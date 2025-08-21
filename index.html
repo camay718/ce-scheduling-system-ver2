@@ -1,0 +1,537 @@
+# 業務配置調整システム開発プロンプト（個人タイムライン表示改善・PDF週間一括出力対応版）
+
+## **プロジェクト概要**
+
+現在の優秀なシステム（https://hkwpxjas.gensparkspace.com/）において、以下の**2つの重要な改善項目**を実装し、真の完成版を構築します：
+
+**🎯 改善項目：**
+1. **個人タイムライン表示の改善**（時間区切りセルからバー形状表示への変更、重複時の段表示）
+2. **PDF出力機能の修正**（月〜金全体の週間一括出力対応）
+
+**✅ 絶対に維持すべき既存機能：**
+- 27名の正確なスタッフデータ
+- スケジュール画面の全機能（スタッフプール、業務追加・編集、ドラッグ&ドロップ）
+- 当直・非番設定機能（タブ付きUI）
+- HD区分ピンク（#FF69B4）・FLEX区分ゴールド（#FFD700）色分け
+- データ永続化機能
+
+## **Phase 1: 個人タイムライン表示の改善**
+
+### **1. バー形状表示システムの実装**
+
+**実装要件：**
+- 8:00-17:00の時間軸上に業務を連続したバーとして表示
+- バーの位置と幅は開始・終了時間に基づいて正確に計算
+- 時間重複時は自動的に段（レーン）を増やして表示
+- 各バー内に業務名を表示
+
+```javascript
+// タイムライン設定
+const TIMELINE_CONFIG = {
+  startHour: 8,     // 8:00
+  endHour: 17,      // 17:00
+  totalHours: 9,    // 9時間
+  laneHeight: 30,   // 各段の高さ（px）
+  barHeight: 26,    // バーの高さ（px）
+  padding: 4        // 余白
+};
+
+// 時間文字列を分に変換
+function timeToMinutes(timeStr) {
+  const [hours, minutes] = timeStr.split(':').map(Number);
+  return hours * 60 + minutes;
+}
+
+// 時間をパーセンテージに変換（8:00-17:00基準）
+function timeToPercent(timeStr) {
+  const minutes = timeToMinutes(timeStr);
+  const startMinutes = TIMELINE_CONFIG.startHour * 60;
+  const totalMinutes = TIMELINE_CONFIG.totalHours * 60;
+  return ((minutes - startMinutes) / totalMinutes) * 100;
+}
+
+// スタッフの1日の業務バーデータを生成
+function buildStaffDayBars(staffId, day) {
+  const dayAssignments = hospitalStore.assignments[day] || {};
+  const businessItems = [];
+  
+  // 配置データから業務アイテムを抽出
+  Object.entries(dayAssignments).forEach(([businessId, assignedStaffIds]) => {
+    if (assignedStaffIds.includes(staffId)) {
+      const business = (hospitalStore.dailyBusinesses[day] || []).find(b => b.id === businessId);
+      if (business) {
+        const startMinutes = timeToMinutes(business.startTime);
+        const endMinutes = timeToMinutes(business.endTime);
+        
+        // 表示範囲内の業務のみ処理
+        if (endMinutes > TIMELINE_CONFIG.startHour * 60 && 
+            startMinutes < TIMELINE_CONFIG.endHour * 60) {
+          businessItems.push({
+            businessId,
+            title: business.title,
+            category: business.category,
+            startTime: business.startTime,
+            endTime: business.endTime,
+            startMinutes,
+            endMinutes
+          });
+        }
+      }
+    }
+  });
+  
+  // 開始時間でソート
+  businessItems.sort((a, b) => a.startMinutes - b.startMinutes);
+  
+  // レーン割当（重複解決アルゴリズム）
+  const lanes = []; // 各レーンの最後の終了時間
+  businessItems.forEach(item => {
+    let assignedLane = -1;
+    
+    // 空いているレーンを探す
+    for (let i = 0; i < lanes.length; i++) {
+      if (item.startMinutes >= lanes[i]) {
+        assignedLane = i;
+        lanes[i] = item.endMinutes;
+        break;
+      }
+    }
+    
+    // 空きがなければ新レーン作成
+    if (assignedLane === -1) {
+      assignedLane = lanes.length;
+      lanes.push(item.endMinutes);
+    }
+    
+    item.lane = assignedLane;
+  });
+  
+  return {
+    items: businessItems,
+    maxLanes: lanes.length
+  };
+}
+
+// スタッフの1日タイムライン描画
+function renderStaffDayTimeline(staffId, day) {
+  const { items, maxLanes } = buildStaffDayBars(staffId, day);
+  const cellHeight = Math.max(60, maxLanes * TIMELINE_CONFIG.laneHeight + TIMELINE_CONFIG.padding * 2);
+  
+  const barsHTML = items.map(item => {
+    const leftPercent = timeToPercent(item.startTime);
+    const rightPercent = timeToPercent(item.endTime);
+    const widthPercent = rightPercent - leftPercent;
+    const topPosition = TIMELINE_CONFIG.padding + (item.lane * TIMELINE_CONFIG.laneHeight);
+    
+    const backgroundColor = hospitalStore.colorMap[item.category] || '#6c757d';
+    const textColor = getReadableTextColor(backgroundColor);
+    
+    return `
+      <div class="timeline-business-bar" 
+           style="
+             position: absolute;
+             left: ${leftPercent}%;
+             width: ${widthPercent}%;
+             top: ${topPosition}px;
+             height: ${TIMELINE_CONFIG.barHeight}px;
+             background-color: ${backgroundColor};
+             color: ${textColor};
+             border-radius: 4px;
+             padding: 2px 6px;
+             font-size: 0.75em;
+             font-weight: bold;
+             display: flex;
+             align-items: center;
+             justify-content: center;
+             box-shadow: 0 2px 4px rgba(0,0,0,0.15);
+             cursor: pointer;
+             overflow: hidden;
+             white-space: nowrap;
+             text-overflow: ellipsis;
+           "
+           title="${item.title} (${item.startTime}-${item.endTime})"
+           onclick="editBusinessFromTimeline('${item.businessId}', '${day}')">
+        ${item.title}
+      </div>
+    `;
+  }).join('');
+  
+  // 状態オーバーレイ（非番・休暇等）
+  const status = getStaffDayStatus(staffId, day);
+  const statusOverlay = (status && status !== 'available') ? `
+    <div class="status-overlay status-${status}"
+         style="
+           position: absolute;
+           top: 0; left: 0; right: 0; bottom: 0;
+           background: ${getStatusOverlayStyle(status)};
+           display: flex;
+           align-items: center;
+           justify-content: center;
+           font-weight: bold;
+           color: white;
+           z-index: 10;
+         ">
+      ${getStatusDisplayName(status)}
+    </div>
+  ` : '';
+  
+  return `
+    <div class="day-timeline-cell" 
+         style="
+           position: relative;
+           height: ${cellHeight}px;
+           border-right: 2px solid #dee2e6;
+           background: ${day === 'Tue' || day === 'Thu' ? '#fafbfc' : 'white'};
+           overflow: hidden;
+         ">
+      ${barsHTML}
+      ${statusOverlay}
+    </div>
+  `;
+}
+
+// 週間タイムライン全体の再描画
+function renderWeeklyPersonalTimelineWithBars() {
+  const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'];
+  
+  return `
+    <div class="weekly-personal-timeline">
+      <div class="timeline-header">
+        <h3>👤 個人別週間タイムライン (8:00-17:00)</h3>
+        <div class="timeline-controls">
+          <button onclick="exportWeeklyTimelinePDF()" class="btn btn-primary">
+            📄 週間PDF出力
+          </button>
+          <button onclick="toggleTimelineView()" class="btn btn-secondary">
+            🔄 表示切替
+          </button>
+        </div>
+      </div>
+      
+      <!-- 時間軸ヘッダー -->
+      <div class="timeline-time-header">
+        <div class="staff-column-header">スタッフ</div>
+        ${days.map(day => `
+          <div class="day-column-header">
+            <div class="day-info">
+              <div class="day-name">${getDayDisplayName(day)}</div>
+              <div class="day-date">${getDayDate(day)}</div>
+            </div>
+            <div class="time-scale">
+              ${Array.from({length: 10}, (_, i) => `
+                <div class="time-mark" style="left: ${(i / 9) * 100}%;">
+                  ${(8 + i).toString().padStart(2, '0')}:00
+                </div>
+              `).join('')}
+            </div>
+          </div>
+        `).join('')}
+      </div>
+      
+      <!-- スタッフタイムライン本体 -->
+      <div class="timeline-body">
+        ${hospitalStore.staff.map(staff => `
+          <div class="staff-timeline-row">
+            <div class="staff-info-cell">
+              <div class="staff-avatar" style="background-color: ${staff.color};">
+                ${staff.name.charAt(0)}
+              </div>
+              <div class="staff-details">
+                <div class="staff-name">${staff.name}</div>
+                <div class="staff-category">${staff.baseCategory}</div>
+              </div>
+            </div>
+            ${days.map(day => renderStaffDayTimeline(staff.id, day)).join('')}
+          </div>
+        `).join('')}
+      </div>
+    </div>
+  `;
+}
+```
+
+### **2. タイムライン専用CSS**
+
+```css
+/* 週間タイムライン（バー表示対応） */
+.timeline-time-header {
+  display: grid;
+  grid-template-columns: 200px repeat(5, 1fr);
+  background: #f8f9fa;
+  border-bottom: 3px solid #dee2e6;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+
+.staff-column-header {
+  padding: 15px;
+  font-weight: bold;
+  text-align: center;
+  border-right: 2px solid #dee2e6;
+  background: #e9ecef;
+}
+
+.day-column-header {
+  border-right: 2px solid #dee2e6;
+  background: white;
+}
+
+.day-info {
+  text-align: center;
+  padding: 10px;
+  background: #007bff;
+  color: white;
+}
+
+.time-scale {
+  position: relative;
+  height: 25px;
+  background: linear-gradient(to right, #f1f3f4 0%, #f1f3f4 100%);
+  border-top: 1px solid #dee2e6;
+}
+
+.time-mark {
+  position: absolute;
+  top: 2px;
+  font-size: 0.7em;
+  color: #495057;
+  transform: translateX(-50%);
+  background: rgba(255, 255, 255, 0.8);
+  padding: 1px 3px;
+  border-radius: 2px;
+}
+
+.staff-timeline-row {
+  display: grid;
+  grid-template-columns: 200px repeat(5, 1fr);
+  border-bottom: 1px solid #dee2e6;
+}
+
+.staff-info-cell {
+  padding: 15px;
+  border-right: 2px solid #dee2e6;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: #f8f9fa;
+}
+
+.staff-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-weight: bold;
+  font-size: 1.2em;
+}
+
+/* 業務バーのホバー効果 */
+.timeline-business-bar:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(0,0,0,0.25) !important;
+  z-index: 20;
+}
+
+/* 状態オーバーレイスタイル */
+.status-overlay.status-offDuty {
+  background: repeating-linear-gradient(
+    45deg,
+    rgba(108, 117, 125, 0.8),
+    rgba(108, 117, 125, 0.8) 10px,
+    rgba(90, 98, 104, 0.8) 10px,
+    rgba(90, 98, 104, 0.8) 20px
+  ) !important;
+}
+
+.status-overlay.status-annualLeave {
+  background: repeating-linear-gradient(
+    45deg,
+    rgba(40, 167, 69, 0.8),
+    rgba(40, 167, 69, 0.8) 10px,
+    rgba(30, 126, 52, 0.8) 10px,
+    rgba(30, 126, 52, 0.8) 20px
+  ) !important;
+}
+```
+
+## **Phase 2: 週間PDF出力機能の実装**
+
+### **PDF出力システム（html2canvas + jsPDF）**
+
+```javascript
+// 週間タイムラインPDF出力
+async function exportWeeklyTimelinePDF() {
+  const timelineContainer = document.querySelector('.weekly-personal-timeline');
+  if (!timelineContainer) {
+    showMessage('タイムラインが見つかりません', 'error');
+    return;
+  }
+
+  // ローディング表示
+  showMessage('PDFを生成中...', 'info');
+  
+  try {
+    // 高解像度でキャプチャ
+    const canvas = await html2canvas(timelineContainer, {
+      scale: 2,
+      useCORS: true,
+      logging: false,
+      scrollX: 0,
+      scrollY: -window.scrollY,
+      backgroundColor: '#ffffff',
+      width: timelineContainer.scrollWidth,
+      height: timelineContainer.scrollHeight
+    });
+
+    const imgData = canvas.toDataURL('image/png');
+    
+    // A3横向きPDF設定
+    const { jsPDF } = window.jspdf;
+    const pdf = new jsPDF('landscape', 'mm', 'a3');
+    
+    const pageWidth = pdf.internal.pageSize.getWidth();
+    const pageHeight = pdf.internal.pageSize.getHeight();
+    
+    // 画像サイズ計算
+    const imgWidth = pageWidth - 20; // 余白10mm×2
+    const imgHeight = (canvas.height * imgWidth) / canvas.width;
+    
+    // タイトル追加
+    pdf.setFontSize(16);
+    pdf.setFont('helvetica', 'bold');
+    const weekStart = getWeekStartDate();
+    const weekEnd = getWeekEndDate();
+    const title = `業務配置調整システム - 週間タイムライン (${formatDate(weekStart)} ～ ${formatDate(weekEnd)})`;
+    pdf.text(title, pageWidth / 2, 15, { align: 'center' });
+    
+    // 画像を追加（複数ページ対応）
+    let remainingHeight = imgHeight;
+    let sourceY = 0;
+    let pageNum = 1;
+    
+    while (remainingHeight > 0) {
+      const availableHeight = pageHeight - 30; // ヘッダー・フッター用余白
+      const sliceHeight = Math.min(remainingHeight, availableHeight);
+      
+      if (pageNum > 1) {
+        pdf.addPage();
+        pdf.setFontSize(16);
+        pdf.setFont('helvetica', 'bold');
+        pdf.text(title, pageWidth / 2, 15, { align: 'center' });
+      }
+      
+      // 画像の一部を切り取って配置
+      const tempCanvas = document.createElement('canvas');
+      const tempCtx = tempCanvas.getContext('2d');
+      tempCanvas.width = canvas.width;
+      tempCanvas.height = (sliceHeight / imgHeight) * canvas.height;
+      
+      tempCtx.drawImage(
+        canvas,
+        0, (sourceY / imgHeight) * canvas.height,
+        canvas.width, tempCanvas.height,
+        0, 0,
+        canvas.width, tempCanvas.height
+      );
+      
+      const sliceData = tempCanvas.toDataURL('image/png');
+      pdf.addImage(sliceData, 'PNG', 10, 20, imgWidth, sliceHeight);
+      
+      // フッター追加
+      pdf.setFontSize(8);
+      pdf.setFont('helvetica', 'normal');
+      pdf.setTextColor(100, 100, 100);
+      pdf.text(`出力日時: ${new Date().toLocaleString('ja-JP')}`, 10, pageHeight - 5);
+      pdf.text(`ページ: ${pageNum}`, pageWidth - 30, pageHeight - 5);
+      
+      remainingHeight -= sliceHeight;
+      sourceY += sliceHeight;
+      pageNum++;
+    }
+    
+    // ファイル保存
+    const fileName = `業務配置_週間タイムライン_${formatDate(weekStart)}_${formatDate(weekEnd)}.pdf`;
+    pdf.save(fileName);
+    
+    showMessage('週間タイムラインPDFを出力しました', 'success');
+    
+  } catch (error) {
+    console.error('PDF出力エラー:', error);
+    showMessage('PDF出力に失敗しました', 'error');
+  }
+}
+
+// 日付フォーマット関数
+function formatDate(date) {
+  return date.toLocaleDateString('ja-JP', {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit'
+  }).replace(/\//g, '-');
+}
+
+// 週の開始・終了日取得
+function getWeekStartDate() {
+  // 現在選択されている週の開始日を返す
+  // hospitalStore.currentWeek から計算
+  return new Date(); // 実装に応じて調整
+}
+
+function getWeekEndDate() {
+  const start = getWeekStartDate();
+  const end = new Date(start);
+  end.setDate(start.getDate() + 4); // 金曜日まで
+  return end;
+}
+```
+
+## **受け入れ基準チェックリスト**
+
+### **Phase 1（タイムライン表示改善）**
+- [ ] **業務配置が時間区切りセルではなくバー形状で表示される**
+- [ ] **バーの位置と幅が開始・終了時間に基づいて正確に計算される**
+- [ ] **時間が重なる業務が異なる段（レーン）に自動配置される**
+- [ ] **各バー内に業務名が表示される**
+- [ ] **業務区分に応じた色分けがバーに適用される**
+- [ ] **非番・休暇・出張の状態オーバーレイが表示される**
+- [ ] **8:00-17:00の時間軸が正確に表示される**
+
+### **Phase 2（PDF出力改善）**
+- [ ] **「📄 週間PDF出力」ボタンが機能する**
+- [ ] **PDF出力で月〜金の全5日間が一括出力される**
+- [ ] **A3横向きで適切なレイアウトで出力される**
+- [ ] **業務配置バーが色分けされて出力される**
+- [ ] **複数ページ対応（内容が1ページに収まらない場合）**
+- [ ] **ヘッダー・フッターが適切に設定される**
+
+### **既存機能維持確認**
+- [ ] **27名の正確なスタッフデータが維持される**
+- [ ] **スケジュール画面の全機能が正常動作する**
+- [ ] **業務追加・編集・削除が正常動作する**
+- [ ] **ドラッグ&ドロップ配置が正常動作する**
+- [ ] **当直・非番設定が正常動作する**
+- [ ] **HD区分ピンク・FLEX区分ゴールドが維持される**
+
+## **実装指示**
+
+### **実装順序（厳守）**
+1. **Phase 1のタイムライン表示改善を最優先で実装**
+   - 既存の`renderWeeklyPersonalTimeline`関数を`renderWeeklyPersonalTimelineWithBars`に置換
+   - バー描画ロジックとレーン分けアルゴリズムを実装
+   - CSS更新
+2. **動作確認後、Phase 2のPDF出力機能を実装**
+   - `html2canvas`と`jsPDF`ライブラリの確実な読み込み
+   - 週間一括出力機能の実装
+3. **全体統合テストを実施**
+
+### **重要な注意点**
+- **既存の優秀な機能は絶対に破壊しない**
+- **タイムライン更新時は必ず`renderWeeklyPersonalTimelineWithBars()`を呼び出す**
+- **業務編集・配置変更後のタイムライン再描画を確実に実行**
+- **PDF出力時のメモリ使用量とファイルサイズに注意**
+
+このプロンプトに従い、個人タイムライン表示の改善とPDF出力機能の修正を行い、真の完成版「業務配置調整システム」を構築してください。
