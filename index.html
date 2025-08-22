@@ -1,0 +1,452 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>業務配置調整システム</title>
+    
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/9.15.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.15.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.15.0/firebase-database-compat.js"></script>
+    
+    <style>
+        /* 認証画面スタイル */
+        .auth-container {
+            min-height: 100vh;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        .auth-card {
+            background: white;
+            padding: 40px;
+            border-radius: 16px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            width: 100%;
+            max-width: 420px;
+            text-align: center;
+        }
+        
+        .auth-title {
+            font-size: 1.8em;
+            font-weight: bold;
+            color: #2c3e50;
+            margin-bottom: 8px;
+        }
+        
+        .auth-subtitle {
+            color: #7f8c8d;
+            font-size: 0.95em;
+            margin-bottom: 30px;
+        }
+        
+        .form-group {
+            margin-bottom: 20px;
+            text-align: left;
+        }
+        
+        .form-label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #34495e;
+            font-size: 0.9em;
+        }
+        
+        .form-input {
+            width: 100%;
+            padding: 12px 16px;
+            border: 2px solid #e9ecef;
+            border-radius: 8px;
+            font-size: 1em;
+            transition: all 0.3s ease;
+            box-sizing: border-box;
+        }
+        
+        .form-input:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+        
+        .email-readonly {
+            background: #f8f9fa;
+            color: #495057;
+            font-weight: 500;
+        }
+        
+        .password-container {
+            position: relative;
+        }
+        
+        .password-toggle {
+            position: absolute;
+            right: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: none;
+            border: none;
+            cursor: pointer;
+            color: #6c757d;
+            font-size: 1.1em;
+        }
+        
+        .login-btn {
+            width: 100%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 14px 24px;
+            border-radius: 8px;
+            font-size: 1em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .login-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(102, 126, 234, 0.3);
+        }
+        
+        .login-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        .error-message, .success-message {
+            padding: 12px 16px;
+            border-radius: 6px;
+            margin-top: 16px;
+            font-size: 0.9em;
+            display: none;
+        }
+        
+        .error-message {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        
+        .success-message {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        
+        /* メイン画面 */
+        .main-container {
+            display: none;
+            min-height: 100vh;
+            background: #f8f9fa;
+        }
+        
+        .header-bar {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 12px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        .header-title {
+            font-size: 1.3em;
+            font-weight: bold;
+        }
+        
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        
+        .logout-btn {
+            background: rgba(255,255,255,0.2);
+            color: white;
+            border: none;
+            padding: 6px 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.85em;
+            transition: all 0.2s ease;
+        }
+        
+        .logout-btn:hover {
+            background: rgba(255,255,255,0.3);
+        }
+        
+        .connection-status {
+            position: fixed;
+            top: 60px;
+            right: 20px;
+            z-index: 9999;
+            padding: 8px 12px;
+            border-radius: 6px;
+            font-size: 0.85em;
+            font-weight: bold;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+        }
+        
+        .status-online {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        
+        .status-offline {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+    </style>
+</head>
+<body>
+    <!-- 認証画面 -->
+    <div id="auth-container" class="auth-container">
+        <div class="auth-card">
+            <h1 class="auth-title">🏥 業務配置調整システム</h1>
+            <p class="auth-subtitle">安全なログインでシステムにアクセス</p>
+            
+            <form id="auth-form">
+                <div class="form-group">
+                    <label for="email-input" class="form-label">📧 メールアドレス</label>
+                    <input 
+                        type="email" 
+                        id="email-input" 
+                        class="form-input email-readonly" 
+                        value="camay718@gmail.com" 
+                        readonly>
+                </div>
+                
+                <div class="form-group">
+                    <label for="password-input" class="form-label">🔐 パスワード</label>
+                    <div class="password-container">
+                        <input 
+                            type="password" 
+                            id="password-input" 
+                            class="form-input" 
+                            placeholder="パスワードを入力してください"
+                            required>
+                        <button type="button" class="password-toggle" onclick="togglePassword()">👁️</button>
+                    </div>
+                </div>
+                
+                <button type="submit" class="login-btn">
+                    🚀 ログイン
+                </button>
+            </form>
+            
+            <div id="error-message" class="error-message"></div>
+            <div id="success-message" class="success-message"></div>
+        </div>
+    </div>
+    
+    <!-- メイン画面 -->
+    <div id="main-container" class="main-container">
+        <div class="header-bar">
+            <div class="header-title">🏥 業務配置調整システム</div>
+            <div class="user-info">
+                <div id="connection-status" class="connection-status status-offline">
+                    🔴 接続中...
+                </div>
+                <span id="user-display">ユーザー</span>
+                <button onclick="handleLogout()" class="logout-btn">ログアウト</button>
+            </div>
+        </div>
+        
+        <!-- ここに既存のメイン画面コンテンツを挿入 -->
+        <div id="main-content">
+            <!-- HOME、スケジュール、タイムライン画面など -->
+            <div id="activity-logs"></div>
+            <div id="active-users"></div>
+            <!-- 既存のUI要素をここに配置 -->
+        </div>
+    </div>
+
+    <script>
+        // Firebase設定（実際の値に置き換えてください）
+        // Import the functions you need from the SDKs you need
+import { initializeApp } from "firebase/app";
+import { getAnalytics } from "firebase/analytics";
+// TODO: Add SDKs for Firebase products that you want to use
+// https://firebase.google.com/docs/web/setup#available-libraries
+
+// Your web app's Firebase configuration
+// For Firebase JS SDK v7.20.0 and later, measurementId is optional
+const firebaseConfig = {
+  apiKey: "AIzaSyDHujcHnKS1IKxcp1rBmfL6zNiraRVv_Q0",
+  authDomain: "work-arrangement.firebaseapp.com",
+  databaseURL: "https://work-arrangement-default-rtdb.firebaseio.com",
+  projectId: "work-arrangement",
+  storageBucket: "work-arrangement.firebasestorage.app",
+  messagingSenderId: "373524055304",
+  appId: "1:373524055304:web:47e1dac049a9a44d4c58bd",
+  measurementId: "G-21B5862ZRW"
+};
+
+// Initialize Firebase
+const app = initializeApp(firebaseConfig);
+const analytics = getAnalytics(app);
+
+        let currentUser = null;
+
+        // パスワード表示切り替え
+        function togglePassword() {
+            const passwordInput = document.getElementById('password-input');
+            const toggleBtn = document.querySelector('.password-toggle');
+            
+            if (passwordInput.type === 'password') {
+                passwordInput.type = 'text';
+                toggleBtn.textContent = '🙈';
+            } else {
+                passwordInput.type = 'password';
+                toggleBtn.textContent = '👁️';
+            }
+        }
+
+        // メッセージ表示
+        function showMessage(message, type) {
+            const errorEl = document.getElementById('error-message');
+            const successEl = document.getElementById('success-message');
+            
+            errorEl.style.display = 'none';
+            successEl.style.display = 'none';
+            
+            if (type === 'error') {
+                errorEl.textContent = message;
+                errorEl.style.display = 'block';
+            } else {
+                successEl.textContent = message;
+                successEl.style.display = 'block';
+            }
+            
+            setTimeout(() => {
+                errorEl.style.display = 'none';
+                successEl.style.display = 'none';
+            }, 5000);
+        }
+
+        // ログイン処理
+        async function handleLogin(email, password) {
+            try {
+                showMessage('ログイン中...', 'success');
+                
+                const userCredential = await auth.signInWithEmailAndPassword(email, password);
+                const user = userCredential.user;
+                
+                if (!user.emailVerified) {
+                    throw new Error('メールアドレスが確認されていません');
+                }
+                
+                currentUser = {
+                    uid: user.uid,
+                    email: user.email,
+                    displayName: user.email.split('@')[0]
+                };
+                
+                await initializeMainSystem();
+                
+            } catch (error) {
+                console.error('ログインエラー:', error);
+                
+                let errorMessage = 'ログインに失敗しました';
+                switch (error.code) {
+                    case 'auth/user-not-found':
+                    case 'auth/wrong-password':
+                        errorMessage = 'メールアドレスまたはパスワードが間違っています';
+                        break;
+                    case 'auth/invalid-email':
+                        errorMessage = 'メールアドレスの形式が正しくありません';
+                        break;
+                    case 'auth/too-many-requests':
+                        errorMessage = 'ログイン試行回数が多すぎます。しばらく待ってから再試行してください';
+                        break;
+                    default:
+                        errorMessage = error.message;
+                }
+                
+                showMessage(errorMessage, 'error');
+            }
+        }
+
+        // ログアウト処理
+        async function handleLogout() {
+            try {
+                await auth.signOut();
+                document.getElementById('auth-container').style.display = 'flex';
+                document.getElementById('main-container').style.display = 'none';
+                document.getElementById('password-input').value = '';
+                
+                if (window.firebaseStore) {
+                    window.firebaseStore.cleanup();
+                }
+                
+                currentUser = null;
+                showMessage('ログアウトしました', 'success');
+                
+            } catch (error) {
+                console.error('ログアウトエラー:', error);
+                showMessage('ログアウトに失敗しました', 'error');
+            }
+        }
+
+        // メインシステム初期化
+        async function initializeMainSystem() {
+            try {
+                document.getElementById('auth-container').style.display = 'none';
+                document.getElementById('main-container').style.display = 'block';
+                
+                document.getElementById('user-display').textContent = currentUser.displayName;
+                
+                await initializeFirebaseRealtimeSystem(currentUser.displayName, currentUser.uid);
+                
+                console.log('✅ メインシステム初期化完了');
+                
+            } catch (error) {
+                console.error('❌ メインシステム初期化エラー:', error);
+                showMessage('システムの初期化に失敗しました', 'error');
+            }
+        }
+
+        // 認証状態監視
+        auth.onAuthStateChanged((user) => {
+            if (user && user.emailVerified) {
+                if (!currentUser) {
+                    currentUser = {
+                        uid: user.uid,
+                        email: user.email,
+                        displayName: user.email.split('@')[0]
+                    };
+                    initializeMainSystem();
+                }
+            } else {
+                if (currentUser) {
+                    handleLogout();
+                }
+            }
+        });
+
+        // フォーム送信処理
+        document.getElementById('auth-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const email = document.getElementById('email-input').value.trim();
+            const password = document.getElementById('password-input').value;
+            
+            if (!email || !password) {
+                showMessage('メールアドレスとパスワードを入力してください', 'error');
+                return;
+            }
+            
+            await handleLogin(email, password);
+        });
+    </script>
+</body>
+</html>
