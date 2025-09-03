@@ -1132,19 +1132,172 @@ function setupAllEventListeners() {
     console.log('✅ イベントリスナー設定完了');
 }
 
-// ========= グローバル関数登録（重要） =========
+// ========= 緊急修復パッチ開始 =========
+function showMessage(text, type = 'info') {
+    const container = document.getElementById('messageContainer');
+    if (!container) { 
+        console[type === 'error' ? 'error' : 'log'](text); 
+        return; 
+    }
+    const msg = document.createElement('div');
+    msg.className = `message ${type}`;
+    msg.innerHTML = `<i class="fas fa-info-circle"></i> ${text}`;
+    container.appendChild(msg);
+    setTimeout(() => msg.remove(), 4000);
+}
+
+// モーダル制御関数
+function showModal(id) { 
+    const el = document.getElementById(id); 
+    if(el) el.style.display = 'block'; 
+}
+
+function closeModal(id) { 
+    const el = document.getElementById(id); 
+    if(el) el.style.display = 'none'; 
+}
+
+// Firebase初期化（最小版）
+function initializeFirebase() {
+    try {
+        updateSyncStatus('connecting', 'Firebase Ver2接続中...');
+        
+        if (!firebase.apps.length) {
+            firebase.initializeApp(firebaseConfig);
+        }
+        
+        database = firebase.database();
+        auth = firebase.auth();
+        
+        auth.signInAnonymously().then(() => {
+            updateSyncStatus('connected', 'Ver2リアルタイム同期中');
+            const statusEl = document.getElementById('firebaseConnectionStatus');
+            if (statusEl) statusEl.textContent = 'Ver2接続中';
+            isFirebaseReady = true;
+        }).catch(err => {
+            console.error('Firebase認証エラー:', err);
+            updateSyncStatus('disconnected', '認証失敗');
+            showMessage('Firebase認証に失敗しました', 'error');
+        });
+    } catch (e) {
+        console.error('Firebase初期化エラー:', e);
+        updateSyncStatus('disconnected', '初期化失敗');
+        showMessage('Firebase初期化に失敗しました', 'error');
+    }
+}
+
+// 必要なスタブ関数
+function tryRestoreFromLocalStorage() {}
+function setupAutoLogout() {}
+function restoreLoginState() {
+    const login = document.getElementById('loginScreen');
+    const main = document.getElementById('mainInterface');
+    if (login) login.style.display = 'flex';
+    if (main) main.style.display = 'none';
+}
+
+// 週開始日設定
+function setDefaultWeekMonday() {
+    const today = new Date();
+    const dow = today.getDay();
+    const sub = dow === 0 ? 6 : dow - 1;
+    today.setDate(today.getDate() - sub);
+    weekStartDate = today;
+    const input = document.getElementById('weekStartDate');
+    if (input) input.value = weekStartDate.toISOString().split('T')[0];
+}
+
+function updateDateDisplay() {
+    const ids = ['mondayDate','tuesdayDate','wednesdayDate','thursdayDate','fridayDate','saturdayDate','sundayDate'];
+    ids.forEach((id, i) => {
+        const d = new Date(weekStartDate);
+        d.setDate(weekStartDate.getDate() + i);
+        const el = document.getElementById(id);
+        if (el) el.textContent = `(${d.getMonth()+1}/${d.getDate()})`;
+    });
+}
+
+// ログイン処理（核心機能）
+function handleLogin() {
+    const roleKey = document.getElementById('userId')?.value || '';
+    const name = (document.getElementById('nameInput')?.value || '').trim();
+    const code = (document.getElementById('securityInput')?.value || '').trim();
+
+    if (!roleKey) return showMessage('ユーザーを選択してください', 'warning');
+
+    const cred = AUTH_CREDENTIALS[roleKey];
+    if (!cred) return showMessage('無効なユーザーです', 'error');
+
+    let ok = false;
+    let displayName = roleKey;
+
+    if (cred.type === 'name') {
+        if (!name) return showMessage('お名前を入力してください', 'warning');
+        ok = true; 
+        displayName = name;
+    } else {
+        if (!code) return showMessage('セキュリティコードを入力してください', 'warning');
+        ok = (code === cred.code);
+    }
+
+    if (!ok) return showMessage('認証に失敗しました', 'error');
+
+    currentUser = displayName;
+    userRole = cred.role;
+    userDepartment = cred.department || null;
+
+    showMainInterface();
+    showMessage(`${roleKey}としてログインしました`, 'success');
+}
+
+// メイン画面表示
+function showMainInterface() {
+    const login = document.getElementById('loginScreen');
+    const main = document.getElementById('mainInterface');
+    if (login) login.style.display = 'none';
+    if (main) main.style.display = 'flex';
+    
+    const userDisp = document.getElementById('currentUserDisplay');
+    if (userDisp) userDisp.textContent = currentUser || 'ユーザー';
+
+    // 権限に応じたボタン表示
+    const canEdit = ['editor','admin'].includes(userRole);
+    const addBtn = document.getElementById('addTaskButton');
+    const clrBtn = document.getElementById('clearTasksButton');
+    if (addBtn) addBtn.style.display = canEdit ? 'inline-flex' : 'none';
+    if (clrBtn) clrBtn.style.display = canEdit ? 'inline-flex' : 'none';
+}
+
+// 同期状態更新
+function updateSyncStatus(status, message) {
+    const syncStatus = document.getElementById('syncStatus');
+    const mainSyncStatus = document.getElementById('mainSyncStatus');
+    
+    const statusClasses = {
+        'connecting': 'sync-indicator connecting',
+        'connected': 'sync-indicator connected',
+        'disconnected': 'sync-indicator disconnected'
+    };
+    
+    if (syncStatus) {
+        syncStatus.className = statusClasses[status] || 'sync-indicator disconnected';
+        syncStatus.innerHTML = `<div class="sync-dot ${status === 'connected' ? 'pulse' : ''}"></div>${message}`;
+    }
+    
+    if (mainSyncStatus) {
+        mainSyncStatus.className = statusClasses[status] || 'sync-indicator disconnected';
+        mainSyncStatus.innerHTML = `<div class="sync-dot ${status === 'connected' ? 'pulse' : ''}"></div><span class="sidebar-text">${message}</span>`;
+    }
+}
+
+// グローバル関数登録
 window.handleUserIdChange = handleUserIdChange;
 window.handleLogin = handleLogin;
 window.closeModal = closeModal;
 window.showModal = showModal;
 
-// ========= ここに元のVer1の全ての関数を含める =========
-// （handleLogin, showMessage, Firebase関数など、元のコードの全ての関数）
-
-console.log('✅ CEスケジュール管理システム Ver.2 読み込み完了');
-
-        // ========= 元のVer1の全JavaScript機能をここに含める =========
-        // （スペースの都合上、元のコードの残りの部分をそのまま含める）
+console.log('✅ CEスケジュール管理システム Ver.2 緊急修復パッチ適用完了');
+// ========= 緊急修復パッチ終了 =========
 
     </script>
     <!-- ========= JAVASCRIPT END ========= -->
