@@ -412,18 +412,18 @@
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-2">ユーザー</label>
                     <select id="userId" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500" 
-                            onchange="handleUserIdChange()" oninput="handleUserIdChange()">
-                        <option value="">ユーザーを選択</option>
-                        <option value="スタッフ">スタッフ</option>
-                        <option value="手術・麻酔">手術・麻酔</option>
-                        <option value="MEセンター">MEセンター</option>
-                        <option value="血液浄化">血液浄化</option>
-                        <option value="不整脈">不整脈</option>
-                        <option value="人工心肺・補助循環">人工心肺・補助循環</option>
-                        <option value="心・カテーテル">心・カテーテル</option>
-                        <option value="モニター">モニター</option>
-                        <option value="管理者">管理者</option>
-                    </select>
+        onchange="handleUserIdChange()" oninput="handleUserIdChange()">
+    <option value="">ユーザーを選択</option>
+    <option value="スタッフ" selected>スタッフ</option>  <!-- selected追加 -->
+    <option value="手術・麻酔">手術・麻酔</option>
+    <option value="MEセンター">MEセンター</option>
+    <option value="血液浄化">血液浄化</option>
+    <option value="不整脈">不整脈</option>
+    <option value="人工心肺・補助循環">人工心肺・補助循環</option>
+    <option value="心・カテーテル">心・カテーテル</option>
+    <option value="モニター">モニター</option>
+    <option value="管理者">管理者</option>
+</select>
                 </div>
 
                 <div id="nameInputDiv" style="display:none;">
@@ -958,109 +958,188 @@
 
     <!-- ========= JAVASCRIPT START ========= -->
     <script>
-        // ========= FIREBASE CONFIG START =========
-        const firebaseConfig = {
-            apiKey: "AIzaSyD-9gMA2Q_xopDS_FTbvOlMANy5MHP830g",
-            authDomain: "ce-scheduling-system-v2.firebaseapp.com",
-            databaseURL: "https://ce-scheduling-system-v2-default-rtdb.asia-southeast1.firebasedatabase.app",
-            projectId: "ce-scheduling-system-v2",
-            storageBucket: "ce-scheduling-system-v2.firebasestorage.app",
-            messagingSenderId: "288279598010",
-            appId: "1:288279598010:web:d545ee1d4d854513084383",
-            measurementId: "G-LSEEMJE2R0"
-        };
+const firebaseConfig = {
+    apiKey: "AIzaSyD-9gMA2Q_xopDS_FTbvOlMANy5MHP830g",
+    authDomain: "ce-scheduling-system-v2.firebaseapp.com",
+    databaseURL: "https://ce-scheduling-system-v2-default-rtdb.asia-southeast1.firebasedatabase.app",
+    projectId: "ce-scheduling-system-v2",
+    storageBucket: "ce-scheduling-system-v2.firebasestorage.app",
+    messagingSenderId: "288279598010",
+    appId: "1:288279598010:web:d545ee1d4d854513084383",
+    measurementId: "G-LSEEMJE2R0"
+};
 
-        const DATA_ROOT = 'ceScheduleSystem/v2';
-        // ========= FIREBASE CONFIG END =========
+const DATA_ROOT = 'ceScheduleSystem/v2';
+// ========= FIREBASE CONFIG END =========
 
-         // ========= GLOBAL VARIABLES START =========
-        let database = null;
-        let auth = null;
-        let isFirebaseReady = false;
-        let currentUser = null;
-        let userRole = null;
-        let userDepartment = null;
-        let currentActiveDay = 'monday';
-        let weekStartDate = new Date();
-        let editingCEIndex = -1;
-        let editingTask = { mode: 'create', day: null, index: -1 };
+// ========= GLOBAL VARIABLES START =========
+let database = null;
+let auth = null;
+let isFirebaseReady = false;
+let currentUser = null;
+let userRole = null;
+let userDepartment = null;
+let currentActiveDay = 'monday';
+let weekStartDate = new Date();
+let editingCEIndex = -1;
+let editingTask = { mode: 'create', day: null, index: -1 };
 
-        // データ管理
-　　　    let globalTasksData = { monday: [], tuesday: [], wednesday: [], thursday: [], friday: [], saturday: [], sunday: [] };
-        let globalAssignmentsData = { monday: {}, tuesday: {}, wednesday: {}, thursday: {}, friday: {}, saturday: {}, sunday: {} };
+// データ管理
+let globalTasksData = { monday: [], tuesday: [], wednesday: [], thursday: [], friday: [], saturday: [], sunday: [] };
+let globalAssignmentsData = { monday: {}, tuesday: {}, wednesday: {}, thursday: {}, friday: {}, saturday: {}, sunday: {} };
 
-        // CE一覧（27名）
-        let CE_LIST = [
-        　   { name: '安孫子', workType: 'OPE', status: { monday: '', tuesday: '', wednesday: '', thursday: '', friday: '', saturday: '', sunday: '' } },
-            { name: '八鍬', workType: 'ME', status: { monday: '', tuesday: '', wednesday: '', thursday: '', friday: '', saturday: '', sunday: '' } },
-            { name: '杉山', workType: 'HD', status: { monday: '', tuesday: '', wednesday: '', thursday: '', friday: '', saturday: '', sunday: '' } },
-            { name: '中村', workType: 'OPE', status:{ monday: '', tuesday: '', wednesday: '', thursday: '', friday: '', saturday: '', sunday: '' } },
-            { name: '石山', workType: 'ME', status: { monday: '', tuesday: '', wednesday: '', thursday: '', friday: '', saturday: '', sunday: '' } },
-            { name: '亀井', workType: 'OPE', status:{ monday: '', tuesday: '', wednesday: '', thursday: '', friday: '', saturday: '', sunday: '' } },
-            { name: '丸藤', workType: 'OPE', status:{ monday: '', tuesday: '', wednesday: '', thursday: '', friday: '', saturday: '', sunday: '' } },
-            { name: '三春', workType: 'ME', status:{ monday: '', tuesday: '', wednesday: '', thursday: '', friday: '', saturday: '', sunday: '' } },
-            { name: '斎藤', workType: 'FLEX', status:{ monday: '', tuesday: '', wednesday: '', thursday: '', friday: '', saturday: '', sunday: '' } },
-            { name: '田中', workType: 'ME', status:{ monday: '', tuesday: '', wednesday: '', thursday: '', friday: '', saturday: '', sunday: '' } },
-            { name: '宇井', workType: 'OPE', status:{ monday: '', tuesday: '', wednesday: '', thursday: '', friday: '', saturday: '', sunday: '' } },
-            { name: '宇野沢', workType: 'OPE', status:{ monday: '', tuesday: '', wednesday: '', thursday: '', friday: '', saturday: '', sunday: '' } },
-            { name: '佐藤将志', workType: 'OPE', status:{ monday: '', tuesday: '', wednesday: '', thursday: '', friday: '', saturday: '', sunday: '' } },
-            { name: '庄司', workType: 'HD', status: { monday: '', tuesday: '', wednesday: '', thursday: '', friday: '', saturday: '', sunday: '' } },
-            { name: '小沼', workType: 'OPE', status: { monday: '', tuesday: '', wednesday: '', thursday: '', friday: '', saturday: '', sunday: '' } },
-            { name: '設樂', workType: 'OPE', status: { monday: '', tuesday: '', wednesday: '', thursday: '', friday: '', saturday: '', sunday: '' } },
-            { name: '武田', workType: 'ME', status:{ monday: '', tuesday: '', wednesday: '', thursday: '', friday: '', saturday: '', sunday: '' } },
-            { name: '伊藤大晟', workType: 'ME', status:{ monday: '', tuesday: '', wednesday: '', thursday: '', friday: '', saturday: '', sunday: '' } },
-            { name: '上松野', workType: 'ME', status:{ monday: '', tuesday: '', wednesday: '', thursday: '', friday: '', saturday: '', sunday: '' } },
-            { name: '笹生', workType: 'ME', status: { monday: '', tuesday: '', wednesday: '', thursday: '', friday: '', saturday: '', sunday: '' } },
-            { name: '和田', workType: 'OPE', status:{ monday: '', tuesday: '', wednesday: '', thursday: '', friday: '', saturday: '', sunday: '' } },
-            { name: '伊藤大稀', workType: 'OPE', status:{ monday: '', tuesday: '', wednesday: '', thursday: '', friday: '', saturday: '', sunday: '' } },
-            { name: '佐藤千優', workType: 'ME', status: { monday: '', tuesday: '', wednesday: '', thursday: '', friday: '', saturday: '', sunday: '' } },
-            { name: '桑島', workType: 'OPE', status:{ monday: '', tuesday: '', wednesday: '', thursday: '', friday: '', saturday: '', sunday: '' } },
-            { name: '村田', workType: 'ME', status:{ monday: '', tuesday: '', wednesday: '', thursday: '', friday: '', saturday: '', sunday: '' } },
-            { name: '小林', workType: 'OPE', status: { monday: '', tuesday: '', wednesday: '', thursday: '', friday: '', saturday: '', sunday: '' } },
-            { name: '寒河江', workType: 'ME', status:{ monday: '', tuesday: '', wednesday: '', thursday: '', friday: '', saturday: '', sunday: '' } },
-        ];
+// CE一覧（27名）
+let CE_LIST = [
+    { name: '安孫子', workType: 'OPE', status: { monday: '', tuesday: '', wednesday: '', thursday: '', friday: '', saturday: '', sunday: '' } },
+    { name: '八鍬', workType: 'ME', status: { monday: '', tuesday: '', wednesday: '', thursday: '', friday: '', saturday: '', sunday: '' } },
+    { name: '杉山', workType: 'HD', status: { monday: '', tuesday: '', wednesday: '', thursday: '', friday: '', saturday: '', sunday: '' } },
+    { name: '中村', workType: 'OPE', status:{ monday: '', tuesday: '', wednesday: '', thursday: '', friday: '', saturday: '', sunday: '' } },
+    { name: '石山', workType: 'ME', status: { monday: '', tuesday: '', wednesday: '', thursday: '', friday: '', saturday: '', sunday: '' } },
+    { name: '亀井', workType: 'OPE', status:{ monday: '', tuesday: '', wednesday: '', thursday: '', friday: '', saturday: '', sunday: '' } },
+    { name: '丸藤', workType: 'OPE', status:{ monday: '', tuesday: '', wednesday: '', thursday: '', friday: '', saturday: '', sunday: '' } },
+    { name: '三春', workType: 'ME', status:{ monday: '', tuesday: '', wednesday: '', thursday: '', friday: '', saturday: '', sunday: '' } },
+    { name: '斎藤', workType: 'FLEX', status:{ monday: '', tuesday: '', wednesday: '', thursday: '', friday: '', saturday: '', sunday: '' } },
+    { name: '田中', workType: 'ME', status:{ monday: '', tuesday: '', wednesday: '', thursday: '', friday: '', saturday: '', sunday: '' } },
+    { name: '宇井', workType: 'OPE', status:{ monday: '', tuesday: '', wednesday: '', thursday: '', friday: '', saturday: '', sunday: '' } },
+    { name: '宇野沢', workType: 'OPE', status:{ monday: '', tuesday: '', wednesday: '', thursday: '', friday: '', saturday: '', sunday: '' } },
+    { name: '佐藤将志', workType: 'OPE', status:{ monday: '', tuesday: '', wednesday: '', thursday: '', friday: '', saturday: '', sunday: '' } },
+    { name: '庄司', workType: 'HD', status: { monday: '', tuesday: '', wednesday: '', thursday: '', friday: '', saturday: '', sunday: '' } },
+    { name: '小沼', workType: 'OPE', status: { monday: '', tuesday: '', wednesday: '', thursday: '', friday: '', saturday: '', sunday: '' } },
+    { name: '設樂', workType: 'OPE', status: { monday: '', tuesday: '', wednesday: '', thursday: '', friday: '', saturday: '', sunday: '' } },
+    { name: '武田', workType: 'ME', status:{ monday: '', tuesday: '', wednesday: '', thursday: '', friday: '', saturday: '', sunday: '' } },
+    { name: '伊藤大晟', workType: 'ME', status:{ monday: '', tuesday: '', wednesday: '', thursday: '', friday: '', saturday: '', sunday: '' } },
+    { name: '上松野', workType: 'ME', status:{ monday: '', tuesday: '', wednesday: '', thursday: '', friday: '', saturday: '', sunday: '' } },
+    { name: '笹生', workType: 'ME', status: { monday: '', tuesday: '', wednesday: '', thursday: '', friday: '', saturday: '', sunday: '' } },
+    { name: '和田', workType: 'OPE', status:{ monday: '', tuesday: '', wednesday: '', thursday: '', friday: '', saturday: '', sunday: '' } },
+    { name: '伊藤大稀', workType: 'OPE', status:{ monday: '', tuesday: '', wednesday: '', thursday: '', friday: '', saturday: '', sunday: '' } },
+    { name: '佐藤千優', workType: 'ME', status: { monday: '', tuesday: '', wednesday: '', thursday: '', friday: '', saturday: '', sunday: '' } },
+    { name: '桑島', workType: 'OPE', status:{ monday: '', tuesday: '', wednesday: '', thursday: '', friday: '', saturday: '', sunday: '' } },
+    { name: '村田', workType: 'ME', status:{ monday: '', tuesday: '', wednesday: '', thursday: '', friday: '', saturday: '', sunday: '' } },
+    { name: '小林', workType: 'OPE', status: { monday: '', tuesday: '', wednesday: '', thursday: '', friday: '', saturday: '', sunday: '' } },
+    { name: '寒河江', workType: 'ME', status:{ monday: '', tuesday: '', wednesday: '', thursday: '', friday: '', saturday: '', sunday: '' } },
+];
 
-        // 認証設定（既存のセキュリティコードを維持）
-        const AUTH_CREDENTIALS = {
-            'スタッフ': { type: 'name', role: 'viewer', department: null },
-            '手術・麻酔': { code: 'secure_SurgAnest_6917_ce_system', role: 'editor', department: '手術・麻酔' },
-            'MEセンター': { code: 'secure_MEcenter_6994_ce_system', role: 'editor', department: '機器管理・人工呼吸' },
-            '血液浄化': { code: 'secure_Hemodialysis_6735_ce_system', role: 'editor', department: '血液浄化' },
-            '不整脈': { code: 'secure_Arrhythm_6551_ce_system', role: 'editor', department: '不整脈' },
-            '人工心肺・補助循環': { code: 'secure_CpbEcmo_6288_ce_system', role: 'editor', department: '人工心肺・補助循環' },
-            '心・カテーテル': { code: 'secure_CardCath_6925_ce_system', role: 'editor', department: '心・カテーテル' },
-            'モニター': { code: 'secure_CEmonitor_1122_ce_system', role: 'monitor', department: null },
-            '管理者': { code: 'secure_CEadmin_5711_ce_system', role: 'admin', department: null }
-        };
-       // ========= GLOBAL VARIABLES END =========
+// 認証設定
+const AUTH_CREDENTIALS = {
+    'スタッフ': { type: 'name', role: 'viewer', department: null },
+    '手術・麻酔': { code: 'secure_SurgAnest_6917_ce_system', role: 'editor', department: '手術・麻酔' },
+    'MEセンター': { code: 'secure_MEcenter_6994_ce_system', role: 'editor', department: '機器管理・人工呼吸' },
+    '血液浄化': { code: 'secure_Hemodialysis_6735_ce_system', role: 'editor', department: '血液浄化' },
+    '不整脈': { code: 'secure_Arrhythm_6551_ce_system', role: 'editor', department: '不整脈' },
+    '人工心肺・補助循環': { code: 'secure_CpbEcmo_6288_ce_system', role: 'editor', department: '人工心肺・補助循環' },
+    '心・カテーテル': { code: 'secure_CardCath_6925_ce_system', role: 'editor', department: '心・カテーテル' },
+    'モニター': { code: 'secure_CEmonitor_1122_ce_system', role: 'monitor', department: null },
+    '管理者': { code: 'secure_CEadmin_5711_ce_system', role: 'admin', department: null }
+};
+// ========= GLOBAL VARIABLES END =========
 
-// ========= Ver1の全JavaScript機能をそのまま継続 =========
-// （元のVer1コードのJavaScript部分をここに完全に含める）
-// ========= 以下、元のVer1のJavaScriptコードを完全に含める必要があります =========
+// ========= 修正された初期化処理 =========
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initializeSystem);
+} else {
+    initializeSystem();
+}
 
-        if (document.readyState === 'loading') {
-            document.addEventListener('DOMContentLoaded', initializeSystem);
-        } else {
-            initializeSystem();
+function initializeSystem() {
+    console.log('🔄 CEスケジュール管理システム Ver.2 初期化開始');
+    try {
+        setupAllEventListeners();
+        
+        // 重要：ユーザー選択の初期化を確実に実行
+        const userSelect = document.getElementById('userId');
+        if (userSelect && !userSelect.value) {
+            userSelect.value = 'スタッフ';  // デフォルト値を設定
         }
+        handleUserIdChange(); // 初期表示を更新
+        
+        initializeFirebase();
+        tryRestoreFromLocalStorage();
+        restoreLoginState();
+        setupAutoLogout();
+        setDefaultWeekMonday();
+        updateDateDisplay();
+        console.log('✅ システム初期化完了');
+    } catch (error) {
+        console.error('❌ 初期化エラー:', error);
+        showMessage('システム初期化でエラーが発生しました: ' + error.message, 'error');
+    }
+}
 
-        function initializeSystem() {
-            console.log('🔄 CEスケジュール管理システム Ver.2 初期化開始');
-            try {
-                setupAllEventListeners();
-                handleUserIdChange();
-                initializeFirebase();
-                tryRestoreFromLocalStorage();
-                restoreLoginState();
-                setupAutoLogout();
-                setDefaultWeekMonday();
-                updateDateDisplay();
-                console.log('✅ システム初期化完了');
-            } catch (error) {
-                console.error('❌ 初期化エラー:', error);
-                showMessage('システム初期化でエラーが発生しました: ' + error.message, 'error');
-            }
-        }
+// ========= 修正されたログイン関数 =========
+function handleUserIdChange() {
+    console.log('🔄 ユーザーID変更処理開始');
+    const userId = document.getElementById('userId');
+    const nameDiv = document.getElementById('nameInputDiv');
+    const secDiv = document.getElementById('securityCodeDiv');
+    
+    if (!userId || !nameDiv || !secDiv) {
+        console.error('❌ 必要な要素が見つかりません');
+        return;
+    }
+    
+    const selectedValue = userId.value;
+    console.log('選択されたユーザー:', selectedValue);
+    
+    if (selectedValue === 'スタッフ') {
+        console.log('✅ 名前入力表示');
+        nameDiv.style.display = 'block';
+        secDiv.style.display = 'none';
+    } else if (selectedValue && selectedValue !== '') {
+        console.log('✅ セキュリティコード入力表示');
+        nameDiv.style.display = 'none';
+        secDiv.style.display = 'block';
+    } else {
+        console.log('✅ 入力欄非表示');
+        nameDiv.style.display = 'none';
+        secDiv.style.display = 'none';
+    }
+}
+
+// ========= 修正されたイベントリスナー設定 =========
+function setupAllEventListeners() {
+    console.log('🔄 イベントリスナー設定開始');
+    
+    // ログイン関連（確実に設定）
+    const userId = document.getElementById('userId');
+    const loginButton = document.getElementById('loginButton');
+    const securityInput = document.getElementById('securityInput');
+    const nameInput = document.getElementById('nameInput');
+    
+    if (userId) {
+        // 既存のリスナーを削除してから新しく追加
+        userId.removeEventListener('change', handleUserIdChange);
+        userId.removeEventListener('input', handleUserIdChange);
+        userId.addEventListener('change', handleUserIdChange);
+        userId.addEventListener('input', handleUserIdChange);
+        console.log('✅ ユーザー選択イベントリスナー設定完了');
+    }
+    
+    if (loginButton) {
+        loginButton.addEventListener('click', handleLogin);
+    }
+    if (securityInput) {
+        securityInput.addEventListener('keypress', e => { if (e.key === 'Enter') handleLogin(); });
+    }
+    if (nameInput) {
+        nameInput.addEventListener('keypress', e => { if (e.key === 'Enter') handleLogin(); });
+    }
+
+    // ここに元のVer1の他の全てのイベントリスナー設定を含める
+    // （サイドバー、ナビゲーション、業務ボタンなど）
+    
+    console.log('✅ イベントリスナー設定完了');
+}
+
+// ========= グローバル関数登録（重要） =========
+window.handleUserIdChange = handleUserIdChange;
+window.handleLogin = handleLogin;
+window.closeModal = closeModal;
+window.showModal = showModal;
+
+// ========= ここに元のVer1の全ての関数を含める =========
+// （handleLogin, showMessage, Firebase関数など、元のコードの全ての関数）
+
+console.log('✅ CEスケジュール管理システム Ver.2 読み込み完了');
 
         // ========= 元のVer1の全JavaScript機能をここに含める =========
         // （スペースの都合上、元のコードの残りの部分をそのまま含める）
