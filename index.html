@@ -1045,12 +1045,13 @@ function initializeSystem() {
     try {
         setupAllEventListeners();
         
-        // 重要：ユーザー選択の初期化を確実に実行
+        // ★この部分を追加★
         const userSelect = document.getElementById('userId');
         if (userSelect && !userSelect.value) {
-            userSelect.value = 'スタッフ';  // デフォルト値を設定
+            userSelect.value = 'スタッフ';
         }
-        handleUserIdChange(); // 初期表示を更新
+        handleUserIdChange();
+        // ★追加終了★
         
         initializeFirebase();
         tryRestoreFromLocalStorage();
@@ -1064,6 +1065,7 @@ function initializeSystem() {
         showMessage('システム初期化でエラーが発生しました: ' + error.message, 'error');
     }
 }
+
 
 // ========= 修正されたログイン関数 =========
 function handleUserIdChange() {
