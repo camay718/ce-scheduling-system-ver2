@@ -14,48 +14,201 @@
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
-    <!-- V2用Firebase設定 -->
-<script src="js/core/firebase-config.js"></script>
     
     <!-- カスタムCSS -->
     <link rel="stylesheet" href="css/main.css">
     <link rel="stylesheet" href="css/auth.css">
 </head>
 <body>
-    <div id="messageContainer"></div>
+    <!-- メッセージコンテナ -->
+    <div id="messageContainer" class="fixed top-4 left-1/2 transform -translate-x-1/2 z-50 w-96"></div>
 
-    <!-- ========= ログイン画面（既存のHTMLをそのまま使用）========= -->
-    <div id="loginScreen" class="min-h-screen flex items-center justify-center">
-        <!-- 既存のログイン画面HTMLをそのまま保持 -->
-    </div>
+    <!-- ========= ログイン画面（完成版）========= -->
+    <div id="loginScreen" class="auth-container">
+        <div class="auth-card">
+            <div class="text-center mb-8">
+                <h1 class="text-2xl font-bold text-gray-800 mb-2">
+                    <i class="fas fa-calendar-alt mr-2 text-green-600"></i>
+                    CEスケジュール管理システム
+                </h1>
+                <p class="text-sm text-gray-600">Version 2.0 - 認証システム強化版</p>
+            </div>
 
-    <!-- ========= メインインターフェース（既存のHTMLをそのまま使用）========= -->
-    <div id="mainInterface" style="display:none;" class="flex">
-        <!-- 既存のメインインターフェースHTMLをそのまま保持 -->
-        
-        <!-- 追加：Firebase接続状態表示 -->
-        <div class="fixed bottom-4 right-4 text-xs">
-            <div id="firebaseStatus" class="bg-white bg-opacity-80 px-2 py-1 rounded">
-                🔄 Firebase初期化中...
+            <form onsubmit="event.preventDefault(); handleLogin();" class="space-y-4">
+                <!-- ユーザー選択 -->
+                <div>
+                    <label for="userId" class="block text-sm font-medium text-gray-700 mb-2">
+                        <i class="fas fa-user mr-1"></i>ユーザー選択
+                    </label>
+                    <select id="userId" class="auth-input" onchange="handleUserIdChange()" required>
+                        <option value="">ユーザーを選択してください</option>
+                        <option value="スタッフ">スタッフ（名前入力）</option>
+                        <option value="手術・麻酔">手術・麻酔</option>
+                        <option value="MEセンター">MEセンター</option>
+                        <option value="血液浄化">血液浄化</option>
+                        <option value="不整脈">不整脈</option>
+                        <option value="人工心肺・補助循環">人工心肺・補助循環</option>
+                        <option value="心・カテーテル">心・カテーテル</option>
+                        <option value="モニター">モニター</option>
+                        <option value="管理者">管理者</option>
+                    </select>
+                </div>
+
+                <!-- 名前入力（スタッフ用） -->
+                <div id="nameInputDiv" style="display: none;">
+                    <label for="nameInput" class="block text-sm font-medium text-gray-700 mb-2">
+                        <i class="fas fa-id-badge mr-1"></i>お名前
+                    </label>
+                    <input type="text" id="nameInput" class="auth-input" 
+                           placeholder="お名前を入力してください" 
+                           onkeypress="if(event.key==='Enter') handleLogin()">
+                </div>
+
+                <!-- セキュリティコード入力 -->
+                <div id="securityCodeDiv" style="display: none;">
+                    <label for="securityInput" class="block text-sm font-medium text-gray-700 mb-2">
+                        <i class="fas fa-lock mr-1"></i>セキュリティコード
+                    </label>
+                    <input type="password" id="securityInput" class="auth-input" 
+                           placeholder="セキュリティコードを入力" 
+                           onkeypress="if(event.key==='Enter') handleLogin()">
+                </div>
+
+                <!-- ログインボタン -->
+                <button type="submit" class="btn-primary w-full py-3 text-center">
+                    <i class="fas fa-sign-in-alt mr-2"></i>ログイン
+                </button>
+            </form>
+
+            <!-- バージョン情報 -->
+            <div class="mt-6 text-center text-xs text-gray-500">
+                <p>🔒 V2認証システム | 🔄 Firebase連携対応</p>
+                <div id="firebaseStatus" class="mt-2 px-2 py-1 rounded bg-gray-100 text-xs">
+                    🔄 Firebase初期化中...
+                </div>
             </div>
         </div>
     </div>
 
-<!-- JavaScript読み込み（順序重要・キャッシュ対策版） -->
-<script src="js/core/firebase-config.js?v=20241205-1"></script>
-<script src="js/auth/auth-core.js?v=20241205-1"></script>
-<script src="js/auth/login-ui.js?v=20241205-1"></script>
+    <!-- ========= メインインターフェース（V1ベース完成版）========= -->
+    <div id="mainInterface" style="display:none;" class="flex min-h-screen bg-gray-50">
+        <!-- サイドバー -->
+        <div class="w-64 bg-white shadow-lg">
+            <div class="p-4 bg-gradient-to-r from-green-500 to-green-600 text-white">
+                <h2 class="text-lg font-bold">
+                    <i class="fas fa-calendar-alt mr-2"></i>
+                    CEスケジュール
+                </h2>
+                <p class="text-sm opacity-90">V2システム</p>
+            </div>
 
-<!-- 残りのV1機能 -->
-<script>
-    // 重要：以下は削除済みのため含めない
-    // - firebaseConfig定義
-    // - AUTH_CREDENTIALS定義  
-    // - handleUserIdChange関数
-    // - handleLogin関数
-    // - initializeFirebase関数
-    
-    console.log('📋 V1機能読み込み完了');
-</script>
+            <nav class="p-4 space-y-2">
+                <button class="w-full text-left px-3 py-2 rounded hover:bg-green-50 transition-colors">
+                    <i class="fas fa-home mr-2 text-green-600"></i>ダッシュボード
+                </button>
+                <button class="w-full text-left px-3 py-2 rounded hover:bg-green-50 transition-colors">
+                    <i class="fas fa-calendar mr-2 text-green-600"></i>スケジュール管理
+                </button>
+                <button class="w-full text-left px-3 py-2 rounded hover:bg-green-50 transition-colors">
+                    <i class="fas fa-users mr-2 text-green-600"></i>スタッフ管理
+                </button>
+                <button class="w-full text-left px-3 py-2 rounded hover:bg-green-50 transition-colors">
+                    <i class="fas fa-chart-bar mr-2 text-green-600"></i>統計・分析
+                </button>
+            </nav>
+
+            <div class="absolute bottom-4 left-4 right-4">
+                <div class="text-xs text-gray-600 mb-2">
+                    ログインユーザー: <span id="currentUserDisplay" class="font-semibold"></span>
+                </div>
+                <button id="logoutButtonMain" class="w-full btn-primary py-2 text-sm">
+                    <i class="fas fa-sign-out-alt mr-2"></i>ログアウト
+                </button>
+            </div>
+        </div>
+
+        <!-- メインコンテンツ -->
+        <div class="flex-1 p-6">
+            <div class="bg-white rounded-lg shadow-lg p-6">
+                <div class="flex justify-between items-center mb-6">
+                    <h1 class="text-2xl font-bold text-gray-800">
+                        <i class="fas fa-tachometer-alt mr-2 text-green-600"></i>
+                        ダッシュボード
+                    </h1>
+                    <div class="flex space-x-2">
+                        <button class="btn-primary">
+                            <i class="fas fa-plus mr-2"></i>新規作成
+                        </button>
+                    </div>
+                </div>
+
+                <!-- ダッシュボードコンテンツ -->
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    <div class="bg-gradient-to-r from-blue-400 to-blue-600 text-white p-6 rounded-lg">
+                        <h3 class="text-lg font-semibold mb-2">
+                            <i class="fas fa-calendar-check mr-2"></i>
+                            今日の予定
+                        </h3>
+                        <p class="text-2xl font-bold">5件</p>
+                    </div>
+
+                    <div class="bg-gradient-to-r from-green-400 to-green-600 text-white p-6 rounded-lg">
+                        <h3 class="text-lg font-semibold mb-2">
+                            <i class="fas fa-users mr-2"></i>
+                            稼働スタッフ
+                        </h3>
+                        <p class="text-2xl font-bold">12名</p>
+                    </div>
+
+                    <div class="bg-gradient-to-r from-yellow-400 to-yellow-600 text-white p-6 rounded-lg">
+                        <h3 class="text-lg font-semibold mb-2">
+                            <i class="fas fa-exclamation-triangle mr-2"></i>
+                            要注意事項
+                        </h3>
+                        <p class="text-2xl font-bold">2件</p>
+                    </div>
+                </div>
+
+                <!-- プレースホルダーコンテンツ -->
+                <div class="mt-8">
+                    <h2 class="text-xl font-semibold mb-4">システム状態</h2>
+                    <div class="bg-gray-50 p-4 rounded-lg">
+                        <p class="text-gray-600">
+                            <i class="fas fa-info-circle mr-2 text-blue-500"></i>
+                            Phase 1完成！認証システムが正常に動作しています。
+                        </p>
+                        <p class="text-gray-600 mt-2">
+                            <i class="fas fa-rocket mr-2 text-green-500"></i>
+                            Phase 2への移行準備が整いました。
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- JavaScript読み込み（順序最適化版） -->
+    <script src="js/core/firebase-config.js?v=20241205-2"></script>
+    <script src="js/auth/auth-core.js?v=20241205-2"></script>
+    <script src="js/auth/login-ui.js?v=20241205-2"></script>
+
+    <!-- システム初期化 -->
+    <script>
+        // システム起動確認
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('✅ V2システム起動完了');
+            console.log('🔐 認証システム準備:', window.authSystem ? '完了' : '準備中');
+            console.log('🔥 Firebase状態:', window.isFirebaseReady ? '接続中' : '準備中');
+        });
+
+        // エラーハンドリング強化
+        window.addEventListener('error', function(event) {
+            console.error('❌ システムエラー:', event.error);
+        });
+
+        window.addEventListener('unhandledrejection', function(event) {
+            console.error('❌ Promise拒否:', event.reason);
+        });
+    </script>
 </body>
 </html>
