@@ -970,6 +970,214 @@
 };
 
         const DATA_ROOT = 'ceScheduleSystem/v2';
+        / ===== Ver2 安定版修復パッチ =====
+(function() {
+    console.log('🔧 Ver2安定版修復パッチ開始');
+    
+    // Firebase SDK読み込み完了待機
+    function waitForFirebase(callback, maxWait = 10000) {
+        const startTime = Date.now();
+        function checkFirebase() {
+            if (typeof firebase !== 'undefined' && firebase.apps !== undefined) {
+                console.log('✅ Firebase SDK読み込み確認完了');
+                callback();
+                return;
+            }
+            if (Date.now() - startTime > maxWait) {
+                console.error('❌ Firebase SDK読み込みタイムアウト');
+                updateSyncStatus('disconnected', 'SDK読み込み失敗');
+                return;
+            }
+            setTimeout(checkFirebase, 100);
+        }
+        checkFirebase();
+    }
+    
+    // 基本機能の定義
+    if (typeof window.showMessage !== 'function') {
+        window.showMessage = function(text, type = 'info') {
+            const container = document.getElementById('messageContainer');
+            if (!container) {
+                console.log(`[${type.toUpperCase()}] ${text}`);
+                return;
+            }
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${type}`;
+            const icons = { success: 'check', error: 'times', warning: 'exclamation', info: 'info' };
+            messageDiv.innerHTML = `<i class="fas fa-${icons[type]}-circle"></i>${text}`;
+            container.appendChild(messageDiv);
+            setTimeout(() => messageDiv.remove(), 4000);
+        };
+    }
+
+    if (typeof window.updateSyncStatus !== 'function') {
+        window.updateSyncStatus = function(status, message) {
+            const statusClasses = {
+                connecting: 'sync-indicator connecting',
+                connected: 'sync-indicator connected', 
+                disconnected: 'sync-indicator disconnected'
+            };
+            ['syncStatus', 'mainSyncStatus'].forEach(id => {
+                const el = document.getElementById(id);
+                if (el) {
+                    el.className = statusClasses[status] || statusClasses.disconnected;
+                    el.innerHTML = `<div class="sync-dot ${status === 'connected' ? 'pulse' : ''}"></div>${id === 'mainSyncStatus' ? '<span class="sidebar-text">' + message + '</span>' : message}`;
+                }
+            });
+        };
+    }
+
+    // 認証情報をグローバルで確実に定義
+    if (!window.AUTH_CREDENTIALS) {
+        window.AUTH_CREDENTIALS = {
+            'スタッフ': { type: 'name', role: 'viewer', department: null },
+            '手術・麻酔': { code: 'secure_SurgAnest_6917_ce_system', role: 'editor', department: '手術・麻酔' },
+            'MEセンター': { code: 'secure_MEcenter_6994_ce_system', role: 'editor', department: '機器管理・人工呼吸' },
+            '血液浄化': { code: 'secure_Hemodialysis_6735_ce_system', role: 'editor', department: '血液浄化' },
+            '不整脈': { code: 'secure_Arrhythm_6551_ce_system', role: 'editor', department: '不整脈' },
+            '人工心肺・補助循環': { code: 'secure_CpbEcmo_6288_ce_system', role: 'editor', department: '人工心肺・補助循環' },
+            '心・カテーテル': { code: 'secure_CardCath_6925_ce_system', role: 'editor', department: '心・カテーテル' },
+            'モニター': { code: 'secure_CEmonitor_1122_ce_system', role: 'monitor', department: null },
+            '管理者': { code: 'secure_CEadmin_5711_ce_system', role: 'admin', department: null }
+        };
+    }
+
+    // 重要な関数の定義
+    if (typeof window.handleUserIdChange !== 'function') {
+        window.handleUserIdChange = function() {
+            const userId = document.getElementById('userId');
+            const nameDiv = document.getElementById('nameInputDiv');
+            const secDiv = document.getElementById('securityCodeDiv');
+            if (!userId || !nameDiv || !secDiv) return;
+            
+            if (userId.value === 'スタッフ') {
+                nameDiv.style.display = 'block';
+                secDiv.style.display = 'none';
+            } else if (userId.value) {
+                nameDiv.style.display = 'none';
+                secDiv.style.display = 'block';
+            } else {
+                nameDiv.style.display = 'none';
+                secDiv.style.display = 'none';
+            }
+        };
+    }
+
+    if (typeof window.initializeFirebase !== 'function') {
+        window.initializeFirebase = function() {
+            waitForFirebase(function() {
+                try {
+                    updateSyncStatus('connecting', 'Firebase Ver2接続中...');
+                    if (!firebase.apps.length) {
+                        firebase.initializeApp(firebaseConfig);
+                    }
+                    
+                    // 重要：グローバル変数に正しく代入
+                    database = firebase.database();
+                    auth = firebase.auth();
+
+                    database.ref('.info/connected').on('value', function(snapshot) {
+                        if (snapshot.val() === true) {
+                            updateSyncStatus('connected', 'Ver2リアルタイム同期中');
+                            isFirebaseReady = true;
+                        } else {
+                            updateSyncStatus('disconnected', '接続失敗');
+                            isFirebaseReady = false;
+                        }
+                    });
+
+                    auth.signInAnonymously()
+                        .then(() => {
+                            const statusEl = document.getElementById('firebaseConnectionStatus');
+                            if (statusEl) statusEl.textContent = 'Ver2接続中';
+                        })
+                        .catch(error => {
+                            updateSyncStatus('disconnected', '認証失敗');
+                            showMessage('Firebase認証に失敗しました: ' + error.message, 'error');
+                        });
+                } catch (error) {
+                    updateSyncStatus('disconnected', '初期化失敗');
+                    showMessage('Firebase初期化に失敗しました: ' + error.message, 'error');
+                }
+            });
+        };
+    }
+
+    if (typeof window.handleLogin !== 'function') {
+        window.handleLogin = function() {
+            const userId = document.getElementById('userId').value;
+            const nameInput = document.getElementById('nameInput').value.trim();
+            const securityInput = document.getElementById('securityInput').value;
+
+            if (!userId) return showMessage('ユーザーを選択してください', 'warning');
+
+            // 修正：正しい認証情報参照
+            const credential = window.AUTH_CREDENTIALS[userId];
+            if (!credential) return showMessage('無効なユーザーです', 'error');
+
+            let isValid = false;
+            let displayName = userId;
+            
+            if (credential.type === 'name') {
+                if (!nameInput) return showMessage('お名前を入力してください', 'warning');
+                isValid = true;
+                displayName = nameInput;
+            } else {
+                if (!securityInput) return showMessage('セキュリティコードを入力してください', 'warning');
+                isValid = securityInput === credential.code;
+            }
+
+            if (isValid) {
+                userRole = credential.role;
+                currentUser = displayName;
+                userDepartment = credential.department;
+                
+                localStorage.setItem('ceSystemLoggedInUser', JSON.stringify({
+                    id: currentUser, role: userRole, department: userDepartment, loginTime: new Date().toISOString()
+                }));
+                localStorage.setItem('ceSystemLoginExpiry', Date.now() + (24 * 60 * 60 * 1000));
+                
+                showMainInterface();
+                showMessage(`${userId}としてログインしました`, 'success');
+            } else {
+                showMessage('認証に失敗しました', 'error');
+            }
+        };
+    }
+
+    // その他の必要な関数
+    ['showMainInterface', 'setupAllEventListeners', 'restoreLoginState', 'setDefaultWeekMonday', 
+     'updateDateDisplay', 'showModal', 'closeModal', 'displayCEList', 'setupPermissions'].forEach(name => {
+        if (typeof window[name] !== 'function') {
+            window[name] = function() { console.log(`${name}: 基本実装`); };
+        }
+    });
+
+    // スタブ関数
+    ['tryRestoreFromLocalStorage', 'showScreen', 'updatePlacementSummary', 'renderDaySections', 
+     'loadChangeHistory', 'loadLoginStats', 'loadTemplateListUI', 'saveAllToFirebase', 
+     'loadAllFromFirebase', 'setupRealTimeSync', 'recordEditHistory', 'recordLoginEvent', 'setupAutoLogout'].forEach(name => {
+        if (typeof window[name] !== 'function') {
+            window[name] = function() { console.log(`${name}: 後で実装予定`); };
+        }
+    });
+
+    // 初期UI設定
+    function initUI() {
+        const userSelect = document.getElementById('userId');
+        if (userSelect && !userSelect.value) userSelect.value = 'スタッフ';
+        if (typeof handleUserIdChange === 'function') handleUserIdChange();
+    }
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', initUI);
+    } else {
+        initUI();
+    }
+
+    console.log('✅ Ver2安定版修復パッチ適用完了');
+})();
+// ===== Ver2 安定版修復パッチ終了 =====
         // ========= FIREBASE CONFIG END =========
 
          // ========= GLOBAL VARIABLES START (行数: 922-950) =========
@@ -1570,7 +1778,36 @@ function getWeekRef(subpath = 'state') {
     return database.ref(`${DATA_ROOT}/weeks/${getWeekKey()}/${subpath}`);
 }
 
-        // ========= DATE AND WEEK FUNCTIONS START (行数: 1222-1280) =========
+// ========= DATE AND WEEK FUNCTIONS START (行数: 1222-1280) =========
+
+// 週単位管理のための関数群（新規追加）
+let currentWeekListenerRef = null;
+
+function getMondayOfWeek(date) {
+    const d = new Date(date);
+    const day = d.getDay();
+    const diff = (day === 0 ? -6 : 1 - day);
+    d.setDate(d.getDate() + diff);
+    d.setHours(0,0,0,0);
+    return d;
+}
+
+function formatDateYYYYMMDD(d) {
+    const y = d.getFullYear();
+    const m = String(d.getMonth()+1).padStart(2,'0');
+    const da = String(d.getDate()).padStart(2,'0');
+    return `${y}-${m}-${da}`;
+}
+
+function getWeekKey(date = weekStartDate) {
+    return formatDateYYYYMMDD(getMondayOfWeek(date));
+}
+
+function getWeekRef(subpath = 'state') {
+    if (!database) return null;
+    return database.ref(`${DATA_ROOT}/weeks/${getWeekKey()}/${subpath}`);
+}
+
         function setDefaultWeekMonday() {
             const today = new Date();
             const dayOfWeek = today.getDay();
@@ -2167,6 +2404,7 @@ window.removeCEAssignment = removeCEAssignment;
                 console.error('ローカルストレージ復元エラー:', error);
             }
         }
+
 function getWeekCacheKey() {
     return `weekCache_${getWeekKey()}`;
 }
@@ -2212,6 +2450,7 @@ function loadWeekFromCache() {
         return false;
     }
 }
+
         async function saveAllToFirebase() {
             // ローカルストレージに保存
             try {
