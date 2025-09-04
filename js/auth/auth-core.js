@@ -273,44 +273,49 @@ async loadUserProfile(uid) {
     }
 }
 
-// グローバルインスタンス作成（構文エラー修正版）
-let authSystemInstance;
-
-try {
-    authSystemInstance = new AuthSystemV2();
-    console.log('✅ 認証システムインスタンス作成完了');
-} catch (error) {
-    console.error('❌ 認証システム作成エラー:', error);
-    authSystemInstance = null;
-}
-
-// グローバル関数として安全に公開
-if (typeof window !== 'undefined' && authSystemInstance) {
-    window.handleUserIdChange = function() {
-        try {
-            return authSystemInstance.handleUserIdChange();
-        } catch (error) {
-            console.error('handleUserIdChange エラー:', error);
-        }
-    };
+// グローバルインスタンス作成（重複防止版）
+(function() {
+    // 重複作成防止
+    if (window.authSystem) {
+        console.log('ℹ️ 認証システム既に初期化済み');
+        return;
+    }
     
-    window.handleLogin = function() {
-        try {
-            return authSystemInstance.handleLogin();
-        } catch (error) {
-            console.error('handleLogin エラー:', error);
-        }
-    };
-    
-    window.handleLogout = function() {
-        try {
-            return authSystemInstance.handleLogout();
-        } catch (error) {
-            console.error('handleLogout エラー:', error);
-        }
-    };
-    
-    window.authSystem = authSystemInstance;
-}
+    try {
+        window.authSystem = new AuthSystemV2();
+        console.log('✅ 認証システムインスタンス作成完了');
+        
+        // グローバル関数として安全に公開
+        window.handleUserIdChange = function() {
+            try {
+                return window.authSystem.handleUserIdChange();
+            } catch (error) {
+                console.error('handleUserIdChange エラー:', error);
+            }
+        };
+        
+        window.handleLogin = function() {
+            try {
+                return window.authSystem.handleLogin();
+            } catch (error) {
+                console.error('handleLogin エラー:', error);
+            }
+        };
+        
+        window.handleLogout = function() {
+            try {
+                return window.authSystem.handleLogout();
+            } catch (error) {
+                console.error('handleLogout エラー:', error);
+            }
+        };
+        
+        console.log('✅ グローバル関数設定完了');
+        
+    } catch (error) {
+        console.error('❌ 認証システム作成エラー:', error);
+        window.authSystem = null;
+    }
+})();
 
 console.log('🔒 認証システムコア読み込み完了');
