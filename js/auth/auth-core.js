@@ -273,13 +273,44 @@ async loadUserProfile(uid) {
     }
 }
 
-// グローバルインスタンス作成
-const authSystem = new AuthSystemV2();
+// グローバルインスタンス作成（構文エラー修正版）
+let authSystemInstance;
 
-// グローバル関数として公開
-window.handleUserIdChange = () => authSystem.handleUserIdChange();
-window.handleLogin = () => authSystem.handleLogin();
-window.handleLogout = () => authSystem.handleLogout();
-window.authSystem = authSystem;
+try {
+    authSystemInstance = new AuthSystemV2();
+    console.log('✅ 認証システムインスタンス作成完了');
+} catch (error) {
+    console.error('❌ 認証システム作成エラー:', error);
+    authSystemInstance = null;
+}
+
+// グローバル関数として安全に公開
+if (typeof window !== 'undefined' && authSystemInstance) {
+    window.handleUserIdChange = function() {
+        try {
+            return authSystemInstance.handleUserIdChange();
+        } catch (error) {
+            console.error('handleUserIdChange エラー:', error);
+        }
+    };
+    
+    window.handleLogin = function() {
+        try {
+            return authSystemInstance.handleLogin();
+        } catch (error) {
+            console.error('handleLogin エラー:', error);
+        }
+    };
+    
+    window.handleLogout = function() {
+        try {
+            return authSystemInstance.handleLogout();
+        } catch (error) {
+            console.error('handleLogout エラー:', error);
+        }
+    };
+    
+    window.authSystem = authSystemInstance;
+}
 
 console.log('🔒 認証システムコア読み込み完了');
