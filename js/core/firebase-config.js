@@ -90,3 +90,18 @@ if (typeof window.firebaseConfigV2 !== 'undefined') {
 
     console.log('🔒 Firebase設定ファイル読み込み完了');
 }
+// 既存のサービス取得後に以下を追加
+window.auth = firebase.auth();
+window.database = firebase.database();
+
+// 匿名認証の自動実行（開発用）
+window.auth.onAuthStateChanged((user) => {
+    if (user) {
+        console.log('✅ 認証状態:', user.isAnonymous ? '匿名ユーザー' : user.email);
+    } else {
+        console.log('🔄 匿名認証を実行中...');
+        window.auth.signInAnonymously().catch((error) => {
+            console.error('❌ 匿名認証失敗:', error);
+        });
+    }
+});
