@@ -26,45 +26,54 @@ if (typeof window.firebaseConfigV2 !== 'undefined') {
     window.isFirebaseReady = false;
 
     // Firebase初期化関数
-    function initializeFirebaseV2() {
-        try {
-            console.log('🔄 Firebase V2 初期化開始');
-            
-            // Firebase SDK確認
-            if (typeof firebase === 'undefined') {
-                console.error('❌ Firebase SDK未読み込み');
-                setTimeout(initializeFirebaseV2, 1000);
-                return;
-            }
-
-            // Firebase初期化
-            if (!firebase.apps || firebase.apps.length === 0) {
-                firebase.initializeApp(window.firebaseConfigV2);
-                console.log('✅ Firebase アプリ初期化完了');
-            }
-            
-            // サービス取得
-            window.auth = firebase.auth();
-            window.database = firebase.database();
-            
-            // 接続状態監視
-            window.database.ref('.info/connected').on('value', function(snapshot) {
-                if (snapshot.val() === true) {
-                    console.log('✅ Firebase接続成功');
-                    window.isFirebaseReady = true;
-                    updateConnectionStatus('connected');
-                } else {
-                    console.log('❌ Firebase接続失敗');
-                    window.isFirebaseReady = false;
-                    updateConnectionStatus('disconnected');
-                }
-            });
-            
-        } catch (error) {
-            console.error('❌ Firebase初期化エラー:', error);
-            updateConnectionStatus('error');
+function initializeFirebaseV2() {
+    try {
+        console.log('🔄 Firebase V2 初期化開始');
+        
+        // 重要：SDK確認（auth()を呼ぶ前に必須）
+        if (typeof firebase === 'undefined') {
+            console.log('⏳ Firebase SDK読み込み待機中...');
+            setTimeout(initializeFirebaseV2, 500);
+            return;
         }
+
+        // 重要：Firebase App初期化（auth()より前に必須）
+        try {
+            firebase.app(); // 既存確認
+            console.log('ℹ️ Firebase App既に存在');
+        } catch (e) {
+            firebase.initializeApp(window.firebaseConfigV2);
+            console.log('✅ Firebase App初期化完了');
+        }
+        
+        // 初期化後にサービス取得
+        window.auth = firebase.auth();
+        window.database = firebase.database();
+        
+        // 接続監視
+        window.database.ref('.info/connected').on('value', function(snapshot) {
+            const isConnected = snapshot.val();
+            window.isFirebaseReady = isConnected;
+            updateConnectionStatus(isConnected ? 'connected' : 'disconnected');
+            console.log(isConnected ? '✅ Firebase接続成功' : '❌ Firebase接続失敗');
+        });
+        
+        // 匿名認証（開発用）
+        window.auth.onAuthStateChanged(function(user) {
+            if (!user) {
+                window.auth.signInAnonymously().catch(function(error) {
+                    console.warn('⚠️ 匿名認証失敗:', error.message);
+                });
+            } else {
+                console.log('🔐 Firebase認証状態: 匿名ユーザー');
+            }
+        });
+        
+    } catch (error) {
+        console.error('❌ Firebase初期化エラー:', error);
+        updateConnectionStatus('error');
     }
+}
 
     // 接続状態表示更新
     function updateConnectionStatus(status) {
