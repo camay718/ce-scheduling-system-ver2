@@ -1,99 +1,92 @@
 /*
-==========================================
-🔒 Firebase設定 - CRITICAL CONFIGURATION
-このファイルはシステム接続の根幹です
-変更時は必ずバックアップを取ってください
-==========================================
+🔒 Firebase設定 - V2専用（重複定義防止版）
 */
 
-// Firebase設定（既存の設定を使用）
-const firebaseConfig = {
-    apiKey: "AIzaSyD-9gMA2Q_xopDS_FTbvOlMANy5MHP830g",
-    authDomain: "ce-scheduling-system-v2.firebaseapp.com",
-    databaseURL: "https://ce-scheduling-system-v2-default-rtdb.asia-southeast1.firebasedatabase.app",
-    projectId: "ce-scheduling-system-v2",
-    storageBucket: "ce-scheduling-system-v2.appspot.com",
-    messagingSenderId: "288279598010",
-    appId: "1:288279598010:web:d545ee1d4d854513084383",
-    measurementId: "G-LSEEMJE2R0"
-};
+// 重複定義防止
+if (typeof window.firebaseConfigV2 !== 'undefined') {
+    console.warn('⚠️ Firebase設定は既に読み込み済みです');
+} else {
+    // あなたの実際のFirebase設定値に置き換えてください
+    window.firebaseConfigV2 = {
+        apiKey: "AIzaSyD-9gMA2Q_xopDS_FTbvOlMANy5MHP830g",
+  authDomain: "ce-scheduling-system-v2.firebaseapp.com",
+  databaseURL: "https://ce-scheduling-system-v2-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "ce-scheduling-system-v2",
+  storageBucket: "ce-scheduling-system-v2.appspot.com",
+  messagingSenderId: "288279598010",
+  appId: "1:288279598010:web:d545ee1d4d854513084383",
+  measurementId: "G-LSEEMJE2R0"
+    };
+    // V2用データルート
+    window.DATA_ROOT = 'ceScheduleV2';
 
-// V2用データルート
-const DATA_ROOT = 'ceScheduleV2';
+    // Firebase サービス変数
+    window.database = null;
+    window.auth = null;
+    window.isFirebaseReady = false;
 
-// Firebase サービス変数
-let app = null;
-let database = null;
-let auth = null;
-let isFirebaseReady = false;
-
-// Firebase初期化関数
-function initializeFirebaseV2() {
-    try {
-        console.log('🔄 Firebase V2 初期化開始');
-        
-        // Firebase初期化
-        if (!firebase.apps.length) {
-            app = firebase.initializeApp(firebaseConfig);
-        } else {
-            app = firebase.apps[0];
-        }
-        
-        // サービス取得
-        auth = firebase.auth();
-        database = firebase.database();
-        
-        // 接続状態監視
-        database.ref('.info/connected').on('value', function(snapshot) {
-            if (snapshot.val() === true) {
-                console.log('✅ Firebase接続成功');
-                isFirebaseReady = true;
-                updateConnectionStatus('connected');
-            } else {
-                console.log('❌ Firebase接続失敗');
-                isFirebaseReady = false;
-                updateConnectionStatus('disconnected');
+    // Firebase初期化関数
+    function initializeFirebaseV2() {
+        try {
+            console.log('🔄 Firebase V2 初期化開始');
+            
+            // Firebase SDK確認
+            if (typeof firebase === 'undefined') {
+                console.error('❌ Firebase SDK未読み込み');
+                setTimeout(initializeFirebaseV2, 1000);
+                return;
             }
+
+            // Firebase初期化
+            if (!firebase.apps || firebase.apps.length === 0) {
+                firebase.initializeApp(window.firebaseConfigV2);
+                console.log('✅ Firebase アプリ初期化完了');
+            }
+            
+            // サービス取得
+            window.auth = firebase.auth();
+            window.database = firebase.database();
+            
+            // 接続状態監視
+            window.database.ref('.info/connected').on('value', function(snapshot) {
+                if (snapshot.val() === true) {
+                    console.log('✅ Firebase接続成功');
+                    window.isFirebaseReady = true;
+                    updateConnectionStatus('connected');
+                } else {
+                    console.log('❌ Firebase接続失敗');
+                    window.isFirebaseReady = false;
+                    updateConnectionStatus('disconnected');
+                }
+            });
+            
+        } catch (error) {
+            console.error('❌ Firebase初期化エラー:', error);
+            updateConnectionStatus('error');
+        }
+    }
+
+    // 接続状態表示更新
+    function updateConnectionStatus(status) {
+        const statusElement = document.getElementById('firebaseStatus');
+        if (statusElement) {
+            const statusText = {
+                connected: '✅ Firebase接続中',
+                disconnected: '❌ Firebase未接続',
+                error: '⚠️ Firebase接続エラー'
+            };
+            statusElement.textContent = statusText[status] || '❓ 状態不明';
+        }
+    }
+
+    // 初期化実行
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', () => {
+            setTimeout(initializeFirebaseV2, 100);
         });
-        
-        console.log('✅ Firebase V2 初期化完了');
-        return true;
-    } catch (error) {
-        console.error('❌ Firebase初期化エラー:', error);
-        updateConnectionStatus('error');
-        return false;
+    } else {
+        setTimeout(initializeFirebaseV2, 100);
     }
+
+    console.log('🔒 Firebase設定ファイル読み込み完了');
 }
-
-// 接続状態表示更新
-function updateConnectionStatus(status) {
-    const statusElement = document.getElementById('firebaseStatus');
-    if (statusElement) {
-        const statusText = {
-            connected: '✅ Firebase接続中',
-            disconnected: '❌ Firebase未接続',
-            error: '⚠️ Firebase接続エラー'
-        };
-        statusElement.textContent = statusText[status] || '❓ 状態不明';
-    }
-}
-
-// グローバル公開（保護）
-Object.defineProperty(window, 'firebaseConfig', {
-    value: firebaseConfig,
-    writable: false,
-    configurable: false
-});
-
-Object.defineProperty(window, 'DATA_ROOT', {
-    value: DATA_ROOT,
-    writable: false,
-    configurable: false
-});
-
-// 初期化実行
-document.addEventListener('DOMContentLoaded', () => {
-    initializeFirebaseV2();
-});
-
-console.log('🔒 Firebase設定ファイル読み込み完了');
