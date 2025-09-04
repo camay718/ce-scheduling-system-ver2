@@ -41,51 +41,38 @@
         </div>
     </div>
 
-    <!-- ========= JavaScript読み込み（順序重要）========= -->
-    <!-- 1. Firebase設定（最優先） -->
-    <script src="js/core/firebase-config.js"></script>
+<!-- JavaScript読み込み（順序重要） -->
+
+<!-- 1. V2専用スクリプト（Firebase CDNの後に配置） -->
+<script src="js/core/firebase-config.js"></script>
+<script src="js/auth/auth-core.js"></script>
+<script src="js/auth/login-ui.js"></script>
+
+<!-- 2. 残りのV1機能（最小限） -->
+<script>
+    // ここには、上記で分離していないV1機能のみを配置
+    // 例：globalTasksData, CE_LIST, その他の業務管理関数など
     
-    <!-- 2. 認証システム -->
-    <script src="js/auth/auth-core.js"></script>
-    <script src="js/auth/login-ui.js"></script>
-
-    <!-- 3. 既存のV1機能（後で段階的に分離） -->
-    <script>
-        // 既存のV1 JavaScriptコードをここに一時的に配置
-        // 後のPhaseで段階的に外部ファイルに移動します
-        
-        // ここに現在のindex.htmlの<script>タグ内容をコピー
-        // ただし、以下は除外：
-        // - firebaseConfig関連（既に分離済み）
-        // - handleUserIdChange, handleLogin関連（既に分離済み）
-        // - Ver2安定版修復パッチ（不要）
-    </script>
-
-    <!-- 4. 保護システム -->
-    <script>
-        // 認証モジュール保護
-        (function() {
-            'use strict';
-            
-            console.log('🔒 Phase 1 保護システム開始');
-            
-            // 重要オブジェクトの保護
-            if (window.authSystem) {
-                Object.freeze(window.authSystem);
-                console.log('🔒 認証システム保護完了');
-            }
-            
-            // 整合性チェック（30秒ごと）
-            setInterval(() => {
-                if (!window.authSystem || typeof window.authSystem.handleLogin !== 'function') {
-                    console.error('🚨 認証システム破損検出');
-                    alert('重要なシステムコンポーネントが破損しました。ページを再読み込みします。');
-                    location.reload();
-                }
-            }, 30000);
-            
-            console.log('✅ Phase 1 保護システム初期化完了');
-        })();
-    </script>
+    // 重要：以下は削除済みのため含めない
+    // - firebaseConfig
+    // - AUTH_CREDENTIALS
+    // - handleUserIdChange
+    // - handleLogin
+    // - initializeFirebase
+    
+    // 例：
+    let globalTasksData = { 
+        monday: [], tuesday: [], wednesday: [], thursday: [], 
+        friday: [], saturday: [], sunday: [] 
+    };
+    let globalAssignmentsData = { 
+        monday: {}, tuesday: {}, wednesday: {}, thursday: {}, 
+        friday: {}, saturday: {}, sunday: {} 
+    };
+    
+    // その他のV1機能...
+    
+    console.log('📋 V1機能読み込み完了');
+</script>
 </body>
 </html>
