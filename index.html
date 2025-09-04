@@ -959,15 +959,15 @@
     <script>
         // ========= FIREBASE CONFIG START (行数: 907-920) =========
         const firebaseConfig = {
-            apiKey: "AIzaSyD-9gMA2Q_xopDS_FTbvOlMANy5MHP830g",
-  　　　　　　authDomain: "ce-scheduling-system-v2.firebaseapp.com",
- 　　　　　　 databaseURL: "https://ce-scheduling-system-v2-default-rtdb.asia-southeast1.firebasedatabase.app",
- 　　　　　　 projectId: "ce-scheduling-system-v2",
- 　　　　　　 storageBucket: "ce-scheduling-system-v2.firebasestorage.app",
- 　　　　　　 messagingSenderId: "288279598010",
- 　　　　　　 appId: "1:288279598010:web:d545ee1d4d854513084383",
- 　　　　　　 measurementId: "G-LSEEMJE2R0"
-        };
+    apiKey: "AIzaSyD-9gMA2Q_xopDS_FTbvOlMANy5MHP830g",
+    authDomain: "ce-scheduling-system-v2.firebaseapp.com",
+    databaseURL: "https://ce-scheduling-system-v2-default-rtdb.asia-southeast1.firebasedatabase.app",
+    projectId: "ce-scheduling-system-v2",
+    storageBucket: "ce-scheduling-system-v2.firebasestorage.app",
+    messagingSenderId: "288279598010",
+    appId: "1:288279598010:web:d545ee1d4d854513084383",
+    measurementId: "G-LSEEMJE2R0"
+};
 
         const DATA_ROOT = 'ceScheduleSystem/v2';
         // ========= FIREBASE CONFIG END =========
@@ -1542,6 +1542,34 @@ actionButtons.forEach(btn => {
 }
         // ========= LOGIN FUNCTIONS END =========
 
+// 週単位管理のための関数群
+let currentWeekListenerRef = null;
+
+function getMondayOfWeek(date) {
+    const d = new Date(date);
+    const day = d.getDay();
+    const diff = (day === 0 ? -6 : 1 - day);
+    d.setDate(d.getDate() + diff);
+    d.setHours(0,0,0,0);
+    return d;
+}
+
+function formatDateYYYYMMDD(d) {
+    const y = d.getFullYear();
+    const m = String(d.getMonth()+1).padStart(2,'0');
+    const da = String(d.getDate()).padStart(2,'0');
+    return `${y}-${m}-${da}`;
+}
+
+function getWeekKey(date = weekStartDate) {
+    return formatDateYYYYMMDD(getMondayOfWeek(date));
+}
+
+function getWeekRef(subpath = 'state') {
+    if (!database) return null;
+    return database.ref(`${DATA_ROOT}/weeks/${getWeekKey()}/${subpath}`);
+}
+
         // ========= DATE AND WEEK FUNCTIONS START (行数: 1222-1280) =========
         function setDefaultWeekMonday() {
             const today = new Date();
@@ -1552,17 +1580,22 @@ actionButtons.forEach(btn => {
             document.getElementById('weekStartDate').value = weekStartDate.toISOString().split('T')[0];
         }
 
-        function setWeekStartDate() {
-            const selectedDate = new Date(document.getElementById('weekStartDate').value);
-            if (isNaN(selectedDate.getTime())) {
-                showMessage('有効な日付を選択してください', 'warning');
-                return;
-            }
-            weekStartDate = selectedDate;
-            updateDateDisplay();
-            showMessage('週開始日を設定しました', 'success');
-        }
-
+function setWeekStartDate() {
+    const selectedDate = new Date(document.getElementById('weekStartDate').value);
+    if (isNaN(selectedDate.getTime())) {
+        showMessage('有効な日付を選択してください', 'warning');
+        return;
+    }
+    weekStartDate = selectedDate;
+    updateDateDisplay();
+    
+    // 週切替時の処理を追加
+    setupWeekRealtimeSync();
+    loadAllFromFirebase();
+    saveWeekToCache();
+    
+    showMessage('週開始日を設定しました', 'success');
+}
  function updateDateDisplay() {
     const dateIds = ['mondayDate', 'tuesdayDate', 'wednesdayDate', 'thursdayDate', 'fridayDate', 'saturdayDate', 'sundayDate'];
     dateIds.forEach((id, index) => {
@@ -2134,7 +2167,51 @@ window.removeCEAssignment = removeCEAssignment;
                 console.error('ローカルストレージ復元エラー:', error);
             }
         }
+function getWeekCacheKey() {
+    return `weekCache_${getWeekKey()}`;
+}
 
+function saveWeekToCache() {
+    try {
+        const cache = {
+            tasks: globalTasksData,
+            assignments: globalAssignmentsData,
+            ceList: CE_LIST,
+            lastUpdated: Date.now()
+        };
+        localStorage.setItem(getWeekCacheKey(), JSON.stringify(cache));
+        console.log('✅ 週キャッシュ保存完了:', getWeekCacheKey());
+    } catch(e) {
+        console.warn('❌ キャッシュ保存エラー:', e);
+    }
+}
+
+function loadWeekFromCache() {
+    try {
+        const cacheKey = getWeekCacheKey();
+        const raw = localStorage.getItem(cacheKey);
+        if (!raw) {
+            console.log('ℹ️ キャッシュなし:', cacheKey);
+            return false;
+        }
+        
+        const cache = JSON.parse(raw);
+        if (!cache || !cache.tasks) {
+            console.warn('⚠️ 無効なキャッシュデータ:', cacheKey);
+            return false;
+        }
+        
+        globalTasksData = cache.tasks || globalTasksData;
+        globalAssignmentsData = cache.assignments || globalAssignmentsData;
+        CE_LIST = cache.ceList || CE_LIST;
+        
+        console.log('✅ 週キャッシュ読込完了:', cacheKey, '更新日時:', new Date(cache.lastUpdated));
+        return true;
+    } catch(e) {
+        console.warn('❌ キャッシュ読込エラー:', e);
+        return false;
+    }
+}
         async function saveAllToFirebase() {
             // ローカルストレージに保存
             try {
@@ -2157,7 +2234,8 @@ window.removeCEAssignment = removeCEAssignment;
             };
 
             try {
-                await database.ref(`${DATA_ROOT}/state`).set(saveData);
+                const ref = getWeekRef('state');
+await ref.set(saveData);
                 updateSyncTime();
                 return true;
             } catch (error) {
@@ -2167,75 +2245,72 @@ window.removeCEAssignment = removeCEAssignment;
             }
         }
 
-     async function loadAllFromFirebase() {
+async function loadAllFromFirebase() {
     if (!isFirebaseReady || !database) return;
 
-    // ローカルにデータがあるかチェック
-    const hasLocalData = (data) => {
-        return ['monday','tuesday','wednesday','thursday','friday'].some(d => (data[d] || []).length > 0);
-    };
+    // 1) ローカルキャッシュを即時適用
+    if (loadWeekFromCache()) {
+        updateAllDisplays();
+    }
 
     try {
-        const snapshot = await database.ref(`${DATA_ROOT}/state`).once('value');
-        const localHasData = hasLocalData(globalTasksData);
+        // 2) 週パスから取得
+        const ref = getWeekRef('state');
+        let snapshot = await ref.once('value');
+
+        // 3) 新パスにデータが無い場合、旧パスから移行
+        if (!snapshot.exists()) {
+            const oldSnap = await database.ref(`${DATA_ROOT}/state`).once('value');
+            if (oldSnap.exists()) {
+                const data = oldSnap.val();
+                await ref.set(data);
+                snapshot = await ref.once('value');
+            }
+        }
 
         if (snapshot.exists()) {
             const data = snapshot.val() || {};
-            const serverHasData = hasLocalData(data.tasks);
-
-            if (serverHasData) {
-                // サーバにデータあり → サーバを採用
-                globalTasksData = data.tasks || globalTasksData;
-                globalAssignmentsData = data.assignments || globalAssignmentsData;
-                CE_LIST = data.ceList || CE_LIST;
-                console.log('✅ Firebaseからデータを読み込みました');
-            } else if (localHasData) {
-                // サーバ空・ローカル有 → ローカルをサーバへ反映
-                console.log('🔄 ローカルデータをFirebaseに保存します');
-                await saveAllToFirebase();
-            }
+            globalTasksData = data.tasks || globalTasksData;
+            globalAssignmentsData = data.assignments || globalAssignmentsData;
+            CE_LIST = data.ceList || CE_LIST;
+            saveWeekToCache();
+            updateAllDisplays();
+            setupWeekRealtimeSync();
         } else {
-            // サーバキー未作成 → 初期データ作成
-            if (localHasData) {
-                await saveAllToFirebase();
-            } else {
-                await database.ref(`${DATA_ROOT}/state`).set({
-                    tasks: globalTasksData,
-                    assignments: globalAssignmentsData,
-                    ceList: CE_LIST,
-                    lastUpdatedBy: currentUser || 'System',
-                    lastUpdated: Date.now(),
-                    timestamp: new Date().toISOString()
-                });
-            }
+            await saveAllToFirebase();
+            setupWeekRealtimeSync();
         }
-
-        updateAllDisplays();
-        loadTemplateListUI();
     } catch (error) {
         console.error('Firebase読込エラー:', error);
-        showMessage('Firebase読込に失敗しました（ローカルデータを使用）', 'warning');
+        showMessage('Firebase読込に失敗しました（キャッシュを使用）', 'warning');
+        updateAllDisplays();
+        setupWeekRealtimeSync();
     }
 }
-
-        function setupRealTimeSync() {
-            if (!isFirebaseReady || !database) return;
-
-            database.ref(`${DATA_ROOT}/state`).on('value', snapshot => {
-                if (!snapshot.exists()) return;
-                
-                const data = snapshot.val();
-                if (data.lastUpdatedBy === currentUser) return;
-                
-                globalTasksData = data.tasks || globalTasksData;
-                globalAssignmentsData = data.assignments || globalAssignmentsData;
-                CE_LIST = data.ceList || CE_LIST;
-                
-                updateAllDisplays();
-                showMessage(`${data.lastUpdatedBy}の変更を同期しました`, 'info');
-                updateSyncTime();
-            });
-        }
+function setupWeekRealtimeSync() {
+    if (!isFirebaseReady || !database) return;
+    
+    // 既存リスナーを外す
+    if (currentWeekListenerRef) currentWeekListenerRef.off();
+    
+    // 新しい週のリスナーを設定
+    const ref = getWeekRef('state');
+    currentWeekListenerRef = ref;
+    ref.on('value', snapshot => {
+        if (!snapshot.exists()) return;
+        const data = snapshot.val();
+        if (data.lastUpdatedBy === currentUser) return;
+        
+        globalTasksData = data.tasks || globalTasksData;
+        globalAssignmentsData = data.assignments || globalAssignmentsData;
+        CE_LIST = data.ceList || CE_LIST;
+        
+        updateAllDisplays();
+        saveWeekToCache();
+        showMessage(`${data.lastUpdatedBy}の変更を同期しました`, 'info');
+        updateSyncTime();
+    });
+}
 
 function updateAllDisplays() {
     console.log('🔄 全表示を更新中...');
