@@ -1,16 +1,8 @@
 /*
-==========================================
-🔒 認証システムコア - CRITICAL SECURITY FILE
-このファイルはシステムセキュリティの根幹です
-
-変更時の必須事項：
-1. 完全バックアップの取得
-2. テスト環境での動作確認
-3. 段階的な実装とテスト
-==========================================
+🔒 認証システムコア - V2専用（安全初期化版）
 */
 
-// V1認証情報（既存システムとの互換性のため保持）
+// V1認証情報
 const AUTH_CREDENTIALS = {
     'スタッフ': { type: 'name', role: 'viewer', department: null },
     '手術・麻酔': { code: 'secure_SurgAnest_6917_ce_system', role: 'editor', department: '手術・麻酔' },
@@ -33,34 +25,65 @@ class AuthSystemV2 {
         this.isReady = false;
         
         console.log('🔐 認証システムV2 初期化中...');
-        this.initialize();
+        
+        // Firebase準備完了を待ってから初期化
+        this.waitForFirebaseAndInitialize();
     }
 
-    async initialize() {
-        // Firebase認証状態の監視
-        if (typeof firebase !== 'undefined' && firebase.auth) {
-            firebase.auth().onAuthStateChanged(async (user) => {
-                if (user) {
-                    console.log('✅ Firebase認証ユーザー検出:', user.email);
-                    this.currentUser = user.email;
-                    await this.loadUserProfile(user.uid);
-                    this.showMainInterface();
-                } else {
-                    console.log('ℹ️ Firebase認証なし - V1認証システム使用');
-                    this.currentUser = null;
-                    this.userProfile = null;
-                    this.showLoginInterface();
-                }
+    async waitForFirebaseAndInitialize() {
+        // Firebase初期化完了まで待機（最大30秒）
+        let attempts = 0;
+        const maxAttempts = 300; // 30秒 (100ms × 300回)
+        
+        while (attempts < maxAttempts) {
+            if (window.isFirebaseReady && window.auth) {
+                console.log('✅ Firebase準備完了、認証システム初期化開始');
+                this.initialize();
+                return;
+            }
+            
+            await new Promise(resolve => setTimeout(resolve, 100));
+            attempts++;
+            
+            if (attempts % 50 === 0) { // 5秒ごとにログ出力
+                console.log('⏳ Firebase準備待ち...', attempts / 10, '秒経過');
+            }
+        }
+        
+        // タイムアウト時はV1システムで継続
+        console.warn('⚠️ Firebase初期化タイムアウト - V1システムで継続');
+        this.showLoginInterface();
+        this.isReady = true;
+    }
+
+    initialize() {
+        try {
+            if (window.auth) {
+                window.auth.onAuthStateChanged(async (user) => {
+                    if (user) {
+                        console.log('✅ Firebase認証ユーザー検出:', user.email);
+                        this.currentUser = user.email;
+                        await this.loadUserProfile(user.uid);
+                        this.showMainInterface();
+                    } else {
+                        console.log('ℹ️ Firebase認証なし - V1認証システム使用');
+                        this.showLoginInterface();
+                    }
+                    this.isReady = true;
+                });
+            } else {
+                console.log('⚠️ Firebase Auth未準備 - V1認証システムで継続');
+                this.showLoginInterface();
                 this.isReady = true;
-            });
-        } else {
-            // Firebase未準備の場合はV1システムを使用
-            console.log('⚠️ Firebase未準備 - V1認証システムで継続');
+            }
+        } catch (error) {
+            console.error('❌ 認証システム初期化エラー:', error);
+            this.showLoginInterface();
             this.isReady = true;
         }
     }
 
-    // V1互換ログイン処理
+    // V1互換関数
     handleUserIdChange() {
         const userId = document.getElementById('userId');
         const nameDiv = document.getElementById('nameInputDiv');
@@ -82,14 +105,13 @@ class AuthSystemV2 {
         }
     }
 
-    // V1互換ログイン処理
     handleLogin() {
         const userId = document.getElementById('userId').value;
         const nameInput = document.getElementById('nameInput').value.trim();
         const securityInput = document.getElementById('securityInput').value;
 
         if (!userId) {
-            this.showMessage('ユーザーを選択してください', 'error');
+            this.showMessage('ユーザーを選択してください', 'warning');
             return;
         }
 
@@ -104,14 +126,14 @@ class AuthSystemV2 {
         
         if (credential.type === 'name') {
             if (!nameInput) {
-                this.showMessage('お名前を入力してください', 'error');
+                this.showMessage('お名前を入力してください', 'warning');
                 return;
             }
             isValid = true;
             displayName = nameInput;
         } else {
             if (!securityInput) {
-                this.showMessage('セキュリティコードを入力してください', 'error');
+                this.showMessage('セキュリティコードを入力してください', 'warning');
                 return;
             }
             isValid = securityInput === credential.code;
@@ -122,7 +144,6 @@ class AuthSystemV2 {
             this.currentUser = displayName;
             this.userDepartment = credential.department;
             
-            // ログイン状態保存
             const loginExpiry = Date.now() + (24 * 60 * 60 * 1000);
             localStorage.setItem('ceSystemLoggedInUser', JSON.stringify({
                 id: this.currentUser,
@@ -139,7 +160,6 @@ class AuthSystemV2 {
         }
     }
 
-    // ログアウト処理
     handleLogout() {
         if (confirm('ログアウトしますか？')) {
             this.currentUser = null;
@@ -154,7 +174,6 @@ class AuthSystemV2 {
         }
     }
 
-    // ログイン状態復元
     restoreLoginState() {
         try {
             const savedUser = localStorage.getItem('ceSystemLoggedInUser');
@@ -184,50 +203,6 @@ class AuthSystemV2 {
         }
     }
 
-    // ユーザープロファイル読み込み（V2用）
-    async loadUserProfile(uid) {
-        if (!database) return null;
-        
-        try {
-            const snapshot = await database.ref(`${DATA_ROOT}/users/${uid}`).once('value');
-            this.userProfile = snapshot.val();
-            
-            if (!this.userProfile) {
-                console.warn('⚠️ ユーザープロファイルが見つかりません');
-                await this.createDefaultProfile(uid);
-            }
-            
-            return this.userProfile;
-        } catch (error) {
-            console.error('❌ プロファイル読み込みエラー:', error);
-            return null;
-        }
-    }
-
-    // デフォルトプロファイル作成
-    async createDefaultProfile(uid) {
-        const defaultProfile = {
-            displayName: this.currentUser || 'ユーザー',
-            email: this.currentUser,
-            department: '未設定',
-            permissions: {
-                canView: ['all'],
-                canEdit: [],
-                isAdmin: false
-            },
-            createdAt: new Date().toISOString()
-        };
-
-        try {
-            await database.ref(`${DATA_ROOT}/users/${uid}`).set(defaultProfile);
-            this.userProfile = defaultProfile;
-            console.log('✅ デフォルトプロファイル作成完了');
-        } catch (error) {
-            console.error('❌ プロファイル作成エラー:', error);
-        }
-    }
-
-    // インターフェース切り替え
     showLoginInterface() {
         const loginScreen = document.getElementById('loginScreen');
         const mainInterface = document.getElementById('mainInterface');
@@ -245,7 +220,6 @@ class AuthSystemV2 {
         if (loginScreen) loginScreen.style.display = 'none';
         if (mainInterface) mainInterface.style.display = 'flex';
         
-        // ユーザー情報表示
         const userDisplay = document.getElementById('currentUserDisplay');
         if (userDisplay && this.currentUser) {
             userDisplay.textContent = this.currentUser;
@@ -254,7 +228,6 @@ class AuthSystemV2 {
         console.log('✅ メイン画面を表示');
     }
 
-    // メッセージ表示
     showMessage(text, type = 'info') {
         const container = document.getElementById('messageContainer');
         if (!container) {
@@ -270,52 +243,27 @@ class AuthSystemV2 {
         setTimeout(() => messageDiv.remove(), 4000);
     }
 
-    // 権限チェック
-    hasPermission(permission) {
-        switch (permission) {
-            case 'admin':
-                return this.userRole === 'admin';
-            case 'editor':
-                return ['editor', 'admin'].includes(this.userRole);
-            case 'viewer':
-                return ['viewer', 'editor', 'admin'].includes(this.userRole);
-            default:
-                return false;
+    async loadUserProfile(uid) {
+        if (!window.database) return null;
+        
+        try {
+            const snapshot = await window.database.ref(`${window.DATA_ROOT}/users/${uid}`).once('value');
+            this.userProfile = snapshot.val();
+            return this.userProfile;
+        } catch (error) {
+            console.error('❌ プロファイル読み込みエラー:', error);
+            return null;
         }
-    }
-
-    // 現在のユーザー情報取得
-    getCurrentUser() {
-        return {
-            name: this.currentUser,
-            role: this.userRole,
-            department: this.userDepartment,
-            profile: this.userProfile
-        };
     }
 }
 
-// グローバルインスタンス作成（保護対象）
+// グローバルインスタンス作成
 const authSystem = new AuthSystemV2();
 
-// グローバル公開（保護）
-Object.defineProperty(window, 'authSystem', {
-    value: authSystem,
-    writable: false,
-    configurable: false
-});
-
-// V1互換関数のグローバル公開
-Object.defineProperty(window, 'handleUserIdChange', {
-    value: () => authSystem.handleUserIdChange(),
-    writable: false,
-    configurable: false
-});
-
-Object.defineProperty(window, 'handleLogin', {
-    value: () => authSystem.handleLogin(),
-    writable: false,
-    configurable: false
-});
+// グローバル関数として公開
+window.handleUserIdChange = () => authSystem.handleUserIdChange();
+window.handleLogin = () => authSystem.handleLogin();
+window.handleLogout = () => authSystem.handleLogout();
+window.authSystem = authSystem;
 
 console.log('🔒 認証システムコア読み込み完了');
