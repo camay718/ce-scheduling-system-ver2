@@ -27,30 +27,40 @@ if (typeof window.firebaseConfigV2 !== 'undefined') {
 
     // Firebase初期化関数
 function initializeFirebaseV2() {
+    // 重複初期化防止
+    if (window.firebaseV2Initialized) {
+        console.log('ℹ️ Firebase V2 既に初期化済み');
+        return;
+    }
+    
     try {
         console.log('🔄 Firebase V2 初期化開始');
         
-        // 重要：SDK確認（auth()を呼ぶ前に必須）
+        // Step 1: SDK確認
         if (typeof firebase === 'undefined') {
             console.log('⏳ Firebase SDK読み込み待機中...');
             setTimeout(initializeFirebaseV2, 500);
             return;
         }
 
-        // 重要：Firebase App初期化（auth()より前に必須）
-        try {
-            firebase.app(); // 既存確認
-            console.log('ℹ️ Firebase App既に存在');
-        } catch (e) {
-            firebase.initializeApp(window.firebaseConfigV2);
+        // Step 2: App初期化（重要：auth()より前に必須）
+        let app;
+        if (firebase.apps.length === 0) {
+            app = firebase.initializeApp(window.firebaseConfigV2);
             console.log('✅ Firebase App初期化完了');
+        } else {
+            app = firebase.app();
+            console.log('ℹ️ Firebase App既に存在');
         }
         
-        // 初期化後にサービス取得
+        // Step 3: 初期化完了後にサービス取得
         window.auth = firebase.auth();
         window.database = firebase.database();
+        window.firebaseV2Initialized = true;
         
-        // 接続監視
+        console.log('✅ Firebase サービス取得完了');
+        
+        // Step 4: 接続監視
         window.database.ref('.info/connected').on('value', function(snapshot) {
             const isConnected = snapshot.val();
             window.isFirebaseReady = isConnected;
@@ -58,7 +68,7 @@ function initializeFirebaseV2() {
             console.log(isConnected ? '✅ Firebase接続成功' : '❌ Firebase接続失敗');
         });
         
-        // 匿名認証（開発用）
+        // Step 5: 匿名認証
         window.auth.onAuthStateChanged(function(user) {
             if (!user) {
                 window.auth.signInAnonymously().catch(function(error) {
