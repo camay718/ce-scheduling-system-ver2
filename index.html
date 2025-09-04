@@ -1027,21 +1027,6 @@
         };
     }
 
-    // 認証情報をグローバルで確実に定義
-    if (!window.AUTH_CREDENTIALS) {
-        window.AUTH_CREDENTIALS = {
-            'スタッフ': { type: 'name', role: 'viewer', department: null },
-            '手術・麻酔': { code: 'secure_SurgAnest_6917_ce_system', role: 'editor', department: '手術・麻酔' },
-            'MEセンター': { code: 'secure_MEcenter_6994_ce_system', role: 'editor', department: '機器管理・人工呼吸' },
-            '血液浄化': { code: 'secure_Hemodialysis_6735_ce_system', role: 'editor', department: '血液浄化' },
-            '不整脈': { code: 'secure_Arrhythm_6551_ce_system', role: 'editor', department: '不整脈' },
-            '人工心肺・補助循環': { code: 'secure_CpbEcmo_6288_ce_system', role: 'editor', department: '人工心肺・補助循環' },
-            '心・カテーテル': { code: 'secure_CardCath_6925_ce_system', role: 'editor', department: '心・カテーテル' },
-            'モニター': { code: 'secure_CEmonitor_1122_ce_system', role: 'monitor', department: null },
-            '管理者': { code: 'secure_CEadmin_5711_ce_system', role: 'admin', department: null }
-        };
-    }
-
     // 重要な関数の定義
     if (typeof window.handleUserIdChange !== 'function') {
         window.handleUserIdChange = function() {
@@ -1753,7 +1738,7 @@ actionButtons.forEach(btn => {
 // 週単位管理のための関数群
 let currentWeekListenerRef = null;
 
-function getMondayOfWeek(date) {
+date) {
     const d = new Date(date);
     const day = d.getDay();
     const diff = (day === 0 ? -6 : 1 - day);
@@ -1779,35 +1764,6 @@ function getWeekRef(subpath = 'state') {
 }
 
 // ========= DATE AND WEEK FUNCTIONS START (行数: 1222-1280) =========
-
-// 週単位管理のための関数群（新規追加）
-let currentWeekListenerRef = null;
-
-function getMondayOfWeek(date) {
-    const d = new Date(date);
-    const day = d.getDay();
-    const diff = (day === 0 ? -6 : 1 - day);
-    d.setDate(d.getDate() + diff);
-    d.setHours(0,0,0,0);
-    return d;
-}
-
-function formatDateYYYYMMDD(d) {
-    const y = d.getFullYear();
-    const m = String(d.getMonth()+1).padStart(2,'0');
-    const da = String(d.getDate()).padStart(2,'0');
-    return `${y}-${m}-${da}`;
-}
-
-function getWeekKey(date = weekStartDate) {
-    return formatDateYYYYMMDD(getMondayOfWeek(date));
-}
-
-function getWeekRef(subpath = 'state') {
-    if (!database) return null;
-    return database.ref(`${DATA_ROOT}/weeks/${getWeekKey()}/${subpath}`);
-}
-
         function setDefaultWeekMonday() {
             const today = new Date();
             const dayOfWeek = today.getDay();
@@ -2608,11 +2564,11 @@ setTimeout(() => {
             messageDiv.className = `message ${type}`;
             
             const icons = {
-                success: 'check',
-                error: 'times',const firebaseConfig = {
-                warning: 'exclamation',
-                info: 'info'
-            };
+    success: 'check',
+    error: 'times',
+    warning: 'exclamation',
+    info: 'info'
+};
             
             messageDiv.innerHTML = `
                 <i class="fas fa-${icons[type]}-circle"></i>
