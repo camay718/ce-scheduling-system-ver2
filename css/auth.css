@@ -74,3 +74,22 @@
     0% { transform: rotate(0deg); }
     100% { transform: rotate(360deg); }
 }
+/*
+🔐 認証システム専用スタイル
+*/
+.auth-input {
+    width: 100%;
+    padding: 12px 16px;
+    border: 2px solid #e1e5e9;
+    border-radius: 12px;
+    font-size: 14px;
+    transition: all 0.3s ease;
+    background: rgba(255,255,255,0.8);
+}
+
+.auth-input:focus {
+    outline: none;
+    border-color: #4CAF50;
+    box-shadow: 0 0 0 3px rgba(76,175,80,0.1);
+    background: rgba(255,255,255,1);
+}
