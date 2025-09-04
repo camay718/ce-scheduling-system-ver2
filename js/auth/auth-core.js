@@ -1,8 +1,8 @@
 /*
-🔒 認証システムコア - V2専用（安全初期化版）
+🔒 認証システムコア - V2専用（完全修正版）
 */
 
-// V1認証情報
+// V1認証情報（既存維持）
 const AUTH_CREDENTIALS = {
     'スタッフ': { type: 'name', role: 'viewer', department: null },
     '手術・麻酔': { code: 'secure_SurgAnest_6917_ce_system', role: 'editor', department: '手術・麻酔' },
@@ -15,7 +15,7 @@ const AUTH_CREDENTIALS = {
     '管理者': { code: 'secure_CEadmin_5711_ce_system', role: 'admin', department: null }
 };
 
-// 認証システムクラス
+// 認証システムクラス（完全修正版）
 class AuthSystemV2 {
     constructor() {
         this.currentUser = null;
@@ -26,14 +26,20 @@ class AuthSystemV2 {
         
         console.log('🔐 認証システムV2 初期化中...');
         
+        // ログイン状態復元を先に試行
+        if (this.restoreLoginState()) {
+            console.log('✅ ログイン状態復元成功');
+            this.isReady = true;
+            return;
+        }
+        
         // Firebase準備完了を待ってから初期化
         this.waitForFirebaseAndInitialize();
     }
 
     async waitForFirebaseAndInitialize() {
-        // Firebase初期化完了まで待機（最大30秒）
         let attempts = 0;
-        const maxAttempts = 300; // 30秒 (100ms × 300回)
+        const maxAttempts = 300; // 30秒
         
         while (attempts < maxAttempts) {
             if (window.isFirebaseReady && window.auth) {
@@ -45,12 +51,11 @@ class AuthSystemV2 {
             await new Promise(resolve => setTimeout(resolve, 100));
             attempts++;
             
-            if (attempts % 50 === 0) { // 5秒ごとにログ出力
+            if (attempts % 50 === 0) {
                 console.log('⏳ Firebase準備待ち...', attempts / 10, '秒経過');
             }
         }
         
-        // タイムアウト時はV1システムで継続
         console.warn('⚠️ Firebase初期化タイムアウト - V1システムで継続');
         this.showLoginInterface();
         this.isReady = true;
@@ -61,8 +66,8 @@ class AuthSystemV2 {
             if (window.auth) {
                 window.auth.onAuthStateChanged(async (user) => {
                     if (user) {
-                        console.log('✅ Firebase認証ユーザー検出:', user.email);
-                        this.currentUser = user.email;
+                        console.log('✅ Firebase認証ユーザー検出:', user.isAnonymous ? '匿名' : user.email);
+                        this.currentUser = user.email || user.uid;
                         await this.loadUserProfile(user.uid);
                         this.showMainInterface();
                     } else {
@@ -83,94 +88,216 @@ class AuthSystemV2 {
         }
     }
 
-    // V1互換関数
+    // ★ 未実装関数の補完
+    async createDefaultProfile(uid) {
+        if (!window.database) {
+            console.log('ℹ️ Database未準備 - プロファイル作成スキップ');
+            return null;
+        }
+        
+        try {
+            const defaultProfile = {
+                uid: uid,
+                role: 'viewer',
+                department: null,
+                permissions: {
+                    canEdit: false,
+                    canView: true,
+                    isAdmin: false,
+                    canExport: false
+                },
+                createdAt: firebase.database.ServerValue.TIMESTAMP,
+                lastLogin: firebase.database.ServerValue.TIMESTAMP,
+                displayName: 'ゲストユーザー',
+                loginCount: 1
+            };
+            
+            await window.database.ref(`${window.DATA_ROOT}/users/${uid}`).set(defaultProfile);
+            this.userProfile = defaultProfile;
+            
+            console.log('✅ デフォルトプロファイル作成完了:', uid);
+            return defaultProfile;
+            
+        } catch (error) {
+            console.error('❌ デフォルトプロファイル作成失敗:', error);
+            return null;
+        }
+    }
+
+    async loadUserProfile(uid) {
+        if (!window.database) {
+            console.log('ℹ️ Database未準備 - プロファイル読み込みスキップ');
+            return null;
+        }
+        
+        try {
+            console.log('📋 ユーザープロファイル読み込み開始:', uid);
+            
+            const snapshot = await window.database.ref(`${window.DATA_ROOT}/users/${uid}`).once('value');
+            
+            if (snapshot.exists()) {
+                this.userProfile = snapshot.val();
+                
+                // ログイン回数更新
+                await window.database.ref(`${window.DATA_ROOT}/users/${uid}`).update({
+                    lastLogin: firebase.database.ServerValue.TIMESTAMP,
+                    loginCount: (this.userProfile.loginCount || 0) + 1
+                });
+                
+                console.log('✅ ユーザープロファイル読み込み完了');
+            } else {
+                console.log('ℹ️ ユーザープロファイル未存在 - 新規作成');
+                await this.createDefaultProfile(uid);
+            }
+            
+            return this.userProfile;
+            
+        } catch (error) {
+            console.warn('⚠️ プロファイル読み込み失敗 - V1システムで継続:', error.message);
+            this.userProfile = null;
+            return null;
+        }
+    }
+
+    // V1互換関数（既存維持 + エラーハンドリング強化）
     handleUserIdChange() {
-        const userId = document.getElementById('userId');
-        const nameDiv = document.getElementById('nameInputDiv');
-        const secDiv = document.getElementById('securityCodeDiv');
-        
-        if (!userId || !nameDiv || !secDiv) return;
-        
-        const selectedValue = userId.value;
-        
-        if (selectedValue === 'スタッフ') {
-            nameDiv.style.display = 'block';
-            secDiv.style.display = 'none';
-        } else if (selectedValue && selectedValue !== '') {
-            nameDiv.style.display = 'none';
-            secDiv.style.display = 'block';
-        } else {
-            nameDiv.style.display = 'none';
-            secDiv.style.display = 'none';
+        try {
+            const userId = document.getElementById('userId');
+            const nameDiv = document.getElementById('nameInputDiv');
+            const secDiv = document.getElementById('securityCodeDiv');
+            
+            if (!userId || !nameDiv || !secDiv) {
+                console.warn('⚠️ ログイン要素が見つかりません');
+                return;
+            }
+            
+            const selectedValue = userId.value;
+            
+            if (selectedValue === 'スタッフ') {
+                nameDiv.style.display = 'block';
+                secDiv.style.display = 'none';
+            } else if (selectedValue && selectedValue !== '') {
+                nameDiv.style.display = 'none';
+                secDiv.style.display = 'block';
+            } else {
+                nameDiv.style.display = 'none';
+                secDiv.style.display = 'none';
+            }
+        } catch (error) {
+            console.error('❌ ユーザー選択エラー:', error);
         }
     }
 
     handleLogin() {
-        const userId = document.getElementById('userId').value;
-        const nameInput = document.getElementById('nameInput').value.trim();
-        const securityInput = document.getElementById('securityInput').value;
+        try {
+            const userId = document.getElementById('userId')?.value;
+            const nameInput = document.getElementById('nameInput')?.value?.trim();
+            const securityInput = document.getElementById('securityInput')?.value;
 
-        if (!userId) {
-            this.showMessage('ユーザーを選択してください', 'warning');
+            if (!userId) {
+                this.showMessage('ユーザーを選択してください', 'warning');
+                return;
+            }
+
+            const credential = AUTH_CREDENTIALS[userId];
+            if (!credential) {
+                this.showMessage('無効なユーザーです', 'error');
+                return;
+            }
+
+            let isValid = false;
+            let displayName = userId;
+            
+            if (credential.type === 'name') {
+                if (!nameInput) {
+                    this.showMessage('お名前を入力してください', 'warning');
+                    return;
+                }
+                isValid = true;
+                displayName = nameInput;
+            } else {
+                if (!securityInput) {
+                    this.showMessage('セキュリティコードを入力してください', 'warning');
+                    return;
+                }
+                isValid = securityInput === credential.code;
+            }
+
+            if (isValid) {
+                this.userRole = credential.role;
+                this.currentUser = displayName;
+                this.userDepartment = credential.department;
+                
+                const loginExpiry = Date.now() + (24 * 60 * 60 * 1000);
+                const userSession = {
+                    id: this.currentUser,
+                    role: this.userRole,
+                    department: this.userDepartment,
+                    loginTime: new Date().toISOString(),
+                    version: 'V2'
+                };
+                
+                localStorage.setItem('ceSystemLoggedInUser', JSON.stringify(userSession));
+                localStorage.setItem('ceSystemLoginExpiry', loginExpiry.toString());
+                
+                // ログイン履歴記録（Firebase利用可能時）
+                this.recordLoginHistory(userSession);
+                
+                this.showMainInterface();
+                this.showMessage(`${userId}としてログインしました`, 'success');
+            } else {
+                this.showMessage('認証に失敗しました', 'error');
+            }
+        } catch (error) {
+            console.error('❌ ログインエラー:', error);
+            this.showMessage('ログイン処理中にエラーが発生しました', 'error');
+        }
+    }
+
+    // ★ 新機能：ログイン履歴記録
+    async recordLoginHistory(userSession) {
+        if (!window.database || !window.isFirebaseReady) {
+            console.log('ℹ️ Firebase未準備 - ログイン履歴記録スキップ');
             return;
         }
-
-        const credential = AUTH_CREDENTIALS[userId];
-        if (!credential) {
-            this.showMessage('無効なユーザーです', 'error');
-            return;
-        }
-
-        let isValid = false;
-        let displayName = userId;
         
-        if (credential.type === 'name') {
-            if (!nameInput) {
-                this.showMessage('お名前を入力してください', 'warning');
-                return;
-            }
-            isValid = true;
-            displayName = nameInput;
-        } else {
-            if (!securityInput) {
-                this.showMessage('セキュリティコードを入力してください', 'warning');
-                return;
-            }
-            isValid = securityInput === credential.code;
-        }
-
-        if (isValid) {
-            this.userRole = credential.role;
-            this.currentUser = displayName;
-            this.userDepartment = credential.department;
-            
-            const loginExpiry = Date.now() + (24 * 60 * 60 * 1000);
-            localStorage.setItem('ceSystemLoggedInUser', JSON.stringify({
-                id: this.currentUser,
-                role: this.userRole,
-                department: this.userDepartment,
-                loginTime: new Date().toISOString()
-            }));
-            localStorage.setItem('ceSystemLoginExpiry', loginExpiry.toString());
-            
-            this.showMainInterface();
-            this.showMessage(`${userId}としてログインしました`, 'success');
-        } else {
-            this.showMessage('認証に失敗しました', 'error');
+        try {
+            const historyRef = window.database.ref(`${window.DATA_ROOT}/loginHistory`).push();
+            await historyRef.set({
+                ...userSession,
+                timestamp: firebase.database.ServerValue.TIMESTAMP,
+                userAgent: navigator.userAgent,
+                ip: 'client-side'
+            });
+            console.log('✅ ログイン履歴記録完了');
+        } catch (error) {
+            console.warn('⚠️ ログイン履歴記録失敗:', error.message);
         }
     }
 
     handleLogout() {
-        if (confirm('ログアウトしますか？')) {
-            this.currentUser = null;
-            this.userRole = null;
-            this.userDepartment = null;
-            
-            localStorage.removeItem('ceSystemLoggedInUser');
-            localStorage.removeItem('ceSystemLoginExpiry');
-            
-            this.showLoginInterface();
-            this.showMessage('ログアウトしました', 'info');
+        try {
+            if (confirm('ログアウトしますか？')) {
+                this.currentUser = null;
+                this.userRole = null;
+                this.userDepartment = null;
+                this.userProfile = null;
+                
+                localStorage.removeItem('ceSystemLoggedInUser');
+                localStorage.removeItem('ceSystemLoginExpiry');
+                
+                // Firebase認証からもログアウト
+                if (window.auth) {
+                    window.auth.signOut().catch(error => {
+                        console.warn('⚠️ Firebase認証ログアウト失敗:', error);
+                    });
+                }
+                
+                this.showLoginInterface();
+                this.showMessage('ログアウトしました', 'info');
+            }
+        } catch (error) {
+            console.error('❌ ログアウトエラー:', error);
         }
     }
 
@@ -188,6 +315,7 @@ class AuthSystemV2 {
                     this.currentUser = parsedUser.id;
                     this.userRole = parsedUser.role;
                     this.userDepartment = parsedUser.department;
+                    
                     this.showMainInterface();
                     this.showMessage(`お疲れ様です、${this.currentUser}さん！`, 'info');
                     return true;
@@ -236,46 +364,26 @@ class AuthSystemV2 {
         }
         
         const messageDiv = document.createElement('div');
-        messageDiv.className = `message ${type}`;
+        messageDiv.className = `message ${type} px-4 py-2 mb-2 rounded-lg`;
         const icons = { success: 'check', error: 'times', warning: 'exclamation', info: 'info' };
-        messageDiv.innerHTML = `<i class="fas fa-${icons[type]}-circle"></i>${text}`;
+        messageDiv.innerHTML = `<i class="fas fa-${icons[type]}-circle mr-2"></i>${text}`;
+        
+        // メッセージ色設定
+        const colors = {
+            success: 'bg-green-100 text-green-800',
+            error: 'bg-red-100 text-red-800',
+            warning: 'bg-yellow-100 text-yellow-800',
+            info: 'bg-blue-100 text-blue-800'
+        };
+        messageDiv.className += ` ${colors[type]}`;
+        
         container.appendChild(messageDiv);
         setTimeout(() => messageDiv.remove(), 4000);
     }
-
-async loadUserProfile(uid) {
-    if (!window.database) {
-        console.log('ℹ️ Database未準備 - プロファイル読み込みスキップ');
-        return null;
-    }
-    
-    try {
-        console.log('📋 ユーザープロファイル読み込み開始:', uid);
-        
-        const snapshot = await window.database.ref(`${window.DATA_ROOT}/users/${uid}`).once('value');
-        
-        if (snapshot.exists()) {
-            this.userProfile = snapshot.val();
-            console.log('✅ ユーザープロファイル読み込み完了');
-        } else {
-            console.log('ℹ️ ユーザープロファイル未存在 - 新規作成');
-            await this.createDefaultProfile(uid);
-        }
-        
-        return this.userProfile;
-        
-    } catch (error) {
-        console.warn('⚠️ プロファイル読み込み失敗 - V1システムで継続:', error.message);
-        
-        // エラー時でもシステムは継続動作
-        this.userProfile = null;
-        return null;
-    }
-}
+} // ← ★ 重要：クラス定義の正しい終了
 
 // グローバルインスタンス作成（重複防止版）
 (function() {
-    // 重複作成防止
     if (window.authSystem) {
         console.log('ℹ️ 認証システム既に初期化済み');
         return;
@@ -318,4 +426,4 @@ async loadUserProfile(uid) {
     }
 })();
 
-console.log('🔒 認証システムコア読み込み完了');
+console.log('🔒 認証システムコア読み込み完了（修正版）');
