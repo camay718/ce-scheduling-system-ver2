@@ -1,0 +1,53 @@
+/*
+==========================================
+🎨 CEスケジュール管理システム V2 - メインスタイル
+V1から分離されたCSSファイル
+==========================================
+*/
+
+:root {
+    --primary-gradient: linear-gradient(135deg, #E8F5E8 0%, #D4F1D4 100%);
+    --accent-color: #B8E6B8;
+    --text-color: #2C3E50;
+    --shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+
+body {
+    background: var(--primary-gradient);
+    font-family: 'Segoe UI', 'Hiragino Sans', 'Yu Gothic UI', sans-serif;
+    color: var(--text-color);
+    min-height: 100vh;
+    overflow-x: hidden;
+    font-size: 14px;
+}
+
+.glassmorphism {
+    background: rgba(255,255,255,0.7);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255,255,255,0.3);
+}
+
+.btn-primary {
+    background: linear-gradient(135deg, #4CAF50, #45a049);
+    color: white;
+    border: none;
+    padding: 10px 18px;
+    border-radius: 20px;
+    font-weight: 600;
+    box-shadow: var(--shadow);
+    transition: all 0.2s ease;
+    cursor: pointer;
+}
+
+.btn-primary:hover { 
+    transform: translateY(-1px); 
+    box-shadow: 0 6px 18px rgba(0,0,0,0.15); 
+}
+
+.btn-primary:disabled { 
+    background: #ccc; 
+    cursor: not-allowed; 
+}
+
+/* ========= V1から移行したスタイル ========= */
+/* 現在のindex.htmlの<style>タグ内容をここにコピー */
