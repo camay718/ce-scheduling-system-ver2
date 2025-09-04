@@ -243,17 +243,33 @@ class AuthSystemV2 {
         setTimeout(() => messageDiv.remove(), 4000);
     }
 
-    async loadUserProfile(uid) {
-        if (!window.database) return null;
+async loadUserProfile(uid) {
+    if (!window.database) {
+        console.log('ℹ️ Database未準備 - プロファイル読み込みスキップ');
+        return null;
+    }
+    
+    try {
+        console.log('📋 ユーザープロファイル読み込み開始:', uid);
         
-        try {
-            const snapshot = await window.database.ref(`${window.DATA_ROOT}/users/${uid}`).once('value');
+        const snapshot = await window.database.ref(`${window.DATA_ROOT}/users/${uid}`).once('value');
+        
+        if (snapshot.exists()) {
             this.userProfile = snapshot.val();
-            return this.userProfile;
-        } catch (error) {
-            console.error('❌ プロファイル読み込みエラー:', error);
-            return null;
+            console.log('✅ ユーザープロファイル読み込み完了');
+        } else {
+            console.log('ℹ️ ユーザープロファイル未存在 - 新規作成');
+            await this.createDefaultProfile(uid);
         }
+        
+        return this.userProfile;
+        
+    } catch (error) {
+        console.warn('⚠️ プロファイル読み込み失敗 - V1システムで継続:', error.message);
+        
+        // エラー時でもシステムは継続動作
+        this.userProfile = null;
+        return null;
     }
 }
 
