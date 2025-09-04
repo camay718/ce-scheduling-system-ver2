@@ -41,36 +41,19 @@
         </div>
     </div>
 
-<!-- JavaScript読み込み（順序重要） -->
+<!-- JavaScript読み込み（順序が重要） -->
+<script src="js/core/firebase-config.js?v=2"></script>
+<script src="js/auth/auth-core.js?v=2"></script>
+<script src="js/auth/login-ui.js?v=2"></script>
 
-<!-- 1. V2専用スクリプト（Firebase CDNの後に配置） -->
-<script src="js/core/firebase-config.js"></script>
-<script src="js/auth/auth-core.js"></script>
-<script src="js/auth/login-ui.js"></script>
-
-<!-- 2. 残りのV1機能（最小限） -->
+<!-- 残りのV1機能 -->
 <script>
-    // ここには、上記で分離していないV1機能のみを配置
-    // 例：globalTasksData, CE_LIST, その他の業務管理関数など
-    
     // 重要：以下は削除済みのため含めない
-    // - firebaseConfig
-    // - AUTH_CREDENTIALS
-    // - handleUserIdChange
-    // - handleLogin
-    // - initializeFirebase
-    
-    // 例：
-    let globalTasksData = { 
-        monday: [], tuesday: [], wednesday: [], thursday: [], 
-        friday: [], saturday: [], sunday: [] 
-    };
-    let globalAssignmentsData = { 
-        monday: {}, tuesday: {}, wednesday: {}, thursday: {}, 
-        friday: {}, saturday: {}, sunday: {} 
-    };
-    
-    // その他のV1機能...
+    // - firebaseConfig定義
+    // - AUTH_CREDENTIALS定義  
+    // - handleUserIdChange関数
+    // - handleLogin関数
+    // - initializeFirebase関数
     
     console.log('📋 V1機能読み込み完了');
 </script>
