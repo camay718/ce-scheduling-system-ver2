@@ -65,12 +65,17 @@ class AuthSystemV2 {
         try {
             if (window.auth) {
                 window.auth.onAuthStateChanged(async (user) => {
-                    if (user) {
-                        console.log('✅ Firebase認証ユーザー検出:', user.isAnonymous ? '匿名' : user.email);
-                        this.currentUser = user.email || user.uid;
-                        await this.loadUserProfile(user.uid);
-                        this.showMainInterface();
-                    } else {
+    if (user && !user.isAnonymous) {
+        // Email認証ユーザーのみ自動ログイン
+        console.log('✅ Email認証ユーザー検出:', user.email);
+        this.currentUser = user.email;
+        await this.loadUserProfile(user.uid);
+        this.showMainInterface();
+    } else if (user && user.isAnonymous) {
+        // 匿名ユーザーはログイン画面表示
+        console.log('ℹ️ 匿名ユーザー - ログイン画面表示');
+        this.showLoginInterface();
+    } else {
                         console.log('ℹ️ Firebase認証なし - V1認証システム使用');
                         this.showLoginInterface();
                     }
