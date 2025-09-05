@@ -12,151 +12,158 @@
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
 </head>
-<body class="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50">
-    <div class="container mx-auto px-4 py-8 max-w-md">
-        <!-- ヘッダー -->
-        <div class="text-center mb-8">
-            <h1 class="text-3xl font-bold text-gray-800 mb-2">CEスケジュール管理</h1>
-            <p class="text-gray-600">システム V2 - 統合ログイン</p>
+<body class="bg-gradient-to-br from-blue-50 to-indigo-100 min-h-screen">
+    <!-- デバッグログパネル -->
+    <div id="debugPanel" class="fixed top-4 right-4 bg-black bg-opacity-80 text-green-400 p-4 rounded-lg text-xs max-w-md max-h-96 overflow-y-auto font-mono" style="display: none;">
+        <div class="flex justify-between items-center mb-2">
+            <span class="text-yellow-400 font-bold">🔧 デバッグログ</span>
+            <button onclick="toggleDebug()" class="text-red-400 hover:text-red-300">✕</button>
         </div>
+        <div id="debugLog"></div>
+    </div>
 
-        <!-- プログレスバー -->
-        <div id="progressBar" class="mb-8">
-            <div class="flex items-center justify-between mb-2">
-                <span id="step1" class="flex items-center text-blue-600">
-                    <i class="fas fa-sign-in-alt w-5 h-5 mr-2"></i>
-                    <span class="text-sm font-medium">ログイン</span>
-                </span>
-                <span id="step2" class="flex items-center text-gray-400">
-                    <i class="fas fa-user-cog w-5 h-5 mr-2"></i>
-                    <span class="text-sm font-medium">個人設定</span>
-                </span>
-                <span id="step3" class="flex items-center text-gray-400">
-                    <i class="fas fa-check-circle w-5 h-5 mr-2"></i>
-                    <span class="text-sm font-medium">完了</span>
-                </span>
+    <!-- デバッグボタン -->
+    <button onclick="toggleDebug()" class="fixed top-4 left-4 bg-gray-800 text-white px-3 py-2 rounded-lg text-sm hover:bg-gray-700">
+        <i class="fas fa-bug"></i> Debug
+    </button>
+
+    <div class="container mx-auto px-4 py-8">
+        <!-- ログイン画面 -->
+        <div id="loginScreen" class="max-w-md mx-auto bg-white rounded-xl shadow-2xl overflow-hidden">
+            <div class="bg-gradient-to-r from-blue-600 to-indigo-600 px-8 py-6">
+                <h1 class="text-2xl font-bold text-white text-center">
+                    <i class="fas fa-calendar-alt mr-2"></i>
+                    CEスケジュール管理システム V2
+                </h1>
+                <p class="text-blue-100 text-center mt-2">統合ログインシステム</p>
             </div>
-            <div class="w-full bg-gray-200 rounded-full h-2">
-                <div id="progressFill" class="bg-blue-600 h-2 rounded-full transition-all duration-500" style="width: 33%"></div>
-            </div>
-        </div>
-
-        <!-- ログインセクション -->
-        <div id="loginSection" class="bg-white rounded-lg shadow-lg p-6">
-            <h2 class="text-xl font-semibold text-gray-800 mb-6 text-center">
-                <i class="fas fa-sign-in-alt mr-2 text-blue-600"></i>
-                ログイン
-            </h2>
             
-            <form id="loginForm">
-                <div class="mb-4">
-                    <label class="block text-sm font-medium text-gray-700 mb-2">
-                        ユーザー名またはメールアドレス
-                    </label>
-                    <input type="text" id="loginInput" 
-                           class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                           placeholder="例: 田中太郎 または tanaka@example.com" required>
-                </div>
-                
-                <div class="mb-6">
-                    <label class="block text-sm font-medium text-gray-700 mb-2">
-                        パスワード
-                    </label>
-                    <input type="password" id="loginPassword" 
-                           class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                           placeholder="••••••••" required>
-                </div>
-                
-                <button type="submit" id="loginBtn" 
-                        class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-6 rounded-lg transition duration-200">
-                    <i class="fas fa-sign-in-alt mr-2"></i>
-                    ログイン
-                </button>
-            </form>
-
-            <div class="mt-4 text-center">
-                <a href="admin-debug.html" class="text-sm text-blue-600 hover:text-blue-800">
-                    <i class="fas fa-user-shield mr-1"></i>
-                    管理者ダッシュボード
-                </a>
-            </div>
-        </div>
-
-        <!-- 個人設定セクション -->
-        <div id="userSetupSection" class="bg-white rounded-lg shadow-lg p-6 hidden">
-            <h2 class="text-xl font-semibold text-gray-800 mb-6 text-center">
-                <i class="fas fa-user-cog mr-2 text-green-600"></i>
-                個人設定
-            </h2>
-            
-            <div id="userInfo" class="mb-6 p-4 bg-blue-50 rounded-lg"></div>
-            
-            <form id="setupForm">
-                <div class="mb-4">
-                    <label class="block text-sm font-medium text-gray-700 mb-2">
-                        ユーザー名
-                    </label>
-                    <input type="text" id="newUsername" 
-                           class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
-                           placeholder="新しいユーザー名" required>
-                </div>
-                
-                <div class="mb-4">
-                    <label class="block text-sm font-medium text-gray-700 mb-2">
-                        新しいパスワード
-                    </label>
-                    <input type="password" id="newPassword" 
-                           class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
-                           placeholder="新しいパスワード（8文字以上）" required>
-                </div>
-                
-                <div class="mb-6">
-                    <label class="block text-sm font-medium text-gray-700 mb-2">
-                        パスワード確認
-                    </label>
-                    <input type="password" id="confirmPassword" 
-                           class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
-                           placeholder="パスワードを再入力" required>
-                </div>
-                
-                <button type="submit" id="setupBtn" 
-                        class="w-full bg-green-600 hover:bg-green-700 text-white font-semibold py-3 px-6 rounded-lg transition duration-200">
-                    <i class="fas fa-save mr-2"></i>
-                    設定を完了
-                </button>
-            </form>
-        </div>
-
-        <!-- 完了セクション -->
-        <div id="completionSection" class="bg-white rounded-lg shadow-lg p-6 hidden">
-            <div class="text-center">
-                <div class="mb-4">
-                    <i class="fas fa-check-circle text-green-500 text-6xl"></i>
-                </div>
-                <h2 class="text-xl font-semibold text-gray-800 mb-4">設定完了！</h2>
-                <p class="text-gray-600 mb-6">個人設定が正常に完了しました。</p>
-                
-                <div class="space-y-3">
-                    <button onclick="goToDashboard()" 
-                            class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-6 rounded-lg transition duration-200">
-                        <i class="fas fa-tachometer-alt mr-2"></i>
-                        ダッシュボードへ
-                    </button>
+            <div class="px-8 py-6">
+                <form id="loginForm" onsubmit="return false;">
+                    <div class="mb-4">
+                        <label for="loginInput" class="block text-sm font-medium text-gray-700 mb-2">
+                            <i class="fas fa-user mr-1"></i>
+                            ユーザー名 または メールアドレス
+                        </label>
+                        <input type="text" id="loginInput" 
+                               class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" 
+                               placeholder="例: 田中太郎 または tanaka@example.com" 
+                               autocomplete="username"
+                               required>
+                    </div>
                     
-                    <button onclick="logout()" 
-                            class="w-full bg-gray-500 hover:bg-gray-600 text-white font-semibold py-3 px-6 rounded-lg transition duration-200">
-                        <i class="fas fa-sign-out-alt mr-2"></i>
-                        ログアウト
+                    <div class="mb-6">
+                        <label for="loginPassword" class="block text-sm font-medium text-gray-700 mb-2">
+                            <i class="fas fa-lock mr-1"></i>
+                            パスワード
+                        </label>
+                        <input type="password" id="loginPassword" 
+                               class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" 
+                               placeholder="••••••••" 
+                               autocomplete="current-password"
+                               required>
+                    </div>
+                    
+                    <button type="submit" id="loginBtn" onclick="handleLogin()"
+                            class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-6 rounded-lg transition duration-200">
+                        <i class="fas fa-sign-in-alt mr-2"></i>
+                        ログイン
                     </button>
-                </div>
+                </form>
+                
+                <div id="loginStatus" class="mt-4 text-center text-sm"></div>
             </div>
         </div>
 
-        <!-- ステータス表示 -->
-        <div id="statusMessage" class="mt-4 p-4 rounded-lg hidden"></div>
+        <!-- 個人設定画面 -->
+        <div id="setupScreen" class="max-w-md mx-auto bg-white rounded-xl shadow-2xl overflow-hidden" style="display: none;">
+            <div class="bg-gradient-to-r from-green-600 to-teal-600 px-8 py-6">
+                <h1 class="text-2xl font-bold text-white text-center">
+                    <i class="fas fa-user-cog mr-2"></i>
+                    個人設定
+                </h1>
+                <p class="text-green-100 text-center mt-2">初期設定を完了してください</p>
+            </div>
+            
+            <div class="px-8 py-6">
+                <div id="currentUserInfo" class="mb-6 p-4 bg-blue-50 rounded-lg">
+                    <h3 class="font-medium text-gray-700 mb-2">現在のユーザー情報</h3>
+                    <div id="userInfoDisplay" class="text-sm text-gray-600"></div>
+                </div>
+                
+                <form id="setupForm" onsubmit="return false;">
+                    <div class="mb-4">
+                        <label for="newUsername" class="block text-sm font-medium text-gray-700 mb-2">
+                            <i class="fas fa-user-edit mr-1"></i>
+                            新しいユーザー名
+                        </label>
+                        <input type="text" id="newUsername" 
+                               class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent" 
+                               placeholder="例: 田中太郎"
+                               autocomplete="username">
+                    </div>
+                    
+                    <div class="mb-4">
+                        <label for="newPassword" class="block text-sm font-medium text-gray-700 mb-2">
+                            <i class="fas fa-key mr-1"></i>
+                            新しいパスワード
+                        </label>
+                        <input type="password" id="newPassword" 
+                               class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent" 
+                               placeholder="8文字以上の安全なパスワード"
+                               autocomplete="new-password"
+                               required>
+                    </div>
+                    
+                    <div class="mb-6">
+                        <label for="confirmPassword" class="block text-sm font-medium text-gray-700 mb-2">
+                            <i class="fas fa-check-double mr-1"></i>
+                            パスワード確認
+                        </label>
+                        <input type="password" id="confirmPassword" 
+                               class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent" 
+                               placeholder="上記と同じパスワード"
+                               autocomplete="new-password"
+                               required>
+                    </div>
+                    
+                    <button type="submit" id="setupBtn" onclick="handleSetup()"
+                            class="w-full bg-green-600 hover:bg-green-700 text-white font-semibold py-3 px-6 rounded-lg transition duration-200">
+                        <i class="fas fa-check mr-2"></i>
+                        設定を完了
+                    </button>
+                </form>
+                
+                <div id="setupStatus" class="mt-4 text-center text-sm"></div>
+            </div>
+        </div>
 
-        <!-- デバッグ情報 -->
-        <div id="debugInfo" class="mt-6 p-4 bg-gray-100 rounded-lg text-xs text-gray-600 hidden"></div>
+        <!-- 完了画面 -->
+        <div id="completeScreen" class="max-w-md mx-auto bg-white rounded-xl shadow-2xl overflow-hidden" style="display: none;">
+            <div class="bg-gradient-to-r from-purple-600 to-pink-600 px-8 py-6">
+                <h1 class="text-2xl font-bold text-white text-center">
+                    <i class="fas fa-check-circle mr-2"></i>
+                    設定完了
+                </h1>
+                <p class="text-purple-100 text-center mt-2">お疲れ様でした！</p>
+            </div>
+            
+            <div class="px-8 py-6 text-center">
+                <div class="mb-6">
+                    <i class="fas fa-user-check text-6xl text-green-500 mb-4"></i>
+                    <h2 class="text-xl font-semibold text-gray-800 mb-2">セットアップ完了！</h2>
+                    <p class="text-gray-600">個人設定が正常に保存されました。</p>
+                </div>
+                
+                <div id="completionInfo" class="mb-6 p-4 bg-gray-50 rounded-lg text-sm text-left"></div>
+                
+                <button id="dashboardBtn" onclick="goToDashboard()"
+                        class="w-full bg-purple-600 hover:bg-purple-700 text-white font-semibold py-3 px-6 rounded-lg transition duration-200">
+                    <i class="fas fa-tachometer-alt mr-2"></i>
+                    ダッシュボードへ進む
+                </button>
+            </div>
+        </div>
     </div>
 
     <script>
@@ -172,52 +179,28 @@
             measurementId: "G-LSEEMJE2R0"
         };
 
-        // Firebase初期化
+        // グローバル変数
         let app, auth, database;
         let currentUser = null;
+        let currentUserData = null;
+        let authStateListenerActive = false;
 
-        // デバッグログ
-        function debugLog(message) {
+        // デバッグ機能
+        function debugLog(message, type = 'info') {
+            const timestamp = new Date().toLocaleTimeString();
+            const logElement = document.getElementById('debugLog');
+            const color = type === 'error' ? 'text-red-400' : 
+                         type === 'success' ? 'text-green-400' : 
+                         type === 'warning' ? 'text-yellow-400' : 'text-blue-400';
+            
+            logElement.innerHTML += `<div class="${color}">[${timestamp}] ${message}</div>`;
+            logElement.scrollTop = logElement.scrollHeight;
             console.log(`[DEBUG] ${message}`);
-            const debugDiv = document.getElementById('debugInfo');
-            debugDiv.innerHTML += `<div>${new Date().toLocaleTimeString()}: ${message}</div>`;
-            debugDiv.classList.remove('hidden');
         }
 
-        // ステータス表示
-        function showStatus(message, type = 'info') {
-            const statusDiv = document.getElementById('statusMessage');
-            statusDiv.className = `mt-4 p-4 rounded-lg ${type === 'error' ? 'bg-red-100 text-red-700 border border-red-300' : 
-                                  type === 'success' ? 'bg-green-100 text-green-700 border border-green-300' : 
-                                  'bg-blue-100 text-blue-700 border border-blue-300'}`;
-            statusDiv.innerHTML = `<i class="fas fa-${type === 'error' ? 'exclamation-circle' : 
-                                   type === 'success' ? 'check-circle' : 'info-circle'} mr-2"></i>${message}`;
-            statusDiv.classList.remove('hidden');
-        }
-
-        // プログレスバー更新
-        function updateProgress(step) {
-            const steps = ['step1', 'step2', 'step3'];
-            const progressFill = document.getElementById('progressFill');
-            
-            steps.forEach((stepId, index) => {
-                const element = document.getElementById(stepId);
-                if (index < step) {
-                    element.className = element.className.replace('text-gray-400', 'text-green-600');
-                } else if (index === step - 1) {
-                    element.className = element.className.replace('text-gray-400', 'text-blue-600');
-                }
-            });
-            
-            progressFill.style.width = `${(step / 3) * 100}%`;
-        }
-
-        // セクション表示制御
-        function showSection(sectionName) {
-            ['loginSection', 'userSetupSection', 'completionSection'].forEach(id => {
-                document.getElementById(id).classList.add('hidden');
-            });
-            document.getElementById(sectionName).classList.remove('hidden');
+        function toggleDebug() {
+            const panel = document.getElementById('debugPanel');
+            panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
         }
 
         // Firebase初期化
@@ -226,234 +209,334 @@
                 app = firebase.initializeApp(firebaseConfig);
                 auth = firebase.auth();
                 database = firebase.database();
-                debugLog('Firebase初期化完了');
+                debugLog('Firebase初期化完了', 'success');
+                
+                // 認証状態の監視を設定
+                setupAuthStateListener();
                 return true;
             } catch (error) {
-                debugLog(`Firebase初期化エラー: ${error.message}`);
-                showStatus(`Firebase初期化に失敗しました: ${error.message}`, 'error');
+                debugLog(`Firebase初期化エラー: ${error.message}`, 'error');
                 return false;
             }
         }
 
-        // ユーザー名からUIDを取得
-        async function getUsernameUID(username) {
-            try {
-                const snapshot = await database.ref(`ceScheduleV2/usernames/${username}`).once('value');
-                return snapshot.exists() ? snapshot.val() : null;
-            } catch (error) {
-                debugLog(`ユーザー名検索エラー: ${error.message}`);
-                return null;
+        // 認証状態監視の設定
+        function setupAuthStateListener() {
+            if (authStateListenerActive) {
+                debugLog('認証状態監視は既に有効', 'warning');
+                return;
             }
+            
+            authStateListenerActive = true;
+            debugLog('認証状態監視を開始', 'info');
+            
+            auth.onAuthStateChanged(async (user) => {
+                if (user) {
+                    debugLog(`認証状態: ログイン中 (${user.email})`, 'success');
+                    currentUser = user;
+                    
+                    // ユーザーデータの取得
+                    try {
+                        await loadUserData(user.uid);
+                    } catch (error) {
+                        debugLog(`ユーザーデータ取得エラー: ${error.message}`, 'error');
+                    }
+                } else {
+                    debugLog('認証状態: 未ログイン', 'warning');
+                    currentUser = null;
+                    currentUserData = null;
+                }
+            });
         }
 
-        // ユーザーデータ取得
-        async function getUserData(uid) {
+        // ユーザーデータの読み込み
+        async function loadUserData(uid) {
             try {
-                const snapshot = await database.ref(`ceScheduleV2/users/${uid}`).once('value');
-                return snapshot.exists() ? snapshot.val() : null;
+                const userRef = database.ref(`ceScheduleV2/users/${uid}`);
+                const snapshot = await userRef.once('value');
+                
+                if (snapshot.exists()) {
+                    currentUserData = snapshot.val();
+                    debugLog(`ユーザーデータ取得完了: ${JSON.stringify(currentUserData)}`, 'success');
+                    
+                    // 初期ユーザーかどうかを判定
+                    if (currentUserData.isInitialUser && !currentUserData.hasCompletedSetup) {
+                        debugLog('初期ユーザー - 個人設定画面へ移行', 'info');
+                        showSetupScreen();
+                    } else {
+                        debugLog('設定済みユーザー - ダッシュボードへ', 'info');
+                        // 設定済みユーザーの場合はダッシュボードへ
+                        setTimeout(() => {
+                            goToDashboard();
+                        }, 1000);
+                    }
+                } else {
+                    debugLog('ユーザーデータが見つかりません', 'error');
+                    showStatus('loginStatus', 'ユーザーデータが見つかりません', 'error');
+                }
             } catch (error) {
-                debugLog(`ユーザーデータ取得エラー: ${error.message}`);
-                return null;
+                debugLog(`ユーザーデータ読み込みエラー: ${error.message}`, 'error');
+                throw error;
             }
         }
 
         // ログイン処理
-        async function handleLogin(loginInput, password) {
+        async function handleLogin() {
+            const loginInput = document.getElementById('loginInput').value.trim();
+            const password = document.getElementById('loginPassword').value;
+            
+            if (!loginInput || !password) {
+                showStatus('loginStatus', 'すべての項目を入力してください', 'error');
+                return;
+            }
+            
+            setButtonLoading('loginBtn', true);
+            debugLog(`ログイン試行: ${loginInput}`, 'info');
+            
             try {
-                debugLog(`ログイン試行: ${loginInput}`);
-                showStatus('ログイン中...', 'info');
-
                 let email = loginInput;
                 
-                // ユーザー名の場合、UIDを取得してユーザーデータからemailを取得
+                // ユーザー名の場合はメールアドレスに変換
                 if (!loginInput.includes('@')) {
-                    debugLog('ユーザー名でのログインを検出');
-                    const uid = await getUsernameUID(loginInput);
-                    if (!uid) {
+                    debugLog('ユーザー名でのログインを検出', 'info');
+                    email = await getUsernameToEmail(loginInput);
+                    if (!email) {
                         throw new Error('ユーザー名が見つかりません');
                     }
-                    
-                    const userData = await getUserData(uid);
-                    if (!userData || !userData.email) {
-                        throw new Error('ユーザーデータまたはメールアドレスが見つかりません');
-                    }
-                    
-                    email = userData.email;
-                    debugLog(`ユーザー名からメールアドレス取得: ${email}`);
+                    debugLog(`ユーザー名からメールアドレス取得: ${email}`, 'info');
                 }
-
+                
                 // Firebase認証
-                const userCredential = await auth.signInWithEmailAndPassword(email, password);
-                currentUser = userCredential.user;
+                await auth.signInWithEmailAndPassword(email, password);
+                debugLog(`認証成功: ${email}`, 'success');
+                showStatus('loginStatus', 'ログイン成功！', 'success');
                 
-                debugLog(`認証成功: ${currentUser.email}`);
-                
-                // ユーザーデータ取得
-                const userData = await getUserData(currentUser.uid);
-                if (!userData) {
-                    throw new Error('ユーザーデータが見つかりません');
-                }
-
-                debugLog(`ユーザーデータ取得完了: ${JSON.stringify(userData)}`);
-
-                // 管理者の場合は管理ダッシュボードへ
-                if (userData.role === 'admin') {
-                    showStatus('管理者として認証されました。管理ダッシュボードにリダイレクトします...', 'success');
-                    setTimeout(() => {
-                        window.location.href = 'admin-debug.html';
-                    }, 2000);
-                    return;
-                }
-
-                // 初期ユーザーの場合は個人設定へ
-                if (userData.isInitialUser === true || userData.hasCompletedSetup === false) {
-                    debugLog('初期ユーザー - 個人設定画面へ移行');
-                    showUserSetup(userData);
-                } else {
-                    debugLog('設定完了ユーザー - ダッシュボードへ');
-                    showCompletion();
-                }
-
             } catch (error) {
-                debugLog(`ログインエラー: ${error.message}`);
-                showStatus(`ログインに失敗しました: ${error.message}`, 'error');
+                debugLog(`ログインエラー: ${error.message}`, 'error');
+                let errorMessage = 'ログインに失敗しました';
+                
+                if (error.code === 'auth/invalid-login-credentials' || error.code === 'auth/wrong-password') {
+                    errorMessage = 'メールアドレスまたはパスワードが正しくありません';
+                } else if (error.code === 'auth/user-not-found') {
+                    errorMessage = 'ユーザーが見つかりません';
+                } else if (error.code === 'auth/invalid-email') {
+                    errorMessage = '無効なメールアドレスです';
+                }
+                
+                showStatus('loginStatus', errorMessage, 'error');
+            } finally {
+                setButtonLoading('loginBtn', false);
             }
         }
 
-        // 個人設定表示
-        function showUserSetup(userData) {
-            updateProgress(2);
-            showSection('userSetupSection');
-            
-            const userInfo = document.getElementById('userInfo');
-            userInfo.innerHTML = `
-                <h3 class="font-semibold text-blue-800 mb-2">現在の情報</h3>
-                <p><strong>ユーザー名:</strong> ${userData.username}</p>
-                <p><strong>メールアドレス:</strong> ${userData.email}</p>
-                <p><strong>権限:</strong> ${userData.role}</p>
-                <p class="text-sm text-blue-600 mt-2">初回ログインです。個人設定を完了してください。</p>
-            `;
-            
-            // フォームに現在の値を設定
-            document.getElementById('newUsername').value = userData.username;
-            
-            showStatus('個人設定を行ってください', 'info');
+        // ユーザー名からメールアドレスを取得
+        async function getUsernameToEmail(username) {
+            try {
+                const usernameRef = database.ref(`ceScheduleV2/usernames/${username}`);
+                const snapshot = await usernameRef.once('value');
+                
+                if (snapshot.exists()) {
+                    const uid = snapshot.val();
+                    const userRef = database.ref(`ceScheduleV2/users/${uid}`);
+                    const userSnapshot = await userRef.once('value');
+                    
+                    if (userSnapshot.exists()) {
+                        return userSnapshot.val().email;
+                    }
+                }
+                return null;
+            } catch (error) {
+                debugLog(`ユーザー名変換エラー: ${error.message}`, 'error');
+                return null;
+            }
         }
 
-        // 個人設定完了処理
-        async function handleUserSetup(newUsername, newPassword, confirmPassword) {
+        // 個人設定画面表示
+        function showSetupScreen() {
+            debugLog('個人設定画面を表示', 'info');
+            document.getElementById('loginScreen').style.display = 'none';
+            document.getElementById('setupScreen').style.display = 'block';
+            document.getElementById('completeScreen').style.display = 'none';
+            
+            // 現在のユーザー情報を表示
+            if (currentUserData) {
+                document.getElementById('userInfoDisplay').innerHTML = `
+                    <div><strong>ユーザー名:</strong> ${currentUserData.username}</div>
+                    <div><strong>メール:</strong> ${currentUserData.email}</div>
+                    <div><strong>権限:</strong> ${getRoleDisplayName(currentUserData.role)}</div>
+                `;
+                
+                // フォームにデフォルト値を設定
+                document.getElementById('newUsername').value = currentUserData.username || '';
+            }
+        }
+
+        // 個人設定処理
+        async function handleSetup() {
+            const newUsername = document.getElementById('newUsername').value.trim();
+            const newPassword = document.getElementById('newPassword').value;
+            const confirmPassword = document.getElementById('confirmPassword').value;
+            
+            if (!newPassword || !confirmPassword) {
+                showStatus('setupStatus', 'すべての項目を入力してください', 'error');
+                return;
+            }
+            
+            if (newPassword !== confirmPassword) {
+                showStatus('setupStatus', 'パスワードが一致しません', 'error');
+                return;
+            }
+            
+            if (newPassword.length < 8) {
+                showStatus('setupStatus', 'パスワードは8文字以上で入力してください', 'error');
+                return;
+            }
+            
+            setButtonLoading('setupBtn', true);
+            debugLog('個人設定更新開始', 'info');
+            
             try {
-                debugLog('個人設定処理開始');
-                showStatus('設定を保存中...', 'info');
-
-                // パスワード確認
-                if (newPassword !== confirmPassword) {
-                    throw new Error('パスワードが一致しません');
-                }
-
-                if (newPassword.length < 8) {
-                    throw new Error('パスワードは8文字以上で入力してください');
-                }
-
                 // パスワード更新
                 await currentUser.updatePassword(newPassword);
-                debugLog('パスワード更新完了');
-
-                // データベース更新
-                const updates = {
-                    [`ceScheduleV2/users/${currentUser.uid}/username`]: newUsername,
-                    [`ceScheduleV2/users/${currentUser.uid}/hasCompletedSetup`]: true,
-                    [`ceScheduleV2/users/${currentUser.uid}/isInitialUser`]: false,
-                    [`ceScheduleV2/users/${currentUser.uid}/lastLogin`]: Date.now(),
-                    [`ceScheduleV2/usernames/${newUsername}`]: currentUser.uid
+                debugLog('パスワード更新完了', 'success');
+                
+                // ユーザーデータ更新
+                const updatedUserData = {
+                    ...currentUserData,
+                    username: newUsername || currentUserData.username,
+                    hasCompletedSetup: true,
+                    isInitialUser: false,
+                    lastSetupDate: new Date().toISOString()
                 };
-
-                await database.ref().update(updates);
-                debugLog('データベース更新完了');
-
-                // 初期ユーザーデータ削除
+                
+                await database.ref(`ceScheduleV2/users/${currentUser.uid}`).update(updatedUserData);
+                debugLog('ユーザーデータ更新完了', 'success');
+                
+                // ユーザー名マッピング更新（必要な場合）
+                if (newUsername && newUsername !== currentUserData.username) {
+                    await database.ref(`ceScheduleV2/usernames/${newUsername}`).set(currentUser.uid);
+                    // 古いユーザー名マッピングを削除
+                    if (currentUserData.username) {
+                        await database.ref(`ceScheduleV2/usernames/${currentUserData.username}`).remove();
+                    }
+                    debugLog('ユーザー名マッピング更新完了', 'success');
+                }
+                
+                // 初期ユーザーデータを削除
                 await database.ref(`ceScheduleV2/initialUsers/${currentUser.uid}`).remove();
-                debugLog('初期ユーザーデータ削除完了');
-
-                showCompletion();
-
+                debugLog('初期ユーザーデータ削除完了', 'success');
+                
+                currentUserData = updatedUserData;
+                showStatus('setupStatus', '設定が完了しました！', 'success');
+                
+                // 完了画面へ移行
+                setTimeout(() => {
+                    showCompleteScreen();
+                }, 1000);
+                
             } catch (error) {
-                debugLog(`個人設定エラー: ${error.message}`);
-                showStatus(`設定の保存に失敗しました: ${error.message}`, 'error');
+                debugLog(`設定更新エラー: ${error.message}`, 'error');
+                showStatus('setupStatus', '設定の更新に失敗しました', 'error');
+            } finally {
+                setButtonLoading('setupBtn', false);
             }
         }
 
         // 完了画面表示
-        function showCompletion() {
-            updateProgress(3);
-            showSection('completionSection');
-            showStatus('個人設定が完了しました！', 'success');
+        function showCompleteScreen() {
+            debugLog('完了画面を表示', 'info');
+            document.getElementById('loginScreen').style.display = 'none';
+            document.getElementById('setupScreen').style.display = 'none';
+            document.getElementById('completeScreen').style.display = 'block';
+            
+            // 完了情報を表示
+            if (currentUserData) {
+                document.getElementById('completionInfo').innerHTML = `
+                    <div class="space-y-2">
+                        <div><strong>ユーザー名:</strong> ${currentUserData.username}</div>
+                        <div><strong>メール:</strong> ${currentUserData.email}</div>
+                        <div><strong>権限:</strong> ${getRoleDisplayName(currentUserData.role)}</div>
+                        <div><strong>完了日時:</strong> ${new Date().toLocaleString('ja-JP')}</div>
+                    </div>
+                `;
+            }
         }
 
         // ダッシュボードへ移動
         function goToDashboard() {
-            // TODO: 実際のダッシュボードページに遷移
-            showStatus('ダッシュボード機能は開発中です', 'info');
-        }
-
-        // ログアウト
-        async function logout() {
-            try {
-                await auth.signOut();
-                currentUser = null;
-                updateProgress(1);
-                showSection('loginSection');
-                showStatus('ログアウトしました', 'success');
-                debugLog('ログアウト完了');
-            } catch (error) {
-                debugLog(`ログアウトエラー: ${error.message}`);
-                showStatus(`ログアウトに失敗しました: ${error.message}`, 'error');
-            }
-        }
-
-        // イベントリスナー
-        document.addEventListener('DOMContentLoaded', function() {
-            debugLog('ページ読み込み完了');
+            debugLog('ダッシュボードへ移動', 'info');
             
-            if (!initializeFirebase()) {
-                return;
+            if (currentUserData && currentUserData.role === 'admin') {
+                debugLog('管理者ダッシュボードへリダイレクト', 'info');
+                window.location.href = 'admin-debug.html';
+            } else {
+                debugLog('一般ユーザーダッシュボードへリダイレクト', 'info');
+                // 一般ユーザー用ダッシュボードがある場合
+                // window.location.href = 'user-dashboard.html';
+                
+                // 現在は管理者ダッシュボードへ（開発中のため）
+                window.location.href = 'admin-debug.html';
             }
+        }
 
-            // ログインフォーム
-            document.getElementById('loginForm').addEventListener('submit', function(e) {
-                e.preventDefault();
-                const loginInput = document.getElementById('loginInput').value.trim();
-                const password = document.getElementById('loginPassword').value;
-                
-                if (loginInput && password) {
-                    handleLogin(loginInput, password);
+        // ユーティリティ関数
+        function getRoleDisplayName(role) {
+            switch (role) {
+                case 'admin': return '管理者';
+                case 'editor': return '編集者';
+                case 'viewer': return '閲覧者';
+                default: return '不明';
+            }
+        }
+
+        function showStatus(elementId, message, type) {
+            const element = document.getElementById(elementId);
+            element.textContent = message;
+            element.className = `mt-4 text-center text-sm ${
+                type === 'error' ? 'text-red-600' : 
+                type === 'success' ? 'text-green-600' : 
+                'text-gray-600'
+            }`;
+        }
+
+        function setButtonLoading(buttonId, loading) {
+            const button = document.getElementById(buttonId);
+            if (loading) {
+                button.disabled = true;
+                button.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>処理中...';
+            } else {
+                button.disabled = false;
+                const originalText = buttonId === 'loginBtn' ? 
+                    '<i class="fas fa-sign-in-alt mr-2"></i>ログイン' :
+                    '<i class="fas fa-check mr-2"></i>設定を完了';
+                button.innerHTML = originalText;
+            }
+        }
+
+        // ページ読み込み時の初期化
+        document.addEventListener('DOMContentLoaded', function() {
+            debugLog('ページ読み込み完了', 'success');
+            
+            if (initializeFirebase()) {
+                debugLog('システム初期化完了', 'success');
+            } else {
+                debugLog('システム初期化失敗', 'error');
+            }
+            
+            // Enter キーでのフォーム送信
+            document.getElementById('loginForm').addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    handleLogin();
                 }
             });
-
-            // 個人設定フォーム
-            document.getElementById('setupForm').addEventListener('submit', function(e) {
-                e.preventDefault();
-                const newUsername = document.getElementById('newUsername').value.trim();
-                const newPassword = document.getElementById('newPassword').value;
-                const confirmPassword = document.getElementById('confirmPassword').value;
-                
-                if (newUsername && newPassword && confirmPassword) {
-                    handleUserSetup(newUsername, newPassword, confirmPassword);
+            
+            document.getElementById('setupForm').addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    handleSetup();
                 }
             });
-
-            // 認証状態の監視
-            auth.onAuthStateChanged(function(user) {
-                if (user) {
-                    debugLog(`認証状態変更: ログイン中 (${user.email})`);
-                    currentUser = user;
-                } else {
-                    debugLog('認証状態変更: 未ログイン');
-                    currentUser = null;
-                }
-            });
-
-            debugLog('システム初期化完了');
         });
     </script>
 </body>
