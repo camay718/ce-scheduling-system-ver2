@@ -131,6 +131,13 @@
                 <button class="w-full text-left px-3 py-2 rounded hover:bg-green-50 transition-colors">
                     <i class="fas fa-chart-bar mr-2 text-green-600"></i>統計・分析
                 </button>
+                    <div id="adminMenuSection" style="display: none;">
+        <hr class="my-2 border-gray-200">
+        <button onclick="openAdminDashboard()" class="w-full text-left px-3 py-2 rounded hover:bg-blue-50 transition-colors">
+            <i class="fas fa-shield-alt mr-2 text-blue-600"></i>管理者機能
+        </button>
+    </div>
+</nav>
             </nav>
 
             <div class="absolute bottom-4 left-4 right-4">
@@ -209,37 +216,55 @@
     <script src="js/auth/login-ui.js?v=20241205-2"></script>
     <script src="js/auth/email-auth.js?v=20241205-2"></script>
 
-    <!-- システム初期化 -->
-    <script>
-        // システム起動確認
-        document.addEventListener('DOMContentLoaded', function() {
-            console.log('✅ V2システム起動完了');
-            console.log('🔐 認証システム準備:', window.authSystem ? '完了' : '準備中');
-            console.log('🔥 Firebase状態:', window.isFirebaseReady ? '接続中' : '準備中');
-        });
-
-        // エラーハンドリング強化
-        window.addEventListener('error', function(event) {
-            console.error('❌ システムエラー:', event.error);
-        });
-
-        window.addEventListener('unhandledrejection', function(event) {
-            console.error('❌ Promise拒否:', event.reason);
-        });
-    // 新規登録モード切替（追加）
-function showRegistrationMode() {
-    window.location.href = 'pages/register.html';
-}
-
-// パスワードリセット表示
-function showPasswordReset() {
-    const email = prompt('パスワードリセット用のメールアドレスを入力してください:');
-    if (email && window.emailAuthSystem) {
-        window.emailAuthSystem.resetPassword(email).then(result => {
-            alert(result.message);
-        });
+<!-- システム初期化 -->
+<script>
+    // 新規登録モード切替
+    function showRegistrationMode() {
+        window.location.href = 'pages/register.html';
     }
-}
-    </script>
+
+    // パスワードリセット表示
+    function showPasswordReset() {
+        const email = prompt('パスワードリセット用のメールアドレスを入力してください:');
+        if (email && window.emailAuthSystem) {
+            window.emailAuthSystem.resetPassword(email).then(result => {
+                alert(result.message);
+            });
+        }
+    }
+
+    // システム起動確認 & 管理者機能初期化
+    document.addEventListener('DOMContentLoaded', function() {
+        console.log('✅ V2システム起動完了');
+        console.log('🔐 認証システム準備:', window.authSystem ? '完了' : '準備中');
+        console.log('🔥 Firebase状態:', window.isFirebaseReady ? '接続中' : '準備中');
+        
+        // 管理者メニュー表示制御
+        setTimeout(() => {
+            if (window.authSystem && window.authSystem.isAdmin()) {
+                document.getElementById('adminMenuSection').style.display = 'block';
+                console.log('👨‍💼 管理者メニュー表示');
+            }
+        }, 2000);
+    });
+
+    // 管理者ダッシュボード開く
+    function openAdminDashboard() {
+        if (window.authSystem && window.authSystem.isAdmin()) {
+            window.open('pages/admin-dashboard.html?admin=true', '_blank');
+        } else {
+            alert('管理者権限が必要です');
+        }
+    }
+
+    // エラーハンドリング強化
+    window.addEventListener('error', function(event) {
+        console.error('❌ システムエラー:', event.error);
+    });
+
+    window.addEventListener('unhandledrejection', function(event) {
+        console.error('❌ Promise拒否:', event.reason);
+    });
+</script>
 </body>
 </html>
