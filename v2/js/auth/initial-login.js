@@ -70,31 +70,45 @@ class InitialLoginDetector {
 
     // 🔧 修正: ユーザー名ログイン処理
     async handleUsernameLogin(username, password) {
-        console.log('🔍 ユーザー名ログイン試行:', username);
+    console.log('🔍 ユーザー名ログイン試行:', username);
+    
+    try {
+        // ✅ usernames テーブルから UID を取得
+        const usernameSnapshot = await this.database
+            .ref(`ceScheduleV2/usernames/${username}`)
+            .once('value');
+            
+        if (!usernameSnapshot.exists()) {
+            throw new Error('ユーザー名が見つかりません');
+        }
         
-        try {
-            // ✅ usernames テーブルから UID を取得
-            const usernameSnapshot = await this.database
-                .ref(`ceScheduleV2/usernames/${username}`)
-                .once('value');
+        const usernameData = usernameSnapshot.val();
+        console.log('✅ ユーザー名データ:', usernameData);
+        
+        // 初期ユーザーの場合は初期ログインに転送
+        if (usernameData.status === 'initial') {
+            console.log('🔄 初期ユーザーのため初期ログインに転送');
+            return await this.handleInitialLogin(username, password);
+        }
+        
+        // 🆕 通常ログイン処理（新規実装）
+        if (usernameData.uid && usernameData.status === 'active') {
+            console.log('🔐 通常ユーザーログイン処理開始');
+            
+            // Firebase Authentication でログイン
+            try {
+                // Email形式のログイン（一時的なEmail使用）
+                const loginEmail = `${username}@temp.local`;
+                console.log('🔐 Firebase Auth ログイン試行:', loginEmail);
                 
-            if (!usernameSnapshot.exists()) {
-                throw new Error('ユーザー名が見つかりません');
-            }
-            
-            const usernameData = usernameSnapshot.val();
-            console.log('✅ ユーザー名データ:', usernameData);
-            
-            // 初期ユーザーの場合は初期ログインに転送
-            if (usernameData.status === 'initial') {
-                console.log('🔄 初期ユーザーのため初期ログインに転送');
-                return await this.handleInitialLogin(username, password);
-            }
-            
-            // UID が存在する場合は通常ログイン
-            if (usernameData.uid) {
+                const userCredential = await this.auth.signInWithEmailAndPassword(loginEmail, password);
+                const user = userCredential.user;
+                
+                console.log('✅ Firebase Authentication 成功:', user.uid);
+                
+                // ユーザーデータ取得
                 const userSnapshot = await this.database
-                    .ref(`ceScheduleV2/users/${usernameData.uid}`)
+                    .ref(`ceScheduleV2/users/${user.uid}`)
                     .once('value');
                     
                 if (!userSnapshot.exists()) {
@@ -104,19 +118,31 @@ class InitialLoginDetector {
                 const userData = userSnapshot.val();
                 console.log('✅ 通常ユーザーデータ取得:', userData);
                 
-                // Firebase Authentication でログイン
-                // 注: 実際の実装では適切な認証方法を使用
-                throw new Error('通常ログインは未実装');
+                // ログイン記録更新
+                await this.database.ref(`ceScheduleV2/users/${user.uid}`).update({
+                    lastLogin: firebase.database.ServerValue.TIMESTAMP,
+                    loginCount: (userData.loginCount || 0) + 1
+                });
                 
-            } else {
-                throw new Error('ユーザーデータが不完全です');
+                console.log('🎉 通常ログイン完全成功:', username);
+                
+                // メイン画面にリダイレクト (認証システムが自動処理)
+                return true;
+                
+            } catch (authError) {
+                console.error('❌ Firebase Authentication エラー:', authError);
+                throw new Error('認証に失敗しました。パスワードを確認してください。');
             }
             
-        } catch (error) {
-            console.error('❌ ユーザー名ログインエラー:', error);
-            throw error;
+        } else {
+            throw new Error('ユーザー状態が無効です');
         }
+        
+    } catch (error) {
+        console.error('❌ ユーザー名ログインエラー:', error);
+        throw error;
     }
+}
 
     // 🔧 修正: ログイン試行統合メソッド
     async attemptLogin(loginId, password) {
