@@ -175,6 +175,51 @@ class InitialLoginDetector {
         }
     }
 
+    // 🆕 ユーザー名利用可能性チェック（追加）
+    async checkUsernameAvailability(username) {
+        console.log('🔍 ユーザー名利用可能性チェック:', username);
+        
+        try {
+            // 入力値検証
+            if (!username || username.length < 3 || username.length > 20) {
+                return { available: false, reason: 'invalid_length' };
+            }
+            
+            // 英数字チェック
+            const alphanumericRegex = /^[a-zA-Z0-9]+$/;
+            if (!alphanumericRegex.test(username)) {
+                return { available: false, reason: 'invalid_format' };
+            }
+            
+            // 1. initialUsers テーブルをチェック
+            const initialUserSnapshot = await this.database
+                .ref(`ceScheduleV2/initialUsers/${username}`)
+                .once('value');
+                
+            if (initialUserSnapshot.exists()) {
+                console.log('❌ ユーザー名は既に初期ユーザーとして使用中');
+                return { available: false, reason: 'initial_user_exists' };
+            }
+            
+            // 2. usernames テーブルをチェック
+            const usernameSnapshot = await this.database
+                .ref(`ceScheduleV2/usernames/${username}`)
+                .once('value');
+                
+            if (usernameSnapshot.exists()) {
+                console.log('❌ ユーザー名は既に使用中');
+                return { available: false, reason: 'username_exists' };
+            }
+            
+            console.log('✅ ユーザー名は利用可能');
+            return { available: true };
+            
+        } catch (error) {
+            console.error('❌ ユーザー名チェックエラー:', error);
+            return { available: false, reason: 'check_failed' };
+        }
+    }
+
     // 🆕 パスワード確認
     async validatePassword(username, password, userType = 'initial') {
         try {
