@@ -7,7 +7,7 @@ if (typeof window.firebaseConfigV2 !== 'undefined') {
 } else {
     // Firebase設定
     window.firebaseConfigV2 = {
-        apiKey: "AIzaSyD-9gMA2Q_xopDS_FTbvOlMANy5MHP830g",
+        apiKey: "AIzaSyCRUvvs0OSz_9L9bXtqteVFIIze1OaZObE",
         authDomain: "ce-scheduling-system-v2.firebaseapp.com",
         databaseURL: "https://ce-scheduling-system-v2-default-rtdb.asia-southeast1.firebasedatabase.app",
         projectId: "ce-scheduling-system-v2",
