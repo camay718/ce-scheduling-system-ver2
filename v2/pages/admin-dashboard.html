@@ -1,0 +1,636 @@
+Copy<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>管理者ダッシュボード - CEスケジュール管理システム V2</title>
+    
+    <!-- 外部ライブラリ -->
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css">
+    
+    <!-- Firebase CDN -->
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+    
+    <!-- カスタムCSS -->
+    <link rel="stylesheet" href="../css/main.css">
+    <link rel="stylesheet" href="../css/admin.css">
+</head>
+<body>
+    <!-- メッセージコンテナ -->
+    <div id="messageContainer" class="fixed top-4 left-1/2 transform -translate-x-1/2 z-50 w-96"></div>
+
+    <div class="admin-container">
+        <!-- ヘッダー -->
+        <div class="admin-header">
+            <div class="flex justify-between items-center">
+                <h1 class="admin-title">
+                    <i class="fas fa-shield-alt mr-3 text-blue-600"></i>
+                    管理者ダッシュボード
+                </h1>
+                <div class="flex items-center space-x-4">
+                    <span class="text-sm text-gray-600">
+                        管理者: <span id="adminUserName" class="font-semibold"></span>
+                    </span>
+                    <button onclick="goBack()" class="admin-btn admin-btn-primary">
+                        <i class="fas fa-arrow-left mr-2"></i>
+                        メイン画面に戻る
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <div class="admin-content">
+            <!-- 新規ユーザー作成 -->
+            <div class="admin-card">
+                <div class="admin-card-header">
+                    <h2 class="admin-card-title">
+                        <i class="fas fa-user-plus mr-2 text-green-600"></i>
+                        新規ユーザー作成
+                    </h2>
+                </div>
+
+                <form id="createUserForm" class="admin-grid">
+                    <div>
+                        <!-- ユーザー名（氏名） -->
+                        <div class="admin-form-group">
+                            <label for="username" class="admin-form-label">
+                                <i class="fas fa-user mr-1"></i>ユーザー名（氏名）（必須）
+                            </label>
+                            <input type="text" id="username" class="admin-form-input" 
+                                   placeholder="例: 田中太郎" required>
+                        </div>
+
+                        <!-- 権限レベル -->
+                        <div class="admin-form-group">
+                            <label for="permission" class="admin-form-label">
+                                <i class="fas fa-shield-alt mr-1"></i>権限レベル
+                            </label>
+                            <select id="permission" class="admin-form-select" required onchange="toggleDepartmentField()">
+                                <option value="">-- 権限を選択 --</option>
+                                <option value="viewer">閲覧者（Viewer）</option>
+                                <option value="editor">編集者（Editor）</option>
+                            </select>
+                        </div>
+
+                        <!-- 部門（Editorの場合のみ表示） -->
+                        <div id="departmentField" class="admin-form-group" style="display: none;">
+                            <label for="department" class="admin-form-label">
+                                <i class="fas fa-building mr-1"></i>所属部門（必須）
+                            </label>
+                            <select id="department" class="admin-form-select">
+                                <option value="">部門を選択してください</option>
+                                <option value="手術・麻酔">手術・麻酔</option>
+                                <option value="機器管理・人工呼吸">MEセンター（機器管理・人工呼吸）</option>
+                                <option value="血液浄化">血液浄化</option>
+                                <option value="不整脈">不整脈</option>
+                                <option value="人工心肺・補助循環">人工心肺・補助循環</option>
+                                <option value="心・カテーテル">心・カテーテル</option>
+                                <option value="その他">その他</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div>
+                        <!-- 初期パスワード -->
+                        <div class="admin-form-group">
+                            <label for="initialPassword" class="admin-form-label">
+                                <i class="fas fa-key mr-1"></i>初期パスワード
+                            </label>
+                            <div class="flex space-x-2">
+                                <input type="text" id="initialPassword" class="admin-form-input admin-password-display" 
+                                       placeholder="自動生成されます" readonly>
+                                <button type="button" onclick="generateNewPassword()" class="admin-btn admin-btn-warning">
+                                    <i class="fas fa-sync-alt mr-1"></i>生成
+                                </button>
+                            </div>
+                            <div class="admin-help-text">
+                                ユーザーに共有する初期ログイン用パスワードです
+                            </div>
+                        </div>
+
+                        <!-- 作成ボタン -->
+                        <div class="admin-form-group">
+                            <button type="submit" id="createUserButton" class="admin-btn admin-btn-success w-full py-3">
+                                <i class="fas fa-user-plus mr-2"></i>
+                                初期ユーザー作成
+                            </button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+
+            <!-- 作成結果表示 -->
+            <div id="creationResult" class="admin-card" style="display: none;">
+                <div class="admin-card-header">
+                    <h3 class="admin-card-title">
+                        <i class="fas fa-check-circle mr-2 text-green-600"></i>
+                        ユーザー作成完了
+                    </h3>
+                </div>
+                <div id="creationDetails"></div>
+            </div>
+
+            <!-- 初期ユーザーリスト -->
+            <div class="admin-card">
+                <div class="admin-card-header">
+                    <div class="flex justify-between items-center">
+                        <h2 class="admin-card-title">
+                            <i class="fas fa-users mr-2 text-orange-600"></i>
+                            初期設定待ちユーザー
+                        </h2>
+                        <button onclick="refreshInitialUsers()" class="admin-btn admin-btn-primary">
+                            <i class="fas fa-sync-alt mr-2"></i>更新
+                        </button>
+                    </div>
+                </div>
+
+                <div id="initialUsersTable">
+                    <div class="text-center py-8 text-gray-500">
+                        <i class="fas fa-spinner fa-spin text-2xl mb-2"></i>
+                        <p>データを読み込み中...</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 設定完了済みユーザーリスト -->
+            <div class="admin-card">
+                <div class="admin-card-header">
+                    <div class="flex justify-between items-center">
+                        <h2 class="admin-card-title">
+                            <i class="fas fa-user-check mr-2 text-blue-600"></i>
+                            設定完了済みユーザー
+                        </h2>
+                        <button onclick="refreshConfiguredUsers()" class="admin-btn admin-btn-primary">
+                            <i class="fas fa-sync-alt mr-2"></i>更新
+                        </button>
+                    </div>
+                </div>
+
+                <div id="configuredUsersTable">
+                    <div class="text-center py-8 text-gray-500">
+                        <i class="fas fa-spinner fa-spin text-2xl mb-2"></i>
+                        <p>データを読み込み中...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- JavaScript読み込み -->
+    <script src="../js/core/firebase-config.js?v=20241205-4"></script>
+
+    <!-- Firebase初期化完了待機スクリプト -->
+    <script>
+        // Firebase初期化完了を待ってからAdminUserManagerを読み込み
+        async function waitForFirebaseAndLoadAdmin() {
+            console.log('⏳ Firebase初期化完了を待機中...');
+            
+            // Firebase初期化完了待機（最大20秒）
+            let attempts = 0;
+            while (attempts < 200 && (!window.firebase || !window.firebase.apps || window.firebase.apps.length === 0)) {
+                console.log(`⏳ Firebase初期化待機中... (${attempts + 1}/200)`);
+                await new Promise(resolve => setTimeout(resolve, 100));
+                attempts++;
+            }
+            
+            if (window.firebase && window.firebase.apps && window.firebase.apps.length > 0) {
+                console.log('✅ Firebase初期化確認完了 - AdminUserManagerを読み込み');
+                
+                // AdminUserManagerスクリプトを動的読み込み
+                const script = document.createElement('script');
+                script.src = '../js/admin/admin-user-management.js?v=20241205-5';
+                script.onload = () => {
+                    console.log('✅ AdminUserManager スクリプト読み込み完了');
+                };
+                script.onerror = () => {
+                    console.error('❌ AdminUserManager スクリプト読み込み失敗');
+                };
+                document.head.appendChild(script);
+            } else {
+                console.error('❌ Firebase初期化タイムアウト');
+                alert('Firebase初期化に失敗しました。ページを再読み込みしてください。');
+            }
+        }
+
+        // DOMContentLoaded後にFirebase待機開始
+        document.addEventListener('DOMContentLoaded', waitForFirebaseAndLoadAdmin);
+    </script>
+
+    <!-- 部門フィールド制御 -->
+    <script>
+        // 部門フィールドの表示/非表示制御
+        function toggleDepartmentField() {
+            const permission = document.getElementById('permission').value;
+            const departmentField = document.getElementById('departmentField');
+            const departmentSelect = document.getElementById('department');
+            
+            if (permission === 'editor') {
+                departmentField.style.display = 'block';
+                departmentSelect.required = true;
+            } else {
+                departmentField.style.display = 'none';
+                departmentSelect.required = false;
+                departmentSelect.value = ''; // クリア
+            }
+            
+            console.log('🔧 部門フィールド切替:', permission, departmentField.style.display);
+        }
+    </script>
+
+    <!-- 管理者ダッシュボード制御 -->
+    <script>
+        // 管理者ダッシュボード制御
+        class AdminDashboard {
+            constructor() {
+                this.isInitialized = false;
+                this.currentAdmin = null;
+                this.init();
+            }
+
+            async init() {
+                // Firebase & 管理者システム準備待ち
+                let attempts = 0;
+                while (attempts < 100 && (!window.adminUserManager || !window.adminUserManager.isInitialized)) {
+                    await new Promise(resolve => setTimeout(resolve, 100));
+                    attempts++;
+                }
+
+                if (window.adminUserManager) {
+                    this.isInitialized = true;
+                    await this.checkAdminAccess();
+                    this.setupEventListeners();
+                    this.loadInitialData();
+                    console.log('✅ 管理者ダッシュボード初期化完了');
+                } else {
+                    this.showError('管理者システムの初期化に失敗しました');
+                }
+            }
+
+            async checkAdminAccess() {
+                // 現在のユーザーが管理者かチェック
+                const urlParams = new URLSearchParams(window.location.search);
+                const authToken = urlParams.get('admin');
+                
+                if (!authToken) {
+                    this.showError('管理者認証が必要です');
+                    setTimeout(() => {
+                        window.location.href = '../index.html';
+                    }, 2000);
+                    return;
+                }
+
+                // 管理者情報を設定（簡易版）
+                this.currentAdmin = { uid: 'admin_temp', email: 'admin' };
+                window.adminUserManager.setCurrentAdmin(this.currentAdmin);
+                
+                document.getElementById('adminUserName').textContent = 'システム管理者';
+            }
+
+            setupEventListeners() {
+                // フォーム送信
+                document.getElementById('createUserForm').addEventListener('submit', (e) => {
+                    e.preventDefault();
+                    this.handleCreateUser();
+                });
+
+                // 初期パスワード生成
+                this.generateNewPassword();
+            }
+
+            async loadInitialData() {
+                await this.refreshInitialUsers();
+                await this.refreshConfiguredUsers();
+            }
+
+            async handleCreateUser() {
+                const button = document.getElementById('createUserButton');
+                button.disabled = true;
+                button.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>作成中...';
+
+                try {
+                    // AdminUserManager初期化待機
+                    if (!window.adminUserManager || !window.adminUserManager.isInitialized) {
+                        console.log('⏳ AdminUserManager初期化待機中...');
+                        
+                        let attempts = 0;
+                        while (attempts < 50 && (!window.adminUserManager || !window.adminUserManager.isInitialized)) {
+                            await new Promise(resolve => setTimeout(resolve, 100));
+                            attempts++;
+                        }
+                        
+                        if (!window.adminUserManager || !window.adminUserManager.isInitialized) {
+                            throw new Error('管理システムの初期化が完了していません');
+                        }
+                    }
+
+                    const userData = {
+                        displayName: document.getElementById('username').value.trim(),
+                        department: document.getElementById('department') ? 
+                                   document.getElementById('department').value : null,
+                        role: document.getElementById('permission').value,
+                        initialPassword: document.getElementById('initialPassword').value
+                    };
+
+                    console.log('📝 ユーザーデータ:', userData);
+
+                    const result = await window.adminUserManager.createInitialUser(userData);
+
+                    if (result.success) {
+                        this.showCreationResult(result);
+                        this.resetForm();
+                        await this.refreshInitialUsers();
+                    }
+                } catch (error) {
+                    console.error('❌ ユーザー作成エラー:', error);
+                    this.showError(error.message);
+                } finally {
+                    button.disabled = false;
+                    button.innerHTML = '<i class="fas fa-user-plus mr-2"></i>初期ユーザー作成';
+                }
+            }
+
+            showCreationResult(result) {
+                const resultDiv = document.getElementById('creationResult');
+                const detailsDiv = document.getElementById('creationDetails');
+                
+                detailsDiv.innerHTML = `
+                    <div class="admin-success-message">
+                        <h4 class="font-semibold mb-2">✅ ${result.message}</h4>
+                        <div class="space-y-2">
+                            <p><strong>ユーザーID:</strong> <code>${result.userId}</code></p>
+                            <p><strong>初期パスワード:</strong> <code class="admin-password-display">${result.initialPassword}</code></p>
+                            <p><strong>ログインURL:</strong> <a href="${result.loginUrl}" target="_blank" class="text-blue-600 underline">${result.loginUrl}</a></p>
+                        </div>
+                        <div class="mt-4 p-3 bg-blue-50 rounded-lg">
+                            <p class="text-sm text-blue-800">
+                                <i class="fas fa-info-circle mr-1"></i>
+                                上記の情報をユーザーに共有してください。初回ログイン時に個人設定を完了するよう案内してください。
+                            </p>
+                        </div>
+                    </div>
+                `;
+                
+                resultDiv.style.display = 'block';
+                resultDiv.scrollIntoView({ behavior: 'smooth' });
+            }
+
+            resetForm() {
+                document.getElementById('createUserForm').reset();
+                this.generateNewPassword();
+            }
+
+            async generateNewPassword() {
+                try {
+                    // AdminUserManager初期化待機
+                    if (!window.adminUserManager || !window.adminUserManager.isInitialized) {
+                        console.log('⏳ パスワード生成: AdminUserManager初期化待機中...');
+                        
+                        let attempts = 0;
+                        while (attempts < 30 && (!window.adminUserManager || !window.adminUserManager.isInitialized)) {
+                            await new Promise(resolve => setTimeout(resolve, 100));
+                            attempts++;
+                        }
+                    }
+
+                    if (window.adminUserManager && window.adminUserManager.isInitialized) {
+                        const password = window.adminUserManager.generatePassword();
+                        document.getElementById('initialPassword').value = password;
+                        console.log('🔑 パスワード生成完了');
+                    } else {
+                        console.log('⚠️ AdminUserManager未初期化のため手動パスワード設定');
+                        // 緊急時の手動生成
+                        const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+                        let password = '';
+                        for (let i = 0; i < 8; i++) {
+                            password += chars.charAt(Math.floor(Math.random() * chars.length));
+                        }
+                        document.getElementById('initialPassword').value = password;
+                    }
+                } catch (error) {
+                    console.error('❌ パスワード生成エラー:', error);
+                }
+            }
+
+            async refreshInitialUsers() {
+                const tableDiv = document.getElementById('initialUsersTable');
+                
+                try {
+                    const users = await window.adminUserManager.getInitialUsersList();
+                    
+                    if (users.length === 0) {
+                        tableDiv.innerHTML = `
+                            <div class="text-center py-8 text-gray-500">
+                                <i class="fas fa-users text-3xl mb-2"></i>
+                                <p>初期設定待ちのユーザーはいません</p>
+                            </div>
+                        `;
+                        return;
+                    }
+
+                    let tableHTML = `
+                        <table class="admin-table">
+                            <thead>
+                                <tr>
+                                    <th>氏名</th>
+                                    <th>初期パスワード</th>
+                                    <th>作成日時</th>
+                                    <th>状態</th>
+                                    <th>操作</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                    `;
+
+                    users.forEach(user => {
+                        const createdAt = user.createdAt ? new Date(user.createdAt).toLocaleString('ja-JP') : '不明';
+                        tableHTML += `
+                            <tr>
+                                <td class="font-semibold">${user.displayName}</td>
+                                <td><code class="admin-password-display">${user.initialPassword}</code></td>
+                                <td>${createdAt}</td>
+                                <td><span class="admin-status-badge status-initial">初期設定待ち</span></td>
+                                <td>
+                                    <button onclick="adminDashboard.deleteUser('${user.userId}')" 
+                                            class="admin-btn admin-btn-danger">
+                                        <i class="fas fa-trash mr-1"></i>削除
+                                    </button>
+                                </td>
+                            </tr>
+                        `;
+                    });
+
+                    tableHTML += '</tbody></table>';
+                    tableDiv.innerHTML = tableHTML;
+
+                } catch (error) {
+                    console.error('❌ 初期ユーザーリスト取得エラー:', error);
+                    tableDiv.innerHTML = `
+                        <div class="text-center py-8 text-red-500">
+                            <i class="fas fa-exclamation-triangle text-3xl mb-2"></i>
+                            <p>データの取得に失敗しました</p>
+                        </div>
+                    `;
+                }
+            }
+
+            async refreshConfiguredUsers() {
+                const tableDiv = document.getElementById('configuredUsersTable');
+                
+                try {
+                    const users = await window.adminUserManager.getConfiguredUsersList();
+                    
+                    if (users.length === 0) {
+                        tableDiv.innerHTML = `
+                            <div class="text-center py-8 text-gray-500">
+                                <i class="fas fa-user-check text-3xl mb-2"></i>
+                                <p>設定完了済みのユーザーはいません</p>
+                            </div>
+                        `;
+                        return;
+                    }
+
+                    let tableHTML = `
+                        <table class="admin-table">
+                            <thead>
+                                <tr>
+                                    <th>氏名</th>
+                                    <th>ユーザー名</th>
+                                    <th>部門</th>
+                                    <th>権限</th>
+                                    <th>最終ログイン</th>
+                                    <th>操作</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                    `;
+
+                    users.forEach(user => {
+                        const lastLogin = user.lastLogin ? new Date(user.lastLogin).toLocaleString('ja-JP') : 'なし';
+                        const roleText = { admin: '管理者', editor: '編集者', viewer: '閲覧者' };
+                        
+                        tableHTML += `
+                            <tr>
+                                <td class="font-semibold">${user.displayName || '未設定'}</td>
+                                <td><code>${user.username || '未設定'}</code></td>
+                                <td>${user.department || '未設定'}</td>
+                                <td><span class="admin-status-badge status-configured">${roleText[user.role] || user.role}</span></td>
+                                <td>${lastLogin}</td>
+                                <td>
+                                    <button onclick="adminDashboard.resetPassword('${user.userId}')" 
+                                            class="admin-btn admin-btn-warning mr-1">
+                                        <i class="fas fa-key mr-1"></i>リセット
+                                    </button>
+                                    <button onclick="adminDashboard.deleteUser('${user.userId}')" 
+                                            class="admin-btn admin-btn-danger">
+                                        <i class="fas fa-trash mr-1"></i>削除
+                                    </button>
+                                </td>
+                            </tr>
+                        `;
+                    });
+
+                    tableHTML += '</tbody></table>';
+                    tableDiv.innerHTML = tableHTML;
+
+                } catch (error) {
+                    console.error('❌ 設定済みユーザーリスト取得エラー:', error);
+                    tableDiv.innerHTML = `
+                        <div class="text-center py-8 text-red-500">
+                            <i class="fas fa-exclamation-triangle text-3xl mb-2"></i>
+                            <p>データの取得に失敗しました</p>
+                        </div>
+                    `;
+                }
+            }
+
+            async deleteUser(userId) {
+                if (!confirm('このユーザーを削除しますか？この操作は取り消せません。')) {
+                    return;
+                }
+
+                try {
+                    await window.adminUserManager.deleteUser(userId);
+                    this.showSuccess('ユーザーを削除しました');
+                    await this.refreshInitialUsers();
+                    await this.refreshConfiguredUsers();
+                } catch (error) {
+                    this.showError(error.message);
+                }
+            }
+
+            async resetPassword(userId) {
+                if (!confirm('このユーザーのパスワードをリセットしますか？')) {
+                    return;
+                }
+
+                try {
+                    const newPassword = await window.adminUserManager.resetUserPassword(userId);
+                    alert(`新しい初期パスワード: ${newPassword}\n\nユーザーに共有してください。`);
+                    await this.refreshInitialUsers();
+                    await this.refreshConfiguredUsers();
+                } catch (error) {
+                    this.showError(error.message);
+                }
+            }
+
+            showError(message) {
+                this.showMessage(message, 'error');
+            }
+
+            showSuccess(message) {
+                this.showMessage(message, 'success');
+            }
+
+            showMessage(text, type = 'info') {
+                const container = document.getElementById('messageContainer');
+                const messageDiv = document.createElement('div');
+                messageDiv.className = `message ${type} px-4 py-2 mb-2 rounded-lg`;
+                
+                const icons = { success: 'check', error: 'times', warning: 'exclamation', info: 'info' };
+                messageDiv.innerHTML = `<i class="fas fa-${icons[type]}-circle mr-2"></i>${text}`;
+                
+                const colors = {
+                    success: 'bg-green-100 text-green-800',
+                    error: 'bg-red-100 text-red-800',
+                    warning: 'bg-yellow-100 text-yellow-800',
+                    info: 'bg-blue-100 text-blue-800'
+                };
+                messageDiv.className += ` ${colors[type]}`;
+                
+                container.appendChild(messageDiv);
+                setTimeout(() => messageDiv.remove(), 5000);
+            }
+        }
+
+        // グローバル関数
+        function generateNewPassword() {
+            if (window.adminDashboard) {
+                window.adminDashboard.generateNewPassword();
+            }
+        }
+
+        function refreshInitialUsers() {
+            if (window.adminDashboard) {
+                window.adminDashboard.refreshInitialUsers();
+            }
+        }
+
+        function refreshConfiguredUsers() {
+            if (window.adminDashboard) {
+                window.adminDashboard.refreshConfiguredUsers();
+            }
+        }
+
+        function goBack() {
+            window.location.href = '../index.html';
+        }
+
+        // 初期化
+        window.adminDashboard = new AdminDashboard();
+        console.log('👨‍💼 管理者ダッシュボード読み込み完了');
+    </script>
+</body>
+</html>
