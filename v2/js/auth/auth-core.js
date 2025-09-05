@@ -18,24 +18,18 @@ const AUTH_CREDENTIALS = {
 // 認証システムクラス（完全修正版）
 class AuthSystemV2 {
     constructor() {
-        this.currentUser = null;
-        this.userProfile = null;
-        this.userRole = null;
-        this.userDepartment = null;
-        this.isReady = false;
-        
-        console.log('🔐 認証システムV2 初期化中...');
-        
-        // ログイン状態復元を先に試行
-        if (this.restoreLoginState()) {
-            console.log('✅ ログイン状態復元成功');
-            this.isReady = true;
-            return;
-        }
-        
-        // Firebase準備完了を待ってから初期化
-        this.waitForFirebaseAndInitialize();
-    }
+    this.currentUser = null;
+    this.userProfile = null;
+    this.userRole = null;
+    this.userDepartment = null;
+    this.isReady = false;
+    
+    console.log('🔐 認証システムV2 初期化中...');
+    
+    // Firebase準備完了を待ってから初期化（ログイン状態復元はしない）
+    this.waitForFirebaseAndInitialize();
+}
+
 
     async waitForFirebaseAndInitialize() {
         let attempts = 0;
@@ -61,37 +55,46 @@ class AuthSystemV2 {
         this.isReady = true;
     }
 
-    initialize() {
-        try {
-            if (window.auth) {
-                window.auth.onAuthStateChanged(async (user) => {
-    if (user && !user.isAnonymous) {
-        // Email認証ユーザーのみ自動ログイン
-        console.log('✅ Email認証ユーザー検出:', user.email);
-        this.currentUser = user.email;
-        await this.loadUserProfile(user.uid);
-        this.showMainInterface();
-    } else if (user && user.isAnonymous) {
-        // 匿名ユーザーはログイン画面表示
-        console.log('ℹ️ 匿名ユーザー - ログイン画面表示');
-        this.showLoginInterface();
-    } else {
-                        console.log('ℹ️ Firebase認証なし - V1認証システム使用');
+initialize() {
+    try {
+        if (window.auth) {
+            window.auth.onAuthStateChanged(async (user) => {
+                if (user && !user.isAnonymous) {
+                    // Email認証ユーザーのみ自動ログイン
+                    console.log('✅ Email認証ユーザー検出:', user.email);
+                    this.currentUser = user.email;
+                    await this.loadUserProfile(user.uid);
+                    this.showMainInterface();
+                } else {
+                    // 匿名ユーザーまたは未認証はログイン画面
+                    console.log('ℹ️ 匿名/未認証ユーザー - ログイン画面表示');
+                    
+                    // 既存のV1ログイン状態をチェック
+                    if (!this.restoreLoginState()) {
                         this.showLoginInterface();
                     }
-                    this.isReady = true;
-                });
-            } else {
-                console.log('⚠️ Firebase Auth未準備 - V1認証システムで継続');
-                this.showLoginInterface();
+                }
                 this.isReady = true;
+            });
+        } else {
+            console.log('⚠️ Firebase Auth未準備 - V1認証システムで継続');
+            
+            // V1ログイン状態復元を試行
+            if (!this.restoreLoginState()) {
+                this.showLoginInterface();
             }
-        } catch (error) {
-            console.error('❌ 認証システム初期化エラー:', error);
-            this.showLoginInterface();
             this.isReady = true;
         }
+    } catch (error) {
+        console.error('❌ 認証システム初期化エラー:', error);
+        
+        // エラー時もV1ログイン状態を確認
+        if (!this.restoreLoginState()) {
+            this.showLoginInterface();
+        }
+        this.isReady = true;
     }
+}
 
     // ★ 未実装関数の補完
     async createDefaultProfile(uid) {
