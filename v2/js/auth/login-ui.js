@@ -83,5 +83,4 @@ document.addEventListener('DOMContentLoaded', () => {
         window.authSystem.restoreLoginState();
     }
 });
-
 console.log('🖥️ ログインUI スクリプト読み込み完了');
