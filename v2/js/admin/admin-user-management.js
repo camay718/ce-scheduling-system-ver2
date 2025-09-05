@@ -5,7 +5,7 @@ import { getDatabase, ref, set, get, remove, push, child, query, orderByChild, e
 
 // Firebase configuration
 const firebaseConfig = {
-    apiKey: "AIzaSyCQqsqxxqxELBURGc8pF_OqFLQDm69RJP4",
+    apiKey: "AIzaSyBkcO6x_CcIdxfq1PHzwT46k1VA6sXTN_o",
     authDomain: "ce-schedule-management.firebaseapp.com",
     databaseURL: "https://ce-schedule-management-default-rtdb.asia-southeast1.firebasedatabase.app",
     projectId: "ce-schedule-management",
