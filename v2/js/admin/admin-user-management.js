@@ -29,133 +29,103 @@ class AdminUserManager {
     }
 
     // 🔧 修正: 初期ユーザー作成ロジック
-    async createInitialUser() {
-        const username = document.getElementById('username').value.trim();
-        const permission = document.getElementById('permission').value;
-        
-        if (!username || !permission) {
-            alert('ユーザー名と権限を入力してください');
+async createInitialUser() {
+    const username = document.getElementById('username').value.trim();
+    const permission = document.getElementById('permission').value;
+    
+    // 🆕 部門取得（Editorの場合のみ）
+    let department = null;
+    if (permission === 'editor') {
+        department = document.getElementById('department').value.trim();
+        if (!department) {
+            alert('Editorの場合は所属部門を入力してください');
             return;
         }
-
-        try {
-            // 1. ユーザー名重複チェック
-            const existingUser = await this.database.ref(`ceScheduleV2/usernames/${username}`).once('value');
-            if (existingUser.exists()) {
-                alert('このユーザー名は既に使用されています');
-                return;
-            }
-
-            // 2. 一時パスワード生成
-            const tempPassword = this.generateTempPassword();
-            
-            // 3. 🚨 重要修正: 3つのテーブルに同時保存
-            const userData = {
-                username: username,
-                tempPassword: tempPassword,
-                permission: permission,
-                isInitial: true,
-                createdAt: firebase.database.ServerValue.TIMESTAMP,
-                lastLogin: null
-            };
-
-            // Firebase トランザクション使用で整合性確保
-            const updates = {};
-            
-            // A. initialUsers テーブル
-            updates[`ceScheduleV2/initialUsers/${username}`] = userData;
-            
-            // B. usernames テーブル（ユーザー名予約）
-            updates[`ceScheduleV2/usernames/${username}`] = {
-                reserved: true,
-                createdAt: firebase.database.ServerValue.TIMESTAMP
-            };
-
-            // 🔧 原子的更新実行
-            await this.database.ref().update(updates);
-            
-            console.log('✅ 初期ユーザー作成完了:', username);
-            
-            // UI更新
-            this.showTempPassword(username, tempPassword);
-            this.loadUsers();
-            document.getElementById('createUserForm').reset();
-            
-        } catch (error) {
-            console.error('❌ ユーザー作成エラー:', error);
-            alert(`ユーザー作成に失敗しました: ${error.message}`);
-        }
+    }
+    
+    console.log('🔍 ユーザー作成開始:', {username, permission, department});
+    
+    if (!username || !permission) {
+        alert('ユーザー名（氏名）と権限を入力してください');
+        return;
     }
 
-    // 🔧 修正: ユーザーリスト読み込み
-    async loadUsers() {
-        try {
-            // initialUsers と通常users を両方取得
-            const [initialUsersSnapshot, usersSnapshot] = await Promise.all([
-                this.database.ref('ceScheduleV2/initialUsers').once('value'),
-                this.database.ref('ceScheduleV2/users').once('value')
-            ]);
+    try {
+        // 🔍 Firebase Database 接続テスト
+        console.log('📡 Firebase Database接続テスト...');
+        const testRef = this.database.ref('ceScheduleV2');
+        await testRef.once('value');
+        console.log('✅ Database接続OK');
 
-            const userList = document.getElementById('userList');
-            userList.innerHTML = '';
-
-            // 初期ユーザー表示
-            if (initialUsersSnapshot.exists()) {
-                initialUsersSnapshot.forEach((userSnapshot) => {
-                    const userData = userSnapshot.val();
-                    this.renderUserRow(userSnapshot.key, userData, 'initial');
-                });
-            }
-
-            // 設定完了ユーザー表示
-            if (usersSnapshot.exists()) {
-                usersSnapshot.forEach((userSnapshot) => {
-                    const userData = userSnapshot.val();
-                    this.renderUserRow(userData.username, userData, 'active');
-                });
-            }
-
-        } catch (error) {
-            console.error('❌ ユーザーリスト読み込みエラー:', error);
-        }
-    }
-
-    renderUserRow(identifier, userData, status) {
-        const userList = document.getElementById('userList');
-        const row = document.createElement('tr');
+        // 1. ユーザー名重複チェック（initialUsers で確認）
+        console.log('🔍 重複チェック中...');
+        const existingInitial = await this.database.ref(`ceScheduleV2/initialUsers/${username}`).once('value');
+        const existingUsername = await this.database.ref(`ceScheduleV2/usernames/${username}`).once('value');
         
-        const statusText = status === 'initial' ? '🟡 初期設定待ち' : '🟢 アクティブ';
-        const lastLogin = userData.lastLogin ? 
-            new Date(userData.lastLogin).toLocaleDateString('ja-JP') : '未ログイン';
-        
-        row.innerHTML = `
-            <td class="px-4 py-2 border">${userData.username || identifier}</td>
-            <td class="px-4 py-2 border">${userData.permission || 'N/A'}</td>
-            <td class="px-4 py-2 border">${statusText}</td>
-            <td class="px-4 py-2 border">${lastLogin}</td>
-            <td class="px-4 py-2 border">
-                <button onclick="adminManager.resetPassword('${identifier}')" 
-                        class="bg-yellow-500 text-white px-2 py-1 rounded hover:bg-yellow-600">
-                    パスワードリセット
-                </button>
-                <button onclick="adminManager.deleteUser('${identifier}')" 
-                        class="bg-red-500 text-white px-2 py-1 rounded hover:bg-red-600 ml-2">
-                    削除
-                </button>
-            </td>
-        `;
-        
-        userList.appendChild(row);
-    }
-
-    generateTempPassword() {
-        const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // 混同しやすい文字を除外
-        let password = '';
-        for (let i = 0; i < 8; i++) {
-            password += chars.charAt(Math.floor(Math.random() * chars.length));
+        if (existingInitial.exists() || existingUsername.exists()) {
+            alert('このユーザー名（氏名）は既に使用されています');
+            return;
         }
-        return password;
+        console.log('✅ ユーザー名利用可能');
+
+        // 2. 一時パスワード生成（8文字、覚えやすい形式）
+        const tempPassword = this.generateTempPassword();
+        console.log('🔑 一時パスワード生成:', tempPassword);
+        
+        // 3. 🆕 ユーザーデータ構造（V2形式）
+        const userData = {
+            username: username,        // 氏名
+            tempPassword: tempPassword,
+            permission: permission,
+            department: department,    // EditorのみでなくViewerはnull
+            isInitial: true,          // 初期設定待ち
+            createdAt: firebase.database.ServerValue.TIMESTAMP,
+            lastLogin: null,
+            loginCount: 0
+        };
+
+        console.log('💾 保存データ:', userData);
+
+        // 4. 🚨 段階的保存（エラー箇所特定のため）
+        console.log('📝 Step 1: initialUsers テーブルに保存中...');
+        await this.database.ref(`ceScheduleV2/initialUsers/${username}`).set(userData);
+        console.log('✅ initialUsers 保存完了');
+
+        console.log('📝 Step 2: usernames テーブルに保存中...');
+        await this.database.ref(`ceScheduleV2/usernames/${username}`).set({
+            status: 'initial',        // initial / active
+            createdAt: firebase.database.ServerValue.TIMESTAMP,
+            permission: permission
+        });
+        console.log('✅ usernames 保存完了');
+        
+        console.log('🎉 ユーザー作成完全成功:', username);
+        
+        // UI更新
+        this.showTempPassword(username, tempPassword);
+        this.loadUsers();
+        document.getElementById('createUserForm').reset();
+        
+    } catch (error) {
+        console.error('❌ 詳細エラー情報:');
+        console.error('- エラー:', error);
+        console.error('- エラーコード:', error.code);
+        console.error('- エラーメッセージ:', error.message);
+        console.error('- エラースタック:', error.stack);
+        
+        alert(`❌ ユーザー作成エラー:\n${error.message}\n\n📋 コンソールログで詳細を確認してください`);
     }
+}
+
+// 🔧 一時パスワード生成の改良版（覚えやすい形式）
+generateTempPassword() {
+    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // 混同文字除外
+    let password = '';
+    for (let i = 0; i < 8; i++) {
+        password += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    return password;
+}
 
     showTempPassword(username, tempPassword) {
         const resultDiv = document.getElementById('tempPasswordResult');
