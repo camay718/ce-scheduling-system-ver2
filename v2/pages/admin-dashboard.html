@@ -52,89 +52,74 @@
                     </h2>
                 </div>
 
-                <form id="createUserForm" class="admin-grid">
-                    <div>
-                        <!-- 氏名 -->
-                        <div class="admin-form-group">
-                            <label for="userName" class="admin-form-label">
-                                <i class="fas fa-user mr-1"></i>氏名（必須）
-                            </label>
-                            <input type="text" id="userName" class="admin-form-input" 
-                                   placeholder="山田 太郎" required>
-                        </div>
+<form id="createUserForm" class="admin-grid">
+    <div>
+        <!-- 🔧 氏名（修正済み） -->
+        <div class="admin-form-group">
+            <label for="username" class="admin-form-label">
+                <i class="fas fa-user mr-1"></i>ユーザー名（氏名）（必須）
+            </label>
+            <input type="text" id="username" class="admin-form-input" 
+                   placeholder="例: 田中太郎" required>
+        </div>
 
-                        <!-- 所属部門 -->
-                        <div class="admin-form-group">
-                            <label for="userDepartment" class="admin-form-label">
-                                <i class="fas fa-building mr-1"></i>所属部門
-                            </label>
-                            <select id="userDepartment" class="admin-form-select" required>
-                                <option value="">部門を選択してください</option>
-                                <option value="手術・麻酔">手術・麻酔</option>
-                                <option value="機器管理・人工呼吸">MEセンター（機器管理・人工呼吸）</option>
-                                <option value="血液浄化">血液浄化</option>
-                                <option value="不整脈">不整脈</option>
-                                <option value="人工心肺・補助循環">人工心肺・補助循環</option>
-                                <option value="心・カテーテル">心・カテーテル</option>
-                                <option value="その他">その他</option>
-                            </select>
-                        </div>
+        <!-- 🔧 権限レベル（修正済み） -->
+        <div class="admin-form-group">
+            <label for="permission" class="admin-form-label">
+                <i class="fas fa-shield-alt mr-1"></i>権限レベル
+            </label>
+            <select id="permission" class="admin-form-select" required onchange="toggleDepartmentField()">
+                <option value="">-- 権限を選択 --</option>
+                <option value="viewer">閲覧者（Viewer）</option>
+                <option value="editor">編集者（Editor）</option>
+            </select>
+        </div>
 
-                        <!-- 職種 -->
-                        <div class="admin-form-group">
-                            <label for="userPosition" class="admin-form-label">
-                                <i class="fas fa-id-badge mr-1"></i>職種
-                            </label>
-                            <select id="userPosition" class="admin-form-select" required>
-                                <option value="">職種を選択してください</option>
-                                <option value="CE（臨床工学技士）">CE（臨床工学技士）</option>
-                                <option value="看護師">看護師</option>
-                                <option value="医師">医師</option>
-                                <option value="事務">事務</option>
-                                <option value="その他">その他</option>
-                            </select>
-                        </div>
-                    </div>
+        <!-- 🆕 部門（Editorの場合のみ表示） -->
+        <div id="departmentField" class="admin-form-group" style="display: none;">
+            <label for="department" class="admin-form-label">
+                <i class="fas fa-building mr-1"></i>所属部門（必須）
+            </label>
+            <select id="department" class="admin-form-select">
+                <option value="">部門を選択してください</option>
+                <option value="手術・麻酔">手術・麻酔</option>
+                <option value="機器管理・人工呼吸">MEセンター（機器管理・人工呼吸）</option>
+                <option value="血液浄化">血液浄化</option>
+                <option value="不整脈">不整脈</option>
+                <option value="人工心肺・補助循環">人工心肺・補助循環</option>
+                <option value="心・カテーテル">心・カテーテル</option>
+                <option value="その他">その他</option>
+            </select>
+        </div>
+    </div>
 
-                    <div>
-                        <!-- 権限レベル -->
-                        <div class="admin-form-group">
-                            <label for="userRole" class="admin-form-label">
-                                <i class="fas fa-shield-alt mr-1"></i>権限レベル
-                            </label>
-                            <select id="userRole" class="admin-form-select" required>
-                                <option value="viewer">閲覧者（Viewer）</option>
-                                <option value="editor">編集者（Editor）</option>
-                                <option value="admin">管理者（Admin）</option>
-                            </select>
-                        </div>
+    <div>
+        <!-- 初期パスワード（既存のまま） -->
+        <div class="admin-form-group">
+            <label for="initialPassword" class="admin-form-label">
+                <i class="fas fa-key mr-1"></i>初期パスワード
+            </label>
+            <div class="flex space-x-2">
+                <input type="text" id="initialPassword" class="admin-form-input admin-password-display" 
+                       placeholder="自動生成されます" readonly>
+                <button type="button" onclick="generateNewPassword()" class="admin-btn admin-btn-warning">
+                    <i class="fas fa-sync-alt mr-1"></i>生成
+                </button>
+            </div>
+            <div class="admin-help-text">
+                ユーザーに共有する初期ログイン用パスワードです
+            </div>
+        </div>
 
-                        <!-- 初期パスワード -->
-                        <div class="admin-form-group">
-                            <label for="initialPassword" class="admin-form-label">
-                                <i class="fas fa-key mr-1"></i>初期パスワード
-                            </label>
-                            <div class="flex space-x-2">
-                                <input type="text" id="initialPassword" class="admin-form-input admin-password-display" 
-                                       placeholder="自動生成されます" readonly>
-                                <button type="button" onclick="generateNewPassword()" class="admin-btn admin-btn-warning">
-                                    <i class="fas fa-sync-alt mr-1"></i>生成
-                                </button>
-                            </div>
-                            <div class="admin-help-text">
-                                ユーザーに共有する初期ログイン用パスワードです
-                            </div>
-                        </div>
-
-                        <!-- 作成ボタン -->
-                        <div class="admin-form-group">
-                            <button type="submit" id="createUserButton" class="admin-btn admin-btn-success w-full py-3">
-                                <i class="fas fa-user-plus mr-2"></i>
-                                初期ユーザー作成
-                            </button>
-                        </div>
-                    </div>
-                </form>
+        <!-- 作成ボタン（既存のまま） -->
+        <div class="admin-form-group">
+            <button type="submit" id="createUserButton" class="admin-btn admin-btn-success w-full py-3">
+                <i class="fas fa-user-plus mr-2"></i>
+                初期ユーザー作成
+            </button>
+        </div>
+    </div>
+</form>
             </div>
 
             <!-- 作成結果表示 -->
@@ -197,6 +182,27 @@
     <!-- JavaScript読み込み -->
     <script src="../js/core/firebase-config.js?v=20241205-4"></script>
     <script src="../js/admin/admin-user-management.js?v=20241205-4"></script>
+
+    <!-- 🆕 部門フィールド制御を追加 -->
+    <script>
+        // 部門フィールドの表示/非表示制御
+        function toggleDepartmentField() {
+            const permission = document.getElementById('permission').value;
+            const departmentField = document.getElementById('departmentField');
+            const departmentSelect = document.getElementById('department');
+            
+            if (permission === 'editor') {
+                departmentField.style.display = 'block';
+                departmentSelect.required = true;
+            } else {
+                departmentField.style.display = 'none';
+                departmentSelect.required = false;
+                departmentSelect.value = ''; // クリア
+            }
+            
+            console.log('🔧 部門フィールド切替:', permission, departmentField.style.display);
+        }
+    </script>
 
     <!-- 管理者ダッシュボード制御 -->
     <script>
@@ -270,12 +276,13 @@
 
                 try {
                     const userData = {
-                        displayName: document.getElementById('userName').value.trim(),
-                        department: document.getElementById('userDepartment').value,
-                        position: document.getElementById('userPosition').value,
-                        role: document.getElementById('userRole').value,
-                        initialPassword: document.getElementById('initialPassword').value
-                    };
+    displayName: document.getElementById('username').value.trim(),        // 🔧 ID変更
+    department: document.getElementById('department') ? 
+               document.getElementById('department').value : null,        // 🔧 動的取得
+    // position: document.getElementById('userPosition').value,          // 🗑️ 職種削除
+    role: document.getElementById('permission').value,                   // 🔧 ID変更
+    initialPassword: document.getElementById('initialPassword').value
+};
 
                     const result = await window.adminUserManager.createInitialUser(userData);
 
