@@ -1,77 +1,66 @@
-/*
-🔍 初期ログイン検知システム
-管理者が作成した初期ユーザーのログインを検知し、個人設定画面へ誘導
-*/
-
 class InitialLoginDetector {
     constructor() {
+        this.database = null;
+        this.auth = null;
         this.isInitialized = false;
-        this.currentUserId = null;
-        
-        console.log('🔍 初期ログイン検知システム初期化中...');
-        this.initialize();
+        this.init();
     }
 
-    async initialize() {
-        // Firebase準備待ち
+    async init() {
+        console.log('🔍 初期ログイン検知システム初期化中...');
+        
+        // Firebase準備待機
+        await this.waitForFirebase();
+        
+        try {
+            this.database = firebase.database();
+            this.auth = firebase.auth();
+            this.isInitialized = true;
+            
+            console.log('✅ 初期ログイン検知システム準備完了');
+            
+        } catch (error) {
+            console.error('❌ 初期ログイン検知システム初期化エラー:', error);
+        }
+    }
+
+    async waitForFirebase() {
         let attempts = 0;
-        while (attempts < 100 && (!window.auth || !window.database)) {
+        while (attempts < 100 && (!window.firebase || !window.firebase.apps || window.firebase.apps.length === 0)) {
             await new Promise(resolve => setTimeout(resolve, 100));
             attempts++;
         }
-        
-        if (window.auth && window.database) {
-            this.isInitialized = true;
-            console.log('✅ 初期ログイン検知システム準備完了');
-        } else {
-            console.error('❌ Firebase未準備 - 初期ログイン検知無効');
-        }
     }
 
-    // 初期パスワードでのログイン処理
-    async handleInitialLogin(userId, password) {
-        if (!this.isInitialized) {
-            throw new Error('システムが初期化されていません');
-        }
-
+    // 🔧 修正: 初期ログイン処理
+    async handleInitialLogin(username, password) {
+        console.log('🔍 初期ログイン試行:', username);
+        
         try {
-            console.log('🔍 初期ログイン試行:', userId);
-            
-            // ユーザー情報取得
-            const userSnapshot = await window.database.ref(`${window.DATA_ROOT}/users/${userId}`).once('value');
-            
+            // ✅ initialUsers テーブルから検索
+            const userSnapshot = await this.database
+                .ref(`ceScheduleV2/initialUsers/${username}`)
+                .once('value');
+                
             if (!userSnapshot.exists()) {
                 throw new Error('ユーザーが見つかりません');
             }
             
             const userData = userSnapshot.val();
-            const authData = userData.auth || {};
+            console.log('✅ 初期ユーザーデータ取得:', userData);
             
-            // アカウント状態確認
-            if (authData.accountStatus !== 'initial') {
-                throw new Error('このアカウントは既に設定が完了しているか、無効です');
+            // パスワード確認
+            if (userData.tempPassword !== password) {
+                throw new Error('パスワードが正しくありません');
             }
             
-            // 初期パスワード確認
-            if (authData.initialPassword !== password) {
-                throw new Error('初期パスワードが正しくありません');
-            }
+            console.log('✅ 初期ログイン認証成功:', username);
             
-            // ログイン成功
-            this.currentUserId = userId;
+            // 🔄 ユーザー設定画面にリダイレクト
+            const redirectUrl = `pages/user-setup.html?initialUser=${encodeURIComponent(username)}`;
+            console.log('🔄 初期設定画面へリダイレクト:', redirectUrl);
             
-            // 初期ログイン履歴記録
-            await this.recordInitialLogin(userId, userData);
-            
-            console.log('✅ 初期ログイン成功 - 個人設定画面へ誘導');
-            
-            return {
-                success: true,
-                userId: userId,
-                userData: userData,
-                requiresSetup: true,
-                message: '初期ログイン成功！個人設定を完了してください。'
-            };
+            window.location.href = redirectUrl;
             
         } catch (error) {
             console.error('❌ 初期ログインエラー:', error);
@@ -79,59 +68,49 @@ class InitialLoginDetector {
         }
     }
 
-    // 通常ユーザー名ログイン処理
+    // 🔧 修正: ユーザー名ログイン処理
     async handleUsernameLogin(username, password) {
-        if (!this.isInitialized) {
-            throw new Error('システムが初期化されていません');
-        }
-
+        console.log('🔍 ユーザー名ログイン試行:', username);
+        
         try {
-            console.log('🔍 ユーザー名ログイン試行:', username);
-            
-            // ユーザー名からユーザーID取得
-            const usernameSnapshot = await window.database.ref(`${window.DATA_ROOT}/usernames/${username}`).once('value');
-            
+            // ✅ usernames テーブルから UID を取得
+            const usernameSnapshot = await this.database
+                .ref(`ceScheduleV2/usernames/${username}`)
+                .once('value');
+                
             if (!usernameSnapshot.exists()) {
                 throw new Error('ユーザー名が見つかりません');
             }
             
-            const userId = usernameSnapshot.val();
+            const usernameData = usernameSnapshot.val();
+            console.log('✅ ユーザー名データ:', usernameData);
             
-            // ユーザー情報取得
-            const userSnapshot = await window.database.ref(`${window.DATA_ROOT}/users/${userId}`).once('value');
-            
-            if (!userSnapshot.exists()) {
-                throw new Error('ユーザーデータが見つかりません');
+            // 初期ユーザーの場合は初期ログインに転送
+            if (usernameData.status === 'initial') {
+                console.log('🔄 初期ユーザーのため初期ログインに転送');
+                return await this.handleInitialLogin(username, password);
             }
             
-            const userData = userSnapshot.val();
-            const authData = userData.auth || {};
-            
-            // アカウント状態確認
-            if (authData.accountStatus !== 'configured') {
-                throw new Error('アカウントが正しく設定されていません');
+            // UID が存在する場合は通常ログイン
+            if (usernameData.uid) {
+                const userSnapshot = await this.database
+                    .ref(`ceScheduleV2/users/${usernameData.uid}`)
+                    .once('value');
+                    
+                if (!userSnapshot.exists()) {
+                    throw new Error('ユーザーデータが見つかりません');
+                }
+                
+                const userData = userSnapshot.val();
+                console.log('✅ 通常ユーザーデータ取得:', userData);
+                
+                // Firebase Authentication でログイン
+                // 注: 実際の実装では適切な認証方法を使用
+                throw new Error('通常ログインは未実装');
+                
+            } else {
+                throw new Error('ユーザーデータが不完全です');
             }
-            
-            // パスワード確認
-            if (authData.userPassword !== password) {
-                throw new Error('パスワードが正しくありません');
-            }
-            
-            // ログイン成功
-            this.currentUserId = userId;
-            
-            // ログイン履歴記録
-            await this.recordNormalLogin(userId, userData);
-            
-            console.log('✅ 通常ログイン成功');
-            
-            return {
-                success: true,
-                userId: userId,
-                userData: userData,
-                requiresSetup: false,
-                message: 'ログインしました'
-            };
             
         } catch (error) {
             console.error('❌ ユーザー名ログインエラー:', error);
@@ -139,120 +118,99 @@ class InitialLoginDetector {
         }
     }
 
-    // ログイン方式自動判定
+    // 🔧 修正: ログイン試行統合メソッド
     async attemptLogin(loginId, password) {
-        if (!this.isInitialized) {
-            throw new Error('システムが初期化されていません');
-        }
-
-        try {
-            // 1. 初期ユーザーIDとしてログイン試行
-            if (loginId.startsWith('user_')) {
-                return await this.handleInitialLogin(loginId, password);
-            }
-            
-            // 2. ユーザー名としてログイン試行
-            return await this.handleUsernameLogin(loginId, password);
-            
-        } catch (error) {
-            // 1つ目が失敗した場合、もう1つの方式を試行
-            try {
-                if (loginId.startsWith('user_')) {
-                    return await this.handleUsernameLogin(loginId, password);
-                } else {
-                    return await this.handleInitialLogin(loginId, password);
-                }
-            } catch (secondError) {
-                console.error('❌ 両方のログイン方式が失敗:', error.message, secondError.message);
-                throw new Error('ユーザーID/ユーザー名またはパスワードが正しくありません');
-            }
-        }
-    }
-
-    // 初期ログイン履歴記録
-    async recordInitialLogin(userId, userData) {
-        try {
-            await window.database.ref(`${window.DATA_ROOT}/users/${userId}/loginHistory`).push({
-                type: 'initial_login',
-                timestamp: firebase.database.ServerValue.TIMESTAMP,
-                userAgent: navigator.userAgent,
-                setupRequired: true
-            });
-
-            // 最終ログイン更新
-            await window.database.ref(`${window.DATA_ROOT}/users/${userId}`).update({
-                lastLogin: firebase.database.ServerValue.TIMESTAMP,
-                loginCount: (userData.loginCount || 0) + 1
-            });
-
-            console.log('✅ 初期ログイン履歴記録完了');
-        } catch (error) {
-            console.warn('⚠️ ログイン履歴記録失敗:', error);
-        }
-    }
-
-    // 通常ログイン履歴記録
-    async recordNormalLogin(userId, userData) {
-        try {
-            await window.database.ref(`${window.DATA_ROOT}/users/${userId}/loginHistory`).push({
-                type: 'normal_login',
-                timestamp: firebase.database.ServerValue.TIMESTAMP,
-                userAgent: navigator.userAgent
-            });
-
-            // 最終ログイン更新
-            await window.database.ref(`${window.DATA_ROOT}/users/${userId}`).update({
-                lastLogin: firebase.database.ServerValue.TIMESTAMP,
-                loginCount: (userData.loginCount || 0) + 1
-            });
-
-            console.log('✅ 通常ログイン履歴記録完了');
-        } catch (error) {
-            console.warn('⚠️ ログイン履歴記録失敗:', error);
-        }
-    }
-
-    // ログアウト処理
-    async handleLogout() {
-        if (this.currentUserId) {
-            try {
-                await window.database.ref(`${window.DATA_ROOT}/users/${this.currentUserId}/loginHistory`).push({
-                    type: 'logout',
-                    timestamp: firebase.database.ServerValue.TIMESTAMP
-                });
-                console.log('✅ ログアウト記録完了');
-            } catch (error) {
-                console.warn('⚠️ ログアウト記録失敗:', error);
-            }
-        }
+        console.log('🔍 ログイン試行開始:', { loginId });
         
-        this.currentUserId = null;
-        console.log('✅ ログアウト処理完了');
-    }
-
-    // 現在のユーザーID取得
-    getCurrentUserId() {
-        return this.currentUserId;
-    }
-
-    // ユーザー名の重複チェック
-    async checkUsernameAvailability(username) {
-        if (!this.isInitialized) {
-            throw new Error('システムが初期化されていません');
-        }
-
         try {
-            const snapshot = await window.database.ref(`${window.DATA_ROOT}/usernames/${username}`).once('value');
-            return !snapshot.exists();
+            // 1. 初期ログイン試行
+            try {
+                await this.handleInitialLogin(loginId, password);
+                return; // 成功時は処理終了（リダイレクト済み）
+            } catch (initialError) {
+                console.log('⚠️ 初期ログイン失敗:', initialError.message);
+            }
+            
+            // 2. ユーザー名ログイン試行
+            try {
+                await this.handleUsernameLogin(loginId, password);
+                return; // 成功時は処理終了
+            } catch (usernameError) {
+                console.log('⚠️ ユーザー名ログイン失敗:', usernameError.message);
+            }
+            
+            // 3. 全て失敗
+            console.error('❌ 両方のログイン方式が失敗');
+            throw new Error('ユーザーID/ユーザー名またはパスワードが正しくありません');
+            
         } catch (error) {
-            console.error('❌ ユーザー名重複チェックエラー:', error);
+            console.error('❌ ログイン試行エラー:', error);
+            throw error;
+        }
+    }
+
+    // 🆕 ユーザー存在確認
+    async checkUserExists(username) {
+        try {
+            const initialUserSnapshot = await this.database
+                .ref(`ceScheduleV2/initialUsers/${username}`)
+                .once('value');
+                
+            if (initialUserSnapshot.exists()) {
+                return { type: 'initial', data: initialUserSnapshot.val() };
+            }
+            
+            const usernameSnapshot = await this.database
+                .ref(`ceScheduleV2/usernames/${username}`)
+                .once('value');
+                
+            if (usernameSnapshot.exists()) {
+                return { type: 'registered', data: usernameSnapshot.val() };
+            }
+            
+            return null;
+        } catch (error) {
+            console.error('❌ ユーザー存在確認エラー:', error);
+            return null;
+        }
+    }
+
+    // 🆕 パスワード確認
+    async validatePassword(username, password, userType = 'initial') {
+        try {
+            if (userType === 'initial') {
+                const userSnapshot = await this.database
+                    .ref(`ceScheduleV2/initialUsers/${username}`)
+                    .once('value');
+                    
+                if (userSnapshot.exists()) {
+                    const userData = userSnapshot.val();
+                    return userData.tempPassword === password;
+                }
+            }
+            
+            return false;
+        } catch (error) {
+            console.error('❌ パスワード確認エラー:', error);
             return false;
         }
     }
 }
 
-// グローバルインスタンス作成
-if (!window.initialLoginDetector) {
-    window.initialLoginDetector = new InitialLoginDetector();
-    console.log('🔍 初期ログイン検知システム読み込み完了');
-}
+// グローバル変数
+let initialLoginDetector = null;
+
+// システム初期化
+document.addEventListener('DOMContentLoaded', async () => {
+    try {
+        initialLoginDetector = new InitialLoginDetector();
+        window.initialLoginDetector = initialLoginDetector;
+        
+        console.log('✅ 初期ログイン検知システム準備完了');
+        
+    } catch (error) {
+        console.error('❌ 初期ログイン検知システム初期化失敗:', error);
+    }
+});
+
+console.log('🔍 初期ログイン検知システム読み込み完了');
