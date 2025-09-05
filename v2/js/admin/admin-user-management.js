@@ -1,16 +1,20 @@
-// Firebase imports
-import { initializeApp } from 'firebase/app';
-import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, onAuthStateChanged } from 'firebase/auth';
-import { getDatabase, ref, set, get, remove, push, child, query, orderByChild, equalTo } from 'firebase/database';
+// Firebase CDN版（importは不要）
+// Firebase設定は外部ファイルから読み込み
 
-// Firebase設定をインポート
-import { firebaseConfig } from '../config/firebase-config.js';
+// Firebase initialization（CDN版）
+let app, auth, database;
 
-// Initialize Firebase
-const app = initializeApp(firebaseConfig);
-const auth = getAuth(app);
-const database = getDatabase(app);
-
+// Initialize Firebase when config is loaded
+function initializeFirebase() {
+    if (window.firebaseConfig) {
+        app = firebase.initializeApp(window.firebaseConfig);
+        auth = firebase.auth();
+        database = firebase.database();
+        console.log('Firebase initialized successfully');
+    } else {
+        console.error('Firebase config not loaded');
+    }
+}
 // DOM elements
 let createUserBtn, usernameInput, emailInput, roleSelect, statusDiv, userTableBody;
 
