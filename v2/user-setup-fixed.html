@@ -1,0 +1,530 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>個人設定 - CEスケジュール管理システム V2</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css">
+    
+    <!-- Firebase CDN -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
+    
+    <style>
+        .loading-spinner {
+            border: 3px solid #f3f4f6;
+            border-top: 3px solid #3b82f6;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .fade-in {
+            animation: fadeIn 0.5s ease-in;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    </style>
+</head>
+<body class="bg-gradient-to-br from-blue-50 to-indigo-100 min-h-screen">
+    <!-- Loading Screen -->
+    <div id="loadingScreen" class="fixed inset-0 bg-white flex items-center justify-center z-50">
+        <div class="text-center">
+            <div class="loading-spinner mx-auto mb-4"></div>
+            <h2 class="text-xl font-semibold text-gray-700">認証状態を確認中...</h2>
+            <p class="text-gray-500 mt-2">しばらくお待ちください</p>
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <div id="mainContent" class="hidden">
+        <div class="container mx-auto px-4 py-8">
+            <!-- Header -->
+            <div class="bg-white rounded-lg shadow-lg p-6 mb-8">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <h1 class="text-3xl font-bold text-gray-800">
+                            <i class="fas fa-user-cog text-blue-600 mr-3"></i>
+                            個人設定
+                        </h1>
+                        <p class="text-gray-600 mt-2">CEスケジュール管理システム V2</p>
+                    </div>
+                    <div id="userInfo" class="text-right">
+                        <div class="text-sm text-gray-500">ログイン中</div>
+                        <div id="currentUser" class="font-semibold text-gray-800"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Status Messages -->
+            <div id="statusMessage" class="hidden mb-6"></div>
+
+            <!-- User Setup Form -->
+            <div id="userSetupSection" class="bg-white rounded-lg shadow-lg p-8">
+                <div class="max-w-2xl mx-auto">
+                    <div class="text-center mb-8">
+                        <div class="bg-blue-100 w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-4">
+                            <i class="fas fa-user-edit text-blue-600 text-3xl"></i>
+                        </div>
+                        <h2 class="text-2xl font-bold text-gray-800 mb-2">プロフィール設定</h2>
+                        <p class="text-gray-600">個人情報とセキュリティ設定を行ってください</p>
+                    </div>
+
+                    <form id="setupForm" class="space-y-6">
+                        <!-- Username Display -->
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">
+                                <i class="fas fa-user text-blue-600 mr-2"></i>
+                                ユーザー名
+                            </label>
+                            <div id="usernameDisplay" class="bg-gray-50 px-4 py-3 rounded-lg border text-gray-800 font-medium"></div>
+                            <p class="text-xs text-gray-500 mt-1">※ユーザー名は変更できません</p>
+                        </div>
+
+                        <!-- Email Display -->
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">
+                                <i class="fas fa-envelope text-blue-600 mr-2"></i>
+                                メールアドレス
+                            </label>
+                            <div id="emailDisplay" class="bg-gray-50 px-4 py-3 rounded-lg border text-gray-800"></div>
+                        </div>
+
+                        <!-- Role Display -->
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">
+                                <i class="fas fa-shield text-blue-600 mr-2"></i>
+                                権限レベル
+                            </label>
+                            <div id="roleDisplay" class="bg-gray-50 px-4 py-3 rounded-lg border"></div>
+                        </div>
+
+                        <!-- New Password -->
+                        <div>
+                            <label for="newPassword" class="block text-sm font-medium text-gray-700 mb-2">
+                                <i class="fas fa-lock text-blue-600 mr-2"></i>
+                                新しいパスワード
+                            </label>
+                            <div class="relative">
+                                <input type="password" id="newPassword" 
+                                       class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                       placeholder="新しいパスワードを入力してください" required>
+                                <button type="button" onclick="togglePassword('newPassword')" 
+                                        class="absolute right-3 top-3 text-gray-500 hover:text-gray-700">
+                                    <i class="fas fa-eye"></i>
+                                </button>
+                            </div>
+                            <div id="passwordStrength" class="mt-2"></div>
+                        </div>
+
+                        <!-- Confirm Password -->
+                        <div>
+                            <label for="confirmPassword" class="block text-sm font-medium text-gray-700 mb-2">
+                                <i class="fas fa-lock text-blue-600 mr-2"></i>
+                                パスワード確認
+                            </label>
+                            <div class="relative">
+                                <input type="password" id="confirmPassword" 
+                                       class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                       placeholder="パスワードを再入力してください" required>
+                                <button type="button" onclick="togglePassword('confirmPassword')" 
+                                        class="absolute right-3 top-3 text-gray-500 hover:text-gray-700">
+                                    <i class="fas fa-eye"></i>
+                                </button>
+                            </div>
+                            <div id="passwordMatch" class="mt-2"></div>
+                        </div>
+
+                        <!-- Submit Button -->
+                        <div class="pt-6">
+                            <button type="submit" id="saveButton"
+                                    class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-6 rounded-lg transition duration-200 flex items-center justify-center">
+                                <i class="fas fa-save mr-2"></i>
+                                設定を保存
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Success Screen -->
+            <div id="successScreen" class="hidden bg-white rounded-lg shadow-lg p-8">
+                <div class="text-center">
+                    <div class="bg-green-100 w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-6">
+                        <i class="fas fa-check text-green-600 text-3xl"></i>
+                    </div>
+                    <h2 class="text-2xl font-bold text-gray-800 mb-4">設定完了！</h2>
+                    <p class="text-gray-600 mb-6">個人設定が正常に保存されました。</p>
+                    <div class="space-y-4">
+                        <button onclick="redirectToDashboard()" 
+                                class="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-6 rounded-lg transition duration-200">
+                            <i class="fas fa-tachometer-alt mr-2"></i>
+                            ダッシュボードへ
+                        </button>
+                        <div>
+                            <button onclick="logout()" 
+                                    class="text-gray-600 hover:text-gray-800 font-medium">
+                                <i class="fas fa-sign-out-alt mr-2"></i>
+                                ログアウト
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Firebase Configuration
+        const firebaseConfig = {
+            apiKey: "AIzaSyCRUvvs0OSz_9L9bXtqteVFIIze1OaZObE",
+            authDomain: "ce-scheduling-system-v2.firebaseapp.com",
+            databaseURL: "https://ce-scheduling-system-v2-default-rtdb.asia-southeast1.firebasedatabase.app",
+            projectId: "ce-scheduling-system-v2",
+            storageBucket: "ce-scheduling-system-v2.firebasestorage.app",
+            messagingSenderId: "288279598010",
+            appId: "1:288279598010:web:d545ee1d4d854513084383",
+            measurementId: "G-LSEEMJE2R0"
+        };
+
+        // Initialize Firebase
+        let app, auth, database;
+        let currentUserData = null;
+
+        function initializeFirebase() {
+            try {
+                app = firebase.initializeApp(firebaseConfig);
+                auth = firebase.auth();
+                database = firebase.database();
+                console.log('✅ Firebase初期化完了');
+                return true;
+            } catch (error) {
+                console.error('❌ Firebase初期化エラー:', error);
+                return false;
+            }
+        }
+
+        // Authentication Recovery System
+        async function recoverAuthenticationState() {
+            console.log('🔄 認証状態復旧開始...');
+            
+            return new Promise((resolve) => {
+                // Wait for auth state to be determined
+                const unsubscribe = auth.onAuthStateChanged(async (user) => {
+                    unsubscribe(); // Remove listener after first call
+                    
+                    if (user) {
+                        console.log('✅ 認証状態復旧成功:', user.email);
+                        try {
+                            // Get user data from database
+                            const userRef = database.ref(`ceScheduleV2/users/${user.uid}`);
+                            const snapshot = await userRef.once('value');
+                            
+                            if (snapshot.exists()) {
+                                currentUserData = snapshot.val();
+                                console.log('✅ ユーザーデータ取得成功:', currentUserData);
+                                resolve({ success: true, user: user, userData: currentUserData });
+                            } else {
+                                console.log('❌ ユーザーデータが見つかりません');
+                                resolve({ success: false, error: 'ユーザーデータが見つかりません' });
+                            }
+                        } catch (error) {
+                            console.error('❌ ユーザーデータ取得エラー:', error);
+                            resolve({ success: false, error: error.message });
+                        }
+                    } else {
+                        console.log('❌ 認証状態なし - ログインが必要');
+                        resolve({ success: false, error: 'ログインが必要です' });
+                    }
+                });
+            });
+        }
+
+        // Initialize and check authentication
+        async function initializeSystem() {
+            console.log('🚀 システム初期化開始...');
+            
+            // Initialize Firebase
+            if (!initializeFirebase()) {
+                showError('Firebase初期化に失敗しました');
+                return;
+            }
+
+            // Try to recover authentication state
+            const authResult = await recoverAuthenticationState();
+            
+            if (authResult.success) {
+                console.log('✅ 認証状態確認完了');
+                await setupUserInterface();
+            } else {
+                console.log('❌ 認証失敗:', authResult.error);
+                showError(authResult.error);
+                setTimeout(() => {
+                    window.location.href = 'login-unified.html';
+                }, 3000);
+            }
+        }
+
+        // Setup User Interface
+        async function setupUserInterface() {
+            try {
+                // Hide loading screen
+                document.getElementById('loadingScreen').classList.add('hidden');
+                document.getElementById('mainContent').classList.remove('hidden');
+
+                // Display user information
+                const currentUserDiv = document.getElementById('currentUser');
+                currentUserDiv.textContent = currentUserData.email || 'Unknown';
+
+                // Populate form fields
+                document.getElementById('usernameDisplay').textContent = currentUserData.username || '';
+                document.getElementById('emailDisplay').textContent = currentUserData.email || '';
+                
+                // Display role with badge
+                const roleDiv = document.getElementById('roleDisplay');
+                const roleBadges = {
+                    admin: '<span class="bg-red-100 text-red-800 px-3 py-1 rounded-full text-sm font-medium">管理者</span>',
+                    editor: '<span class="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm font-medium">編集者</span>',
+                    viewer: '<span class="bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm font-medium">閲覧者</span>'
+                };
+                roleDiv.innerHTML = roleBadges[currentUserData.role] || '<span class="bg-gray-100 text-gray-800 px-3 py-1 rounded-full text-sm font-medium">不明</span>';
+
+                console.log('✅ UI設定完了');
+            } catch (error) {
+                console.error('❌ UI設定エラー:', error);
+                showError('画面の設定に失敗しました');
+            }
+        }
+
+        // Password validation
+        function validatePassword(password) {
+            const minLength = 8;
+            const hasUpper = /[A-Z]/.test(password);
+            const hasLower = /[a-z]/.test(password);
+            const hasNumber = /\d/.test(password);
+            const hasSpecial = /[!@#$%^&*(),.?":{}|<>]/.test(password);
+
+            let strength = 0;
+            let feedback = [];
+
+            if (password.length >= minLength) strength++;
+            else feedback.push(`${minLength}文字以上`);
+
+            if (hasUpper) strength++;
+            else feedback.push('大文字');
+
+            if (hasLower) strength++;
+            else feedback.push('小文字');
+
+            if (hasNumber) strength++;
+            else feedback.push('数字');
+
+            if (hasSpecial) strength++;
+            else feedback.push('特殊文字');
+
+            return { strength, feedback, isValid: strength >= 4 };
+        }
+
+        // Update password strength indicator
+        function updatePasswordStrength() {
+            const password = document.getElementById('newPassword').value;
+            const strengthDiv = document.getElementById('passwordStrength');
+
+            if (!password) {
+                strengthDiv.innerHTML = '';
+                return;
+            }
+
+            const validation = validatePassword(password);
+            const colors = ['text-red-600', 'text-orange-600', 'text-yellow-600', 'text-green-600', 'text-green-700'];
+            const labels = ['弱い', 'やや弱い', '普通', '強い', '非常に強い'];
+
+            let strengthHTML = `<div class="flex items-center space-x-2">
+                <span class="text-sm ${colors[validation.strength - 1] || 'text-red-600'}">
+                    パスワード強度: ${labels[validation.strength - 1] || '弱い'}
+                </span>
+            </div>`;
+
+            if (validation.feedback.length > 0) {
+                strengthHTML += `<div class="text-xs text-gray-600 mt-1">
+                    必要な要素: ${validation.feedback.join(', ')}
+                </div>`;
+            }
+
+            strengthDiv.innerHTML = strengthHTML;
+        }
+
+        // Check password match
+        function checkPasswordMatch() {
+            const password = document.getElementById('newPassword').value;
+            const confirm = document.getElementById('confirmPassword').value;
+            const matchDiv = document.getElementById('passwordMatch');
+
+            if (!confirm) {
+                matchDiv.innerHTML = '';
+                return;
+            }
+
+            if (password === confirm) {
+                matchDiv.innerHTML = '<div class="text-xs text-green-600">✓ パスワードが一致しています</div>';
+                return true;
+            } else {
+                matchDiv.innerHTML = '<div class="text-xs text-red-600">✗ パスワードが一致しません</div>';
+                return false;
+            }
+        }
+
+        // Toggle password visibility
+        function togglePassword(fieldId) {
+            const field = document.getElementById(fieldId);
+            const icon = field.nextElementSibling.querySelector('i');
+
+            if (field.type === 'password') {
+                field.type = 'text';
+                icon.className = 'fas fa-eye-slash';
+            } else {
+                field.type = 'password';
+                icon.className = 'fas fa-eye';
+            }
+        }
+
+        // Save user settings
+        async function saveUserSettings(event) {
+            event.preventDefault();
+
+            const newPassword = document.getElementById('newPassword').value;
+            const confirmPassword = document.getElementById('confirmPassword').value;
+            const saveButton = document.getElementById('saveButton');
+
+            // Validation
+            if (!newPassword || !confirmPassword) {
+                showError('すべての項目を入力してください');
+                return;
+            }
+
+            const passwordValidation = validatePassword(newPassword);
+            if (!passwordValidation.isValid) {
+                showError('パスワードの強度が不十分です');
+                return;
+            }
+
+            if (!checkPasswordMatch()) {
+                showError('パスワードが一致しません');
+                return;
+            }
+
+            // Disable button and show loading
+            saveButton.disabled = true;
+            saveButton.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>保存中...';
+
+            try {
+                const user = auth.currentUser;
+                if (!user) {
+                    throw new Error('認証状態が無効です');
+                }
+
+                // Update password in Firebase Auth
+                await user.updatePassword(newPassword);
+
+                // Update user data in database
+                const updates = {
+                    hasCompletedSetup: true,
+                    isInitialUser: false,
+                    lastUpdate: new Date().toISOString(),
+                    setupCompletedAt: new Date().toISOString()
+                };
+
+                await database.ref(`ceScheduleV2/users/${user.uid}`).update(updates);
+
+                // Remove from initialUsers if exists
+                await database.ref(`ceScheduleV2/initialUsers/${user.uid}`).remove();
+
+                console.log('✅ ユーザー設定保存完了');
+                showSuccess();
+
+            } catch (error) {
+                console.error('❌ 設定保存エラー:', error);
+                let errorMessage = '設定の保存に失敗しました';
+                
+                if (error.code === 'auth/weak-password') {
+                    errorMessage = 'パスワードが弱すぎます';
+                } else if (error.code === 'auth/requires-recent-login') {
+                    errorMessage = '再度ログインが必要です';
+                }
+                
+                showError(errorMessage);
+            } finally {
+                // Re-enable button
+                saveButton.disabled = false;
+                saveButton.innerHTML = '<i class="fas fa-save mr-2"></i>設定を保存';
+            }
+        }
+
+        // Show success screen
+        function showSuccess() {
+            document.getElementById('userSetupSection').classList.add('hidden');
+            document.getElementById('successScreen').classList.remove('hidden');
+            document.getElementById('successScreen').classList.add('fade-in');
+        }
+
+        // Redirect to dashboard
+        function redirectToDashboard() {
+            if (currentUserData?.role === 'admin') {
+                window.location.href = 'admin-debug.html';
+            } else {
+                window.location.href = 'dashboard.html';
+            }
+        }
+
+        // Logout function
+        async function logout() {
+            try {
+                await auth.signOut();
+                console.log('✅ ログアウト完了');
+                window.location.href = 'login-unified.html';
+            } catch (error) {
+                console.error('❌ ログアウトエラー:', error);
+            }
+        }
+
+        // Show error message
+        function showError(message) {
+            const statusDiv = document.getElementById('statusMessage');
+            statusDiv.innerHTML = `
+                <div class="bg-red-50 border border-red-200 rounded-lg p-4">
+                    <div class="flex items-center">
+                        <i class="fas fa-exclamation-triangle text-red-500 mr-3"></i>
+                        <div>
+                            <h4 class="text-red-800 font-medium">エラー</h4>
+                            <p class="text-red-700 text-sm mt-1">${message}</p>
+                        </div>
+                    </div>
+                </div>
+            `;
+            statusDiv.classList.remove('hidden');
+            statusDiv.scrollIntoView({ behavior: 'smooth' });
+        }
+
+        // Event listeners
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('🚀 ページ読み込み完了');
+            initializeSystem();
+            
+            // Password validation listeners
+            document.getElementById('newPassword').addEventListener('input', updatePasswordStrength);
+            document.getElementById('confirmPassword').addEventListener('input', checkPasswordMatch);
+            
+            // Form submission
+            document.getElementById('setupForm').addEventListener('submit', saveUserSettings);
+        });
+    </script>
+</body>
+</html>
