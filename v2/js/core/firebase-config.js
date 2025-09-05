@@ -1,7 +1,6 @@
 /*
 🔒 Firebase設定 - V2専用（完全修正版）
 */
-
 // 重複定義防止
 if (typeof window.firebaseConfigV2 !== 'undefined') {
     console.warn('⚠️ Firebase設定は既に読み込み済みです');
