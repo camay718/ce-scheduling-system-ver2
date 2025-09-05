@@ -6,7 +6,6 @@ class AuthSystemCore {
         this.isInitialized = false;
         this.init();
     }
-
     async init() {
         console.log('🔐 認証システムV2 初期化中...');
         
