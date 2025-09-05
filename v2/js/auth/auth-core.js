@@ -1,437 +1,207 @@
-/*
-🔒 認証システムコア - V2専用（完全修正版）
-*/
-
-// V1認証情報（既存維持）
-const AUTH_CREDENTIALS = {
-    'スタッフ': { type: 'name', role: 'viewer', department: null },
-    '手術・麻酔': { code: 'secure_SurgAnest_6917_ce_system', role: 'editor', department: '手術・麻酔' },
-    'MEセンター': { code: 'secure_MEcenter_6994_ce_system', role: 'editor', department: '機器管理・人工呼吸' },
-    '血液浄化': { code: 'secure_Hemodialysis_6735_ce_system', role: 'editor', department: '血液浄化' },
-    '不整脈': { code: 'secure_Arrhythm_6551_ce_system', role: 'editor', department: '不整脈' },
-    '人工心肺・補助循環': { code: 'secure_CpbEcmo_6288_ce_system', role: 'editor', department: '人工心肺・補助循環' },
-    '心・カテーテル': { code: 'secure_CardCath_6925_ce_system', role: 'editor', department: '心・カテーテル' },
-    'モニター': { code: 'secure_CEmonitor_1122_ce_system', role: 'monitor', department: null },
-    '管理者': { code: 'secure_CEadmin_5711_ce_system', role: 'admin', department: null }
-};
-
-// 認証システムクラス（完全修正版）
-class AuthSystemV2 {
+class AuthSystemCore {
     constructor() {
-    this.currentUser = null;
-    this.userProfile = null;
-    this.userRole = null;
-    this.userDepartment = null;
-    this.isReady = false;
-    
-    console.log('🔐 認証システムV2 初期化中...');
-    
-    // Firebase準備完了を待ってから初期化（ログイン状態復元はしない）
-    this.waitForFirebaseAndInitialize();
-}
+        this.auth = null;
+        this.database = null;
+        this.currentUser = null;
+        this.isInitialized = false;
+        this.init();
+    }
 
-
-    async waitForFirebaseAndInitialize() {
-        let attempts = 0;
-        const maxAttempts = 300; // 30秒
+    async init() {
+        console.log('🔐 認証システムV2 初期化中...');
         
-        while (attempts < maxAttempts) {
-            if (window.isFirebaseReady && window.auth) {
-                console.log('✅ Firebase準備完了、認証システム初期化開始');
-                this.initialize();
-                return;
-            }
+        // Firebase準備待機
+        await this.waitForFirebase();
+        
+        try {
+            this.auth = firebase.auth();
+            this.database = firebase.database();
             
+            // 認証状態変更リスナー
+            this.auth.onAuthStateChanged((user) => {
+                this.handleAuthStateChange(user);
+            });
+            
+            this.isInitialized = true;
+            console.log('✅ 認証システムインスタンス作成完了');
+            
+        } catch (error) {
+            console.error('❌ 認証システム初期化エラー:', error);
+        }
+    }
+
+    async waitForFirebase() {
+        let attempts = 0;
+        while (attempts < 100 && (!window.firebase || !window.firebase.apps || window.firebase.apps.length === 0)) {
             await new Promise(resolve => setTimeout(resolve, 100));
             attempts++;
-            
-            if (attempts % 50 === 0) {
-                console.log('⏳ Firebase準備待ち...', attempts / 10, '秒経過');
-            }
         }
         
-        console.warn('⚠️ Firebase初期化タイムアウト - V1システムで継続');
-        this.showLoginInterface();
-        this.isReady = true;
-    }
-
-initialize() {
-    try {
-        if (window.auth) {
-            window.auth.onAuthStateChanged(async (user) => {
-                if (user && !user.isAnonymous) {
-                    // Email認証ユーザーのみ自動ログイン
-                    console.log('✅ Email認証ユーザー検出:', user.email);
-                    this.currentUser = user.email;
-                    await this.loadUserProfile(user.uid);
-                    this.showMainInterface();
-                } else {
-                    // 匿名ユーザーまたは未認証はログイン画面
-                    console.log('ℹ️ 匿名/未認証ユーザー - ログイン画面表示');
-                    
-                    // 既存のV1ログイン状態をチェック
-                    if (!this.restoreLoginState()) {
-                        this.showLoginInterface();
-                    }
-                }
-                this.isReady = true;
-            });
+        if (window.firebase && window.firebase.apps && window.firebase.apps.length > 0) {
+            console.log('✅ Firebase準備完了、認証システム初期化開始');
         } else {
-            console.log('⚠️ Firebase Auth未準備 - V1認証システムで継続');
-            
-            // V1ログイン状態復元を試行
-            if (!this.restoreLoginState()) {
-                this.showLoginInterface();
-            }
-            this.isReady = true;
+            throw new Error('Firebase初期化タイムアウト');
         }
-    } catch (error) {
-        console.error('❌ 認証システム初期化エラー:', error);
+    }
+
+    async handleAuthStateChange(user) {
+        if (user) {
+            console.log('🔐 認証ユーザー:', user.uid);
+            this.currentUser = user;
+            
+            if (!user.isAnonymous) {
+                // 通常認証ユーザー
+                await this.handleAuthenticatedUser(user);
+            } else {
+                // 匿名ユーザー
+                console.log('ℹ️ 匿名/未認証ユーザー - ログイン画面表示');
+                this.showLoginScreen();
+            }
+        } else {
+            console.log('🔓 未認証状態');
+            this.currentUser = null;
+            this.showLoginScreen();
+        }
+    }
+
+    async handleAuthenticatedUser(user) {
+        try {
+            // ユーザーデータ取得
+            const userSnapshot = await this.database.ref(`ceScheduleV2/users/${user.uid}`).once('value');
+            
+            if (userSnapshot.exists()) {
+                const userData = userSnapshot.val();
+                console.log('✅ ユーザーデータ取得:', userData);
+                
+                // メイン画面へ
+                this.showMainScreen(userData);
+            } else {
+                console.log('⚠️ ユーザーデータが見つかりません');
+                this.handleMissingUserData(user);
+            }
+        } catch (error) {
+            console.error('❌ 認証ユーザー処理エラー:', error);
+        }
+    }
+
+    handleMissingUserData(user) {
+        // ユーザーデータが存在しない場合の処理
+        console.log('🔄 ユーザーデータ作成が必要');
+        // 初期設定画面にリダイレクトするか、ログアウトする
+        this.logout();
+    }
+
+    showLoginScreen() {
+        console.log('🔓 ログイン画面を表示');
+        const loginSection = document.getElementById('loginSection');
+        const mainSection = document.getElementById('mainSection');
         
-        // エラー時もV1ログイン状態を確認
-        if (!this.restoreLoginState()) {
-            this.showLoginInterface();
+        if (loginSection) {
+            loginSection.style.display = 'block';
         }
-        this.isReady = true;
+        if (mainSection) {
+            mainSection.style.display = 'none';
+        }
     }
-}
 
-    // ★ 未実装関数の補完
-    async createDefaultProfile(uid) {
-        if (!window.database) {
-            console.log('ℹ️ Database未準備 - プロファイル作成スキップ');
-            return null;
-        }
+    showMainScreen(userData) {
+        console.log('🏠 メイン画面を表示:', userData);
+        const loginSection = document.getElementById('loginSection');
+        const mainSection = document.getElementById('mainSection');
         
-        try {
-            const defaultProfile = {
-                uid: uid,
-                role: 'viewer',
-                department: null,
-                permissions: {
-                    canEdit: false,
-                    canView: true,
-                    isAdmin: false,
-                    canExport: false
-                },
-                createdAt: firebase.database.ServerValue.TIMESTAMP,
-                lastLogin: firebase.database.ServerValue.TIMESTAMP,
-                displayName: 'ゲストユーザー',
-                loginCount: 1
-            };
-            
-            await window.database.ref(`${window.DATA_ROOT}/users/${uid}`).set(defaultProfile);
-            this.userProfile = defaultProfile;
-            
-            console.log('✅ デフォルトプロファイル作成完了:', uid);
-            return defaultProfile;
-            
-        } catch (error) {
-            console.error('❌ デフォルトプロファイル作成失敗:', error);
-            return null;
+        if (loginSection) {
+            loginSection.style.display = 'none';
         }
-    }
-
-    async loadUserProfile(uid) {
-        if (!window.database) {
-            console.log('ℹ️ Database未準備 - プロファイル読み込みスキップ');
-            return null;
-        }
-        
-        try {
-            console.log('📋 ユーザープロファイル読み込み開始:', uid);
-            
-            const snapshot = await window.database.ref(`${window.DATA_ROOT}/users/${uid}`).once('value');
-            
-            if (snapshot.exists()) {
-                this.userProfile = snapshot.val();
-                
-                // ログイン回数更新
-                await window.database.ref(`${window.DATA_ROOT}/users/${uid}`).update({
-                    lastLogin: firebase.database.ServerValue.TIMESTAMP,
-                    loginCount: (this.userProfile.loginCount || 0) + 1
-                });
-                
-                console.log('✅ ユーザープロファイル読み込み完了');
-            } else {
-                console.log('ℹ️ ユーザープロファイル未存在 - 新規作成');
-                await this.createDefaultProfile(uid);
-            }
-            
-            return this.userProfile;
-            
-        } catch (error) {
-            console.warn('⚠️ プロファイル読み込み失敗 - V1システムで継続:', error.message);
-            this.userProfile = null;
-            return null;
-        }
-    }
-
-    // V1互換関数（既存維持 + エラーハンドリング強化）
-    handleUserIdChange() {
-        try {
-            const userId = document.getElementById('userId');
-            const nameDiv = document.getElementById('nameInputDiv');
-            const secDiv = document.getElementById('securityCodeDiv');
-            
-            if (!userId || !nameDiv || !secDiv) {
-                console.warn('⚠️ ログイン要素が見つかりません');
-                return;
-            }
-            
-            const selectedValue = userId.value;
-            
-            if (selectedValue === 'スタッフ') {
-                nameDiv.style.display = 'block';
-                secDiv.style.display = 'none';
-            } else if (selectedValue && selectedValue !== '') {
-                nameDiv.style.display = 'none';
-                secDiv.style.display = 'block';
-            } else {
-                nameDiv.style.display = 'none';
-                secDiv.style.display = 'none';
-            }
-        } catch (error) {
-            console.error('❌ ユーザー選択エラー:', error);
-        }
-    }
-
-    handleLogin() {
-        try {
-            const userId = document.getElementById('userId')?.value;
-            const nameInput = document.getElementById('nameInput')?.value?.trim();
-            const securityInput = document.getElementById('securityInput')?.value;
-
-            if (!userId) {
-                this.showMessage('ユーザーを選択してください', 'warning');
-                return;
-            }
-
-            const credential = AUTH_CREDENTIALS[userId];
-            if (!credential) {
-                this.showMessage('無効なユーザーです', 'error');
-                return;
-            }
-
-            let isValid = false;
-            let displayName = userId;
-            
-            if (credential.type === 'name') {
-                if (!nameInput) {
-                    this.showMessage('お名前を入力してください', 'warning');
-                    return;
-                }
-                isValid = true;
-                displayName = nameInput;
-            } else {
-                if (!securityInput) {
-                    this.showMessage('セキュリティコードを入力してください', 'warning');
-                    return;
-                }
-                isValid = securityInput === credential.code;
-            }
-
-            if (isValid) {
-                this.userRole = credential.role;
-                this.currentUser = displayName;
-                this.userDepartment = credential.department;
-                
-                const loginExpiry = Date.now() + (24 * 60 * 60 * 1000);
-                const userSession = {
-                    id: this.currentUser,
-                    role: this.userRole,
-                    department: this.userDepartment,
-                    loginTime: new Date().toISOString(),
-                    version: 'V2'
-                };
-                
-                localStorage.setItem('ceSystemLoggedInUser', JSON.stringify(userSession));
-                localStorage.setItem('ceSystemLoginExpiry', loginExpiry.toString());
-                
-                // ログイン履歴記録（Firebase利用可能時）
-                this.recordLoginHistory(userSession);
-                
-                this.showMainInterface();
-                this.showMessage(`${userId}としてログインしました`, 'success');
-            } else {
-                this.showMessage('認証に失敗しました', 'error');
-            }
-        } catch (error) {
-            console.error('❌ ログインエラー:', error);
-            this.showMessage('ログイン処理中にエラーが発生しました', 'error');
-        }
-    }
-
-    // ★ 新機能：ログイン履歴記録
-    async recordLoginHistory(userSession) {
-        if (!window.database || !window.isFirebaseReady) {
-            console.log('ℹ️ Firebase未準備 - ログイン履歴記録スキップ');
-            return;
+        if (mainSection) {
+            mainSection.style.display = 'block';
         }
         
-        try {
-            const historyRef = window.database.ref(`${window.DATA_ROOT}/loginHistory`).push();
-            await historyRef.set({
-                ...userSession,
-                timestamp: firebase.database.ServerValue.TIMESTAMP,
-                userAgent: navigator.userAgent,
-                ip: 'client-side'
-            });
-            console.log('✅ ログイン履歴記録完了');
-        } catch (error) {
-            console.warn('⚠️ ログイン履歴記録失敗:', error.message);
+        // ユーザー情報表示
+        this.updateUserDisplay(userData);
+    }
+
+    updateUserDisplay(userData) {
+        // ユーザー名表示
+        const userNameElement = document.getElementById('userName');
+        if (userNameElement) {
+            userNameElement.textContent = userData.displayName || userData.username || 'ユーザー';
+        }
+        
+        // 部門表示
+        const departmentElement = document.getElementById('userDepartment');
+        if (departmentElement) {
+            departmentElement.textContent = userData.department || '';
         }
     }
 
-    handleLogout() {
+    // 🆕 isAdmin メソッドを追加
+    isAdmin() {
+        if (this.currentUser && this.currentUser.userData) {
+            return this.currentUser.userData.role === 'admin';
+        }
+        return false;
+    }
+
+    // 🆕 現在のユーザー情報取得
+    getCurrentUser() {
+        return this.currentUser;
+    }
+
+    // 🆕 ユーザー権限取得
+    getUserRole() {
+        if (this.currentUser && this.currentUser.userData) {
+            return this.currentUser.userData.role || 'viewer';
+        }
+        return 'viewer';
+    }
+
+    // 🆕 ログアウト機能
+    async logout() {
         try {
-            if (confirm('ログアウトしますか？')) {
-                this.currentUser = null;
-                this.userRole = null;
-                this.userDepartment = null;
-                this.userProfile = null;
-                
-                localStorage.removeItem('ceSystemLoggedInUser');
-                localStorage.removeItem('ceSystemLoginExpiry');
-                
-                // Firebase認証からもログアウト
-                if (window.auth) {
-                    window.auth.signOut().catch(error => {
-                        console.warn('⚠️ Firebase認証ログアウト失敗:', error);
-                    });
-                }
-                
-                this.showLoginInterface();
-                this.showMessage('ログアウトしました', 'info');
+            if (this.auth) {
+                await this.auth.signOut();
+                console.log('✅ ログアウト完了');
             }
         } catch (error) {
             console.error('❌ ログアウトエラー:', error);
         }
     }
 
-    restoreLoginState() {
+    // 🆕 匿名ログイン（開発用）
+    async signInAnonymously() {
         try {
-            const savedUser = localStorage.getItem('ceSystemLoggedInUser');
-            const loginExpiry = localStorage.getItem('ceSystemLoginExpiry');
-            
-            if (savedUser && loginExpiry) {
-                const currentTime = Date.now();
-                const expiryTime = parseInt(loginExpiry);
-                
-                if (currentTime < expiryTime) {
-                    const parsedUser = JSON.parse(savedUser);
-                    this.currentUser = parsedUser.id;
-                    this.userRole = parsedUser.role;
-                    this.userDepartment = parsedUser.department;
-                    
-                    this.showMainInterface();
-                    this.showMessage(`お疲れ様です、${this.currentUser}さん！`, 'info');
-                    return true;
-                } else {
-                    localStorage.removeItem('ceSystemLoggedInUser');
-                    localStorage.removeItem('ceSystemLoginExpiry');
-                }
+            if (this.auth) {
+                const result = await this.auth.signInAnonymously();
+                console.log('✅ 匿名ログイン完了:', result.user.uid);
+                return result.user;
             }
-            return false;
         } catch (error) {
-            console.error('❌ ログイン状態復元エラー:', error);
-            return false;
+            console.error('❌ 匿名ログインエラー:', error);
+            throw error;
         }
     }
+}
 
-    showLoginInterface() {
-        const loginScreen = document.getElementById('loginScreen');
-        const mainInterface = document.getElementById('mainInterface');
-        
-        if (loginScreen) loginScreen.style.display = 'flex';
-        if (mainInterface) mainInterface.style.display = 'none';
-        
-        console.log('🔓 ログイン画面を表示');
-    }
+// グローバル変数
+let authSystem = null;
 
-    showMainInterface() {
-        const loginScreen = document.getElementById('loginScreen');
-        const mainInterface = document.getElementById('mainInterface');
-        
-        if (loginScreen) loginScreen.style.display = 'none';
-        if (mainInterface) mainInterface.style.display = 'flex';
-        
-        const userDisplay = document.getElementById('currentUserDisplay');
-        if (userDisplay && this.currentUser) {
-            userDisplay.textContent = this.currentUser;
-        }
-        
-        console.log('✅ メイン画面を表示');
-    }
-
-    showMessage(text, type = 'info') {
-        const container = document.getElementById('messageContainer');
-        if (!container) {
-            console.log(`[${type.toUpperCase()}] ${text}`);
-            return;
-        }
-        
-        const messageDiv = document.createElement('div');
-        messageDiv.className = `message ${type} px-4 py-2 mb-2 rounded-lg`;
-        const icons = { success: 'check', error: 'times', warning: 'exclamation', info: 'info' };
-        messageDiv.innerHTML = `<i class="fas fa-${icons[type]}-circle mr-2"></i>${text}`;
-        
-        // メッセージ色設定
-        const colors = {
-            success: 'bg-green-100 text-green-800',
-            error: 'bg-red-100 text-red-800',
-            warning: 'bg-yellow-100 text-yellow-800',
-            info: 'bg-blue-100 text-blue-800'
-        };
-        messageDiv.className += ` ${colors[type]}`;
-        
-        container.appendChild(messageDiv);
-        setTimeout(() => messageDiv.remove(), 4000);
-    }
-} // ← ★ 重要：クラス定義の正しい終了
-
-// グローバルインスタンス作成（重複防止版）
-(function() {
-    if (window.authSystem) {
-        console.log('ℹ️ 認証システム既に初期化済み');
-        return;
-    }
-    
+// システム初期化
+document.addEventListener('DOMContentLoaded', async () => {
     try {
-        window.authSystem = new AuthSystemV2();
-        console.log('✅ 認証システムインスタンス作成完了');
+        authSystem = new AuthSystemCore();
+        window.authSystem = authSystem;
         
-        // グローバル関数として安全に公開
-        window.handleUserIdChange = function() {
-            try {
-                return window.authSystem.handleUserIdChange();
-            } catch (error) {
-                console.error('handleUserIdChange エラー:', error);
-            }
-        };
-        
-        window.handleLogin = function() {
-            try {
-                return window.authSystem.handleLogin();
-            } catch (error) {
-                console.error('handleLogin エラー:', error);
-            }
-        };
-        
-        window.handleLogout = function() {
-            try {
-                return window.authSystem.handleLogout();
-            } catch (error) {
-                console.error('handleLogout エラー:', error);
-            }
-        };
+        // グローバル関数設定
+        window.logout = () => authSystem.logout();
+        window.getCurrentUser = () => authSystem.getCurrentUser();
+        window.getUserRole = () => authSystem.getUserRole();
+        window.isAdmin = () => authSystem.isAdmin();
         
         console.log('✅ グローバル関数設定完了');
         
     } catch (error) {
-        console.error('❌ 認証システム作成エラー:', error);
-        window.authSystem = null;
+        console.error('❌ 認証システム初期化失敗:', error);
     }
-})();
+});
 
 console.log('🔒 認証システムコア読み込み完了（修正版）');
