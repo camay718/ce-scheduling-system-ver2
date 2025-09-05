@@ -3,16 +3,8 @@ import { initializeApp } from 'firebase/app';
 import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, onAuthStateChanged } from 'firebase/auth';
 import { getDatabase, ref, set, get, remove, push, child, query, orderByChild, equalTo } from 'firebase/database';
 
-// Firebase configuration
-const firebaseConfig = {
-    apiKey: "AIzaSyBkcO6x_CcIdxfq1PHzwT46k1VA6sXTN_o",
-    authDomain: "ce-schedule-management.firebaseapp.com",
-    databaseURL: "https://ce-schedule-management-default-rtdb.asia-southeast1.firebasedatabase.app",
-    projectId: "ce-schedule-management",
-    storageBucket: "ce-schedule-management.firebasestorage.app",
-    messagingSenderId: "998140589230",
-    appId: "1:998140589230:web:6c8159f7c1242cd5aeb4d0"
-};
+// Firebase設定をインポート
+import { firebaseConfig } from '../config/firebase-config.js';
 
 // Initialize Firebase
 const app = initializeApp(firebaseConfig);
