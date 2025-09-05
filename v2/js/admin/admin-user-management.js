@@ -1,244 +1,382 @@
-class AdminUserManager {
-    constructor() {
-        this.database = null;
-        this.auth = null;
-        this.isInitialized = false;
-        this.initializationPromise = this.init();
-    }
+// Firebase imports
+import { initializeApp } from 'firebase/app';
+import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, onAuthStateChanged } from 'firebase/auth';
+import { getDatabase, ref, set, get, remove, push, child, query, orderByChild, equalTo } from 'firebase/database';
 
-    async init() {
-        console.log('AdminUserManager初期化開始...');
-        
-        try {
-            if (!window.firebase) {
-                throw new Error('Firebase グローバルオブジェクトが見つかりません');
+// Firebase configuration
+const firebaseConfig = {
+    apiKey: "AIzaSyCQqsqxxqxELBURGc8pF_OqFLQDm69RJP4",
+    authDomain: "ce-schedule-management.firebaseapp.com",
+    databaseURL: "https://ce-schedule-management-default-rtdb.asia-southeast1.firebasedatabase.app",
+    projectId: "ce-schedule-management",
+    storageBucket: "ce-schedule-management.firebasestorage.app",
+    messagingSenderId: "998140589230",
+    appId: "1:998140589230:web:6c8159f7c1242cd5aeb4d0"
+};
+
+// Initialize Firebase
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const database = getDatabase(app);
+
+// DOM elements
+let createUserBtn, usernameInput, emailInput, roleSelect, statusDiv, userTableBody;
+
+// Initialize when DOM is loaded
+document.addEventListener('DOMContentLoaded', function() {
+    createUserBtn = document.getElementById('createUserBtn');
+    usernameInput = document.getElementById('username');
+    emailInput = document.getElementById('email');
+    roleSelect = document.getElementById('role');
+    statusDiv = document.getElementById('status');
+    userTableBody = document.getElementById('userTableBody');
+
+    // Event listeners
+    createUserBtn.addEventListener('click', createUser);
+    
+    // Load existing users
+    loadUsers();
+    
+    // Check authentication
+    checkAdminAuth();
+});
+
+// Check if current user is admin
+function checkAdminAuth() {
+    onAuthStateChanged(auth, async (user) => {
+        if (user) {
+            try {
+                const userRef = ref(database, `ceScheduleV2/users/${user.uid}`);
+                const snapshot = await get(userRef);
+                
+                if (snapshot.exists()) {
+                    const userData = snapshot.val();
+                    if (userData.role !== 'admin') {
+                        showStatus('管理者権限が必要です', 'error');
+                        setTimeout(() => {
+                            window.location.href = '../index.html';
+                        }, 2000);
+                        return;
+                    }
+                } else {
+                    showStatus('ユーザーデータが見つかりません', 'error');
+                    setTimeout(() => {
+                        window.location.href = '../index.html';
+                    }, 2000);
+                    return;
+                }
+            } catch (error) {
+                console.error('管理者認証エラー:', error);
+                showStatus('認証エラーが発生しました', 'error');
             }
-
-            if (!window.firebase.apps || window.firebase.apps.length === 0) {
-                throw new Error('Firebase App が初期化されていません');
-            }
-
-            console.log('Firebase App確認OK');
-
-            this.database = firebase.database();
-            this.auth = firebase.auth();
-            
-            console.log('Firebase サービス接続OK');
-            
-            await this.database.ref('.info/connected').once('value');
-            console.log('Firebase Database接続テストOK');
-            
-            this.isInitialized = true;
-            console.log('AdminUserManager初期化完了');
-            
-            window.adminUserManager = this;
-            
-            return this;
-        } catch (error) {
-            console.error('AdminUserManager初期化エラー:', error);
-            this.isInitialized = false;
-            throw error;
-        }
-    }
-
-    async waitForInitialization() {
-        if (!this.isInitialized) {
-            console.log('AdminUserManager初期化待機中...');
-            await this.initializationPromise;
-        }
-        return this;
-    }
-
-    async createInitialUser(userData) {
-        console.log('createInitialUser 呼び出し開始');
-        
-        await this.waitForInitialization();
-        
-        const username = userData.displayName;
-        const permission = userData.role;
-        const department = userData.department;
-        
-        console.log('ユーザー作成開始:', {username, permission, department});
-        
-        if (!username || !permission) {
-            throw new Error('ユーザー名（氏名）と権限を入力してください');
-        }
-
-        try {
-            console.log('Firebase Database接続テスト...');
-            const testRef = this.database.ref('ceScheduleV2');
-            await testRef.once('value');
-            console.log('Database接続OK');
-
-            console.log('重複チェック中...');
-            const existingInitial = await this.database.ref(`ceScheduleV2/initialUsers/${username}`).once('value');
-            const existingUsername = await this.database.ref(`ceScheduleV2/usernames/${username}`).once('value');
-            
-            if (existingInitial.exists() || existingUsername.exists()) {
-                throw new Error('このユーザー名（氏名）は既に使用されています');
-            }
-            console.log('ユーザー名利用可能');
-
-            const tempPassword = userData.initialPassword;
-            console.log('一時パスワード使用:', tempPassword);
-            
-            if (!tempPassword) {
-                throw new Error('一時パスワードが生成されていません');
-            }
-            
-            const saveUserData = {
-                username: username,        
-                tempPassword: tempPassword,
-                permission: permission,
-                department: department,    
-                isInitial: true,          
-                createdAt: firebase.database.ServerValue.TIMESTAMP,
-                lastLogin: null,
-                loginCount: 0
-            };
-
-            console.log('保存データ:', saveUserData);
-
-            console.log('Step 1: initialUsers テーブルに保存中...');
-            await this.database.ref(`ceScheduleV2/initialUsers/${username}`).set(saveUserData);
-            console.log('initialUsers 保存完了');
-
-            console.log('Step 2: usernames テーブルに保存中...');
-            await this.database.ref(`ceScheduleV2/usernames/${username}`).set({
-                status: 'initial',       
-                createdAt: firebase.database.ServerValue.TIMESTAMP,
-                permission: permission
-            });
-            console.log('usernames 保存完了');
-            
-            console.log('ユーザー作成完全成功:', username);
-            
-            return {
-                success: true,
-                message: 'ユーザー作成が完了しました',
-                userId: username,
-                initialPassword: tempPassword,
-                loginUrl: `${window.location.origin}/v2/index.html`
-            };
-            
-        } catch (error) {
-            console.error('詳細エラー情報:');
-            console.error('- エラー:', error);
-            console.error('- エラーコード:', error.code);
-            console.error('- エラーメッセージ:', error.message);
-            
-            throw new Error(`ユーザー作成エラー: ${error.message}`);
-        }
-    }
-
-    generatePassword() {
-        const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
-        let password = '';
-        for (let i = 0; i < 8; i++) {
-            password += chars.charAt(Math.floor(Math.random() * chars.length));
-        }
-        console.log('新しいパスワード生成:', password);
-        return password;
-    }
-
-    async getInitialUsersList() {
-        await this.waitForInitialization();
-        
-        try {
-            const snapshot = await this.database.ref('ceScheduleV2/initialUsers').once('value');
-            const users = [];
-            
-            if (snapshot.exists()) {
-                snapshot.forEach((userSnapshot) => {
-                    const userData = userSnapshot.val();
-                    users.push({
-                        userId: userSnapshot.key,
-                        displayName: userData.username,
-                        initialPassword: userData.tempPassword,
-                        createdAt: userData.createdAt,
-                        permission: userData.permission,
-                        department: userData.department
-                    });
-                });
-            }
-            
-            return users;
-        } catch (error) {
-            console.error('初期ユーザーリスト取得エラー:', error);
-            return [];
-        }
-    }
-
-    async getConfiguredUsersList() {
-        await this.waitForInitialization();
-        return [];
-    }
-
-    async deleteUser(userId) {
-        await this.waitForInitialization();
-        
-        try {
-            const updates = {};
-            updates[`ceScheduleV2/initialUsers/${userId}`] = null;
-            updates[`ceScheduleV2/usernames/${userId}`] = null;
-            
-            await this.database.ref().update(updates);
-            console.log('ユーザー削除完了:', userId);
-            
-        } catch (error) {
-            console.error('ユーザー削除エラー:', error);
-            throw new Error('ユーザー削除に失敗しました');
-        }
-    }
-
-    async resetUserPassword(userId) {
-        await this.waitForInitialization();
-        
-        try {
-            const newPassword = this.generatePassword();
-            
-            await this.database.ref(`ceScheduleV2/initialUsers/${userId}`).update({
-                tempPassword: newPassword,
-                isInitial: true
-            });
-            
-            console.log('パスワードリセット完了:', userId);
-            return newPassword;
-            
-        } catch (error) {
-            console.error('パスワードリセットエラー:', error);
-            throw new Error('パスワードリセットに失敗しました');
-        }
-    }
-
-    setCurrentAdmin(admin) {
-        this.currentAdmin = admin;
-        console.log('管理者設定:', admin);
-    }
-}
-
-console.log('AdminUserManager スクリプト読み込み完了');
-
-if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', initializeAdminManager);
-} else {
-    setTimeout(initializeAdminManager, 100);
-}
-
-async function initializeAdminManager() {
-    try {
-        console.log('AdminUserManager初期化開始...');
-        const manager = new AdminUserManager();
-        await manager.waitForInitialization();
-        console.log('AdminUserManager準備完了');
-        
-        if (window.adminUserManager) {
-            console.log('グローバルadminUserManager設定完了');
         } else {
-            console.error('グローバルadminUserManager設定失敗');
+            showStatus('ログインが必要です', 'error');
+            setTimeout(() => {
+                window.location.href = '../index.html';
+            }, 2000);
+        }
+    });
+}
+
+// Generate secure password
+function generateSecurePassword() {
+    const length = 12;
+    const charset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*";
+    let password = "";
+    
+    // Ensure at least one character from each required set
+    password += "ABCDEFGHIJKLMNOPQRSTUVWXYZ"[Math.floor(Math.random() * 26)]; // Uppercase
+    password += "abcdefghijklmnopqrstuvwxyz"[Math.floor(Math.random() * 26)]; // Lowercase
+    password += "0123456789"[Math.floor(Math.random() * 10)]; // Number
+    password += "!@#$%^&*"[Math.floor(Math.random() * 8)]; // Special
+    
+    // Fill remaining characters
+    for (let i = 4; i < length; i++) {
+        password += charset[Math.floor(Math.random() * charset.length)];
+    }
+    
+    // Shuffle the password
+    return password.split('').sort(() => 0.5 - Math.random()).join('');
+}
+
+// Validate password strength
+function validatePassword(password) {
+    if (password.length < 8) {
+        return { valid: false, message: 'パスワードは8文字以上である必要があります' };
+    }
+    if (!/[A-Z]/.test(password)) {
+        return { valid: false, message: 'パスワードには大文字を含む必要があります' };
+    }
+    if (!/[a-z]/.test(password)) {
+        return { valid: false, message: 'パスワードには小文字を含む必要があります' };
+    }
+    if (!/[0-9]/.test(password)) {
+        return { valid: false, message: 'パスワードには数字を含む必要があります' };
+    }
+    return { valid: true };
+}
+
+// Create user function
+async function createUser() {
+    const username = usernameInput.value.trim();
+    const email = emailInput.value.trim();
+    const role = roleSelect.value;
+
+    // Validation
+    if (!username || !email || !role) {
+        showStatus('すべての項目を入力してください', 'error');
+        return;
+    }
+
+    if (!validateEmail(email)) {
+        showStatus('有効なメールアドレスを入力してください', 'error');
+        return;
+    }
+
+    if (!validateUsername(username)) {
+        showStatus('ユーザー名は3文字以上20文字以下で、英数字、ひらがな、カタカナ、漢字のみ使用可能です', 'error');
+        return;
+    }
+
+    createUserBtn.disabled = true;
+    showStatus('ユーザーを作成中...', 'info');
+
+    try {
+        // Check if username already exists
+        const usernameRef = ref(database, `ceScheduleV2/usernames/${username}`);
+        const usernameSnapshot = await get(usernameRef);
+        
+        if (usernameSnapshot.exists()) {
+            showStatus('このユーザー名は既に使用されています', 'error');
+            createUserBtn.disabled = false;
+            return;
+        }
+
+        // Generate secure password
+        const password = generateSecurePassword();
+        const passwordValidation = validatePassword(password);
+        
+        if (!passwordValidation.valid) {
+            showStatus(`パスワードエラー: ${passwordValidation.message}`, 'error');
+            createUserBtn.disabled = false;
+            return;
+        }
+
+        // Create user in Firebase Authentication
+        const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+        const uid = userCredential.user.uid;
+
+        // Prepare user data
+        const userData = {
+            uid: uid,
+            username: username,
+            email: email,
+            role: role,
+            isInitialUser: true,
+            hasCompletedSetup: false,
+            createdAt: new Date().toISOString(),
+            createdBy: auth.currentUser?.uid || 'system'
+        };
+
+        // Save to Firebase Database
+        await Promise.all([
+            set(ref(database, `ceScheduleV2/users/${uid}`), userData),
+            set(ref(database, `ceScheduleV2/usernames/${username}`), uid),
+            set(ref(database, `ceScheduleV2/initialUsers/${uid}`), {
+                username: username,
+                tempPassword: password,  // Store temporarily for admin reference
+                created: new Date().toISOString()
+            })
+        ]);
+
+        // Show success message with password
+        showStatus(`ユーザーが正常に作成されました！<br><br>
+            <strong>ユーザー名:</strong> ${username}<br>
+            <strong>メール:</strong> ${email}<br>
+            <strong>権限:</strong> ${role}<br>
+            <strong>仮パスワード:</strong> <code>${password}</code><br><br>
+            <em>※このパスワードを新規ユーザーに安全に伝達してください</em>`, 'success');
+
+        // Clear form
+        usernameInput.value = '';
+        emailInput.value = '';
+        roleSelect.value = 'viewer';
+
+        // Reload user list
+        loadUsers();
+
+    } catch (error) {
+        console.error('ユーザー作成エラー:', error);
+        
+        let errorMessage = 'ユーザー作成に失敗しました';
+        
+        if (error.code === 'auth/email-already-in-use') {
+            errorMessage = 'このメールアドレスは既に使用されています';
+        } else if (error.code === 'auth/invalid-email') {
+            errorMessage = '無効なメールアドレスです';
+        } else if (error.code === 'auth/weak-password') {
+            errorMessage = 'パスワードが弱すぎます';
+        } else if (error.code === 'permission-denied') {
+            errorMessage = 'データベースへの書き込み権限がありません';
         }
         
-    } catch (error) {
-        console.error('AdminUserManager初期化失敗:', error);
+        showStatus(errorMessage, 'error');
+        
+        // Cleanup on failure - remove from Firebase Auth if Database save failed
+        if (error.message.includes('Database') && auth.currentUser) {
+            try {
+                await auth.currentUser.delete();
+                console.log('Firebase Authからユーザーを削除しました（ロールバック）');
+            } catch (cleanupError) {
+                console.error('ロールバック失敗:', cleanupError);
+            }
+        }
+    } finally {
+        createUserBtn.disabled = false;
     }
 }
+
+// Load and display users
+async function loadUsers() {
+    try {
+        const usersRef = ref(database, 'ceScheduleV2/users');
+        const snapshot = await get(usersRef);
+        
+        userTableBody.innerHTML = '';
+        
+        if (snapshot.exists()) {
+            const users = snapshot.val();
+            
+            Object.entries(users).forEach(([uid, userData]) => {
+                const row = document.createElement('tr');
+                
+                const statusBadge = userData.hasCompletedSetup 
+                    ? '<span class="status-badge status-active">設定完了</span>' 
+                    : '<span class="status-badge status-pending">初期状態</span>';
+                
+                const roleBadge = getRoleBadge(userData.role);
+                
+                row.innerHTML = `
+                    <td>${userData.username || 'N/A'}</td>
+                    <td>${userData.email || 'N/A'}</td>
+                    <td>${roleBadge}</td>
+                    <td>${statusBadge}</td>
+                    <td>${formatDate(userData.createdAt)}</td>
+                    <td>
+                        <button class="btn btn-sm btn-outline" onclick="editUser('${uid}')">編集</button>
+                        <button class="btn btn-sm btn-danger" onclick="deleteUser('${uid}', '${userData.username}')">削除</button>
+                    </td>
+                `;
+                
+                userTableBody.appendChild(row);
+            });
+        } else {
+            userTableBody.innerHTML = '<tr><td colspan="6" class="text-center">ユーザーが見つかりません</td></tr>';
+        }
+    } catch (error) {
+        console.error('ユーザーロードエラー:', error);
+        showStatus('ユーザーの読み込みに失敗しました', 'error');
+    }
+}
+
+// Get role badge HTML
+function getRoleBadge(role) {
+    const badges = {
+        admin: '<span class="role-badge role-admin">管理者</span>',
+        editor: '<span class="role-badge role-editor">編集者</span>',
+        viewer: '<span class="role-badge role-viewer">閲覧者</span>'
+    };
+    return badges[role] || '<span class="role-badge">不明</span>';
+}
+
+// Format date
+function formatDate(dateString) {
+    if (!dateString) return 'N/A';
+    
+    try {
+        const date = new Date(dateString);
+        return date.toLocaleDateString('ja-JP', {
+            year: 'numeric',
+            month: '2-digit',
+            day: '2-digit',
+            hour: '2-digit',
+            minute: '2-digit'
+        });
+    } catch (error) {
+        return 'N/A';
+    }
+}
+
+// Edit user function (placeholder)
+window.editUser = function(uid) {
+    // TODO: Implement user editing functionality
+    showStatus('ユーザー編集機能は開発中です', 'info');
+};
+
+// Delete user function
+window.deleteUser = async function(uid, username) {
+    if (!confirm(`ユーザー「${username}」を削除しますか？\n\nこの操作は取り消せません。`)) {
+        return;
+    }
+
+    try {
+        showStatus('ユーザーを削除中...', 'info');
+
+        // Get user data first
+        const userRef = ref(database, `ceScheduleV2/users/${uid}`);
+        const userSnapshot = await get(userRef);
+        
+        if (!userSnapshot.exists()) {
+            showStatus('ユーザーが見つかりません', 'error');
+            return;
+        }
+
+        const userData = userSnapshot.val();
+
+        // Remove from all database locations
+        await Promise.all([
+            remove(ref(database, `ceScheduleV2/users/${uid}`)),
+            remove(ref(database, `ceScheduleV2/usernames/${userData.username}`)),
+            remove(ref(database, `ceScheduleV2/initialUsers/${uid}`))
+        ]);
+
+        showStatus(`ユーザー「${username}」が削除されました`, 'success');
+        
+        // Reload user list
+        loadUsers();
+
+    } catch (error) {
+        console.error('ユーザー削除エラー:', error);
+        showStatus('ユーザーの削除に失敗しました', 'error');
+    }
+};
+
+// Validation functions
+function validateEmail(email) {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailRegex.test(email);
+}
+
+function validateUsername(username) {
+    // Allow alphanumeric, hiragana, katakana, kanji (3-20 characters)
+    const usernameRegex = /^[a-zA-Z0-9ひらがなカタカナ漢字\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FAF]{3,20}$/;
+    return usernameRegex.test(username);
+}
+
+// Show status message
+function showStatus(message, type) {
+    statusDiv.innerHTML = message;
+    statusDiv.className = `status ${type}`;
+    statusDiv.style.display = 'block';
+    
+    // Auto-hide success messages after 5 seconds
+    if (type === 'success') {
+        setTimeout(() => {
+            statusDiv.style.display = 'none';
+        }, 8000);
+    }
+}
+
+// Export for global access
+window.createUser = createUser;
+window.loadUsers = loadUsers;
