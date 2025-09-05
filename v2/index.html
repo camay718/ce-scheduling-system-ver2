@@ -220,6 +220,20 @@
         window.addEventListener('unhandledrejection', function(event) {
             console.error('❌ Promise拒否:', event.reason);
         });
+    // 新規登録モード切替（追加）
+function showRegistrationMode() {
+    window.location.href = 'pages/register.html';
+}
+
+// パスワードリセット表示
+function showPasswordReset() {
+    const email = prompt('パスワードリセット用のメールアドレスを入力してください:');
+    if (email && window.emailAuthSystem) {
+        window.emailAuthSystem.resetPassword(email).then(result => {
+            alert(result.message);
+        });
+    }
+}
     </script>
 </body>
 </html>
