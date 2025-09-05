@@ -1,25 +1,34 @@
-// Firebase CDN版（importは不要）
-// Firebase設定は外部ファイルから読み込み
-
-// Firebase initialization（CDN版）
+// Firebase CDN版（完全対応）
 let app, auth, database;
 
 // Initialize Firebase when config is loaded
 function initializeFirebase() {
     if (window.firebaseConfig) {
-        app = firebase.initializeApp(window.firebaseConfig);
-        auth = firebase.auth();
-        database = firebase.database();
-        console.log('Firebase initialized successfully');
+        try {
+            app = firebase.initializeApp(window.firebaseConfig);
+            auth = firebase.auth();
+            database = firebase.database();
+            console.log('Firebase initialized successfully');
+            return true;
+        } catch (error) {
+            console.error('Firebase initialization error:', error);
+            return false;
+        }
     } else {
         console.error('Firebase config not loaded');
+        return false;
     }
 }
+
 // DOM elements
 let createUserBtn, usernameInput, emailInput, roleSelect, statusDiv, userTableBody;
 
 // Initialize when DOM is loaded
 document.addEventListener('DOMContentLoaded', function() {
+    // Initialize Firebase first
+    const firebaseReady = initializeFirebase();
+    
+    // Get DOM elements
     createUserBtn = document.getElementById('createUserBtn');
     usernameInput = document.getElementById('username');
     emailInput = document.getElementById('email');
@@ -28,22 +37,33 @@ document.addEventListener('DOMContentLoaded', function() {
     userTableBody = document.getElementById('userTableBody');
 
     // Event listeners
-    createUserBtn.addEventListener('click', createUser);
+    if (createUserBtn) {
+        createUserBtn.addEventListener('click', createUser);
+    }
     
-    // Load existing users
-    loadUsers();
-    
-    // Check authentication
-    checkAdminAuth();
+    // Wait for Firebase initialization before calling other functions
+    if (firebaseReady) {
+        setTimeout(() => {
+            loadUsers();
+            checkAdminAuth();
+        }, 1000);
+    }
 });
 
 // Check if current user is admin
 function checkAdminAuth() {
-    onAuthStateChanged(auth, async (user) => {
+    if (!auth) {
+        console.error('Firebase auth not initialized');
+        return;
+    }
+    
+    // CDN版のonAuthStateChanged使用
+    auth.onAuthStateChanged(async (user) => {
         if (user) {
             try {
-                const userRef = ref(database, `ceScheduleV2/users/${user.uid}`);
-                const snapshot = await get(userRef);
+                // CDN版のdatabase.ref()使用
+                const userRef = database.ref(`ceScheduleV2/users/${user.uid}`);
+                const snapshot = await userRef.once('value');
                 
                 if (snapshot.exists()) {
                     const userData = snapshot.val();
@@ -54,6 +74,7 @@ function checkAdminAuth() {
                         }, 2000);
                         return;
                     }
+                    console.log('Admin authentication successful');
                 } else {
                     showStatus('ユーザーデータが見つかりません', 'error');
                     setTimeout(() => {
@@ -114,6 +135,11 @@ function validatePassword(password) {
 
 // Create user function
 async function createUser() {
+    if (!auth || !database) {
+        showStatus('Firebase が初期化されていません', 'error');
+        return;
+    }
+
     const username = usernameInput.value.trim();
     const email = emailInput.value.trim();
     const role = roleSelect.value;
@@ -138,9 +164,9 @@ async function createUser() {
     showStatus('ユーザーを作成中...', 'info');
 
     try {
-        // Check if username already exists
-        const usernameRef = ref(database, `ceScheduleV2/usernames/${username}`);
-        const usernameSnapshot = await get(usernameRef);
+        // CDN版のdatabase.ref()を使用してユーザー名の重複チェック
+        const usernameRef = database.ref(`ceScheduleV2/usernames/${username}`);
+        const usernameSnapshot = await usernameRef.once('value');
         
         if (usernameSnapshot.exists()) {
             showStatus('このユーザー名は既に使用されています', 'error');
@@ -158,8 +184,8 @@ async function createUser() {
             return;
         }
 
-        // Create user in Firebase Authentication
-        const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+        // CDN版のcreateUserWithEmailAndPasswordを使用
+        const userCredential = await auth.createUserWithEmailAndPassword(email, password);
         const uid = userCredential.user.uid;
 
         // Prepare user data
@@ -174,13 +200,13 @@ async function createUser() {
             createdBy: auth.currentUser?.uid || 'system'
         };
 
-        // Save to Firebase Database
+        // CDN版のdatabase.ref().set()を使用してデータを保存
         await Promise.all([
-            set(ref(database, `ceScheduleV2/users/${uid}`), userData),
-            set(ref(database, `ceScheduleV2/usernames/${username}`), uid),
-            set(ref(database, `ceScheduleV2/initialUsers/${uid}`), {
+            database.ref(`ceScheduleV2/users/${uid}`).set(userData),
+            database.ref(`ceScheduleV2/usernames/${username}`).set(uid),
+            database.ref(`ceScheduleV2/initialUsers/${uid}`).set({
                 username: username,
-                tempPassword: password,  // Store temporarily for admin reference
+                tempPassword: password,
                 created: new Date().toISOString()
             })
         ]);
@@ -196,7 +222,7 @@ async function createUser() {
         // Clear form
         usernameInput.value = '';
         emailInput.value = '';
-        roleSelect.value = 'viewer';
+        roleSelect.value = '';
 
         // Reload user list
         loadUsers();
@@ -217,16 +243,6 @@ async function createUser() {
         }
         
         showStatus(errorMessage, 'error');
-        
-        // Cleanup on failure - remove from Firebase Auth if Database save failed
-        if (error.message.includes('Database') && auth.currentUser) {
-            try {
-                await auth.currentUser.delete();
-                console.log('Firebase Authからユーザーを削除しました（ロールバック）');
-            } catch (cleanupError) {
-                console.error('ロールバック失敗:', cleanupError);
-            }
-        }
     } finally {
         createUserBtn.disabled = false;
     }
@@ -234,9 +250,20 @@ async function createUser() {
 
 // Load and display users
 async function loadUsers() {
+    if (!database) {
+        console.error('Database not initialized');
+        return;
+    }
+
     try {
-        const usersRef = ref(database, 'ceScheduleV2/users');
-        const snapshot = await get(usersRef);
+        // CDN版のdatabase.ref()を使用
+        const usersRef = database.ref('ceScheduleV2/users');
+        const snapshot = await usersRef.once('value');
+        
+        if (!userTableBody) {
+            console.error('User table body not found');
+            return;
+        }
         
         userTableBody.innerHTML = '';
         
@@ -305,7 +332,6 @@ function formatDate(dateString) {
 
 // Edit user function (placeholder)
 window.editUser = function(uid) {
-    // TODO: Implement user editing functionality
     showStatus('ユーザー編集機能は開発中です', 'info');
 };
 
@@ -318,9 +344,9 @@ window.deleteUser = async function(uid, username) {
     try {
         showStatus('ユーザーを削除中...', 'info');
 
-        // Get user data first
-        const userRef = ref(database, `ceScheduleV2/users/${uid}`);
-        const userSnapshot = await get(userRef);
+        // CDN版のdatabase.ref()を使用
+        const userRef = database.ref(`ceScheduleV2/users/${uid}`);
+        const userSnapshot = await userRef.once('value');
         
         if (!userSnapshot.exists()) {
             showStatus('ユーザーが見つかりません', 'error');
@@ -329,16 +355,14 @@ window.deleteUser = async function(uid, username) {
 
         const userData = userSnapshot.val();
 
-        // Remove from all database locations
+        // CDN版のdatabase.ref().remove()を使用
         await Promise.all([
-            remove(ref(database, `ceScheduleV2/users/${uid}`)),
-            remove(ref(database, `ceScheduleV2/usernames/${userData.username}`)),
-            remove(ref(database, `ceScheduleV2/initialUsers/${uid}`))
+            database.ref(`ceScheduleV2/users/${uid}`).remove(),
+            database.ref(`ceScheduleV2/usernames/${userData.username}`).remove(),
+            database.ref(`ceScheduleV2/initialUsers/${uid}`).remove()
         ]);
 
         showStatus(`ユーザー「${username}」が削除されました`, 'success');
-        
-        // Reload user list
         loadUsers();
 
     } catch (error) {
@@ -354,25 +378,21 @@ function validateEmail(email) {
 }
 
 function validateUsername(username) {
-    // Allow alphanumeric, hiragana, katakana, kanji (3-20 characters)
     const usernameRegex = /^[a-zA-Z0-9ひらがなカタカナ漢字\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FAF]{3,20}$/;
     return usernameRegex.test(username);
 }
 
 // Show status message
 function showStatus(message, type) {
+    if (!statusDiv) return;
+    
     statusDiv.innerHTML = message;
     statusDiv.className = `status ${type}`;
     statusDiv.style.display = 'block';
     
-    // Auto-hide success messages after 5 seconds
     if (type === 'success') {
         setTimeout(() => {
             statusDiv.style.display = 'none';
         }, 8000);
     }
 }
-
-// Export for global access
-window.createUser = createUser;
-window.loadUsers = loadUsers;
