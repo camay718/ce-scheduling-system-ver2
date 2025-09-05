@@ -2,7 +2,6 @@
 🔐 Email認証システム - Phase 2
 個人ユーザー登録とEmail/Password認証
 */
-
 class EmailAuthSystem {
     constructor() {
         this.isInitialized = false;
