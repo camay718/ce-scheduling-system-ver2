@@ -1,190 +1,242 @@
 // v2/js/admin/admin-user-management.js (修正版)
+
 class AdminUserManager {
     constructor() {
-        this.database = firebase.database();
-        this.auth = firebase.auth();
-        this.init();
+        this.database = null;
+        this.auth = null;
+        this.isInitialized = false;
+        this.initializationPromise = this.init();
     }
 
-    init() {
-        // Firebase認証状態の確認
-        this.auth.onAuthStateChanged((user) => {
-            if (user) {
-                console.log('✅ 管理者認証済み:', user.uid);
-                this.loadUsers();
-            } else {
-                console.log('❌ 未認証 - 管理者ログインが必要');
-                window.location.href = '../index.html';
-            }
-        });
-
-        // フォーム送信イベント
-        const form = document.getElementById('createUserForm');
-        if (form) {
-            form.addEventListener('submit', (e) => {
-                e.preventDefault();
-                this.createInitialUser();
-            });
+    // 🔧 非同期初期化メソッド
+    async init() {
+        console.log('🔄 AdminUserManager初期化開始...');
+        
+        // Firebase初期化待機（最大10秒）
+        let attempts = 0;
+        while (attempts < 100 && (!window.firebase || !window.firebase.database)) {
+            console.log(`⏳ Firebase初期化待機中... (${attempts + 1}/100)`);
+            await new Promise(resolve => setTimeout(resolve, 100));
+            attempts++;
         }
-    }
 
-    // 🔧 修正: 初期ユーザー作成ロジック
-async createInitialUser() {
-    const username = document.getElementById('username').value.trim();
-    const permission = document.getElementById('permission').value;
-    
-    // 🆕 部門取得（Editorの場合のみ）
-    let department = null;
-    if (permission === 'editor') {
-        department = document.getElementById('department').value.trim();
-        if (!department) {
-            alert('Editorの場合は所属部門を入力してください');
-            return;
+        if (!window.firebase || !window.firebase.database) {
+            console.error('❌ Firebase初期化タイムアウト');
+            throw new Error('Firebase初期化に失敗しました');
         }
-    }
-    
-    console.log('🔍 ユーザー作成開始:', {username, permission, department});
-    
-    if (!username || !permission) {
-        alert('ユーザー名（氏名）と権限を入力してください');
-        return;
-    }
 
-    try {
-        // 🔍 Firebase Database 接続テスト
-        console.log('📡 Firebase Database接続テスト...');
-        const testRef = this.database.ref('ceScheduleV2');
-        await testRef.once('value');
-        console.log('✅ Database接続OK');
-
-        // 1. ユーザー名重複チェック（initialUsers で確認）
-        console.log('🔍 重複チェック中...');
-        const existingInitial = await this.database.ref(`ceScheduleV2/initialUsers/${username}`).once('value');
-        const existingUsername = await this.database.ref(`ceScheduleV2/usernames/${username}`).once('value');
-        
-        if (existingInitial.exists() || existingUsername.exists()) {
-            alert('このユーザー名（氏名）は既に使用されています');
-            return;
-        }
-        console.log('✅ ユーザー名利用可能');
-
-        // 2. 一時パスワード生成（8文字、覚えやすい形式）
-        const tempPassword = this.generateTempPassword();
-        console.log('🔑 一時パスワード生成:', tempPassword);
-        
-        // 3. 🆕 ユーザーデータ構造（V2形式）
-        const userData = {
-            username: username,        // 氏名
-            tempPassword: tempPassword,
-            permission: permission,
-            department: department,    // EditorのみでなくViewerはnull
-            isInitial: true,          // 初期設定待ち
-            createdAt: firebase.database.ServerValue.TIMESTAMP,
-            lastLogin: null,
-            loginCount: 0
-        };
-
-        console.log('💾 保存データ:', userData);
-
-        // 4. 🚨 段階的保存（エラー箇所特定のため）
-        console.log('📝 Step 1: initialUsers テーブルに保存中...');
-        await this.database.ref(`ceScheduleV2/initialUsers/${username}`).set(userData);
-        console.log('✅ initialUsers 保存完了');
-
-        console.log('📝 Step 2: usernames テーブルに保存中...');
-        await this.database.ref(`ceScheduleV2/usernames/${username}`).set({
-            status: 'initial',        // initial / active
-            createdAt: firebase.database.ServerValue.TIMESTAMP,
-            permission: permission
-        });
-        console.log('✅ usernames 保存完了');
-        
-        console.log('🎉 ユーザー作成完全成功:', username);
-        
-        // UI更新
-        this.showTempPassword(username, tempPassword);
-        this.loadUsers();
-        document.getElementById('createUserForm').reset();
-        
-    } catch (error) {
-        console.error('❌ 詳細エラー情報:');
-        console.error('- エラー:', error);
-        console.error('- エラーコード:', error.code);
-        console.error('- エラーメッセージ:', error.message);
-        console.error('- エラースタック:', error.stack);
-        
-        alert(`❌ ユーザー作成エラー:\n${error.message}\n\n📋 コンソールログで詳細を確認してください`);
-    }
-}
-
-// 🔧 一時パスワード生成の改良版（覚えやすい形式）
-generateTempPassword() {
-    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // 混同文字除外
-    let password = '';
-    for (let i = 0; i < 8; i++) {
-        password += chars.charAt(Math.floor(Math.random() * chars.length));
-    }
-    return password;
-}
-
-    showTempPassword(username, tempPassword) {
-        const resultDiv = document.getElementById('tempPasswordResult');
-        resultDiv.innerHTML = `
-            <div class="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded mb-4">
-                <h4 class="font-bold">✅ ユーザー作成完了</h4>
-                <p><strong>ユーザー名:</strong> ${username}</p>
-                <p><strong>一時パスワード:</strong> <code class="bg-gray-200 px-2 py-1 rounded">${tempPassword}</code></p>
-                <p class="text-sm mt-2">※ このパスワードをユーザーに伝えてください</p>
-            </div>
-        `;
-        resultDiv.style.display = 'block';
-    }
-
-    // パスワードリセット機能
-    async resetPassword(identifier) {
-        if (!confirm(`${identifier} のパスワードをリセットしますか？`)) return;
-        
+        // Firebase サービス接続
         try {
-            const newTempPassword = this.generateTempPassword();
+            this.database = firebase.database();
+            this.auth = firebase.auth();
+            this.isInitialized = true;
+            console.log('✅ AdminUserManager初期化完了');
             
-            // initialUsers テーブルを更新
-            await this.database.ref(`ceScheduleV2/initialUsers/${identifier}`).update({
-                tempPassword: newTempPassword,
-                isInitial: true // リセット時は初期状態に戻す
+            // 初期化完了をグローバルに通知
+            window.adminUserManager = this;
+            
+            return this;
+        } catch (error) {
+            console.error('❌ AdminUserManager初期化エラー:', error);
+            throw error;
+        }
+    }
+
+    // 🔧 初期化待機メソッド
+    async waitForInitialization() {
+        if (!this.isInitialized) {
+            await this.initializationPromise;
+        }
+        return this;
+    }
+
+    // 🔧 修正: ユーザー作成メソッド（非同期対応）
+    async createInitialUser(userData) {
+        await this.waitForInitialization();
+        
+        const username = userData.displayName;
+        const permission = userData.role;
+        const department = userData.department;
+        
+        console.log('🔍 ユーザー作成開始:', {username, permission, department});
+        
+        if (!username || !permission) {
+            throw new Error('ユーザー名（氏名）と権限を入力してください');
+        }
+
+        try {
+            // 🔍 Firebase Database 接続テスト
+            console.log('📡 Firebase Database接続テスト...');
+            const testRef = this.database.ref('ceScheduleV2');
+            await testRef.once('value');
+            console.log('✅ Database接続OK');
+
+            // 1. ユーザー名重複チェック
+            console.log('🔍 重複チェック中...');
+            const existingInitial = await this.database.ref(`ceScheduleV2/initialUsers/${username}`).once('value');
+            const existingUsername = await this.database.ref(`ceScheduleV2/usernames/${username}`).once('value');
+            
+            if (existingInitial.exists() || existingUsername.exists()) {
+                throw new Error('このユーザー名（氏名）は既に使用されています');
+            }
+            console.log('✅ ユーザー名利用可能');
+
+            // 2. 一時パスワード取得（フォームから）
+            const tempPassword = userData.initialPassword;
+            console.log('🔑 一時パスワード使用:', tempPassword);
+            
+            if (!tempPassword) {
+                throw new Error('一時パスワードが生成されていません');
+            }
+            
+            // 3. ユーザーデータ構造（V2形式）
+            const saveUserData = {
+                username: username,        
+                tempPassword: tempPassword,
+                permission: permission,
+                department: department,    
+                isInitial: true,          
+                createdAt: firebase.database.ServerValue.TIMESTAMP,
+                lastLogin: null,
+                loginCount: 0
+            };
+
+            console.log('💾 保存データ:', saveUserData);
+
+            // 4. 段階的保存
+            console.log('📝 Step 1: initialUsers テーブルに保存中...');
+            await this.database.ref(`ceScheduleV2/initialUsers/${username}`).set(saveUserData);
+            console.log('✅ initialUsers 保存完了');
+
+            console.log('📝 Step 2: usernames テーブルに保存中...');
+            await this.database.ref(`ceScheduleV2/usernames/${username}`).set({
+                status: 'initial',       
+                createdAt: firebase.database.ServerValue.TIMESTAMP,
+                permission: permission
             });
+            console.log('✅ usernames 保存完了');
             
-            alert(`パスワードリセット完了\n新しい一時パスワード: ${newTempPassword}`);
-            this.loadUsers();
+            console.log('🎉 ユーザー作成完全成功:', username);
+            
+            return {
+                success: true,
+                message: 'ユーザー作成が完了しました',
+                userId: username,
+                initialPassword: tempPassword,
+                loginUrl: `${window.location.origin}/v2/index.html`
+            };
             
         } catch (error) {
-            console.error('❌ パスワードリセットエラー:', error);
-            alert('パスワードリセットに失敗しました');
+            console.error('❌ 詳細エラー情報:');
+            console.error('- エラー:', error);
+            console.error('- エラーコード:', error.code);
+            console.error('- エラーメッセージ:', error.message);
+            
+            throw new Error(`ユーザー作成エラー: ${error.message}`);
         }
     }
 
-    // ユーザー削除機能
-    async deleteUser(identifier) {
-        if (!confirm(`${identifier} を削除しますか？この操作は取り消せません。`)) return;
+    // 🔧 パスワード生成メソッド
+    generatePassword() {
+        const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+        let password = '';
+        for (let i = 0; i < 8; i++) {
+            password += chars.charAt(Math.floor(Math.random() * chars.length));
+        }
+        console.log('🔑 新しいパスワード生成:', password);
+        return password;
+    }
+
+    // 🔧 初期ユーザーリスト取得
+    async getInitialUsersList() {
+        await this.waitForInitialization();
+        
+        try {
+            const snapshot = await this.database.ref('ceScheduleV2/initialUsers').once('value');
+            const users = [];
+            
+            if (snapshot.exists()) {
+                snapshot.forEach((userSnapshot) => {
+                    const userData = userSnapshot.val();
+                    users.push({
+                        userId: userSnapshot.key,
+                        displayName: userData.username,
+                        initialPassword: userData.tempPassword,
+                        createdAt: userData.createdAt,
+                        permission: userData.permission,
+                        department: userData.department
+                    });
+                });
+            }
+            
+            return users;
+        } catch (error) {
+            console.error('❌ 初期ユーザーリスト取得エラー:', error);
+            return [];
+        }
+    }
+
+    // 🔧 設定済みユーザーリスト取得
+    async getConfiguredUsersList() {
+        await this.waitForInitialization();
+        return []; // 後で実装
+    }
+
+    // 🔧 ユーザー削除
+    async deleteUser(userId) {
+        await this.waitForInitialization();
         
         try {
             const updates = {};
-            updates[`ceScheduleV2/initialUsers/${identifier}`] = null;
-            updates[`ceScheduleV2/usernames/${identifier}`] = null;
+            updates[`ceScheduleV2/initialUsers/${userId}`] = null;
+            updates[`ceScheduleV2/usernames/${userId}`] = null;
             
             await this.database.ref().update(updates);
-            
-            alert('ユーザーを削除しました');
-            this.loadUsers();
+            console.log('✅ ユーザー削除完了:', userId);
             
         } catch (error) {
             console.error('❌ ユーザー削除エラー:', error);
-            alert('ユーザー削除に失敗しました');
+            throw new Error('ユーザー削除に失敗しました');
         }
+    }
+
+    // 🔧 パスワードリセット
+    async resetUserPassword(userId) {
+        await this.waitForInitialization();
+        
+        try {
+            const newPassword = this.generatePassword();
+            
+            await this.database.ref(`ceScheduleV2/initialUsers/${userId}`).update({
+                tempPassword: newPassword,
+                isInitial: true
+            });
+            
+            console.log('✅ パスワードリセット完了:', userId);
+            return newPassword;
+            
+        } catch (error) {
+            console.error('❌ パスワードリセットエラー:', error);
+            throw new Error('パスワードリセットに失敗しました');
+        }
+    }
+
+    // 🔧 管理者設定
+    setCurrentAdmin(admin) {
+        this.currentAdmin = admin;
+        console.log('👨‍💼 管理者設定:', admin);
     }
 }
 
-// グローバルインスタンス作成
-let adminManager;
-document.addEventListener('DOMContentLoaded', () => {
-    adminManager = new AdminUserManager();
+// 🔧 グローバル初期化（非同期対応）
+document.addEventListener('DOMContentLoaded', async () => {
+    try {
+        console.log('🚀 AdminUserManager初期化開始...');
+        const manager = new AdminUserManager();
+        await manager.waitForInitialization();
+        console.log('✅ AdminUserManager準備完了');
+        
+    } catch (error) {
+        console.error('❌ AdminUserManager初期化失敗:', error);
+    }
 });
