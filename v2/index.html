@@ -35,51 +35,42 @@
                 <p class="text-sm text-gray-600">Version 2.0 - 認証システム強化版</p>
             </div>
 
-            <form onsubmit="event.preventDefault(); handleLogin();" class="space-y-4">
-                <!-- ユーザー選択 -->
-                <div>
-                    <label for="userId" class="block text-sm font-medium text-gray-700 mb-2">
-                        <i class="fas fa-user mr-1"></i>ユーザー選択
-                    </label>
-                    <select id="userId" class="auth-input" onchange="handleUserIdChange()" required>
-                        <option value="">ユーザーを選択してください</option>
-                        <option value="スタッフ">スタッフ（名前入力）</option>
-                        <option value="手術・麻酔">手術・麻酔</option>
-                        <option value="MEセンター">MEセンター</option>
-                        <option value="血液浄化">血液浄化</option>
-                        <option value="不整脈">不整脈</option>
-                        <option value="人工心肺・補助循環">人工心肺・補助循環</option>
-                        <option value="心・カテーテル">心・カテーテル</option>
-                        <option value="モニター">モニター</option>
-                        <option value="管理者">管理者</option>
-                    </select>
-                </div>
+<!-- ハイブリッドログインフォーム -->
+<form onsubmit="event.preventDefault(); handleHybridLogin();" class="space-y-4">
+    <!-- ユーザーID/ユーザー名 -->
+    <div>
+        <label for="loginId" class="block text-sm font-medium text-gray-700 mb-2">
+            <i class="fas fa-user mr-1"></i>ユーザーID または ユーザー名
+        </label>
+        <input type="text" id="loginId" class="auth-input" 
+               placeholder="ユーザーID（user_xxxxx）またはユーザー名" 
+               autocomplete="username" required>
+        <div class="text-xs text-gray-500 mt-1">
+            初回ログイン: 管理者から受け取ったユーザーID<br>
+            ２回目以降: 設定したユーザー名
+        </div>
+    </div>
 
-                <!-- 名前入力（スタッフ用） -->
-                <div id="nameInputDiv" style="display: none;">
-                    <label for="nameInput" class="block text-sm font-medium text-gray-700 mb-2">
-                        <i class="fas fa-id-badge mr-1"></i>お名前
-                    </label>
-                    <input type="text" id="nameInput" class="auth-input" 
-                           placeholder="お名前を入力してください" 
-                           onkeypress="if(event.key==='Enter') handleLogin()">
-                </div>
+    <!-- パスワード -->
+    <div>
+        <label for="loginPassword" class="block text-sm font-medium text-gray-700 mb-2">
+            <i class="fas fa-lock mr-1"></i>パスワード
+        </label>
+        <input type="password" id="loginPassword" class="auth-input" 
+               placeholder="パスワードを入力" 
+               autocomplete="current-password"
+               onkeypress="if(event.key==='Enter') handleHybridLogin()" required>
+        <div class="text-xs text-gray-500 mt-1">
+            初回ログイン: 初期パスワード<br>
+            ２回目以降: 設定したパスワード
+        </div>
+    </div>
 
-                <!-- セキュリティコード入力 -->
-                <div id="securityCodeDiv" style="display: none;">
-                    <label for="securityInput" class="block text-sm font-medium text-gray-700 mb-2">
-                        <i class="fas fa-lock mr-1"></i>セキュリティコード
-                    </label>
-                    <input type="password" id="securityInput" class="auth-input" 
-                           placeholder="セキュリティコードを入力" 
-                           onkeypress="if(event.key==='Enter') handleLogin()">
-                </div>
-
-                <!-- ログインボタン -->
-                <button type="submit" class="btn-primary w-full py-3 text-center">
-                    <i class="fas fa-sign-in-alt mr-2"></i>ログイン
-                </button>
-            </form>
+    <!-- ログインボタン -->
+    <button type="submit" id="hybridLoginButton" class="btn-primary w-full py-3 text-center">
+        <i class="fas fa-sign-in-alt mr-2"></i>ログイン
+    </button>
+</form>
 
             <!-- バージョン情報 -->
           <!-- 認証オプション -->
