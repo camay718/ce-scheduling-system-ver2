@@ -1,0 +1,447 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>個人設定 - CEスケジュール管理システム V2</title>
+    
+    <!-- 外部ライブラリ -->
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css">
+    
+    <!-- Firebase CDN -->
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+    
+    <!-- カスタムCSS -->
+    <link rel="stylesheet" href="../css/main.css">
+    <link rel="stylesheet" href="../css/auth.css">
+    <link rel="stylesheet" href="../css/registration.css">
+</head>
+<body>
+    <!-- メッセージコンテナ -->
+    <div id="messageContainer" class="fixed top-4 left-1/2 transform -translate-x-1/2 z-50 w-96"></div>
+
+    <div class="registration-container">
+        <div class="registration-card">
+            <!-- プログレス表示 -->
+            <div class="progress-steps">
+                <div class="progress-step active">
+                    <div class="step-number">1</div>
+                    <div class="step-title">初期ログイン</div>
+                </div>
+                <div class="progress-step active">
+                    <div class="step-number">2</div>
+                    <div class="step-title">個人設定</div>
+                </div>
+                <div class="progress-step">
+                    <div class="step-number">3</div>
+                    <div class="step-title">完了</div>
+                </div>
+            </div>
+
+            <!-- ヘッダー -->
+            <div class="registration-header">
+                <h1 class="registration-title">
+                    <i class="fas fa-user-cog mr-2 text-blue-600"></i>
+                    個人設定の完了
+                </h1>
+                <p class="registration-subtitle">
+                    初期ログインありがとうございます。個人設定を完了してシステムをご利用ください。
+                </p>
+            </div>
+
+            <!-- 現在のユーザー情報表示 -->
+            <div id="currentUserInfo" class="bg-blue-50 p-4 rounded-lg mb-6">
+                <h3 class="font-semibold text-blue-800 mb-2">
+                    <i class="fas fa-info-circle mr-2"></i>現在の登録情報
+                </h3>
+                <div id="userInfoDetails"></div>
+            </div>
+
+            <!-- 個人設定フォーム -->
+            <form id="userSetupForm" class="space-y-4">
+                <!-- ユーザー名設定 -->
+                <div class="form-group">
+                    <label for="setupUsername" class="form-label required">
+                        <i class="fas fa-user mr-1 text-blue-500"></i>
+                        ユーザー名（ログインID）
+                    </label>
+                    <input type="text" id="setupUsername" class="form-input" 
+                           placeholder="半角英数字3-20文字" required>
+                    <div id="usernameCheck" class="text-xs mt-1"></div>
+                    <div class="admin-help-text">
+                        今後ログイン時に使用するIDです。英数字、アンダースコア、ハイフンが使用可能
+                    </div>
+                </div>
+
+                <!-- パスワード設定 -->
+                <div class="form-group">
+                    <label for="setupPassword" class="form-label required">
+                        <i class="fas fa-lock mr-1 text-blue-500"></i>
+                        新しいパスワード
+                    </label>
+                    <input type="password" id="setupPassword" class="form-input" 
+                           placeholder="6文字以上の安全なパスワード" required>
+                    <div id="passwordStrength" class="text-xs mt-1"></div>
+                    <div class="admin-help-text">
+                        英数字を組み合わせた安全なパスワードを設定してください
+                    </div>
+                </div>
+
+                <!-- パスワード確認 -->
+                <div class="form-group">
+                    <label for="setupPasswordConfirm" class="form-label required">
+                        <i class="fas fa-lock mr-1 text-blue-500"></i>
+                        パスワード確認
+                    </label>
+                    <input type="password" id="setupPasswordConfirm" class="form-input" 
+                           placeholder="同じパスワードを再入力" required>
+                    <div id="passwordMatch" class="text-xs mt-1"></div>
+                </div>
+
+                <!-- Email（任意） -->
+                <div class="form-group">
+                    <label for="setupEmail" class="form-label">
+                        <i class="fas fa-envelope mr-1 text-blue-500"></i>
+                        メールアドレス（任意）
+                    </label>
+                    <input type="email" id="setupEmail" class="form-input" 
+                           placeholder="your.email@example.com">
+                    <div class="admin-help-text">
+                        パスワードを忘れた際の復旧用。入力は任意です
+                    </div>
+                </div>
+
+                <!-- 設定完了ボタン -->
+                <div class="flex space-x-3 mt-8">
+                    <button type="button" onclick="goBack()" 
+                            class="flex-1 py-3 px-4 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors">
+                        <i class="fas fa-arrow-left mr-2"></i>
+                        ログイン画面に戻る
+                    </button>
+                    <button type="submit" id="setupButton" 
+                            class="flex-1 btn-register py-3">
+                        <i class="fas fa-check mr-2"></i>
+                        設定完了
+                    </button>
+                </div>
+            </form>
+
+            <!-- 完了画面（隠し状態） -->
+            <div id="setupComplete" style="display: none;" class="text-center">
+                <div class="success-icon mb-6">
+                    <i class="fas fa-check-circle text-green-500 text-6xl"></i>
+                </div>
+                <h3 class="text-2xl font-bold text-gray-800 mb-4">
+                    設定完了！
+                </h3>
+                <div class="bg-green-50 p-6 rounded-lg mb-6">
+                    <div id="setupCompleteDetails"></div>
+                </div>
+                <p class="text-gray-600 mb-6">
+                    個人設定が完了しました。<br>
+                    今後は設定したユーザー名とパスワードでログインしてください。
+                </p>
+                <button onclick="goToLogin()" class="btn-register">
+                    <i class="fas fa-sign-in-alt mr-2"></i>
+                    ログイン画面へ
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- JavaScript読み込み -->
+    <script src="../js/core/firebase-config.js?v=20241205-5"></script>
+    <script src="../js/auth/initial-login.js?v=20241205-5"></script>
+    <script src="../js/user/user-setup.js?v=20241205-5"></script>
+
+    <!-- ユーザー設定画面制御 -->
+    <script>
+        class UserSetupController {
+            constructor() {
+                this.isInitialized = false;
+                this.currentUserData = null;
+                this.init();
+            }
+
+            async init() {
+                // システム準備待ち
+                let attempts = 0;
+                while (attempts < 100 && (!window.userSetupSystem || !window.userSetupSystem.isInitialized)) {
+                    await new Promise(resolve => setTimeout(resolve, 100));
+                    attempts++;
+                }
+
+                if (window.userSetupSystem) {
+                    this.isInitialized = true;
+                    this.loadUserData();
+                    this.setupEventListeners();
+                    console.log('✅ ユーザー設定画面初期化完了');
+                } else {
+                    this.showError('システムの初期化に失敗しました');
+                }
+            }
+
+            loadUserData() {
+                // URLパラメータからユーザーデータを取得
+                const urlParams = new URLSearchParams(window.location.search);
+                const userDataStr = urlParams.get('userData');
+                
+                if (userDataStr) {
+                    try {
+                        this.currentUserData = JSON.parse(decodeURIComponent(userDataStr));
+                        this.displayCurrentUserInfo();
+                        this.fillPresetData();
+                    } catch (error) {
+                        console.error('❌ ユーザーデータ解析エラー:', error);
+                        this.showError('ユーザーデータの読み込みに失敗しました');
+                    }
+                } else {
+                    this.showError('ユーザーデータが見つかりません');
+                }
+            }
+
+            displayCurrentUserInfo() {
+                if (!this.currentUserData) return;
+
+                const profile = this.currentUserData.profile || {};
+                const auth = this.currentUserData.auth || {};
+
+                const infoDiv = document.getElementById('userInfoDetails');
+                infoDiv.innerHTML = `
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                        <div>
+                            <strong>氏名:</strong> ${profile.displayName || '未設定'}
+                        </div>
+                        <div>
+                            <strong>部門:</strong> ${profile.department || '未設定'}
+                        </div>
+                        <div>
+                            <strong>職種:</strong> ${profile.position || '未設定'}
+                        </div>
+                        <div>
+                            <strong>ユーザーID:</strong> <code class="bg-white px-2 py-1 rounded">${auth.userId || '不明'}</code>
+                        </div>
+                    </div>
+                `;
+            }
+
+            fillPresetData() {
+                if (!window.userSetupSystem) return;
+
+                // ユーザー設定システムにデータを設定
+                const userId = this.currentUserData.auth?.userId;
+                if (userId) {
+                    window.userSetupSystem.setUserData(userId, this.currentUserData);
+                }
+
+                // プリセットデータ取得
+                const presets = window.userSetupSystem.getSetupPresets();
+                
+                // ユーザー名候補を表示
+                if (presets.suggestedUsername) {
+                    document.getElementById('setupUsername').value = presets.suggestedUsername;
+                    this.checkUsernameAvailability(presets.suggestedUsername);
+                }
+            }
+
+            setupEventListeners() {
+                // フォーム送信
+                document.getElementById('userSetupForm').addEventListener('submit', (e) => {
+                    e.preventDefault();
+                    this.handleSetupSubmit();
+                });
+
+                // リアルタイムバリデーション
+                document.getElementById('setupUsername').addEventListener('input', (e) => {
+                    this.checkUsernameAvailability(e.target.value);
+                });
+
+                document.getElementById('setupPassword').addEventListener('input', (e) => {
+                    this.checkPasswordStrength(e.target.value);
+                    this.checkPasswordMatch();
+                });
+
+                document.getElementById('setupPasswordConfirm').addEventListener('input', () => {
+                    this.checkPasswordMatch();
+                });
+            }
+
+            async checkUsernameAvailability(username) {
+                const checkDiv = document.getElementById('usernameCheck');
+                
+                if (!username) {
+                    checkDiv.innerHTML = '';
+                    return;
+                }
+
+                if (username.length < 3) {
+                    checkDiv.innerHTML = '<span class="text-orange-600"><i class="fas fa-exclamation-triangle mr-1"></i>3文字以上で入力してください</span>';
+                    return;
+                }
+
+                checkDiv.innerHTML = '<span class="text-gray-500"><i class="fas fa-spinner fa-spin mr-1"></i>確認中...</span>';
+
+                if (window.userSetupSystem) {
+                    const result = await window.userSetupSystem.checkUsernameRealtime(username);
+                    
+                    if (result.valid) {
+                        checkDiv.innerHTML = `<span class="text-green-600"><i class="fas fa-check mr-1"></i>${result.message}</span>`;
+                    } else {
+                        checkDiv.innerHTML = `<span class="text-red-600"><i class="fas fa-times mr-1"></i>${result.message}</span>`;
+                    }
+                }
+            }
+
+            checkPasswordStrength(password) {
+                const strengthDiv = document.getElementById('passwordStrength');
+                
+                if (!password) {
+                    strengthDiv.innerHTML = '';
+                    return;
+                }
+
+                if (window.userSetupSystem) {
+                    const evaluation = window.userSetupSystem.evaluatePasswordStrength(password);
+                    
+                    const colorClass = {
+                        red: 'text-red-600',
+                        orange: 'text-orange-600', 
+                        yellow: 'text-yellow-600',
+                        green: 'text-green-600',
+                        blue: 'text-blue-600'
+                    }[evaluation.color];
+
+                    strengthDiv.innerHTML = `
+                        <span class="${colorClass}">
+                            <i class="fas fa-shield-alt mr-1"></i>
+                            強度: ${evaluation.strength}
+                            ${evaluation.feedback.length > 0 ? '(' + evaluation.feedback.join(', ') + ')' : ''}
+                        </span>
+                    `;
+                }
+            }
+
+            checkPasswordMatch() {
+                const password = document.getElementById('setupPassword').value;
+                const confirm = document.getElementById('setupPasswordConfirm').value;
+                const matchDiv = document.getElementById('passwordMatch');
+
+                if (!confirm) {
+                    matchDiv.innerHTML = '';
+                    return;
+                }
+
+                if (password === confirm) {
+                    matchDiv.innerHTML = '<span class="text-green-600"><i class="fas fa-check mr-1"></i>パスワードが一致しています</span>';
+                } else {
+                    matchDiv.innerHTML = '<span class="text-red-600"><i class="fas fa-times mr-1"></i>パスワードが一致しません</span>';
+                }
+            }
+
+            async handleSetupSubmit() {
+                const button = document.getElementById('setupButton');
+                button.disabled = true;
+                button.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>設定中...';
+
+                try {
+                    const setupData = {
+                        username: document.getElementById('setupUsername').value.trim(),
+                        password: document.getElementById('setupPassword').value,
+                        email: document.getElementById('setupEmail').value.trim()
+                    };
+
+                    // バリデーション
+                    const passwordConfirm = document.getElementById('setupPasswordConfirm').value;
+                    if (setupData.password !== passwordConfirm) {
+                        throw new Error('パスワードが一致しません');
+                    }
+
+                    if (window.userSetupSystem) {
+                        const result = await window.userSetupSystem.completeUserSetup(setupData);
+                        
+                        if (result.success) {
+                            this.showSetupComplete(result);
+                        }
+                    } else {
+                        throw new Error('ユーザー設定システムが利用できません');
+                    }
+
+                } catch (error) {
+                    this.showError(error.message);
+                } finally {
+                    button.disabled = false;
+                    button.innerHTML = '<i class="fas fa-check mr-2"></i>設定完了';
+                }
+            }
+
+            showSetupComplete(result) {
+                // プログレス更新
+                document.querySelectorAll('.progress-step')[2].classList.add('active');
+
+                // フォーム非表示、完了画面表示
+                document.getElementById('userSetupForm').style.display = 'none';
+                document.getElementById('currentUserInfo').style.display = 'none';
+                document.getElementById('setupComplete').style.display = 'block';
+
+                // 完了詳細表示
+                document.getElementById('setupCompleteDetails').innerHTML = `
+                    <div class="text-left space-y-2">
+                        <p><strong>設定完了ユーザー名:</strong> <code class="bg-white px-2 py-1 rounded font-mono">${result.username}</code></p>
+                        <p><strong>ユーザーID:</strong> <code class="bg-white px-2 py-1 rounded font-mono">${result.userId}</code></p>
+                        <p class="text-sm text-gray-600 mt-4">
+                            <i class="fas fa-info-circle mr-1"></i>
+                            今後は上記のユーザー名とパスワードでログインしてください
+                        </p>
+                    </div>
+                `;
+            }
+
+            showError(message) {
+                this.showMessage(message, 'error');
+            }
+
+            showSuccess(message) {
+                this.showMessage(message, 'success');
+            }
+
+            showMessage(text, type = 'info') {
+                const container = document.getElementById('messageContainer');
+                const messageDiv = document.createElement('div');
+                messageDiv.className = `message ${type} px-4 py-2 mb-2 rounded-lg`;
+                
+                const icons = { success: 'check', error: 'times', warning: 'exclamation', info: 'info' };
+                messageDiv.innerHTML = `<i class="fas fa-${icons[type]}-circle mr-2"></i>${text}`;
+                
+                const colors = {
+                    success: 'bg-green-100 text-green-800',
+                    error: 'bg-red-100 text-red-800',
+                    warning: 'bg-yellow-100 text-yellow-800',
+                    info: 'bg-blue-100 text-blue-800'
+                };
+                messageDiv.className += ` ${colors[type]}`;
+                
+                container.appendChild(messageDiv);
+                setTimeout(() => messageDiv.remove(), 5000);
+            }
+        }
+
+        // グローバル関数
+        function goBack() {
+            if (confirm('設定を中断してログイン画面に戻りますか？')) {
+                window.location.href = '../index.html';
+            }
+        }
+
+        function goToLogin() {
+            window.location.href = '../index.html';
+        }
+
+        // 初期化
+        window.userSetupController = new UserSetupController();
+        console.log('👤 ユーザー設定画面読み込み完了');
+    </script>
+</body>
+</html>
