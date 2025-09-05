@@ -18,6 +18,7 @@
     <!-- カスタムCSS -->
     <link rel="stylesheet" href="css/main.css">
     <link rel="stylesheet" href="css/auth.css">
+    <link rel="stylesheet" href="css/registration.css">
 </head>
 <body>
     <!-- メッセージコンテナ -->
@@ -81,6 +82,15 @@
             </form>
 
             <!-- バージョン情報 -->
+            <!-- 新規登録リンク -->
+<div class="auth-mode-switch">
+    <p class="text-sm text-gray-600">
+        アカウントをお持ちでない方は
+        <a href="#" onclick="showRegistrationMode()" class="auth-link">
+            <i class="fas fa-user-plus mr-1"></i>新規登録
+        </a>
+    </p>
+</div>
             <div class="mt-6 text-center text-xs text-gray-500">
                 <p>🔒 V2認証システム | 🔄 Firebase連携対応</p>
                 <div id="firebaseStatus" class="mt-2 px-2 py-1 rounded bg-gray-100 text-xs">
@@ -191,6 +201,7 @@
     <script src="js/core/firebase-config.js?v=20241205-2"></script>
     <script src="js/auth/auth-core.js?v=20241205-2"></script>
     <script src="js/auth/login-ui.js?v=20241205-2"></script>
+    <script src="js/auth/email-auth.js?v=20241205-2"></script>
 
     <!-- システム初期化 -->
     <script>
