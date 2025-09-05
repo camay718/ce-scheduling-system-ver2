@@ -179,30 +179,45 @@
         </div>
     </div>
 
-    <!-- JavaScript読み込み -->
-    <script src="../js/core/firebase-config.js?v=20241205-4"></script>
-    <script src="../js/admin/admin-user-management.js?v=20241205-4"></script>
+<!-- JavaScript読み込み -->
+<script src="../js/core/firebase-config.js?v=20241205-4"></script>
 
-    <!-- 🆕 部門フィールド制御を追加 -->
-    <script>
-        // 部門フィールドの表示/非表示制御
-        function toggleDepartmentField() {
-            const permission = document.getElementById('permission').value;
-            const departmentField = document.getElementById('departmentField');
-            const departmentSelect = document.getElementById('department');
-            
-            if (permission === 'editor') {
-                departmentField.style.display = 'block';
-                departmentSelect.required = true;
-            } else {
-                departmentField.style.display = 'none';
-                departmentSelect.required = false;
-                departmentSelect.value = ''; // クリア
-            }
-            
-            console.log('🔧 部門フィールド切替:', permission, departmentField.style.display);
-        }
-    </script>
+<!-- 🔧 Firebase初期化完了待機スクリプト -->
+<script>
+// Firebase初期化完了を待ってからAdminUserManagerを読み込み
+async function waitForFirebaseAndLoadAdmin() {
+    console.log('⏳ Firebase初期化完了を待機中...');
+    
+    // Firebase初期化完了待機（最大20秒）
+    let attempts = 0;
+    while (attempts < 200 && (!window.firebase || !window.firebase.apps || window.firebase.apps.length === 0)) {
+        console.log(`⏳ Firebase初期化待機中... (${attempts + 1}/200)`);
+        await new Promise(resolve => setTimeout(resolve, 100));
+        attempts++;
+    }
+    
+    if (window.firebase && window.firebase.apps && window.firebase.apps.length > 0) {
+        console.log('✅ Firebase初期化確認完了 - AdminUserManagerを読み込み');
+        
+        // AdminUserManagerスクリプトを動的読み込み
+        const script = document.createElement('script');
+        script.src = '../js/admin/admin-user-management.js?v=20241205-4';
+        script.onload = () => {
+            console.log('✅ AdminUserManager スクリプト読み込み完了');
+        };
+        script.onerror = () => {
+            console.error('❌ AdminUserManager スクリプト読み込み失敗');
+        };
+        document.head.appendChild(script);
+    } else {
+        console.error('❌ Firebase初期化タイムアウト');
+        alert('Firebase初期化に失敗しました。ページを再読み込みしてください。');
+    }
+}
+
+// DOMContentLoaded後にFirebase待機開始
+document.addEventListener('DOMContentLoaded', waitForFirebaseAndLoadAdmin);
+</script>
 
     <!-- 管理者ダッシュボード制御 -->
     <script>
