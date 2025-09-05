@@ -207,6 +207,7 @@
 <script src="js/auth/login-ui.js?v=20241205-4"></script>
 <script src="js/auth/email-auth.js?v=20241205-4"></script>
 <script src="js/auth/initial-login.js?v=20241205-4"></script>
+<script src="js/user/user-setup.js?v=20241205-5"></script>
 
 <!-- システム初期化 -->
 <script>
@@ -257,6 +258,86 @@
     window.addEventListener('unhandledrejection', function(event) {
         console.error('❌ Promise拒否:', event.reason);
     });
+  // ハイブリッドログイン処理（追加）
+    async function handleHybridLogin() {
+        const button = document.getElementById('hybridLoginButton');
+        const loginId = document.getElementById('loginId')?.value?.trim();
+        const password = document.getElementById('loginPassword')?.value;
+
+        if (!loginId || !password) {
+            showMessage('ユーザーIDまたはユーザー名とパスワードを入力してください', 'warning');
+            return;
+        }
+
+        // ボタン無効化
+        button.disabled = true;
+        button.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>ログイン中...';
+
+        try {
+            if (window.initialLoginDetector && window.initialLoginDetector.isInitialized) {
+                const result = await window.initialLoginDetector.attemptLogin(loginId, password);
+                
+                if (result.success) {
+                    if (result.requiresSetup) {
+                        // 初期ログイン成功 - 個人設定画面へ
+                        showMessage('初期ログイン成功！個人設定を完了してください', 'success');
+                        
+                        // ユーザーデータをURLパラメータで渡す
+                        const userDataParam = encodeURIComponent(JSON.stringify(result.userData));
+                        setTimeout(() => {
+                            window.location.href = `pages/user-setup.html?userData=${userDataParam}`;
+                        }, 1000);
+                    } else {
+                        // 通常ログイン成功 - メイン画面へ
+                        showMessage('ログイン成功！', 'success');
+                        
+                        // 認証システムに通知
+                        if (window.authSystem) {
+                            window.authSystem.currentUser = result.userData.auth?.username || result.userId;
+                            window.authSystem.userProfile = result.userData;
+                            window.authSystem.userRole = result.userData.permissions?.level || 'viewer';
+                            window.authSystem.userDepartment = result.userData.profile?.department || null;
+                            window.authSystem.showMainInterface();
+                        }
+                    }
+                }
+            } else {
+                showMessage('ログインシステムが準備できていません', 'error');
+            }
+        } catch (error) {
+            console.error('❌ ハイブリッドログインエラー:', error);
+            showMessage(error.message, 'error');
+        } finally {
+            // ボタン復元
+            button.disabled = false;
+            button.innerHTML = '<i class="fas fa-sign-in-alt mr-2"></i>ログイン';
+        }
+    }
+
+    // メッセージ表示関数（追加）
+    function showMessage(text, type = 'info') {
+        const container = document.getElementById('messageContainer');
+        if (!container) {
+            console.log(`[${type.toUpperCase()}] ${text}`);
+            return;
+        }
+        
+        const messageDiv = document.createElement('div');
+        messageDiv.className = `message ${type} px-4 py-2 mb-2 rounded-lg`;
+        const icons = { success: 'check', error: 'times', warning: 'exclamation', info: 'info' };
+        messageDiv.innerHTML = `<i class="fas fa-${icons[type]}-circle mr-2"></i>${text}`;
+        
+        const colors = {
+            success: 'bg-green-100 text-green-800',
+            error: 'bg-red-100 text-red-800',
+            warning: 'bg-yellow-100 text-yellow-800',
+            info: 'bg-blue-100 text-blue-800'
+        };
+        messageDiv.className += ` ${colors[type]}`;
+        
+        container.appendChild(messageDiv);
+        setTimeout(() => messageDiv.remove(), 5000);
+    }
 </script>
 </body>
 </html>
