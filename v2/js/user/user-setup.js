@@ -1,280 +1,395 @@
-/*
-👤 ユーザー個人設定システム
-初期ログイン後の個人設定完了処理
-*/
-
 class UserSetupSystem {
     constructor() {
+        this.database = null;
+        this.auth = null;
         this.isInitialized = false;
-        this.currentUserId = null;
-        this.currentUserData = null;
-        
-        console.log('👤 ユーザー設定システム初期化中...');
-        this.initialize();
+        this.currentInitialUser = null;
+        this.init();
     }
 
-    async initialize() {
-        // Firebase & 初期ログイン検知システム準備待ち
+    async init() {
+        console.log('👤 ユーザー設定システム初期化中...');
+        
+        // Firebase準備待機
+        await this.waitForFirebase();
+        
+        try {
+            this.database = firebase.database();
+            this.auth = firebase.auth();
+            this.isInitialized = true;
+            
+            console.log('✅ ユーザー設定システム準備完了');
+            
+        } catch (error) {
+            console.error('❌ ユーザー設定システム初期化エラー:', error);
+        }
+    }
+
+    async waitForFirebase() {
         let attempts = 0;
-        while (attempts < 100 && (!window.database || !window.initialLoginDetector)) {
+        while (attempts < 100 && (!window.firebase || !window.firebase.apps || window.firebase.apps.length === 0)) {
             await new Promise(resolve => setTimeout(resolve, 100));
             attempts++;
         }
+    }
+
+    // 🔧 修正: URLパラメータから初期ユーザー情報取得
+    getInitialUserFromURL() {
+        const urlParams = new URLSearchParams(window.location.search);
+        const initialUser = urlParams.get('initialUser');
         
-        if (window.database && window.initialLoginDetector) {
-            this.isInitialized = true;
-            console.log('✅ ユーザー設定システム準備完了');
-        } else {
-            console.error('❌ 依存システム未準備 - ユーザー設定無効');
+        if (initialUser) {
+            this.currentInitialUser = decodeURIComponent(initialUser);
+            console.log('✅ 初期ユーザー特定:', this.currentInitialUser);
+            return this.currentInitialUser;
         }
+        
+        console.log('❌ 初期ユーザー情報が見つかりません');
+        return null;
     }
 
-    // ユーザー設定データ設定
-    setUserData(userId, userData) {
-        this.currentUserId = userId;
-        this.currentUserData = userData;
-        console.log('👤 ユーザーデータ設定:', userData.profile?.displayName);
+    // 🆕 氏名（全角）対応のユーザー名バリデーション
+    validateUsername(username) {
+        console.log('🔍 ユーザー名バリデーション:', username);
+        
+        if (!username || username.length < 2 || username.length > 30) {
+            return { valid: false, message: 'ユーザー名は2文字以上30文字以下で入力してください' };
+        }
+        
+        // 🆕 日本語（ひらがな、カタカナ、漢字）、英数字、スペース、ハイフン、アンダースコアを許可
+        const validCharsRegex = /^[\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FAF\u3400-\u4DBFa-zA-Z0-9\s\-_]+$/;
+        
+        if (!validCharsRegex.test(username)) {
+            return { valid: false, message: 'ユーザー名に使用できない文字が含まれています' };
+        }
+        
+        console.log('✅ ユーザー名バリデーション通過');
+        return { valid: true };
     }
 
-    // 個人設定完了処理
-    async completeUserSetup(setupData) {
-        if (!this.isInitialized) {
-            throw new Error('システムが初期化されていません');
-        }
-
-        if (!this.currentUserId) {
-            throw new Error('ユーザーが設定されていません');
-        }
-
+    // 🔧 修正: ユーザー名重複チェック（直接データベースアクセス）
+    async checkUsernameAvailability(username) {
+        console.log('🔍 ユーザー名重複チェック:', username);
+        
         try {
-            console.log('👤 個人設定完了処理開始:', setupData.username);
-
-            // 1. ユーザー名重複チェック
-            const isUsernameAvailable = await window.initialLoginDetector.checkUsernameAvailability(setupData.username);
-            if (!isUsernameAvailable) {
-                throw new Error('このユーザー名は既に使用されています');
+            // バリデーション
+            const validation = this.validateUsername(username);
+            if (!validation.valid) {
+                return { available: false, message: validation.message };
             }
+            
+            // 1. initialUsers テーブルをチェック
+            const initialUserSnapshot = await this.database
+                .ref(`ceScheduleV2/initialUsers/${username}`)
+                .once('value');
+                
+            if (initialUserSnapshot.exists()) {
+                // 現在の初期ユーザーと同じ場合は OK
+                if (username === this.currentInitialUser) {
+                    console.log('✅ 現在のユーザー自身のため利用可能');
+                    return { available: true };
+                }
+                console.log('❌ ユーザー名は既に初期ユーザーとして使用中');
+                return { available: false, message: 'このユーザー名は既に使用されています' };
+            }
+            
+            // 2. usernames テーブルをチェック
+            const usernameSnapshot = await this.database
+                .ref(`ceScheduleV2/usernames/${username}`)
+                .once('value');
+                
+            if (usernameSnapshot.exists()) {
+                console.log('❌ ユーザー名は既に使用中');
+                return { available: false, message: 'このユーザー名は既に使用されています' };
+            }
+            
+            console.log('✅ ユーザー名は利用可能');
+            return { available: true };
+            
+        } catch (error) {
+            console.error('❌ ユーザー名チェックエラー:', error);
+            return { available: false, message: 'ユーザー名の確認に失敗しました' };
+        }
+    }
 
-            // 2. パスワード強度チェック
-            this.validatePassword(setupData.password);
+    // パスワードバリデーション
+    validatePassword(password, confirmPassword) {
+        if (!password || password.length < 6) {
+            return { valid: false, message: 'パスワードは6文字以上で入力してください' };
+        }
+        
+        if (password !== confirmPassword) {
+            return { valid: false, message: 'パスワードが一致しません' };
+        }
+        
+        return { valid: true };
+    }
 
-            // 3. ユーザー名マッピング追加
-            await window.database.ref(`${window.DATA_ROOT}/usernames/${setupData.username}`).set(this.currentUserId);
+    // Emailバリデーション
+    validateEmail(email) {
+        if (!email) {
+            return { valid: true }; // Email は任意
+        }
+        
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(email)) {
+            return { valid: false, message: 'メールアドレスの形式が正しくありません' };
+        }
+        
+        return { valid: true };
+    }
 
-            // 4. ユーザーデータ更新
-            const updateData = {
-                'auth/username': setupData.username,
-                'auth/userPassword': setupData.password,
-                'auth/email': setupData.email || null,
-                'auth/accountStatus': 'configured',
-                'auth/passwordChangeRequired': false,
-                'auth/setupCompletedAt': firebase.database.ServerValue.TIMESTAMP,
-                'setupCompleted': true,
-                'profile/email': setupData.email || null
+    // 🔧 修正: ユーザー設定完了処理
+    async completeUserSetup(setupData) {
+        console.log('👤 ユーザー設定完了処理開始:', setupData);
+        
+        try {
+            if (!this.currentInitialUser) {
+                throw new Error('初期ユーザー情報が設定されていません');
+            }
+            
+            // 1. 初期ユーザーデータ取得
+            const initialUserSnapshot = await this.database
+                .ref(`ceScheduleV2/initialUsers/${this.currentInitialUser}`)
+                .once('value');
+                
+            if (!initialUserSnapshot.exists()) {
+                throw new Error('初期ユーザーデータが見つかりません');
+            }
+            
+            const initialUserData = initialUserSnapshot.val();
+            console.log('✅ 初期ユーザーデータ取得:', initialUserData);
+            
+            // 2. Firebase Authentication でユーザー作成
+            console.log('🔐 Firebase Authentication ユーザー作成中...');
+            const userCredential = await this.auth.createUserWithEmailAndPassword(
+                setupData.email || `${setupData.username}@temp.local`,
+                setupData.password
+            );
+            
+            const user = userCredential.user;
+            console.log('✅ Firebase ユーザー作成完了:', user.uid);
+            
+            // 3. 新しいユーザーデータ作成
+            const newUserData = {
+                uid: user.uid,
+                username: setupData.username,
+                displayName: initialUserData.username, // 管理者が設定した氏名
+                email: setupData.email || null,
+                department: initialUserData.department || null,
+                permission: initialUserData.permission,
+                role: initialUserData.permission, // 互換性のため
+                isInitial: false,
+                setupCompleted: true,
+                createdAt: firebase.database.ServerValue.TIMESTAMP,
+                lastLogin: firebase.database.ServerValue.TIMESTAMP,
+                loginCount: 1
             };
-
-            await window.database.ref(`${window.DATA_ROOT}/users/${this.currentUserId}`).update(updateData);
-
-            // 5. 初期ユーザーリストから削除
-            await window.database.ref(`${window.DATA_ROOT}/initialUsers/${this.currentUserId}`).remove();
-
-            // 6. 設定完了履歴記録
-            await this.recordSetupCompletion(setupData);
-
-            console.log('✅ 個人設定完了');
-
+            
+            console.log('💾 新しいユーザーデータ:', newUserData);
+            
+            // 4. データベース更新（トランザクション）
+            const updates = {};
+            
+            // A. users テーブルに追加
+            updates[`ceScheduleV2/users/${user.uid}`] = newUserData;
+            
+            // B. usernames テーブルを更新
+            updates[`ceScheduleV2/usernames/${setupData.username}`] = {
+                uid: user.uid,
+                status: 'active',
+                createdAt: firebase.database.ServerValue.TIMESTAMP
+            };
+            
+            // C. initialUsers から削除
+            updates[`ceScheduleV2/initialUsers/${this.currentInitialUser}`] = null;
+            
+            // 5. 原子的更新実行
+            console.log('📝 データベース更新中...');
+            await this.database.ref().update(updates);
+            console.log('✅ データベース更新完了');
+            
+            // 6. プロフィール更新
+            if (user.updateProfile) {
+                await user.updateProfile({
+                    displayName: setupData.username
+                });
+                console.log('✅ Firebase プロフィール更新完了');
+            }
+            
+            console.log('🎉 ユーザー設定完了成功');
+            
             return {
                 success: true,
-                message: '個人設定が完了しました！システムをご利用いただけます。',
+                uid: user.uid,
                 username: setupData.username,
-                userId: this.currentUserId
+                message: 'ユーザー設定が完了しました'
             };
-
+            
         } catch (error) {
-            console.error('❌ 個人設定エラー:', error);
+            console.error('❌ ユーザー設定完了エラー:', error);
+            throw new Error(`設定完了処理に失敗: ${error.message}`);
+        }
+    }
+
+    // UI更新メソッド
+    showMessage(text, type = 'info') {
+        const messageDiv = document.createElement('div');
+        messageDiv.className = `message ${type} px-4 py-2 mb-4 rounded-md`;
+        
+        const colors = {
+            success: 'bg-green-100 text-green-800 border border-green-300',
+            error: 'bg-red-100 text-red-800 border border-red-300',
+            warning: 'bg-yellow-100 text-yellow-800 border border-yellow-300',
+            info: 'bg-blue-100 text-blue-800 border border-blue-300'
+        };
+        
+        messageDiv.className += ` ${colors[type]}`;
+        messageDiv.textContent = text;
+        
+        const container = document.querySelector('.setup-container') || document.body;
+        container.insertBefore(messageDiv, container.firstChild);
+        
+        setTimeout(() => messageDiv.remove(), 5000);
+    }
+
+    // 成功画面表示
+    showSuccessScreen(userData) {
+        const container = document.querySelector('.setup-container');
+        if (container) {
+            container.innerHTML = `
+                <div class="success-screen text-center">
+                    <div class="success-icon mb-6">
+                        <i class="fas fa-check-circle text-6xl text-green-500"></i>
+                    </div>
+                    <h2 class="text-2xl font-bold mb-4 text-green-800">設定完了！</h2>
+                    <div class="success-details bg-green-50 p-6 rounded-lg mb-6">
+                        <p class="mb-2"><strong>ユーザー名:</strong> ${userData.username}</p>
+                        <p class="mb-2"><strong>氏名:</strong> ${userData.displayName || this.currentInitialUser}</p>
+                        <p class="text-sm text-green-600">アカウントの設定が完了しました。</p>
+                    </div>
+                    <div class="redirect-info p-4 bg-blue-50 rounded-lg mb-6">
+                        <p class="text-blue-800">3秒後に自動的にログイン画面に戻ります...</p>
+                    </div>
+                </div>
+            `;
             
-            // エラー時はユーザー名マッピングをクリーンアップ
-            try {
-                await window.database.ref(`${window.DATA_ROOT}/usernames/${setupData.username}`).remove();
-            } catch (cleanupError) {
-                console.warn('⚠️ ユーザー名マッピングクリーンアップ失敗:', cleanupError);
-            }
-            
-            throw error;
+            // 3秒後にリダイレクト
+            setTimeout(() => {
+                window.location.href = '../index.html';
+            }, 3000);
         }
     }
+}
 
-    // パスワード強度検証
-    validatePassword(password) {
-        if (!password || password.length < 6) {
-            throw new Error('パスワードは6文字以上で設定してください');
+// グローバル変数
+let userSetupSystem = null;
+
+// ページ初期化
+document.addEventListener('DOMContentLoaded', async () => {
+    try {
+        userSetupSystem = new UserSetupSystem();
+        window.userSetupSystem = userSetupSystem;
+        
+        // 初期ユーザー情報取得
+        const initialUser = userSetupSystem.getInitialUserFromURL();
+        
+        if (!initialUser) {
+            alert('初期ユーザー情報が見つかりません。ログイン画面に戻ります。');
+            window.location.href = '../index.html';
+            return;
         }
-
-        // 基本的な強度チェック
-        const hasLetter = /[a-zA-Z]/.test(password);
-        const hasNumber = /[0-9]/.test(password);
-
-        if (!hasLetter || !hasNumber) {
-            throw new Error('パスワードは英字と数字を両方含めてください');
-        }
-
-        // 簡単なパスワードチェック
-        const weakPasswords = ['password', '123456', 'qwerty', 'admin', 'user'];
-        if (weakPasswords.includes(password.toLowerCase())) {
-            throw new Error('より複雑なパスワードを設定してください');
-        }
-
-        return true;
-    }
-
-    // ユーザー名の有効性チェック
-    validateUsername(username) {
-        if (!username || username.length < 3) {
-            throw new Error('ユーザー名は3文字以上で設定してください');
-        }
-
-        if (username.length > 20) {
-            throw new Error('ユーザー名は20文字以下で設定してください');
-        }
-
-        // 使用可能文字チェック
-        const validPattern = /^[a-zA-Z0-9_-]+$/;
-        if (!validPattern.test(username)) {
-            throw new Error('ユーザー名は英数字、アンダースコア、ハイフンのみ使用可能です');
-        }
-
-        // 予約語チェック
-        const reservedWords = ['admin', 'system', 'root', 'user', 'guest', 'test'];
-        if (reservedWords.includes(username.toLowerCase())) {
-            throw new Error('この ユーザー名は予約されています');
-        }
-
-        return true;
-    }
-
-    // リアルタイムユーザー名チェック
-    async checkUsernameRealtime(username) {
-        if (!this.isInitialized) {
-            return { valid: false, message: 'システム準備中...' };
-        }
-
-        try {
-            // 基本バリデーション
-            this.validateUsername(username);
-
-            // 重複チェック
-            const isAvailable = await window.initialLoginDetector.checkUsernameAvailability(username);
-            
-            if (!isAvailable) {
-                return { valid: false, message: 'このユーザー名は既に使用されています' };
-            }
-
-            return { valid: true, message: 'このユーザー名は利用可能です' };
-
-        } catch (error) {
-            return { valid: false, message: error.message };
-        }
-    }
-
-    // 設定完了履歴記録
-    async recordSetupCompletion(setupData) {
-        try {
-            await window.database.ref(`${window.DATA_ROOT}/users/${this.currentUserId}/loginHistory`).push({
-                type: 'setup_completed',
-                username: setupData.username,
-                timestamp: firebase.database.ServerValue.TIMESTAMP,
-                userAgent: navigator.userAgent
+        
+        // フォーム送信イベント
+        const setupForm = document.getElementById('userSetupForm');
+        if (setupForm) {
+            setupForm.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                await handleUserSetup();
             });
-
-            console.log('✅ 設定完了履歴記録完了');
-        } catch (error) {
-            console.warn('⚠️ 設定完了履歴記録失敗:', error);
         }
-    }
-
-    // 現在のユーザーデータ取得
-    getCurrentUserData() {
-        return {
-            userId: this.currentUserId,
-            userData: this.currentUserData
-        };
-    }
-
-    // 設定データのプリセット取得
-    getSetupPresets() {
-        if (!this.currentUserData) {
-            return {};
-        }
-
-        const profile = this.currentUserData.profile || {};
         
-        return {
-            displayName: profile.displayName || '',
-            department: profile.department || '',
-            position: profile.position || '',
-            suggestedUsername: this.generateSuggestedUsername(profile.displayName)
-        };
-    }
-
-    // ユーザー名候補生成
-    generateSuggestedUsername(displayName) {
-        if (!displayName) {
-            return '';
+        // リアルタイムバリデーション
+        const usernameInput = document.getElementById('setupUsername');
+        if (usernameInput) {
+            usernameInput.addEventListener('input', async (e) => {
+                const username = e.target.value.trim();
+                if (username.length >= 2) {
+                    const result = await userSetupSystem.checkUsernameAvailability(username);
+                    const feedback = document.getElementById('usernameFeedback');
+                    if (feedback) {
+                        if (result.available) {
+                            feedback.textContent = '✅ 利用可能です';
+                            feedback.className = 'text-green-600 text-sm mt-1';
+                        } else {
+                            feedback.textContent = result.message || '❌ 利用できません';
+                            feedback.className = 'text-red-600 text-sm mt-1';
+                        }
+                    }
+                }
+            });
         }
-
-        // 日本語名から英数字ユーザー名を生成する簡易ロジック
-        let suggestion = '';
         
-        // スペースを削除
-        const cleanName = displayName.replace(/\s+/g, '');
+        console.log('✅ ユーザー設定画面初期化完了');
         
-        // 簡単な変換例（実際にはより複雑なロジックが必要）
-        if (cleanName.length <= 10) {
-            suggestion = cleanName.toLowerCase().replace(/[^a-z0-9]/g, '');
-        }
-
-        // フォールバック
-        if (!suggestion || suggestion.length < 3) {
-            const timestamp = Date.now().toString().slice(-4);
-            suggestion = `user${timestamp}`;
-        }
-
-        return suggestion;
+    } catch (error) {
+        console.error('❌ ユーザー設定画面初期化失敗:', error);
     }
+});
 
-    // パスワード強度評価
-    evaluatePasswordStrength(password) {
-        let score = 0;
-        const feedback = [];
-
-        if (password.length >= 8) {
-            score += 1;
-        } else {
-            feedback.push('8文字以上推奨');
-        }
-
-        if (/[a-z]/.test(password)) score += 1;
-        if (/[A-Z]/.test(password)) score += 1;
-        if (/[0-9]/.test(password)) score += 1;
-        if (/[^a-zA-Z0-9]/.test(password)) {
-            score += 1;
-            feedback.push('記号を含むとより安全');
-        }
-
-        const strength = ['弱い', '普通', '良い', '強い', '最強'][Math.min(score, 4)];
-        const color = ['red', 'orange', 'yellow', 'green', 'blue'][Math.min(score, 4)];
-
-        return {
-            score: score,
-            strength: strength,
-            color: color,
-            feedback: feedback
+// フォーム送信処理
+async function handleUserSetup() {
+    const submitButton = document.getElementById('setupButton');
+    submitButton.disabled = true;
+    submitButton.textContent = '設定中...';
+    
+    try {
+        // フォームデータ取得
+        const setupData = {
+            username: document.getElementById('setupUsername').value.trim(),
+            password: document.getElementById('setupPassword').value,
+            passwordConfirm: document.getElementById('setupPasswordConfirm').value,
+            email: document.getElementById('setupEmail').value.trim()
         };
+        
+        console.log('📝 設定データ:', { ...setupData, password: '[HIDDEN]', passwordConfirm: '[HIDDEN]' });
+        
+        // バリデーション
+        const usernameValidation = userSetupSystem.validateUsername(setupData.username);
+        if (!usernameValidation.valid) {
+            throw new Error(usernameValidation.message);
+        }
+        
+        const passwordValidation = userSetupSystem.validatePassword(setupData.password, setupData.passwordConfirm);
+        if (!passwordValidation.valid) {
+            throw new Error(passwordValidation.message);
+        }
+        
+        const emailValidation = userSetupSystem.validateEmail(setupData.email);
+        if (!emailValidation.valid) {
+            throw new Error(emailValidation.message);
+        }
+        
+        // ユーザー名重複チェック
+        const availabilityCheck = await userSetupSystem.checkUsernameAvailability(setupData.username);
+        if (!availabilityCheck.available) {
+            throw new Error(availabilityCheck.message);
+        }
+        
+        // 設定完了処理
+        const result = await userSetupSystem.completeUserSetup(setupData);
+        
+        if (result.success) {
+            userSetupSystem.showSuccessScreen(result);
+        }
+        
+    } catch (error) {
+        console.error('❌ ユーザー設定エラー:', error);
+        userSetupSystem.showMessage(error.message, 'error');
+        
+        submitButton.disabled = false;
+        submitButton.textContent = '設定完了';
     }
 }
 
-// グローバルインスタンス作成
-if (!window.userSetupSystem) {
-    window.userSetupSystem = new UserSetupSystem();
-    console.log('👤 ユーザー設定システム読み込み完了');
-}
+console.log('👤 ユーザー設定システム読み込み完了');
