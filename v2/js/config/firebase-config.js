@@ -1,4 +1,3 @@
-// Firebase設定（CDN版）
 window.firebaseConfig = {
     apiKey: "AIzaSyCRUvvs0OSz_9L9bXtqteVFIIze1OaZObE", // ← 新しいAPIキーを設定
     authDomain: "ce-schedule-management.firebaseapp.com",
