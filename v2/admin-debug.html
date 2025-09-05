@@ -1,0 +1,703 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>デバッグ版管理者ダッシュボード - CEスケジュール管理システム V2</title>
+    
+    <!-- Tailwind CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css">
+    
+    <!-- Firebase CDN -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
+    
+    <style>
+        .debug-log {
+            max-height: 200px;
+            overflow-y: auto;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+        }
+        .role-badge {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+        .role-admin { background: #fee2e2; color: #dc2626; }
+        .role-editor { background: #dbeafe; color: #2563eb; }
+        .role-viewer { background: #ecfdf5; color: #059669; }
+        .status-badge {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+        .status-active { background: #ecfdf5; color: #059669; }
+        .status-pending { background: #fef3c7; color: #d97706; }
+    </style>
+</head>
+<body class="bg-gray-100 min-h-screen">
+    <div class="container mx-auto px-4 py-8">
+        <!-- Header -->
+        <div class="bg-white rounded-lg shadow-md p-6 mb-8">
+            <h1 class="text-3xl font-bold text-gray-800 mb-2">
+                <i class="fas fa-shield-alt text-blue-600 mr-3"></i>
+                デバッグ版管理者ダッシュボード
+            </h1>
+            <p class="text-gray-600">CEスケジュール管理システム V2 - 詳細ログ付きユーザー管理</p>
+        </div>
+
+        <!-- Debug Log Section -->
+        <div class="bg-gray-900 text-green-400 rounded-lg p-4 mb-8">
+            <h3 class="text-lg font-semibold mb-3 flex items-center">
+                <i class="fas fa-bug mr-2"></i>
+                デバッグログ
+                <button onclick="clearDebugLog()" class="ml-auto text-xs bg-gray-700 hover:bg-gray-600 px-3 py-1 rounded">
+                    クリア
+                </button>
+            </h3>
+            <div id="debugLog" class="debug-log bg-black p-3 rounded border"></div>
+        </div>
+
+        <!-- Firebase Status -->
+        <div class="bg-white rounded-lg shadow-md p-6 mb-8">
+            <h3 class="text-lg font-semibold mb-4 flex items-center">
+                <i class="fas fa-fire text-orange-500 mr-2"></i>
+                Firebase接続状態
+            </h3>
+            <div class="grid md:grid-cols-3 gap-4">
+                <div class="text-center">
+                    <div id="authStatus" class="inline-block px-4 py-2 rounded-full bg-gray-200 text-gray-600">
+                        <i class="fas fa-spinner fa-spin mr-2"></i>確認中
+                    </div>
+                    <p class="text-sm text-gray-600 mt-2">Authentication</p>
+                </div>
+                <div class="text-center">
+                    <div id="databaseStatus" class="inline-block px-4 py-2 rounded-full bg-gray-200 text-gray-600">
+                        <i class="fas fa-spinner fa-spin mr-2"></i>確認中
+                    </div>
+                    <p class="text-sm text-gray-600 mt-2">Realtime Database</p>
+                </div>
+                <div class="text-center">
+                    <div id="configStatus" class="inline-block px-4 py-2 rounded-full bg-gray-200 text-gray-600">
+                        <i class="fas fa-spinner fa-spin mr-2"></i>確認中
+                    </div>
+                    <p class="text-sm text-gray-600 mt-2">Config</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Login Section -->
+        <div id="loginSection" class="bg-white rounded-lg shadow-md p-6 mb-8">
+            <h3 class="text-lg font-semibold mb-4 flex items-center">
+                <i class="fas fa-sign-in-alt text-blue-600 mr-2"></i>
+                管理者ログイン
+            </h3>
+            
+            <div class="max-w-md mx-auto">
+                <div class="mb-4">
+                    <label for="adminEmail" class="block text-sm font-medium text-gray-700 mb-2">メールアドレス</label>
+                    <input type="email" id="adminEmail" 
+                           class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                           placeholder="admin@ce-schedule.com">
+                </div>
+                
+                <div class="mb-6">
+                    <label for="adminPassword" class="block text-sm font-medium text-gray-700 mb-2">パスワード</label>
+                    <input type="password" id="adminPassword"
+                           class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                           placeholder="••••••••">
+                </div>
+                
+                <button onclick="adminLogin()" id="loginBtn"
+                        class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-6 rounded-lg transition duration-200">
+                    <i class="fas fa-sign-in-alt mr-2"></i>
+                    管理者ログイン
+                </button>
+            </div>
+        </div>
+
+        <!-- Admin Dashboard (Hidden initially) -->
+        <div id="dashboardSection" class="hidden">
+            <!-- User Creation Section -->
+            <div class="bg-white rounded-lg shadow-md p-6 mb-8">
+                <h3 class="text-lg font-semibold mb-4 flex items-center">
+                    <i class="fas fa-user-plus text-green-600 mr-2"></i>
+                    新規ユーザー作成
+                </h3>
+                
+                <div id="statusMessage" class="hidden p-4 rounded-lg mb-4"></div>
+                
+                <div class="grid md:grid-cols-3 gap-4">
+                    <div>
+                        <label for="newUsername" class="block text-sm font-medium text-gray-700 mb-2">ユーザー名</label>
+                        <input type="text" id="newUsername"
+                               class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                               placeholder="例: 田中太郎">
+                    </div>
+                    
+                    <div>
+                        <label for="newEmail" class="block text-sm font-medium text-gray-700 mb-2">メールアドレス</label>
+                        <input type="email" id="newEmail"
+                               class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                               placeholder="例: tanaka@example.com">
+                    </div>
+                    
+                    <div>
+                        <label for="newRole" class="block text-sm font-medium text-gray-700 mb-2">権限レベル</label>
+                        <select id="newRole" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                            <option value="">権限を選択</option>
+                            <option value="admin">管理者 (全権限)</option>
+                            <option value="editor">編集者 (スケジュール編集可)</option>
+                            <option value="viewer">閲覧者 (閲覧のみ)</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <div class="mt-6">
+                    <button onclick="createUser()" id="createUserBtn"
+                            class="bg-green-600 hover:bg-green-700 text-white font-semibold py-2 px-6 rounded-lg transition duration-200">
+                        <i class="fas fa-user-plus mr-2"></i>
+                        ユーザーを作成
+                    </button>
+                </div>
+            </div>
+
+            <!-- Users List Section -->
+            <div class="bg-white rounded-lg shadow-md p-6">
+                <h3 class="text-lg font-semibold mb-4 flex items-center">
+                    <i class="fas fa-users text-purple-600 mr-2"></i>
+                    登録ユーザー一覧
+                    <button onclick="loadUsers()" class="ml-auto text-sm bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded">
+                        <i class="fas fa-sync-alt mr-1"></i>
+                        更新
+                    </button>
+                </h3>
+                
+                <div class="overflow-x-auto">
+                    <table class="w-full table-auto">
+                        <thead class="bg-gray-50">
+                            <tr>
+                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ユーザー名</th>
+                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">メールアドレス</th>
+                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">権限</th>
+                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ステータス</th>
+                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">作成日時</th>
+                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">操作</th>
+                            </tr>
+                        </thead>
+                        <tbody id="usersTableBody" class="bg-white divide-y divide-gray-200">
+                            <tr>
+                                <td colspan="6" class="px-4 py-4 text-center text-gray-500">データを読み込み中...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Firebase Configuration (正しい設定)
+        const firebaseConfig = {
+            apiKey: "AIzaSyCRUvvs0OSz_9L9bXtqteVFIIze1OaZObE",
+            authDomain: "ce-scheduling-system-v2.firebaseapp.com",
+            databaseURL: "https://ce-scheduling-system-v2-default-rtdb.asia-southeast1.firebasedatabase.app",
+            projectId: "ce-scheduling-system-v2",
+            storageBucket: "ce-scheduling-system-v2.firebasestorage.app",
+            messagingSenderId: "288279598010",
+            appId: "1:288279598010:web:d545ee1d4d854513084383",
+            measurementId: "G-LSEEMJE2R0"
+        };
+
+        // Global variables
+        let app, auth, database;
+        let currentUser = null;
+
+        // Debug logging function
+        function debugLog(message, type = 'info') {
+            const now = new Date().toISOString();
+            const logElement = document.getElementById('debugLog');
+            const colors = {
+                info: 'text-green-400',
+                error: 'text-red-400',
+                warn: 'text-yellow-400',
+                success: 'text-blue-400'
+            };
+            
+            const logEntry = document.createElement('div');
+            logEntry.className = colors[type] || 'text-green-400';
+            logEntry.innerHTML = `[${now.substr(11, 8)}] ${message}`;
+            
+            logElement.appendChild(logEntry);
+            logElement.scrollTop = logElement.scrollHeight;
+            
+            console.log(`[DEBUG ${type.toUpperCase()}] ${message}`);
+        }
+
+        function clearDebugLog() {
+            document.getElementById('debugLog').innerHTML = '';
+        }
+
+        // Initialize Firebase
+        function initializeFirebase() {
+            try {
+                debugLog('🔥 Firebase初期化開始...', 'info');
+                debugLog(`📋 設定確認: ${firebaseConfig.projectId}`, 'info');
+                debugLog(`🔗 Database URL: ${firebaseConfig.databaseURL}`, 'info');
+                debugLog(`🔑 API Key: ${firebaseConfig.apiKey.substr(0, 20)}...`, 'info');
+                
+                app = firebase.initializeApp(firebaseConfig);
+                auth = firebase.auth();
+                database = firebase.database();
+                
+                updateStatus('configStatus', '✅ 設定完了', 'success');
+                debugLog('✅ Firebase初期化完了', 'success');
+                
+                // Test connections
+                testFirebaseConnections();
+                
+                return true;
+            } catch (error) {
+                debugLog(`❌ Firebase初期化エラー: ${error.message}`, 'error');
+                updateStatus('configStatus', '❌ 設定エラー', 'error');
+                return false;
+            }
+        }
+
+        // Test Firebase connections
+        async function testFirebaseConnections() {
+            // Test Authentication
+            try {
+                auth.onAuthStateChanged((user) => {
+                    if (user) {
+                        debugLog(`✅ 認証状態: ユーザーログイン済み (${user.email})`, 'success');
+                        updateStatus('authStatus', '✅ 認証済み', 'success');
+                        currentUser = user;
+                        checkAdminPermissions(user);
+                    } else {
+                        debugLog('ℹ️ 認証状態: 未ログイン', 'info');
+                        updateStatus('authStatus', '⏳ 未ログイン', 'pending');
+                        currentUser = null;
+                    }
+                });
+                updateStatus('authStatus', '✅ 接続OK', 'success');
+            } catch (error) {
+                debugLog(`❌ Authentication接続エラー: ${error.message}`, 'error');
+                updateStatus('authStatus', '❌ 接続エラー', 'error');
+            }
+
+            // Test Database
+            try {
+                const testRef = database.ref('.info/connected');
+                testRef.on('value', (snapshot) => {
+                    if (snapshot.val() === true) {
+                        debugLog('✅ Database接続確認済み', 'success');
+                        updateStatus('databaseStatus', '✅ 接続OK', 'success');
+                    } else {
+                        debugLog('⚠️ Database接続が不安定', 'warn');
+                        updateStatus('databaseStatus', '⚠️ 接続不安定', 'warn');
+                    }
+                });
+            } catch (error) {
+                debugLog(`❌ Database接続エラー: ${error.message}`, 'error');
+                updateStatus('databaseStatus', '❌ 接続エラー', 'error');
+            }
+        }
+
+        // Update status indicators
+        function updateStatus(elementId, text, type) {
+            const element = document.getElementById(elementId);
+            const colors = {
+                success: 'bg-green-100 text-green-800',
+                error: 'bg-red-100 text-red-800',
+                warn: 'bg-yellow-100 text-yellow-800',
+                pending: 'bg-blue-100 text-blue-800'
+            };
+            
+            element.className = `inline-block px-4 py-2 rounded-full ${colors[type] || 'bg-gray-200 text-gray-600'}`;
+            element.innerHTML = text;
+        }
+
+        // Admin login
+        async function adminLogin() {
+            const email = document.getElementById('adminEmail').value.trim();
+            const password = document.getElementById('adminPassword').value.trim();
+            const loginBtn = document.getElementById('loginBtn');
+
+            if (!email || !password) {
+                debugLog('❌ ログインエラー: メールアドレスまたはパスワードが空です', 'error');
+                showMessage('メールアドレスとパスワードを入力してください', 'error');
+                return;
+            }
+
+            try {
+                loginBtn.disabled = true;
+                loginBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>ログイン中...';
+                
+                debugLog(`🔐 ログイン試行: ${email}`, 'info');
+                
+                const userCredential = await auth.signInWithEmailAndPassword(email, password);
+                const user = userCredential.user;
+                
+                debugLog(`✅ Firebase認証成功: ${user.email} (UID: ${user.uid})`, 'success');
+                
+                // Check admin permissions
+                await checkAdminPermissions(user);
+                
+            } catch (error) {
+                debugLog(`❌ ログインエラー: ${error.code} - ${error.message}`, 'error');
+                
+                let errorMessage = 'ログインに失敗しました';
+                if (error.code === 'auth/user-not-found') {
+                    errorMessage = 'ユーザーが見つかりません';
+                } else if (error.code === 'auth/wrong-password') {
+                    errorMessage = 'パスワードが間違っています';
+                } else if (error.code === 'auth/invalid-email') {
+                    errorMessage = '無効なメールアドレスです';
+                } else if (error.code === 'auth/too-many-requests') {
+                    errorMessage = 'ログイン試行回数が多すぎます。しばらく待ってから再試行してください';
+                }
+                
+                showMessage(errorMessage, 'error');
+            } finally {
+                loginBtn.disabled = false;
+                loginBtn.innerHTML = '<i class="fas fa-sign-in-alt mr-2"></i>管理者ログイン';
+            }
+        }
+
+        // Check admin permissions
+        async function checkAdminPermissions(user) {
+            try {
+                debugLog(`🔍 管理者権限確認中: ${user.uid}`, 'info');
+                
+                const userRef = database.ref(`ceScheduleV2/users/${user.uid}`);
+                const snapshot = await userRef.once('value');
+                
+                if (snapshot.exists()) {
+                    const userData = snapshot.val();
+                    debugLog(`📋 ユーザーデータ取得: ${JSON.stringify(userData)}`, 'info');
+                    
+                    if (userData.role === 'admin') {
+                        debugLog('✅ 管理者権限確認済み', 'success');
+                        showMessage(`管理者としてログインしました: ${userData.username}`, 'success');
+                        showDashboard();
+                        loadUsers();
+                    } else {
+                        debugLog(`❌ 管理者権限なし: role=${userData.role}`, 'error');
+                        showMessage('管理者権限が必要です', 'error');
+                        await auth.signOut();
+                    }
+                } else {
+                    debugLog('❌ ユーザーデータが見つかりません', 'error');
+                    showMessage('ユーザーデータが見つかりません', 'error');
+                    await auth.signOut();
+                }
+            } catch (error) {
+                debugLog(`❌ 権限確認エラー: ${error.message}`, 'error');
+                showMessage('権限確認中にエラーが発生しました', 'error');
+            }
+        }
+
+        // Show dashboard
+        function showDashboard() {
+            document.getElementById('loginSection').style.display = 'none';
+            document.getElementById('dashboardSection').classList.remove('hidden');
+            debugLog('✅ 管理者ダッシュボード表示', 'success');
+        }
+
+        // Generate secure password
+        function generateSecurePassword() {
+            const length = 12;
+            const charset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*";
+            let password = "";
+            
+            password += "ABCDEFGHIJKLMNOPQRSTUVWXYZ"[Math.floor(Math.random() * 26)];
+            password += "abcdefghijklmnopqrstuvwxyz"[Math.floor(Math.random() * 26)];
+            password += "0123456789"[Math.floor(Math.random() * 10)];
+            password += "!@#$%^&*"[Math.floor(Math.random() * 8)];
+            
+            for (let i = 4; i < length; i++) {
+                password += charset[Math.floor(Math.random() * charset.length)];
+            }
+            
+            return password.split('').sort(() => 0.5 - Math.random()).join('');
+        }
+
+        // Create user
+        async function createUser() {
+            const username = document.getElementById('newUsername').value.trim();
+            const email = document.getElementById('newEmail').value.trim();
+            const role = document.getElementById('newRole').value;
+            const createBtn = document.getElementById('createUserBtn');
+
+            if (!username || !email || !role) {
+                debugLog('❌ ユーザー作成: 必須項目が未入力', 'error');
+                showMessage('すべての項目を入力してください', 'error');
+                return;
+            }
+
+            if (!validateEmail(email)) {
+                debugLog(`❌ ユーザー作成: 無効なメールアドレス (${email})`, 'error');
+                showMessage('有効なメールアドレスを入力してください', 'error');
+                return;
+            }
+
+            try {
+                createBtn.disabled = true;
+                createBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>作成中...';
+                
+                debugLog(`👤 ユーザー作成開始: ${username} (${email})`, 'info');
+                
+                // Check username uniqueness
+                const usernameRef = database.ref(`ceScheduleV2/usernames/${username}`);
+                const usernameSnapshot = await usernameRef.once('value');
+                
+                if (usernameSnapshot.exists()) {
+                    debugLog(`❌ ユーザー名重複: ${username}`, 'error');
+                    showMessage('このユーザー名は既に使用されています', 'error');
+                    return;
+                }
+
+                // Generate password
+                const password = generateSecurePassword();
+                debugLog(`🔑 パスワード生成完了: ${password.substr(0, 4)}...`, 'info');
+
+                // Create Firebase user
+                const userCredential = await auth.createUserWithEmailAndPassword(email, password);
+                const uid = userCredential.user.uid;
+                
+                debugLog(`✅ Firebase認証ユーザー作成完了: ${uid}`, 'success');
+
+                // Prepare user data
+                const userData = {
+                    uid: uid,
+                    username: username,
+                    email: email,
+                    role: role,
+                    isInitialUser: true,
+                    hasCompletedSetup: false,
+                    createdAt: new Date().toISOString(),
+                    createdBy: currentUser?.uid || 'system'
+                };
+
+                // Save to database
+                await Promise.all([
+                    database.ref(`ceScheduleV2/users/${uid}`).set(userData),
+                    database.ref(`ceScheduleV2/usernames/${username}`).set(uid),
+                    database.ref(`ceScheduleV2/initialUsers/${uid}`).set({
+                        username: username,
+                        tempPassword: password,
+                        created: new Date().toISOString()
+                    })
+                ]);
+
+                debugLog('✅ データベース保存完了', 'success');
+
+                showMessage(`
+                    ユーザーが正常に作成されました！<br><br>
+                    <strong>ユーザー名:</strong> ${username}<br>
+                    <strong>メール:</strong> ${email}<br>
+                    <strong>権限:</strong> ${role}<br>
+                    <strong>仮パスワード:</strong> <code class="bg-gray-100 px-2 py-1 rounded">${password}</code><br><br>
+                    <em class="text-sm">※このパスワードを新規ユーザーに安全に伝達してください</em>
+                `, 'success');
+
+                // Clear form
+                document.getElementById('newUsername').value = '';
+                document.getElementById('newEmail').value = '';
+                document.getElementById('newRole').value = '';
+
+                // Reload users
+                loadUsers();
+
+            } catch (error) {
+                debugLog(`❌ ユーザー作成エラー: ${error.code} - ${error.message}`, 'error');
+                
+                let errorMessage = 'ユーザー作成に失敗しました';
+                if (error.code === 'auth/email-already-in-use') {
+                    errorMessage = 'このメールアドレスは既に使用されています';
+                } else if (error.code === 'auth/invalid-email') {
+                    errorMessage = '無効なメールアドレスです';
+                } else if (error.code === 'auth/weak-password') {
+                    errorMessage = 'パスワードが弱すぎます';
+                }
+                
+                showMessage(errorMessage, 'error');
+            } finally {
+                createBtn.disabled = false;
+                createBtn.innerHTML = '<i class="fas fa-user-plus mr-2"></i>ユーザーを作成';
+            }
+        }
+
+        // Load users
+        async function loadUsers() {
+            try {
+                debugLog('📋 ユーザー一覧読み込み開始', 'info');
+                
+                const usersRef = database.ref('ceScheduleV2/users');
+                const snapshot = await usersRef.once('value');
+                const tbody = document.getElementById('usersTableBody');
+                
+                tbody.innerHTML = '';
+                
+                if (snapshot.exists()) {
+                    const users = snapshot.val();
+                    const userCount = Object.keys(users).length;
+                    debugLog(`📊 ユーザー数: ${userCount}`, 'info');
+                    
+                    Object.entries(users).forEach(([uid, userData]) => {
+                        const row = document.createElement('tr');
+                        row.className = 'hover:bg-gray-50';
+                        
+                        const statusBadge = userData.hasCompletedSetup 
+                            ? '<span class="status-badge status-active">設定完了</span>' 
+                            : '<span class="status-badge status-pending">初期状態</span>';
+                        
+                        const roleBadge = getRoleBadge(userData.role);
+                        
+                        row.innerHTML = `
+                            <td class="px-4 py-4 whitespace-nowrap text-sm font-medium text-gray-900">${userData.username || 'N/A'}</td>
+                            <td class="px-4 py-4 whitespace-nowrap text-sm text-gray-900">${userData.email || 'N/A'}</td>
+                            <td class="px-4 py-4 whitespace-nowrap text-sm text-gray-900">${roleBadge}</td>
+                            <td class="px-4 py-4 whitespace-nowrap text-sm text-gray-900">${statusBadge}</td>
+                            <td class="px-4 py-4 whitespace-nowrap text-sm text-gray-900">${formatDate(userData.createdAt)}</td>
+                            <td class="px-4 py-4 whitespace-nowrap text-sm font-medium">
+                                <button onclick="deleteUser('${uid}', '${userData.username}')" 
+                                        class="text-red-600 hover:text-red-900 ml-2">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </td>
+                        `;
+                        
+                        tbody.appendChild(row);
+                    });
+                    
+                    debugLog(`✅ ユーザー一覧表示完了: ${userCount}件`, 'success');
+                } else {
+                    tbody.innerHTML = '<tr><td colspan="6" class="px-4 py-4 text-center text-gray-500">ユーザーが見つかりません</td></tr>';
+                    debugLog('ℹ️ ユーザーデータなし', 'info');
+                }
+            } catch (error) {
+                debugLog(`❌ ユーザー読み込みエラー: ${error.message}`, 'error');
+                showMessage('ユーザーの読み込みに失敗しました', 'error');
+            }
+        }
+
+        // Delete user
+        async function deleteUser(uid, username) {
+            if (!confirm(`ユーザー「${username}」を削除しますか？\n\nこの操作は取り消せません。`)) {
+                return;
+            }
+
+            try {
+                debugLog(`🗑️ ユーザー削除開始: ${username} (${uid})`, 'info');
+                
+                const userRef = database.ref(`ceScheduleV2/users/${uid}`);
+                const userSnapshot = await userRef.once('value');
+                
+                if (!userSnapshot.exists()) {
+                    debugLog('❌ 削除対象ユーザーが見つかりません', 'error');
+                    showMessage('ユーザーが見つかりません', 'error');
+                    return;
+                }
+
+                const userData = userSnapshot.val();
+
+                await Promise.all([
+                    database.ref(`ceScheduleV2/users/${uid}`).remove(),
+                    database.ref(`ceScheduleV2/usernames/${userData.username}`).remove(),
+                    database.ref(`ceScheduleV2/initialUsers/${uid}`).remove()
+                ]);
+
+                debugLog(`✅ ユーザー削除完了: ${username}`, 'success');
+                showMessage(`ユーザー「${username}」が削除されました`, 'success');
+                loadUsers();
+
+            } catch (error) {
+                debugLog(`❌ ユーザー削除エラー: ${error.message}`, 'error');
+                showMessage('ユーザーの削除に失敗しました', 'error');
+            }
+        }
+
+        // Helper functions
+        function getRoleBadge(role) {
+            const badges = {
+                admin: '<span class="role-badge role-admin">管理者</span>',
+                editor: '<span class="role-badge role-editor">編集者</span>',
+                viewer: '<span class="role-badge role-viewer">閲覧者</span>'
+            };
+            return badges[role] || '<span class="role-badge">不明</span>';
+        }
+
+        function formatDate(dateString) {
+            if (!dateString) return 'N/A';
+            try {
+                const date = new Date(dateString);
+                return date.toLocaleDateString('ja-JP', {
+                    year: 'numeric',
+                    month: '2-digit',
+                    day: '2-digit',
+                    hour: '2-digit',
+                    minute: '2-digit'
+                });
+            } catch (error) {
+                return 'N/A';
+            }
+        }
+
+        function validateEmail(email) {
+            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            return emailRegex.test(email);
+        }
+
+        function showMessage(message, type) {
+            const statusMessage = document.getElementById('statusMessage');
+            const colors = {
+                success: 'bg-green-100 border-green-400 text-green-700',
+                error: 'bg-red-100 border-red-400 text-red-700',
+                info: 'bg-blue-100 border-blue-400 text-blue-700',
+                warn: 'bg-yellow-100 border-yellow-400 text-yellow-700'
+            };
+            
+            statusMessage.className = `p-4 rounded-lg mb-4 border-l-4 ${colors[type] || colors.info}`;
+            statusMessage.innerHTML = message;
+            statusMessage.classList.remove('hidden');
+            
+            if (type === 'success') {
+                setTimeout(() => {
+                    statusMessage.classList.add('hidden');
+                }, 8000);
+            }
+        }
+
+        // Initialize on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            debugLog('🚀 ページ読み込み完了', 'info');
+            
+            if (initializeFirebase()) {
+                debugLog('✅ システム初期化完了', 'success');
+            } else {
+                debugLog('❌ システム初期化失敗', 'error');
+            }
+            
+            // Add enter key listeners
+            document.getElementById('adminEmail').addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') adminLogin();
+            });
+            
+            document.getElementById('adminPassword').addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') adminLogin();
+            });
+        });
+    </script>
+</body>
+</html>
