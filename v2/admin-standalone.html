@@ -1,0 +1,538 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>独立型管理者ダッシュボード - CEスケジュール管理システム</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css">
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
+</head>
+<body class="bg-gradient-to-br from-blue-500 via-purple-600 to-indigo-700 min-h-screen">
+    <div class="container mx-auto px-4 py-8">
+        <!-- Header -->
+        <div class="bg-white rounded-lg shadow-xl p-8 mb-8">
+            <div class="text-center">
+                <h1 class="text-4xl font-bold text-gray-800 mb-2">
+                    <i class="fas fa-shield-alt text-blue-600 mr-3"></i>
+                    独立型管理者ダッシュボード
+                </h1>
+                <p class="text-gray-600 text-lg">CEスケジュール管理システム - ユーザー管理</p>
+                <div id="connectionStatus" class="mt-4 p-3 rounded-lg bg-gray-100">
+                    <i class="fas fa-spinner fa-spin mr-2"></i>
+                    Firebase接続中...
+                </div>
+            </div>
+        </div>
+
+        <!-- Auth Section -->
+        <div id="authSection" class="bg-white rounded-lg shadow-xl p-8 mb-8">
+            <h2 class="text-2xl font-bold text-gray-800 mb-6">
+                <i class="fas fa-key text-green-600 mr-3"></i>
+                管理者認証
+            </h2>
+            <div class="grid md:grid-cols-2 gap-6">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">メールアドレス</label>
+                    <input type="email" id="adminEmail" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" placeholder="admin@example.com">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">パスワード</label>
+                    <input type="password" id="adminPassword" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" placeholder="••••••••">
+                </div>
+            </div>
+            <div class="mt-6 flex gap-4">
+                <button id="loginBtn" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg transition duration-300">
+                    <i class="fas fa-sign-in-alt mr-2"></i>ログイン
+                </button>
+                <button id="logoutBtn" class="bg-red-600 hover:bg-red-700 text-white px-6 py-2 rounded-lg transition duration-300 hidden">
+                    <i class="fas fa-sign-out-alt mr-2"></i>ログアウト
+                </button>
+            </div>
+        </div>
+
+        <!-- Admin Panel -->
+        <div id="adminPanel" class="hidden">
+            <!-- User Creation -->
+            <div class="bg-white rounded-lg shadow-xl p-8 mb-8">
+                <h2 class="text-2xl font-bold text-gray-800 mb-6">
+                    <i class="fas fa-user-plus text-green-600 mr-3"></i>
+                    新規ユーザー作成
+                </h2>
+                <div class="grid md:grid-cols-3 gap-6">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">ユーザー名</label>
+                        <input type="text" id="newUsername" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" placeholder="田中太郎">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">メールアドレス</label>
+                        <input type="email" id="newEmail" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" placeholder="tanaka@example.com">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">権限</label>
+                        <select id="newRole" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                            <option value="">権限を選択</option>
+                            <option value="admin">管理者</option>
+                            <option value="editor">編集者</option>
+                            <option value="viewer">閲覧者</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="mt-6">
+                    <button id="createUserBtn" class="bg-green-600 hover:bg-green-700 text-white px-8 py-3 rounded-lg transition duration-300">
+                        <i class="fas fa-plus mr-2"></i>ユーザーを作成
+                    </button>
+                </div>
+            </div>
+
+            <!-- User List -->
+            <div class="bg-white rounded-lg shadow-xl p-8">
+                <h2 class="text-2xl font-bold text-gray-800 mb-6">
+                    <i class="fas fa-users text-blue-600 mr-3"></i>
+                    登録ユーザー一覧
+                </h2>
+                <div class="overflow-x-auto">
+                    <table class="w-full table-auto">
+                        <thead>
+                            <tr class="bg-gray-50">
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ユーザー名</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">メール</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">権限</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ステータス</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">作成日</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">操作</th>
+                            </tr>
+                        </thead>
+                        <tbody id="userTableBody" class="bg-white divide-y divide-gray-200">
+                            <tr>
+                                <td colspan="6" class="px-6 py-4 text-center text-gray-500">
+                                    <i class="fas fa-spinner fa-spin mr-2"></i>データを読み込み中...
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Status Messages -->
+        <div id="statusMessage" class="fixed top-4 right-4 max-w-sm w-full hidden">
+            <div class="bg-white rounded-lg shadow-lg border-l-4 p-4">
+                <div class="flex items-center">
+                    <div class="flex-shrink-0">
+                        <i id="statusIcon" class="fas fa-info-circle text-blue-500"></i>
+                    </div>
+                    <div class="ml-3">
+                        <p id="statusText" class="text-sm text-gray-700"></p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Firebase Configuration
+        const firebaseConfig = {
+            apiKey: "AIzaSyCRUvvs0OSz_9L9bXtqteVFIIze1OaZObE",
+            authDomain: "ce-schedule-management.firebaseapp.com",
+            databaseURL: "https://ce-schedule-management-default-rtdb.asia-southeast1.firebasedatabase.app",
+            projectId: "ce-schedule-management",
+            storageBucket: "ce-schedule-management.firebasestorage.app",
+            messagingSenderId: "998140589230",
+            appId: "1:998140589230:web:6c8159f7c1242cd5aeb4d0"
+        };
+
+        // Initialize Firebase
+        let app, auth, database;
+        let currentUser = null;
+
+        // DOM Elements
+        const connectionStatus = document.getElementById('connectionStatus');
+        const authSection = document.getElementById('authSection');
+        const adminPanel = document.getElementById('adminPanel');
+        const loginBtn = document.getElementById('loginBtn');
+        const logoutBtn = document.getElementById('logoutBtn');
+        const adminEmail = document.getElementById('adminEmail');
+        const adminPassword = document.getElementById('adminPassword');
+        const createUserBtn = document.getElementById('createUserBtn');
+        const newUsername = document.getElementById('newUsername');
+        const newEmail = document.getElementById('newEmail');
+        const newRole = document.getElementById('newRole');
+        const userTableBody = document.getElementById('userTableBody');
+
+        // Initialize Firebase
+        async function initializeFirebase() {
+            try {
+                app = firebase.initializeApp(firebaseConfig);
+                auth = firebase.auth();
+                database = firebase.database();
+                
+                showStatus('Firebase接続成功', 'success');
+                connectionStatus.innerHTML = '<i class="fas fa-check-circle text-green-500 mr-2"></i>Firebase接続完了';
+                connectionStatus.className = 'mt-4 p-3 rounded-lg bg-green-100';
+
+                // Auth state listener
+                auth.onAuthStateChanged(async (user) => {
+                    if (user) {
+                        currentUser = user;
+                        await checkAdminPermission(user);
+                    } else {
+                        currentUser = null;
+                        showAuthSection();
+                    }
+                });
+
+                return true;
+            } catch (error) {
+                console.error('Firebase初期化エラー:', error);
+                showStatus('Firebase接続失敗: ' + error.message, 'error');
+                connectionStatus.innerHTML = '<i class="fas fa-exclamation-triangle text-red-500 mr-2"></i>Firebase接続失敗';
+                connectionStatus.className = 'mt-4 p-3 rounded-lg bg-red-100';
+                return false;
+            }
+        }
+
+        // Check admin permission
+        async function checkAdminPermission(user) {
+            try {
+                const userRef = database.ref(`ceScheduleV2/users/${user.uid}`);
+                const snapshot = await userRef.once('value');
+                
+                if (snapshot.exists()) {
+                    const userData = snapshot.val();
+                    if (userData.role === 'admin') {
+                        showAdminPanel();
+                        loadUsers();
+                        showStatus(`管理者としてログイン: ${userData.username}`, 'success');
+                    } else {
+                        showStatus('管理者権限が必要です', 'error');
+                        await auth.signOut();
+                    }
+                } else {
+                    showStatus('ユーザーデータが見つかりません', 'error');
+                    await auth.signOut();
+                }
+            } catch (error) {
+                console.error('権限確認エラー:', error);
+                showStatus('権限確認に失敗しました', 'error');
+            }
+        }
+
+        // Show auth section
+        function showAuthSection() {
+            authSection.classList.remove('hidden');
+            adminPanel.classList.add('hidden');
+            loginBtn.classList.remove('hidden');
+            logoutBtn.classList.add('hidden');
+        }
+
+        // Show admin panel
+        function showAdminPanel() {
+            authSection.classList.add('hidden');
+            adminPanel.classList.remove('hidden');
+            loginBtn.classList.add('hidden');
+            logoutBtn.classList.remove('hidden');
+        }
+
+        // Login function
+        async function login() {
+            const email = adminEmail.value.trim();
+            const password = adminPassword.value.trim();
+
+            if (!email || !password) {
+                showStatus('メールアドレスとパスワードを入力してください', 'error');
+                return;
+            }
+
+            try {
+                loginBtn.disabled = true;
+                loginBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>ログイン中...';
+                
+                await auth.signInWithEmailAndPassword(email, password);
+                
+                adminEmail.value = '';
+                adminPassword.value = '';
+            } catch (error) {
+                console.error('ログインエラー:', error);
+                let errorMessage = 'ログインに失敗しました';
+                
+                if (error.code === 'auth/user-not-found') {
+                    errorMessage = 'ユーザーが見つかりません';
+                } else if (error.code === 'auth/wrong-password') {
+                    errorMessage = 'パスワードが正しくありません';
+                } else if (error.code === 'auth/invalid-email') {
+                    errorMessage = 'メールアドレスが正しくありません';
+                }
+                
+                showStatus(errorMessage, 'error');
+            } finally {
+                loginBtn.disabled = false;
+                loginBtn.innerHTML = '<i class="fas fa-sign-in-alt mr-2"></i>ログイン';
+            }
+        }
+
+        // Logout function
+        async function logout() {
+            try {
+                await auth.signOut();
+                showStatus('ログアウトしました', 'success');
+            } catch (error) {
+                console.error('ログアウトエラー:', error);
+                showStatus('ログアウトに失敗しました', 'error');
+            }
+        }
+
+        // Generate secure password
+        function generateSecurePassword() {
+            const length = 12;
+            const charset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*";
+            let password = "";
+            
+            password += "ABCDEFGHIJKLMNOPQRSTUVWXYZ"[Math.floor(Math.random() * 26)];
+            password += "abcdefghijklmnopqrstuvwxyz"[Math.floor(Math.random() * 26)];
+            password += "0123456789"[Math.floor(Math.random() * 10)];
+            password += "!@#$%^&*"[Math.floor(Math.random() * 8)];
+            
+            for (let i = 4; i < length; i++) {
+                password += charset[Math.floor(Math.random() * charset.length)];
+            }
+            
+            return password.split('').sort(() => 0.5 - Math.random()).join('');
+        }
+
+        // Create user function
+        async function createUser() {
+            const username = newUsername.value.trim();
+            const email = newEmail.value.trim();
+            const role = newRole.value;
+
+            if (!username || !email || !role) {
+                showStatus('すべての項目を入力してください', 'error');
+                return;
+            }
+
+            if (!validateEmail(email)) {
+                showStatus('有効なメールアドレスを入力してください', 'error');
+                return;
+            }
+
+            try {
+                createUserBtn.disabled = true;
+                createUserBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>作成中...';
+
+                // Check username availability
+                const usernameRef = database.ref(`ceScheduleV2/usernames/${username}`);
+                const usernameSnapshot = await usernameRef.once('value');
+                
+                if (usernameSnapshot.exists()) {
+                    showStatus('このユーザー名は既に使用されています', 'error');
+                    return;
+                }
+
+                // Generate password
+                const password = generateSecurePassword();
+
+                // Create user in Firebase Auth
+                const userCredential = await auth.createUserWithEmailAndPassword(email, password);
+                const uid = userCredential.user.uid;
+
+                // User data
+                const userData = {
+                    uid: uid,
+                    username: username,
+                    email: email,
+                    role: role,
+                    isInitialUser: true,
+                    hasCompletedSetup: false,
+                    createdAt: new Date().toISOString(),
+                    createdBy: currentUser.uid
+                };
+
+                // Save to database
+                await Promise.all([
+                    database.ref(`ceScheduleV2/users/${uid}`).set(userData),
+                    database.ref(`ceScheduleV2/usernames/${username}`).set(uid),
+                    database.ref(`ceScheduleV2/initialUsers/${uid}`).set({
+                        username: username,
+                        tempPassword: password,
+                        created: new Date().toISOString()
+                    })
+                ]);
+
+                showStatus(`ユーザー作成成功！\n仮パスワード: ${password}\n※このパスワードを安全に伝達してください`, 'success');
+                
+                // Clear form
+                newUsername.value = '';
+                newEmail.value = '';
+                newRole.value = '';
+
+                // Reload users
+                loadUsers();
+
+            } catch (error) {
+                console.error('ユーザー作成エラー:', error);
+                let errorMessage = 'ユーザー作成に失敗しました';
+                
+                if (error.code === 'auth/email-already-in-use') {
+                    errorMessage = 'このメールアドレスは既に使用されています';
+                } else if (error.code === 'auth/weak-password') {
+                    errorMessage = 'パスワードが弱すぎます';
+                }
+                
+                showStatus(errorMessage, 'error');
+            } finally {
+                createUserBtn.disabled = false;
+                createUserBtn.innerHTML = '<i class="fas fa-plus mr-2"></i>ユーザーを作成';
+            }
+        }
+
+        // Load users
+        async function loadUsers() {
+            try {
+                const usersRef = database.ref('ceScheduleV2/users');
+                const snapshot = await usersRef.once('value');
+                
+                userTableBody.innerHTML = '';
+                
+                if (snapshot.exists()) {
+                    const users = snapshot.val();
+                    
+                    Object.entries(users).forEach(([uid, userData]) => {
+                        const row = document.createElement('tr');
+                        
+                        const statusBadge = userData.hasCompletedSetup 
+                            ? '<span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800">設定完了</span>'
+                            : '<span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-yellow-100 text-yellow-800">初期状態</span>';
+                        
+                        const roleBadge = getRoleBadge(userData.role);
+                        
+                        row.innerHTML = `
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${userData.username || 'N/A'}</td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${userData.email || 'N/A'}</td>
+                            <td class="px-6 py-4 whitespace-nowrap">${roleBadge}</td>
+                            <td class="px-6 py-4 whitespace-nowrap">${statusBadge}</td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${formatDate(userData.createdAt)}</td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                                <button onclick="deleteUser('${uid}', '${userData.username}')" class="text-red-600 hover:text-red-900 mr-3">
+                                    <i class="fas fa-trash mr-1"></i>削除
+                                </button>
+                            </td>
+                        `;
+                        
+                        userTableBody.appendChild(row);
+                    });
+                } else {
+                    userTableBody.innerHTML = '<tr><td colspan="6" class="px-6 py-4 text-center text-gray-500">ユーザーが見つかりません</td></tr>';
+                }
+            } catch (error) {
+                console.error('ユーザー読み込みエラー:', error);
+                showStatus('ユーザーの読み込みに失敗しました', 'error');
+            }
+        }
+
+        // Get role badge
+        function getRoleBadge(role) {
+            const badges = {
+                admin: '<span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-red-100 text-red-800">管理者</span>',
+                editor: '<span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-blue-100 text-blue-800">編集者</span>',
+                viewer: '<span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-gray-100 text-gray-800">閲覧者</span>'
+            };
+            return badges[role] || '<span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-gray-100 text-gray-800">不明</span>';
+        }
+
+        // Format date
+        function formatDate(dateString) {
+            if (!dateString) return 'N/A';
+            try {
+                return new Date(dateString).toLocaleDateString('ja-JP');
+            } catch {
+                return 'N/A';
+            }
+        }
+
+        // Delete user
+        window.deleteUser = async function(uid, username) {
+            if (!confirm(`ユーザー「${username}」を削除しますか？\n\nこの操作は取り消せません。`)) {
+                return;
+            }
+
+            try {
+                const userRef = database.ref(`ceScheduleV2/users/${uid}`);
+                const snapshot = await userRef.once('value');
+                
+                if (snapshot.exists()) {
+                    const userData = snapshot.val();
+                    
+                    await Promise.all([
+                        database.ref(`ceScheduleV2/users/${uid}`).remove(),
+                        database.ref(`ceScheduleV2/usernames/${userData.username}`).remove(),
+                        database.ref(`ceScheduleV2/initialUsers/${uid}`).remove()
+                    ]);
+                    
+                    showStatus(`ユーザー「${username}」を削除しました`, 'success');
+                    loadUsers();
+                }
+            } catch (error) {
+                console.error('削除エラー:', error);
+                showStatus('ユーザーの削除に失敗しました', 'error');
+            }
+        };
+
+        // Validate email
+        function validateEmail(email) {
+            return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+        }
+
+        // Show status message
+        function showStatus(message, type) {
+            const statusMessage = document.getElementById('statusMessage');
+            const statusIcon = document.getElementById('statusIcon');
+            const statusText = document.getElementById('statusText');
+
+            let iconClass, borderClass;
+            switch (type) {
+                case 'success':
+                    iconClass = 'fas fa-check-circle text-green-500';
+                    borderClass = 'border-green-400';
+                    break;
+                case 'error':
+                    iconClass = 'fas fa-exclamation-circle text-red-500';
+                    borderClass = 'border-red-400';
+                    break;
+                default:
+                    iconClass = 'fas fa-info-circle text-blue-500';
+                    borderClass = 'border-blue-400';
+            }
+
+            statusIcon.className = iconClass;
+            statusText.textContent = message;
+            statusMessage.firstElementChild.className = `bg-white rounded-lg shadow-lg border-l-4 ${borderClass} p-4`;
+            
+            statusMessage.classList.remove('hidden');
+            setTimeout(() => {
+                statusMessage.classList.add('hidden');
+            }, 5000);
+        }
+
+        // Event listeners
+        loginBtn.addEventListener('click', login);
+        logoutBtn.addEventListener('click', logout);
+        createUserBtn.addEventListener('click', createUser);
+
+        // Enter key handlers
+        adminEmail.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') login();
+        });
+        adminPassword.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') login();
+        });
+
+        // Initialize on load
+        document.addEventListener('DOMContentLoaded', () => {
+            initializeFirebase();
+        });
+    </script>
+</body>
+</html>
