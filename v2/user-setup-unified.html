@@ -1,0 +1,586 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>個人設定 - CEスケジュール管理システム V2</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css">
+    
+    <!-- Firebase CDN -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
+
+    <style>
+        .setup-progress {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+        
+        .step-indicator {
+            transition: all 0.3s ease;
+        }
+        
+        .step-indicator.active {
+            background: #4F46E5;
+            color: white;
+            transform: scale(1.1);
+        }
+        
+        .step-indicator.completed {
+            background: #10B981;
+            color: white;
+        }
+        
+        .fade-in {
+            animation: fadeIn 0.5s ease-in;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .password-strength {
+            height: 4px;
+            border-radius: 2px;
+            transition: all 0.3s ease;
+        }
+        
+        .strength-weak { background: #EF4444; }
+        .strength-medium { background: #F59E0B; }
+        .strength-strong { background: #10B981; }
+    </style>
+</head>
+<body class="bg-gray-50">
+    <!-- Debug Info Panel -->
+    <div id="debugPanel" class="fixed top-4 right-4 bg-white p-4 rounded-lg shadow-lg border max-w-md z-50" style="display: none;">
+        <div class="flex justify-between items-center mb-2">
+            <h3 class="font-semibold text-gray-800">🔍 Debug Info</h3>
+            <button onclick="toggleDebug()" class="text-gray-500 hover:text-gray-700">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <div id="debugContent" class="text-sm space-y-1"></div>
+    </div>
+    
+    <button onclick="toggleDebug()" class="fixed top-4 right-4 bg-blue-600 text-white p-2 rounded-full shadow-lg z-40">
+        <i class="fas fa-bug"></i>
+    </button>
+
+    <div class="min-h-screen flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
+        <!-- Loading Screen -->
+        <div id="loadingScreen" class="text-center">
+            <div class="setup-progress w-16 h-16 rounded-full mx-auto mb-4 flex items-center justify-center">
+                <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-white"></div>
+            </div>
+            <h2 class="text-xl font-semibold text-gray-700 mb-2">システムを初期化中...</h2>
+            <p class="text-gray-500">ユーザー情報を確認しています</p>
+        </div>
+
+        <!-- Error Screen -->
+        <div id="errorScreen" class="text-center max-w-md mx-auto hidden">
+            <div class="bg-red-100 w-16 h-16 rounded-full mx-auto mb-4 flex items-center justify-center">
+                <i class="fas fa-exclamation-triangle text-red-600 text-2xl"></i>
+            </div>
+            <h2 class="text-xl font-semibold text-gray-800 mb-2">エラーが発生しました</h2>
+            <p id="errorMessage" class="text-gray-600 mb-4"></p>
+            <div class="space-y-2">
+                <button onclick="retrySetup()" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-lg transition duration-200">
+                    再試行
+                </button>
+                <button onclick="goToLogin()" class="w-full bg-gray-600 hover:bg-gray-700 text-white font-medium py-2 px-4 rounded-lg transition duration-200">
+                    ログイン画面に戻る
+                </button>
+            </div>
+        </div>
+
+        <!-- Setup Screen -->
+        <div id="setupScreen" class="max-w-2xl w-full space-y-8 hidden">
+            <!-- Header -->
+            <div class="text-center">
+                <div class="setup-progress w-20 h-20 rounded-full mx-auto mb-4 flex items-center justify-center">
+                    <i class="fas fa-user-cog text-white text-3xl"></i>
+                </div>
+                <h2 class="text-3xl font-bold text-gray-900">個人設定</h2>
+                <p class="mt-2 text-gray-600">アカウントの初期設定を完了してください</p>
+            </div>
+
+            <!-- Progress Steps -->
+            <div class="flex justify-center space-x-4">
+                <div class="step-indicator active w-10 h-10 rounded-full flex items-center justify-center text-sm font-semibold">
+                    1
+                </div>
+                <div class="step-indicator w-10 h-10 rounded-full flex items-center justify-center text-sm font-semibold bg-gray-200 text-gray-600">
+                    2
+                </div>
+                <div class="step-indicator w-10 h-10 rounded-full flex items-center justify-center text-sm font-semibold bg-gray-200 text-gray-600">
+                    3
+                </div>
+            </div>
+
+            <!-- Setup Form -->
+            <div class="bg-white shadow rounded-lg p-8">
+                <!-- Step 1: Basic Info -->
+                <div id="step1" class="fade-in">
+                    <h3 class="text-lg font-semibold text-gray-900 mb-4">基本情報の確認</h3>
+                    
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">ユーザー名</label>
+                            <input type="text" id="username" class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500" readonly>
+                        </div>
+                        
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">メールアドレス</label>
+                            <input type="email" id="email" class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm bg-gray-50" readonly>
+                        </div>
+                        
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">権限レベル</label>
+                            <div id="roleDisplay" class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm bg-gray-50 text-gray-700"></div>
+                        </div>
+                    </div>
+                    
+                    <div class="mt-6">
+                        <button onclick="nextStep()" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-4 rounded-lg transition duration-200">
+                            次へ進む
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Step 2: Password Setup -->
+                <div id="step2" class="hidden fade-in">
+                    <h3 class="text-lg font-semibold text-gray-900 mb-4">パスワードの変更</h3>
+                    
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">現在のパスワード</label>
+                            <input type="password" id="currentPassword" placeholder="管理者から受け取ったパスワード" class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
+                        </div>
+                        
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">新しいパスワード</label>
+                            <input type="password" id="newPassword" placeholder="8文字以上の安全なパスワード" class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
+                            <div class="password-strength mt-1" id="passwordStrength"></div>
+                            <p class="text-xs text-gray-500 mt-1">8文字以上、大文字・小文字・数字を含めることを推奨します</p>
+                        </div>
+                        
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">パスワード確認</label>
+                            <input type="password" id="confirmPassword" placeholder="新しいパスワードをもう一度入力" class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
+                        </div>
+                    </div>
+                    
+                    <div class="mt-6 flex space-x-3">
+                        <button onclick="prevStep()" class="flex-1 bg-gray-600 hover:bg-gray-700 text-white font-semibold py-3 px-4 rounded-lg transition duration-200">
+                            戻る
+                        </button>
+                        <button onclick="nextStep()" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-4 rounded-lg transition duration-200">
+                            次へ進む
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Step 3: Completion -->
+                <div id="step3" class="hidden fade-in">
+                    <h3 class="text-lg font-semibold text-gray-900 mb-4">設定完了確認</h3>
+                    
+                    <div class="bg-blue-50 p-4 rounded-lg mb-4">
+                        <div class="flex">
+                            <i class="fas fa-info-circle text-blue-600 mt-1 mr-3"></i>
+                            <div>
+                                <h4 class="font-semibold text-blue-900">設定内容の確認</h4>
+                                <div class="mt-2 space-y-1 text-sm text-blue-800">
+                                    <p id="confirmUsername"></p>
+                                    <p id="confirmEmail"></p>
+                                    <p id="confirmRole"></p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="bg-green-50 p-4 rounded-lg mb-6">
+                        <div class="flex">
+                            <i class="fas fa-check-circle text-green-600 mt-1 mr-3"></i>
+                            <div>
+                                <h4 class="font-semibold text-green-900">セットアップ完了</h4>
+                                <p class="text-sm text-green-800 mt-1">
+                                    設定を完了すると、CEスケジュール管理システムの全機能をご利用いただけます。
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="flex space-x-3">
+                        <button onclick="prevStep()" class="flex-1 bg-gray-600 hover:bg-gray-700 text-white font-semibold py-3 px-4 rounded-lg transition duration-200">
+                            戻る
+                        </button>
+                        <button onclick="completeSetup()" id="completeBtn" class="flex-1 bg-green-600 hover:bg-green-700 text-white font-semibold py-3 px-4 rounded-lg transition duration-200">
+                            <span id="completeText">設定を完了</span>
+                            <div id="completeSpinner" class="hidden inline-block ml-2 animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Success Screen -->
+        <div id="successScreen" class="text-center max-w-md mx-auto hidden">
+            <div class="bg-green-100 w-20 h-20 rounded-full mx-auto mb-4 flex items-center justify-center">
+                <i class="fas fa-check text-green-600 text-3xl"></i>
+            </div>
+            <h2 class="text-2xl font-bold text-gray-900 mb-2">設定完了！</h2>
+            <p class="text-gray-600 mb-6">アカウントの初期設定が完了しました。<br>CEスケジュール管理システムをご利用ください。</p>
+            <button onclick="goToDashboard()" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-4 rounded-lg transition duration-200">
+                ダッシュボードへ進む
+            </button>
+        </div>
+    </div>
+
+    <script>
+        // Firebase設定
+        const firebaseConfig = {
+            apiKey: "AIzaSyCRUvvs0OSz_9L9bXtqteVFIIze1OaZObE",
+            authDomain: "ce-scheduling-system-v2.firebaseapp.com",
+            databaseURL: "https://ce-scheduling-system-v2-default-rtdb.asia-southeast1.firebasedatabase.app",
+            projectId: "ce-scheduling-system-v2",
+            storageBucket: "ce-scheduling-system-v2.firebasestorage.app",
+            messagingSenderId: "288279598010",
+            appId: "1:288279598010:web:d545ee1d4d854513084383",
+            measurementId: "G-LSEEMJE2R0"
+        };
+
+        // Firebase初期化
+        firebase.initializeApp(firebaseConfig);
+        const auth = firebase.auth();
+        const database = firebase.database();
+
+        // グローバル変数
+        let currentUser = null;
+        let userData = null;
+        let currentStep = 1;
+
+        // デバッグ機能
+        function debugLog(message, type = 'info') {
+            const timestamp = new Date().toLocaleTimeString();
+            const emoji = type === 'error' ? '❌' : type === 'success' ? '✅' : type === 'warn' ? '⚠️' : 'ℹ️';
+            console.log(`[${timestamp}] ${emoji} ${message}`);
+            
+            const debugContent = document.getElementById('debugContent');
+            if (debugContent) {
+                const logEntry = document.createElement('div');
+                logEntry.className = `text-${type === 'error' ? 'red' : type === 'success' ? 'green' : type === 'warn' ? 'yellow' : 'blue'}-600`;
+                logEntry.innerHTML = `<span class="text-gray-500">${timestamp}</span> ${emoji} ${message}`;
+                debugContent.appendChild(logEntry);
+                debugContent.scrollTop = debugContent.scrollHeight;
+            }
+        }
+
+        function toggleDebug() {
+            const panel = document.getElementById('debugPanel');
+            panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
+        }
+
+        // 初期化
+        document.addEventListener('DOMContentLoaded', function() {
+            debugLog('🚀 個人設定システム初期化開始');
+            initializeUserSetup();
+        });
+
+        // ユーザー設定初期化
+        function initializeUserSetup() {
+            debugLog('🔐 認証状態確認中...');
+            
+            auth.onAuthStateChanged(async (user) => {
+                if (user) {
+                    debugLog(`✅ ユーザー認証済み: ${user.email} (UID: ${user.uid})`);
+                    currentUser = user;
+                    await loadUserData();
+                } else {
+                    debugLog('❌ 未認証状態');
+                    showError('ログインが必要です。ログイン画面に戻ります。');
+                    setTimeout(goToLogin, 2000);
+                }
+            });
+        }
+
+        // ユーザーデータ読み込み
+        async function loadUserData() {
+            try {
+                debugLog(`📋 ユーザーデータ取得開始: ${currentUser.uid}`);
+                
+                const userRef = database.ref(`ceScheduleV2/users/${currentUser.uid}`);
+                const snapshot = await userRef.once('value');
+                
+                if (snapshot.exists()) {
+                    userData = snapshot.val();
+                    debugLog(`✅ ユーザーデータ取得成功: ${JSON.stringify(userData)}`);
+                    
+                    // セットアップ完了チェック
+                    if (userData.hasCompletedSetup) {
+                        debugLog('ℹ️ セットアップ済みユーザー - ダッシュボードにリダイレクト');
+                        showSuccess();
+                        setTimeout(goToDashboard, 1500);
+                        return;
+                    }
+                    
+                    // セットアップ開始
+                    debugLog('🔧 初期設定開始');
+                    startSetup();
+                } else {
+                    debugLog('❌ ユーザーデータが見つかりません');
+                    showError('ユーザーデータが見つかりません。管理者にお問い合わせください。');
+                }
+            } catch (error) {
+                debugLog(`❌ データ取得エラー: ${error.message}`, 'error');
+                showError(`データの取得に失敗しました: ${error.message}`);
+            }
+        }
+
+        // セットアップ開始
+        function startSetup() {
+            document.getElementById('loadingScreen').style.display = 'none';
+            document.getElementById('setupScreen').style.display = 'block';
+            
+            // フォームにデータを設定
+            document.getElementById('username').value = userData.username || '';
+            document.getElementById('email').value = userData.email || '';
+            document.getElementById('roleDisplay').textContent = getRoleDisplayName(userData.role || 'viewer');
+            
+            debugLog('✅ セットアップ画面表示完了');
+        }
+
+        // 権限表示名取得
+        function getRoleDisplayName(role) {
+            const roleNames = {
+                admin: '管理者 (全権限)',
+                editor: '編集者 (スケジュール編集可)',
+                viewer: '閲覧者 (閲覧のみ)'
+            };
+            return roleNames[role] || '不明';
+        }
+
+        // ステップ進行
+        function nextStep() {
+            if (currentStep === 1) {
+                currentStep = 2;
+                updateStepIndicators();
+                showStep(2);
+            } else if (currentStep === 2) {
+                if (validatePasswordStep()) {
+                    currentStep = 3;
+                    updateStepIndicators();
+                    showStep(3);
+                    updateConfirmation();
+                }
+            }
+        }
+
+        function prevStep() {
+            if (currentStep > 1) {
+                currentStep--;
+                updateStepIndicators();
+                showStep(currentStep);
+            }
+        }
+
+        // ステップ表示
+        function showStep(stepNum) {
+            // すべてのステップを非表示
+            for (let i = 1; i <= 3; i++) {
+                document.getElementById(`step${i}`).style.display = 'none';
+            }
+            // 指定されたステップを表示
+            document.getElementById(`step${stepNum}`).style.display = 'block';
+        }
+
+        // ステップインジケータ更新
+        function updateStepIndicators() {
+            const indicators = document.querySelectorAll('.step-indicator');
+            indicators.forEach((indicator, index) => {
+                indicator.classList.remove('active', 'completed');
+                if (index + 1 < currentStep) {
+                    indicator.classList.add('completed');
+                } else if (index + 1 === currentStep) {
+                    indicator.classList.add('active');
+                }
+            });
+        }
+
+        // パスワードステップバリデーション
+        function validatePasswordStep() {
+            const currentPassword = document.getElementById('currentPassword').value;
+            const newPassword = document.getElementById('newPassword').value;
+            const confirmPassword = document.getElementById('confirmPassword').value;
+
+            if (!currentPassword) {
+                alert('現在のパスワードを入力してください');
+                return false;
+            }
+
+            if (!newPassword) {
+                alert('新しいパスワードを入力してください');
+                return false;
+            }
+
+            if (newPassword.length < 8) {
+                alert('パスワードは8文字以上で入力してください');
+                return false;
+            }
+
+            if (newPassword !== confirmPassword) {
+                alert('パスワードが一致しません');
+                return false;
+            }
+
+            return true;
+        }
+
+        // パスワード強度チェック
+        document.getElementById('newPassword').addEventListener('input', function(e) {
+            const password = e.target.value;
+            const strengthBar = document.getElementById('passwordStrength');
+            
+            let strength = 0;
+            if (password.length >= 8) strength++;
+            if (/[A-Z]/.test(password)) strength++;
+            if (/[a-z]/.test(password)) strength++;
+            if (/[0-9]/.test(password)) strength++;
+            if (/[^A-Za-z0-9]/.test(password)) strength++;
+
+            strengthBar.className = 'password-strength mt-1';
+            if (strength <= 2) {
+                strengthBar.classList.add('strength-weak');
+            } else if (strength <= 3) {
+                strengthBar.classList.add('strength-medium');
+            } else {
+                strengthBar.classList.add('strength-strong');
+            }
+        });
+
+        // 確認情報更新
+        function updateConfirmation() {
+            document.getElementById('confirmUsername').textContent = `ユーザー名: ${userData.username}`;
+            document.getElementById('confirmEmail').textContent = `メール: ${userData.email}`;
+            document.getElementById('confirmRole').textContent = `権限: ${getRoleDisplayName(userData.role)}`;
+        }
+
+        // セットアップ完了
+        async function completeSetup() {
+            const completeBtn = document.getElementById('completeBtn');
+            const completeText = document.getElementById('completeText');
+            const completeSpinner = document.getElementById('completeSpinner');
+            
+            completeBtn.disabled = true;
+            completeText.style.display = 'none';
+            completeSpinner.style.display = 'inline-block';
+            
+            try {
+                debugLog('🔧 セットアップ完了処理開始');
+                
+                // パスワード変更
+                const currentPassword = document.getElementById('currentPassword').value;
+                const newPassword = document.getElementById('newPassword').value;
+                
+                if (newPassword) {
+                    debugLog('🔑 パスワード変更中...');
+                    
+                    // 現在のパスワードで再認証
+                    const credential = firebase.auth.EmailAuthProvider.credential(
+                        currentUser.email,
+                        currentPassword
+                    );
+                    await currentUser.reauthenticateWithCredential(credential);
+                    
+                    // パスワード更新
+                    await currentUser.updatePassword(newPassword);
+                    debugLog('✅ パスワード変更完了');
+                }
+                
+                // ユーザーデータ更新
+                const updatedData = {
+                    ...userData,
+                    hasCompletedSetup: true,
+                    setupCompletedAt: new Date().toISOString(),
+                    lastLogin: Date.now(),
+                    loginCount: (userData.loginCount || 0) + 1
+                };
+                
+                await database.ref(`ceScheduleV2/users/${currentUser.uid}`).set(updatedData);
+                
+                // 初期ユーザーデータ削除（もし存在する場合）
+                try {
+                    await database.ref(`ceScheduleV2/initialUsers/${currentUser.uid}`).remove();
+                    debugLog('✅ 初期ユーザーデータ削除完了');
+                } catch (error) {
+                    debugLog('ℹ️ 初期ユーザーデータは存在しませんでした');
+                }
+                
+                debugLog('✅ セットアップ完了処理成功');
+                
+                // 成功画面表示
+                document.getElementById('setupScreen').style.display = 'none';
+                document.getElementById('successScreen').style.display = 'block';
+                
+            } catch (error) {
+                debugLog(`❌ セットアップ完了エラー: ${error.message}`, 'error');
+                
+                let errorMessage = 'セットアップの完了に失敗しました。';
+                if (error.code === 'auth/wrong-password') {
+                    errorMessage = '現在のパスワードが正しくありません。';
+                } else if (error.code === 'auth/requires-recent-login') {
+                    errorMessage = 'セキュリティのため、再度ログインしてください。';
+                }
+                
+                alert(errorMessage);
+                
+                // ボタンを元に戻す
+                completeBtn.disabled = false;
+                completeText.style.display = 'inline';
+                completeSpinner.style.display = 'none';
+            }
+        }
+
+        // エラー表示
+        function showError(message) {
+            document.getElementById('loadingScreen').style.display = 'none';
+            document.getElementById('setupScreen').style.display = 'none';
+            document.getElementById('errorScreen').style.display = 'block';
+            document.getElementById('errorMessage').textContent = message;
+        }
+
+        // 成功表示
+        function showSuccess() {
+            document.getElementById('loadingScreen').style.display = 'none';
+            document.getElementById('setupScreen').style.display = 'none';
+            document.getElementById('successScreen').style.display = 'block';
+        }
+
+        // 再試行
+        function retrySetup() {
+            document.getElementById('errorScreen').style.display = 'none';
+            document.getElementById('loadingScreen').style.display = 'block';
+            initializeUserSetup();
+        }
+
+        // ログイン画面に戻る
+        function goToLogin() {
+            debugLog('🔄 ログイン画面へリダイレクト');
+            window.location.href = 'login-unified.html';
+        }
+
+        // ダッシュボードに移動
+        function goToDashboard() {
+            debugLog('🔄 ダッシュボードへリダイレクト');
+            
+            if (userData && userData.role === 'admin') {
+                window.location.href = 'admin-debug.html';
+            } else {
+                // 一般ユーザー用ダッシュボード（まだ作成されていない場合はログイン画面）
+                window.location.href = 'login-unified.html';
+            }
+        }
+    </script>
+</body>
+</html>
