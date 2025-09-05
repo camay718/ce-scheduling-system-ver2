@@ -1,0 +1,421 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Firebase認証診断ツール - デバッグ専用</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css">
+    
+    <!-- Firebase CDN -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
+</head>
+<body class="bg-gray-100 min-h-screen">
+    <div class="container mx-auto px-4 py-8">
+        <div class="max-w-6xl mx-auto">
+            <!-- Header -->
+            <div class="bg-white rounded-lg shadow-md p-6 mb-6">
+                <h1 class="text-3xl font-bold text-gray-800 mb-2">
+                    <i class="fas fa-bug text-red-500 mr-3"></i>
+                    Firebase認証診断ツール
+                </h1>
+                <p class="text-gray-600">システムの認証状態とデータベース接続を詳細に診断します</p>
+                <div class="mt-4">
+                    <button onclick="runFullDiagnosis()" class="bg-blue-500 hover:bg-blue-600 text-white px-6 py-2 rounded-lg mr-4">
+                        <i class="fas fa-play mr-2"></i>完全診断実行
+                    </button>
+                    <button onclick="clearResults()" class="bg-gray-500 hover:bg-gray-600 text-white px-6 py-2 rounded-lg">
+                        <i class="fas fa-trash mr-2"></i>結果クリア
+                    </button>
+                </div>
+            </div>
+
+            <!-- Firebase接続状態 -->
+            <div class="bg-white rounded-lg shadow-md p-6 mb-6">
+                <h2 class="text-xl font-semibold text-gray-800 mb-4">
+                    <i class="fas fa-fire text-orange-500 mr-2"></i>Firebase接続状態
+                </h2>
+                <div id="firebaseStatus" class="space-y-3">
+                    <div class="flex items-center">
+                        <div class="w-4 h-4 bg-yellow-500 rounded-full mr-3"></div>
+                        <span>Firebase初期化中...</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 認証状態 -->
+            <div class="bg-white rounded-lg shadow-md p-6 mb-6">
+                <h2 class="text-xl font-semibold text-gray-800 mb-4">
+                    <i class="fas fa-user-shield text-blue-500 mr-2"></i>認証状態
+                </h2>
+                <div id="authStatus" class="space-y-3">
+                    <div class="flex items-center">
+                        <div class="w-4 h-4 bg-yellow-500 rounded-full mr-3"></div>
+                        <span>認証状態確認中...</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ユーザーデータ -->
+            <div class="bg-white rounded-lg shadow-md p-6 mb-6">
+                <h2 class="text-xl font-semibold text-gray-800 mb-4">
+                    <i class="fas fa-database text-green-500 mr-2"></i>ユーザーデータ
+                </h2>
+                <div id="userData" class="space-y-3">
+                    <div class="flex items-center">
+                        <div class="w-4 h-4 bg-yellow-500 rounded-full mr-3"></div>
+                        <span>ユーザーデータ取得中...</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- データベース構造 -->
+            <div class="bg-white rounded-lg shadow-md p-6 mb-6">
+                <h2 class="text-xl font-semibold text-gray-800 mb-4">
+                    <i class="fas fa-sitemap text-purple-500 mr-2"></i>データベース構造
+                </h2>
+                <div id="databaseStructure" class="space-y-3">
+                    <div class="flex items-center">
+                        <div class="w-4 h-4 bg-yellow-500 rounded-full mr-3"></div>
+                        <span>データベース構造確認中...</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- エラーログ -->
+            <div class="bg-white rounded-lg shadow-md p-6 mb-6">
+                <h2 class="text-xl font-semibold text-gray-800 mb-4">
+                    <i class="fas fa-exclamation-triangle text-red-500 mr-2"></i>エラーログ
+                </h2>
+                <div id="errorLog" class="bg-gray-50 p-4 rounded-lg min-h-32">
+                    <div class="text-gray-500 italic">エラーログはここに表示されます...</div>
+                </div>
+            </div>
+
+            <!-- デバッグ情報 -->
+            <div class="bg-white rounded-lg shadow-md p-6">
+                <h2 class="text-xl font-semibold text-gray-800 mb-4">
+                    <i class="fas fa-code text-indigo-500 mr-2"></i>詳細デバッグ情報
+                </h2>
+                <div id="debugInfo" class="bg-gray-50 p-4 rounded-lg">
+                    <pre id="debugOutput" class="text-sm text-gray-700 whitespace-pre-wrap">デバッグ情報はここに表示されます...</pre>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Firebase設定
+        const firebaseConfig = {
+            apiKey: "AIzaSyCRUvvs0OSz_9L9bXtqteVFIIze1OaZObE",
+            authDomain: "ce-scheduling-system-v2.firebaseapp.com",
+            databaseURL: "https://ce-scheduling-system-v2-default-rtdb.asia-southeast1.firebasedatabase.app",
+            projectId: "ce-scheduling-system-v2",
+            storageBucket: "ce-scheduling-system-v2.firebasestorage.app",
+            messagingSenderId: "288279598010",
+            appId: "1:288279598010:web:d545ee1d4d854513084383",
+            measurementId: "G-LSEEMJE2R0"
+        };
+
+        let app, auth, database;
+        let errorMessages = [];
+        let debugMessages = [];
+
+        // ログ関数
+        function logError(message) {
+            errorMessages.push(`[${new Date().toLocaleTimeString()}] ${message}`);
+            updateErrorLog();
+            console.error(message);
+        }
+
+        function logDebug(message) {
+            debugMessages.push(`[${new Date().toLocaleTimeString()}] ${message}`);
+            updateDebugInfo();
+            console.log(message);
+        }
+
+        function updateStatus(elementId, status, message, isSuccess = null) {
+            const element = document.getElementById(elementId);
+            let colorClass = 'bg-yellow-500';
+            let icon = 'fas fa-spinner fa-spin';
+            
+            if (isSuccess === true) {
+                colorClass = 'bg-green-500';
+                icon = 'fas fa-check';
+            } else if (isSuccess === false) {
+                colorClass = 'bg-red-500';
+                icon = 'fas fa-times';
+            }
+
+            element.innerHTML = `
+                <div class="flex items-center">
+                    <div class="w-4 h-4 ${colorClass} rounded-full mr-3"></div>
+                    <i class="${icon} mr-2"></i>
+                    <span>${message}</span>
+                </div>
+            `;
+        }
+
+        function updateErrorLog() {
+            const errorLog = document.getElementById('errorLog');
+            if (errorMessages.length === 0) {
+                errorLog.innerHTML = '<div class="text-gray-500 italic">エラーはありません</div>';
+            } else {
+                errorLog.innerHTML = errorMessages.map(msg => 
+                    `<div class="text-red-600 mb-1">${msg}</div>`
+                ).join('');
+            }
+        }
+
+        function updateDebugInfo() {
+            const debugOutput = document.getElementById('debugOutput');
+            debugOutput.textContent = debugMessages.join('\n');
+        }
+
+        // Firebase初期化
+        async function initializeFirebase() {
+            try {
+                logDebug('Firebase初期化開始...');
+                updateStatus('firebaseStatus', 'initializing', 'Firebase初期化中...');
+
+                app = firebase.initializeApp(firebaseConfig);
+                auth = firebase.auth();
+                database = firebase.database();
+
+                logDebug('Firebase App初期化完了');
+                logDebug(`Project ID: ${firebaseConfig.projectId}`);
+                logDebug(`Auth Domain: ${firebaseConfig.authDomain}`);
+                logDebug(`Database URL: ${firebaseConfig.databaseURL}`);
+
+                updateStatus('firebaseStatus', 'success', 'Firebase初期化完了', true);
+                return true;
+            } catch (error) {
+                logError(`Firebase初期化エラー: ${error.message}`);
+                updateStatus('firebaseStatus', 'error', `初期化失敗: ${error.message}`, false);
+                return false;
+            }
+        }
+
+        // 認証状態確認
+        async function checkAuthState() {
+            return new Promise((resolve) => {
+                try {
+                    logDebug('認証状態確認開始...');
+                    updateStatus('authStatus', 'checking', '認証状態確認中...');
+
+                    auth.onAuthStateChanged(async (user) => {
+                        if (user) {
+                            logDebug(`ユーザーログイン済み: ${user.email} (UID: ${user.uid})`);
+                            
+                            const authInfo = `
+                                <div class="space-y-2">
+                                    <div class="flex items-center">
+                                        <div class="w-4 h-4 bg-green-500 rounded-full mr-3"></div>
+                                        <i class="fas fa-check mr-2"></i>
+                                        <span>ログイン済み</span>
+                                    </div>
+                                    <div class="ml-7 text-sm text-gray-600">
+                                        <div><strong>Email:</strong> ${user.email}</div>
+                                        <div><strong>UID:</strong> ${user.uid}</div>
+                                        <div><strong>Email確認:</strong> ${user.emailVerified ? '済み' : '未確認'}</div>
+                                        <div><strong>作成日:</strong> ${new Date(user.metadata.creationTime).toLocaleString()}</div>
+                                        <div><strong>最終ログイン:</strong> ${new Date(user.metadata.lastSignInTime).toLocaleString()}</div>
+                                    </div>
+                                </div>
+                            `;
+                            
+                            document.getElementById('authStatus').innerHTML = authInfo;
+                            resolve(user);
+                        } else {
+                            logDebug('ユーザー未ログイン');
+                            updateStatus('authStatus', 'none', 'ログインしていません', false);
+                            resolve(null);
+                        }
+                    });
+                } catch (error) {
+                    logError(`認証状態確認エラー: ${error.message}`);
+                    updateStatus('authStatus', 'error', `認証エラー: ${error.message}`, false);
+                    resolve(null);
+                }
+            });
+        }
+
+        // ユーザーデータ取得
+        async function fetchUserData(user) {
+            if (!user) {
+                updateStatus('userData', 'none', 'ログインしていないためデータなし', false);
+                return;
+            }
+
+            try {
+                logDebug(`ユーザーデータ取得開始: UID=${user.uid}`);
+                updateStatus('userData', 'fetching', 'ユーザーデータ取得中...');
+
+                const userRef = database.ref(`ceScheduleV2/users/${user.uid}`);
+                const snapshot = await userRef.once('value');
+
+                if (snapshot.exists()) {
+                    const userData = snapshot.val();
+                    logDebug(`ユーザーデータ取得成功: ${JSON.stringify(userData)}`);
+
+                    const userInfo = `
+                        <div class="space-y-2">
+                            <div class="flex items-center">
+                                <div class="w-4 h-4 bg-green-500 rounded-full mr-3"></div>
+                                <i class="fas fa-check mr-2"></i>
+                                <span>ユーザーデータ取得完了</span>
+                            </div>
+                            <div class="ml-7 text-sm">
+                                <div class="bg-gray-50 p-3 rounded">
+                                    <pre class="whitespace-pre-wrap">${JSON.stringify(userData, null, 2)}</pre>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                    
+                    document.getElementById('userData').innerHTML = userInfo;
+
+                    // 初期ユーザーチェック
+                    if (userData.isInitialUser) {
+                        await checkInitialUserData(user.uid);
+                    }
+                } else {
+                    logError(`ユーザーデータが見つかりません: UID=${user.uid}`);
+                    updateStatus('userData', 'notfound', 'ユーザーデータが見つかりません', false);
+                }
+            } catch (error) {
+                logError(`ユーザーデータ取得エラー: ${error.message}`);
+                updateStatus('userData', 'error', `データ取得エラー: ${error.message}`, false);
+            }
+        }
+
+        // 初期ユーザーデータ確認
+        async function checkInitialUserData(uid) {
+            try {
+                logDebug(`初期ユーザーデータ確認: UID=${uid}`);
+                
+                const initialUserRef = database.ref(`ceScheduleV2/initialUsers/${uid}`);
+                const snapshot = await initialUserRef.once('value');
+
+                if (snapshot.exists()) {
+                    const initialData = snapshot.val();
+                    logDebug(`初期ユーザーデータ存在: ${JSON.stringify(initialData)}`);
+                } else {
+                    logError(`初期ユーザーデータが見つかりません: UID=${uid}`);
+                }
+            } catch (error) {
+                logError(`初期ユーザーデータ確認エラー: ${error.message}`);
+            }
+        }
+
+        // データベース構造確認
+        async function checkDatabaseStructure() {
+            try {
+                logDebug('データベース構造確認開始...');
+                updateStatus('databaseStructure', 'checking', 'データベース構造確認中...');
+
+                const paths = [
+                    'ceScheduleV2',
+                    'ceScheduleV2/users',
+                    'ceScheduleV2/usernames',
+                    'ceScheduleV2/initialUsers'
+                ];
+
+                let structureHtml = '<div class="space-y-3">';
+
+                for (const path of paths) {
+                    try {
+                        const ref = database.ref(path);
+                        const snapshot = await ref.once('value');
+                        
+                        if (snapshot.exists()) {
+                            const data = snapshot.val();
+                            const count = typeof data === 'object' ? Object.keys(data).length : 1;
+                            
+                            structureHtml += `
+                                <div class="flex items-center">
+                                    <div class="w-4 h-4 bg-green-500 rounded-full mr-3"></div>
+                                    <i class="fas fa-folder mr-2"></i>
+                                    <span class="font-mono text-sm">${path}</span>
+                                    <span class="ml-2 text-gray-500">(${count}件)</span>
+                                </div>
+                            `;
+                            
+                            logDebug(`${path}: ${count}件のデータ`);
+                        } else {
+                            structureHtml += `
+                                <div class="flex items-center">
+                                    <div class="w-4 h-4 bg-red-500 rounded-full mr-3"></div>
+                                    <i class="fas fa-folder-open mr-2"></i>
+                                    <span class="font-mono text-sm">${path}</span>
+                                    <span class="ml-2 text-red-500">(データなし)</span>
+                                </div>
+                            `;
+                            
+                            logDebug(`${path}: データなし`);
+                        }
+                    } catch (error) {
+                        structureHtml += `
+                            <div class="flex items-center">
+                                <div class="w-4 h-4 bg-red-500 rounded-full mr-3"></div>
+                                <i class="fas fa-exclamation-triangle mr-2"></i>
+                                <span class="font-mono text-sm">${path}</span>
+                                <span class="ml-2 text-red-500">(エラー: ${error.message})</span>
+                            </div>
+                        `;
+                        
+                        logError(`${path} 確認エラー: ${error.message}`);
+                    }
+                }
+
+                structureHtml += '</div>';
+                document.getElementById('databaseStructure').innerHTML = structureHtml;
+                
+            } catch (error) {
+                logError(`データベース構造確認エラー: ${error.message}`);
+                updateStatus('databaseStructure', 'error', `構造確認エラー: ${error.message}`, false);
+            }
+        }
+
+        // 完全診断実行
+        async function runFullDiagnosis() {
+            logDebug('=== 完全診断開始 ===');
+            clearResults();
+
+            const firebaseReady = await initializeFirebase();
+            if (!firebaseReady) {
+                logError('Firebase初期化に失敗したため診断を中止');
+                return;
+            }
+
+            const user = await checkAuthState();
+            await fetchUserData(user);
+            await checkDatabaseStructure();
+
+            logDebug('=== 完全診断完了 ===');
+        }
+
+        // 結果クリア
+        function clearResults() {
+            errorMessages = [];
+            debugMessages = [];
+            
+            updateStatus('firebaseStatus', 'waiting', 'Firebase初期化待機中...');
+            updateStatus('authStatus', 'waiting', '認証状態確認待機中...');
+            updateStatus('userData', 'waiting', 'ユーザーデータ取得待機中...');
+            updateStatus('databaseStructure', 'waiting', 'データベース構造確認待機中...');
+            
+            updateErrorLog();
+            updateDebugInfo();
+        }
+
+        // ページ読み込み時に自動実行
+        window.addEventListener('load', () => {
+            logDebug('診断ツール読み込み完了');
+            setTimeout(runFullDiagnosis, 1000);
+        });
+    </script>
+</body>
+</html>
