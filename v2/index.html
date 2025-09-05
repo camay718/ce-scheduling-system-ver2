@@ -73,11 +73,6 @@
                     <input type="password" id="securityInput" class="auth-input" 
                            placeholder="セキュリティコードを入力" 
                            onkeypress="if(event.key==='Enter') handleLogin()">
-                    <div class="text-right mt-2">
-        <a href="#" onclick="showPasswordReset()" class="text-xs text-blue-600 hover:underline">
-            パスワードを忘れた場合
-        </a>
-    </div>
                 </div>
 
                 <!-- ログインボタン -->
@@ -87,12 +82,18 @@
             </form>
 
             <!-- バージョン情報 -->
-            <!-- 新規登録リンク -->
+          <!-- 認証オプション -->
 <div class="auth-mode-switch">
-    <p class="text-sm text-gray-600">
+    <p class="text-sm text-gray-600 mb-2">
         アカウントをお持ちでない方は
         <a href="#" onclick="showRegistrationMode()" class="auth-link">
             <i class="fas fa-user-plus mr-1"></i>新規登録
+        </a>
+    </p>
+    <p class="text-sm text-gray-600">
+        Email認証のパスワードを忘れた方は
+        <a href="#" onclick="showPasswordReset()" class="auth-link">
+            <i class="fas fa-key mr-1"></i>パスワードリセット
         </a>
     </p>
 </div>
