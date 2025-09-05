@@ -26,22 +26,6 @@
     <!-- 登録画面 -->
     <div class="registration-container">
         <div class="registration-card">
-            <!-- プログレス表示 -->
-            <div class="progress-steps">
-                <div class="progress-step active">
-                    <div class="step-number">1</div>
-                    <div class="step-title">基本情報</div>
-                </div>
-                <div class="progress-step">
-                    <div class="step-number">2</div>
-                    <div class="step-title">確認</div>
-                </div>
-                <div class="progress-step">
-                    <div class="step-number">3</div>
-                    <div class="step-title">完了</div>
-                </div>
-            </div>
-
             <!-- ヘッダー -->
             <div class="registration-header">
                 <h1 class="registration-title">
@@ -55,187 +39,121 @@
 
             <!-- 登録フォーム -->
             <form id="registrationForm" class="space-y-4">
-                <!-- Step 1: 基本情報 -->
-                <div id="step1" class="registration-step">
-                    <!-- メールアドレス -->
-                    <div class="form-group">
-                        <label for="registerEmail" class="form-label">
-                            <i class="fas fa-envelope mr-1 text-blue-500"></i>
-                            メールアドレス
-                        </label>
-                        <input type="email" id="registerEmail" class="form-input" 
-                               placeholder="your.email@example.com" required>
-                        <div class="text-xs text-gray-500 mt-1">
-                            確認メールが送信されるため、有効なメールアドレスを入力してください
-                        </div>
-                    </div>
-
-                    <!-- パスワード -->
-                    <div class="form-group">
-                        <label for="registerPassword" class="form-label">
-                            <i class="fas fa-lock mr-1 text-blue-500"></i>
-                            パスワード
-                        </label>
-                        <input type="password" id="registerPassword" class="form-input" 
-                               placeholder="6文字以上のパスワード" required>
-                        <div class="text-xs text-gray-500 mt-1">
-                            英数字を含む6文字以上で設定してください
-                        </div>
-                    </div>
-
-                    <!-- パスワード確認 -->
-                    <div class="form-group">
-                        <label for="registerPasswordConfirm" class="form-label">
-                            <i class="fas fa-lock mr-1 text-blue-500"></i>
-                            パスワード確認
-                        </label>
-                        <input type="password" id="registerPasswordConfirm" class="form-input" 
-                               placeholder="同じパスワードを再入力" required>
-                    </div>
-
-                    <!-- 表示名 -->
-                    <div class="form-group">
-                        <label for="registerDisplayName" class="form-label">
-                            <i class="fas fa-user mr-1 text-blue-500"></i>
-                            表示名
-                        </label>
-                        <input type="text" id="registerDisplayName" class="form-input" 
-                               placeholder="システム内で表示される名前" required>
-                    </div>
-
-                    <!-- 所属部門 -->
-                    <div class="form-group">
-                        <label for="registerDepartment" class="form-label">
-                            <i class="fas fa-building mr-1 text-blue-500"></i>
-                            所属部門
-                        </label>
-                        <select id="registerDepartment" class="form-select" required>
-                            <option value="">部門を選択してください</option>
-                            <option value="手術・麻酔">手術・麻酔</option>
-                            <option value="機器管理・人工呼吸">MEセンター（機器管理・人工呼吸）</option>
-                            <option value="血液浄化">血液浄化</option>
-                            <option value="不整脈">不整脈</option>
-                            <option value="人工心肺・補助循環">人工心肺・補助循環</option>
-                            <option value="心・カテーテル">心・カテーテル</option>
-                            <option value="その他">その他</option>
-                        </select>
-                    </div>
-
-                    <!-- 職種 -->
-                    <div class="form-group">
-                        <label for="registerPosition" class="form-label">
-                            <i class="fas fa-id-badge mr-1 text-blue-500"></i>
-                            職種
-                        </label>
-                        <select id="registerPosition" class="form-select" required>
-                            <option value="">職種を選択してください</option>
-                            <option value="CE（臨床工学技士）">CE（臨床工学技士）</option>
-                            <option value="看護師">看護師</option>
-                            <option value="医師">医師</option>
-                            <option value="事務">事務</option>
-                            <option value="その他">その他</option>
-                        </select>
-                    </div>
-
-                    <!-- 希望権限 -->
-                    <div class="form-group">
-                        <label for="registerRole" class="form-label">
-                            <i class="fas fa-shield-alt mr-1 text-blue-500"></i>
-                            希望権限レベル
-                        </label>
-                        <select id="registerRole" class="form-select" required>
-                            <option value="viewer">閲覧のみ（Viewer）</option>
-                            <option value="editor">編集可能（Editor）</option>
-                            <option value="admin">管理者（要承認）</option>
-                        </select>
-                        <div class="text-xs text-gray-500 mt-1">
-                            管理者権限は既存管理者による承認が必要です
-                        </div>
-                    </div>
-
-                    <!-- 申請理由 -->
-                    <div class="form-group">
-                        <label for="registerReason" class="form-label">
-                            <i class="fas fa-comment mr-1 text-blue-500"></i>
-                            申請理由・コメント
-                        </label>
-                        <textarea id="registerReason" class="form-input" rows="3" 
-                                  placeholder="システム利用の目的や理由をご記入ください（任意）"></textarea>
-                    </div>
-
-                    <!-- 利用規約同意 -->
-                    <div class="form-group">
-                        <label class="flex items-center space-x-2 cursor-pointer">
-                            <input type="checkbox" id="agreeTerms" required 
-                                   class="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500">
-                            <span class="text-sm text-gray-700">
-                                <a href="#" class="text-blue-600 hover:underline">利用規約</a>
-                                および
-                                <a href="#" class="text-blue-600 hover:underline">プライバシーポリシー</a>
-                                に同意します
-                            </span>
-                        </label>
-                    </div>
-
-                    <!-- ボタン -->
-                    <div class="flex space-x-3">
-                        <button type="button" onclick="goBack()" class="flex-1 py-3 px-4 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors">
-                            <i class="fas fa-arrow-left mr-2"></i>
-                            ログイン画面に戻る
-                        </button>
-                        <button type="submit" id="registerButton" class="flex-1 btn-register">
-                            <i class="fas fa-user-plus mr-2"></i>
-                            登録申請
-                        </button>
+                <!-- メールアドレス -->
+                <div class="form-group">
+                    <label for="registerEmail" class="form-label">
+                        <i class="fas fa-envelope mr-1 text-blue-500"></i>
+                        メールアドレス
+                    </label>
+                    <input type="email" id="registerEmail" class="form-input" 
+                           placeholder="your.email@example.com" required>
+                    <div class="text-xs text-gray-500 mt-1">
+                        確認メールが送信されるため、有効なメールアドレスを入力してください
                     </div>
                 </div>
 
-                <!-- Step 2: 確認画面（隠し状態） -->
-                <div id="step2" class="registration-step" style="display: none;">
-                    <div class="text-center">
-                        <div class="success-icon">
-                            <i class="fas fa-envelope-open-text"></i>
-                        </div>
-                        <h3 class="text-xl font-bold text-gray-800 mb-4">
-                            確認メールを送信しました
-                        </h3>
-                        <div class="bg-blue-50 p-4 rounded-lg text-left">
-                            <p class="text-gray-700 mb-2">
-                                <strong>登録したメールアドレス:</strong><br>
-                                <span id="confirmEmail" class="text-blue-600"></span>
-                            </p>
-                            <p class="text-gray-600 text-sm">
-                                メールに記載されているリンクをクリックして、
-                                メールアドレスの確認を完了してください。
-                            </p>
-                        </div>
-                        <div class="mt-6">
-                            <button type="button" onclick="goBack()" class="btn-register">
-                                <i class="fas fa-sign-in-alt mr-2"></i>
-                                ログイン画面に戻る
-                            </button>
-                        </div>
+                <!-- パスワード -->
+                <div class="form-group">
+                    <label for="registerPassword" class="form-label">
+                        <i class="fas fa-lock mr-1 text-blue-500"></i>
+                        パスワード
+                    </label>
+                    <input type="password" id="registerPassword" class="form-input" 
+                           placeholder="6文字以上のパスワード" required>
+                    <div class="text-xs text-gray-500 mt-1">
+                        英数字を含む6文字以上で設定してください
                     </div>
                 </div>
 
-                <!-- Step 3: 完了画面（隠し状態） -->
-                <div id="step3" class="registration-step" style="display: none;">
-                    <div class="registration-success">
-                        <div class="success-icon">
-                            <i class="fas fa-check-circle"></i>
-                        </div>
-                        <h3 class="text-xl font-bold text-gray-800 mb-4">
-                            登録完了！
-                        </h3>
-                        <p class="text-gray-600 mb-6">
-                            アカウントが正常に作成されました。<br>
-                            管理者による承認をお待ちください。
-                        </p>
-                        <button type="button" onclick="goBack()" class="btn-register">
-                            <i class="fas fa-sign-in-alt mr-2"></i>
-                            ログインしてみる
-                        </button>
+                <!-- パスワード確認 -->
+                <div class="form-group">
+                    <label for="registerPasswordConfirm" class="form-label">
+                        <i class="fas fa-lock mr-1 text-blue-500"></i>
+                        パスワード確認
+                    </label>
+                    <input type="password" id="registerPasswordConfirm" class="form-input" 
+                           placeholder="同じパスワードを再入力" required>
+                </div>
+
+                <!-- 表示名 -->
+                <div class="form-group">
+                    <label for="registerDisplayName" class="form-label">
+                        <i class="fas fa-user mr-1 text-blue-500"></i>
+                        表示名
+                    </label>
+                    <input type="text" id="registerDisplayName" class="form-input" 
+                           placeholder="システム内で表示される名前" required>
+                </div>
+
+                <!-- 所属部門 -->
+                <div class="form-group">
+                    <label for="registerDepartment" class="form-label">
+                        <i class="fas fa-building mr-1 text-blue-500"></i>
+                        所属部門
+                    </label>
+                    <select id="registerDepartment" class="form-select" required>
+                        <option value="">部門を選択してください</option>
+                        <option value="手術・麻酔">手術・麻酔</option>
+                        <option value="機器管理・人工呼吸">MEセンター（機器管理・人工呼吸）</option>
+                        <option value="血液浄化">血液浄化</option>
+                        <option value="不整脈">不整脈</option>
+                        <option value="人工心肺・補助循環">人工心肺・補助循環</option>
+                        <option value="心・カテーテル">心・カテーテル</option>
+                        <option value="その他">その他</option>
+                    </select>
+                </div>
+
+                <!-- 職種 -->
+                <div class="form-group">
+                    <label for="registerPosition" class="form-label">
+                        <i class="fas fa-id-badge mr-1 text-blue-500"></i>
+                        職種
+                    </label>
+                    <select id="registerPosition" class="form-select" required>
+                        <option value="">職種を選択してください</option>
+                        <option value="CE（臨床工学技士）">CE（臨床工学技士）</option>
+                        <option value="看護師">看護師</option>
+                        <option value="医師">医師</option>
+                        <option value="事務">事務</option>
+                        <option value="その他">その他</option>
+                    </select>
+                </div>
+
+                <!-- 利用規約同意 -->
+                <div class="form-group">
+                    <label class="flex items-center space-x-2 cursor-pointer">
+                        <input type="checkbox" id="agreeTerms" required 
+                               class="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500">
+                        <span class="text-sm text-gray-700">
+                            利用規約およびプライバシーポリシーに同意します
+                        </span>
+                    </label>
+                </div>
+
+                <!-- ボタン -->
+                <div class="flex space-x-3">
+                    <button type="button" onclick="goBack()" class="flex-1 py-3 px-4 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors">
+                        <i class="fas fa-arrow-left mr-2"></i>
+                        ログイン画面に戻る
+                    </button>
+                    <button type="submit" id="registerButton" class="flex-1 btn-register">
+                        <i class="fas fa-user-plus mr-2"></i>
+                        登録申請
+                    </button>
+                </div>
+
+                <!-- 成功画面（隠し状態） -->
+                <div id="successMessage" style="display: none;" class="text-center">
+                    <div class="success-icon">
+                        <i class="fas fa-check-circle text-green-500 text-4xl"></i>
                     </div>
+                    <h3 class="text-xl font-bold text-gray-800 mb-4">
+                        登録完了！
+                    </h3>
+                    <p class="text-gray-600 mb-6">
+                        確認メールを送信しました。<br>
+                        メール内のリンクをクリックして確認を完了してください。
+                    </p>
                 </div>
             </form>
         </div>
@@ -280,9 +198,7 @@
                 const profile = {
                     displayName: document.getElementById('registerDisplayName').value.trim(),
                     department: document.getElementById('registerDepartment').value,
-                    position: document.getElementById('registerPosition').value,
-                    requestedRole: document.getElementById('registerRole').value,
-                    reason: document.getElementById('registerReason').value.trim()
+                    position: document.getElementById('registerPosition').value
                 };
 
                 // Email認証システムで登録
@@ -290,12 +206,13 @@
                     const result = await window.emailAuthSystem.registerWithEmail(email, password, profile);
                     
                     if (result.success) {
-                        showStep2(email);
+                        document.getElementById('registrationForm').style.display = 'none';
+                        document.getElementById('successMessage').style.display = 'block';
                     } else {
                         showMessage(result.message, 'error');
                     }
                 } else {
-                    showMessage('認証システムが準備できていません。しばらく待ってから再試行してください。', 'error');
+                    showMessage('認証システムが準備できていません。', 'error');
                 }
             } catch (error) {
                 console.error('登録エラー:', error);
@@ -305,16 +222,6 @@
                 button.disabled = false;
                 button.innerHTML = '<i class="fas fa-user-plus mr-2"></i>登録申請';
             }
-        }
-
-        // Step 2表示
-        function showStep2(email) {
-            document.getElementById('step1').style.display = 'none';
-            document.getElementById('step2').style.display = 'block';
-            document.getElementById('confirmEmail').textContent = email;
-            
-            // プログレス更新
-            document.querySelectorAll('.progress-step')[1].classList.add('active');
         }
 
         // ログイン画面に戻る
@@ -343,7 +250,6 @@
             setTimeout(() => messageDiv.remove(), 5000);
         }
 
-        // 初期化
         console.log('📧 登録画面初期化完了');
     </script>
 </body>
