@@ -1,9 +1,10 @@
 window.firebaseConfig = {
-    apiKey: "AIzaSyCRUvvs0OSz_9L9bXtqteVFIIze1OaZObE", // ← 新しいAPIキーを設定
-    authDomain: "ce-schedule-management.firebaseapp.com",
-    databaseURL: "https://ce-schedule-management-default-rtdb.asia-southeast1.firebasedatabase.app",
-    projectId: "ce-schedule-management",
-    storageBucket: "ce-schedule-management.firebasestorage.app",
-    messagingSenderId: "998140589230",
-    appId: "1:998140589230:web:6c8159f7c1242cd5aeb4d0"
-}
+  apiKey: "AIzaSyCRUvvs0OSz_9L9bXtqteVFIIze1OaZObE",
+  authDomain: "ce-scheduling-system-v2.firebaseapp.com",
+  databaseURL: "https://ce-scheduling-system-v2-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "ce-scheduling-system-v2",
+  storageBucket: "ce-scheduling-system-v2.firebasestorage.app",
+  messagingSenderId: "288279598010",
+  appId: "1:288279598010:web:d545ee1d4d854513084383",
+  measurementId: "G-LSEEMJE2R0"
+};
