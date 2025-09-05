@@ -52,74 +52,74 @@
                     </h2>
                 </div>
 
-<form id="createUserForm" class="admin-grid">
-    <div>
-        <!-- 🔧 氏名（修正済み） -->
-        <div class="admin-form-group">
-            <label for="username" class="admin-form-label">
-                <i class="fas fa-user mr-1"></i>ユーザー名（氏名）（必須）
-            </label>
-            <input type="text" id="username" class="admin-form-input" 
-                   placeholder="例: 田中太郎" required>
-        </div>
+                <form id="createUserForm" class="admin-grid">
+                    <div>
+                        <!-- 🔧 氏名（修正済み） -->
+                        <div class="admin-form-group">
+                            <label for="username" class="admin-form-label">
+                                <i class="fas fa-user mr-1"></i>ユーザー名（氏名）（必須）
+                            </label>
+                            <input type="text" id="username" class="admin-form-input" 
+                                   placeholder="例: 田中太郎" required>
+                        </div>
 
-        <!-- 🔧 権限レベル（修正済み） -->
-        <div class="admin-form-group">
-            <label for="permission" class="admin-form-label">
-                <i class="fas fa-shield-alt mr-1"></i>権限レベル
-            </label>
-            <select id="permission" class="admin-form-select" required onchange="toggleDepartmentField()">
-                <option value="">-- 権限を選択 --</option>
-                <option value="viewer">閲覧者（Viewer）</option>
-                <option value="editor">編集者（Editor）</option>
-            </select>
-        </div>
+                        <!-- 🔧 権限レベル（修正済み） -->
+                        <div class="admin-form-group">
+                            <label for="permission" class="admin-form-label">
+                                <i class="fas fa-shield-alt mr-1"></i>権限レベル
+                            </label>
+                            <select id="permission" class="admin-form-select" required onchange="toggleDepartmentField()">
+                                <option value="">-- 権限を選択 --</option>
+                                <option value="viewer">閲覧者（Viewer）</option>
+                                <option value="editor">編集者（Editor）</option>
+                            </select>
+                        </div>
 
-        <!-- 🆕 部門（Editorの場合のみ表示） -->
-        <div id="departmentField" class="admin-form-group" style="display: none;">
-            <label for="department" class="admin-form-label">
-                <i class="fas fa-building mr-1"></i>所属部門（必須）
-            </label>
-            <select id="department" class="admin-form-select">
-                <option value="">部門を選択してください</option>
-                <option value="手術・麻酔">手術・麻酔</option>
-                <option value="機器管理・人工呼吸">MEセンター（機器管理・人工呼吸）</option>
-                <option value="血液浄化">血液浄化</option>
-                <option value="不整脈">不整脈</option>
-                <option value="人工心肺・補助循環">人工心肺・補助循環</option>
-                <option value="心・カテーテル">心・カテーテル</option>
-                <option value="その他">その他</option>
-            </select>
-        </div>
-    </div>
+                        <!-- 🆕 部門（Editorの場合のみ表示） -->
+                        <div id="departmentField" class="admin-form-group" style="display: none;">
+                            <label for="department" class="admin-form-label">
+                                <i class="fas fa-building mr-1"></i>所属部門（必須）
+                            </label>
+                            <select id="department" class="admin-form-select">
+                                <option value="">部門を選択してください</option>
+                                <option value="手術・麻酔">手術・麻酔</option>
+                                <option value="機器管理・人工呼吸">MEセンター（機器管理・人工呼吸）</option>
+                                <option value="血液浄化">血液浄化</option>
+                                <option value="不整脈">不整脈</option>
+                                <option value="人工心肺・補助循環">人工心肺・補助循環</option>
+                                <option value="心・カテーテル">心・カテーテル</option>
+                                <option value="その他">その他</option>
+                            </select>
+                        </div>
+                    </div>
 
-    <div>
-        <!-- 初期パスワード（既存のまま） -->
-        <div class="admin-form-group">
-            <label for="initialPassword" class="admin-form-label">
-                <i class="fas fa-key mr-1"></i>初期パスワード
-            </label>
-            <div class="flex space-x-2">
-                <input type="text" id="initialPassword" class="admin-form-input admin-password-display" 
-                       placeholder="自動生成されます" readonly>
-                <button type="button" onclick="generateNewPassword()" class="admin-btn admin-btn-warning">
-                    <i class="fas fa-sync-alt mr-1"></i>生成
-                </button>
-            </div>
-            <div class="admin-help-text">
-                ユーザーに共有する初期ログイン用パスワードです
-            </div>
-        </div>
+                    <div>
+                        <!-- 初期パスワード（既存のまま） -->
+                        <div class="admin-form-group">
+                            <label for="initialPassword" class="admin-form-label">
+                                <i class="fas fa-key mr-1"></i>初期パスワード
+                            </label>
+                            <div class="flex space-x-2">
+                                <input type="text" id="initialPassword" class="admin-form-input admin-password-display" 
+                                       placeholder="自動生成されます" readonly>
+                                <button type="button" onclick="generateNewPassword()" class="admin-btn admin-btn-warning">
+                                    <i class="fas fa-sync-alt mr-1"></i>生成
+                                </button>
+                            </div>
+                            <div class="admin-help-text">
+                                ユーザーに共有する初期ログイン用パスワードです
+                            </div>
+                        </div>
 
-        <!-- 作成ボタン（既存のまま） -->
-        <div class="admin-form-group">
-            <button type="submit" id="createUserButton" class="admin-btn admin-btn-success w-full py-3">
-                <i class="fas fa-user-plus mr-2"></i>
-                初期ユーザー作成
-            </button>
-        </div>
-    </div>
-</form>
+                        <!-- 作成ボタン（既存のまま） -->
+                        <div class="admin-form-group">
+                            <button type="submit" id="createUserButton" class="admin-btn admin-btn-success w-full py-3">
+                                <i class="fas fa-user-plus mr-2"></i>
+                                初期ユーザー作成
+                            </button>
+                        </div>
+                    </div>
+                </form>
             </div>
 
             <!-- 作成結果表示 -->
@@ -269,20 +269,37 @@
                 await this.refreshConfiguredUsers();
             }
 
+            // 🔧 修正: handleCreateUser関数
             async handleCreateUser() {
                 const button = document.getElementById('createUserButton');
                 button.disabled = true;
                 button.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>作成中...';
 
                 try {
+                    // 🔧 AdminUserManager初期化待機
+                    if (!window.adminUserManager || !window.adminUserManager.isInitialized) {
+                        console.log('⏳ AdminUserManager初期化待機中...');
+                        
+                        let attempts = 0;
+                        while (attempts < 50 && (!window.adminUserManager || !window.adminUserManager.isInitialized)) {
+                            await new Promise(resolve => setTimeout(resolve, 100));
+                            attempts++;
+                        }
+                        
+                        if (!window.adminUserManager || !window.adminUserManager.isInitialized) {
+                            throw new Error('管理システムの初期化が完了していません');
+                        }
+                    }
+
                     const userData = {
-    displayName: document.getElementById('username').value.trim(),        // 🔧 ID変更
-    department: document.getElementById('department') ? 
-               document.getElementById('department').value : null,        // 🔧 動的取得
-    // position: document.getElementById('userPosition').value,          // 🗑️ 職種削除
-    role: document.getElementById('permission').value,                   // 🔧 ID変更
-    initialPassword: document.getElementById('initialPassword').value
-};
+                        displayName: document.getElementById('username').value.trim(),
+                        department: document.getElementById('department') ? 
+                                   document.getElementById('department').value : null,
+                        role: document.getElementById('permission').value,
+                        initialPassword: document.getElementById('initialPassword').value
+                    };
+
+                    console.log('📝 ユーザーデータ:', userData);
 
                     const result = await window.adminUserManager.createInitialUser(userData);
 
@@ -292,6 +309,7 @@
                         await this.refreshInitialUsers();
                     }
                 } catch (error) {
+                    console.error('❌ ユーザー作成エラー:', error);
                     this.showError(error.message);
                 } finally {
                     button.disabled = false;
@@ -329,10 +347,36 @@
                 this.generateNewPassword();
             }
 
-            generateNewPassword() {
-                if (window.adminUserManager) {
-                    const password = window.adminUserManager.generatePassword();
-                    document.getElementById('initialPassword').value = password;
+            // 🔧 修正: generateNewPassword関数
+            async generateNewPassword() {
+                try {
+                    // AdminUserManager初期化待機
+                    if (!window.adminUserManager || !window.adminUserManager.isInitialized) {
+                        console.log('⏳ パスワード生成: AdminUserManager初期化待機中...');
+                        
+                        let attempts = 0;
+                        while (attempts < 30 && (!window.adminUserManager || !window.adminUserManager.isInitialized)) {
+                            await new Promise(resolve => setTimeout(resolve, 100));
+                            attempts++;
+                        }
+                    }
+
+                    if (window.adminUserManager && window.adminUserManager.isInitialized) {
+                        const password = window.adminUserManager.generatePassword();
+                        document.getElementById('initialPassword').value = password;
+                        console.log('🔑 パスワード生成完了');
+                    } else {
+                        console.log('⚠️ AdminUserManager未初期化のため手動パスワード設定');
+                        // 緊急時の手動生成
+                        const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+                        let password = '';
+                        for (let i = 0; i < 8; i++) {
+                            password += chars.charAt(Math.floor(Math.random() * chars.length));
+                        }
+                        document.getElementById('initialPassword').value = password;
+                    }
+                } catch (error) {
+                    console.error('❌ パスワード生成エラー:', error);
                 }
             }
 
