@@ -5,6 +5,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>管理者ダッシュボード - CEスケジュール管理システム V2</title>
     <link rel="stylesheet" href="../css/admin.css">
+    
+    <!-- Firebase CDN -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
 </head>
 <body>
     <div class="admin-container">
@@ -119,7 +124,10 @@
         </footer>
     </div>
 
-    <!-- Firebase and Admin Script -->
-    <script type="module" src="../js/admin/admin-user-management.js"></script>
+    <!-- Firebase設定を最初に読み込み -->
+    <script src="../js/config/firebase-config.js"></script>
+    
+    <!-- メインスクリプトを最後に読み込み -->
+    <script src="../js/admin/admin-user-management.js"></script>
 </body>
 </html>
