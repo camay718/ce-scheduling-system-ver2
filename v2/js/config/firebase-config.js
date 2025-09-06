@@ -9,3 +9,27 @@ window.firebaseConfig = {
   measurementId: "G-LSEEMJE2R0"
 };
 
+// Firebase初期化
+try {
+    // 既に初期化されている場合はエラーを無視
+    if (!firebase.apps.length) {
+        firebase.initializeApp(firebaseConfig);
+        console.log('🔥 Firebase V2 初期化完了');
+    } else {
+        console.log('🔥 Firebase V2 既に初期化済み');
+    }
+} catch (error) {
+    console.error('❌ Firebase初期化エラー:', error);
+}
+
+// グローバル変数設定
+window.firebaseConfig = firebaseConfig;
+window.auth = firebase.auth();
+window.database = firebase.database();
+
+// グローバル変数確認
+console.log('🔥 Firebase グローバル変数設定完了:', {
+    auth: !!window.auth,
+    database: !!window.database,
+    config: !!window.firebaseConfig
+});
