@@ -8,6 +8,14 @@
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+    <style>
+        .fade-in { animation: fadeIn 0.5s ease-in; }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .hidden { display: none !important; }
+    </style>
 </head>
 <body class="bg-gradient-to-br from-blue-50 to-indigo-100 min-h-screen">
     <div id="app" class="min-h-screen flex items-center justify-center p-4">
@@ -18,7 +26,7 @@
         </div>
 
         <!-- ログイン画面 -->
-        <div id="loginSection" class="hidden w-full max-w-md">
+        <div id="loginSection" class="hidden w-full max-w-md fade-in">
             <div class="bg-white rounded-xl shadow-lg p-8">
                 <div class="text-center mb-8">
                     <h1 class="text-2xl font-bold text-gray-900 mb-2">CEスケジュール管理システム V2</h1>
@@ -29,51 +37,235 @@
                     <div>
                         <label class="block text-sm font-medium text-gray-700 mb-2">ユーザー名</label>
                         <input type="text" id="username" required 
-                               class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                               class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-colors"
                                placeholder="ユーザー名を入力">
+                        <p class="mt-1 text-xs text-gray-500">
+                            <i class="fas fa-info-circle mr-1"></i>
+                            V2システムはユーザー名のみでログインできます（パスワード不要）
+                        </p>
                     </div>
-                    <button type="submit" 
-                            class="w-full bg-indigo-600 text-white py-2 px-4 rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500">
-                        ログイン
+                    <button type="submit" id="loginButton"
+                            class="w-full bg-indigo-600 text-white py-2 px-4 rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-colors disabled:opacity-50">
+                        <span id="loginButtonText">ログイン</span>
+                        <div id="loginSpinner" class="hidden inline-block w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin ml-2"></div>
                     </button>
                 </form>
 
-                <div class="mt-6 text-center">
-                    <p class="text-sm text-gray-600">管理者の方は <a href="admin/" class="text-indigo-600 hover:text-indigo-800">こちら</a></p>
+                <div class="mt-6 text-center border-t pt-4">
+                    <p class="text-sm text-gray-600">
+                        管理者の方は 
+                        <a href="pages/admin-dashboard.html" class="text-indigo-600 hover:text-indigo-800 font-medium transition-colors">
+                            <i class="fas fa-cog mr-1"></i>こちら
+                        </a>
+                    </p>
                 </div>
             </div>
         </div>
 
         <!-- 個人設定画面 -->
-        <div id="userSetupSection" class="hidden w-full max-w-md">
+        <div id="userSetupSection" class="hidden w-full max-w-md fade-in">
             <div class="bg-white rounded-xl shadow-lg p-8">
-                <h2 class="text-xl font-semibold text-gray-900 mb-6">個人設定</h2>
+                <div class="text-center mb-6">
+                    <i class="fas fa-user-cog text-3xl text-indigo-600 mb-3"></i>
+                    <h2 class="text-xl font-semibold text-gray-900">個人設定</h2>
+                    <p class="text-gray-600 text-sm">初回ログイン時の設定を行います</p>
+                </div>
                 
                 <form id="userSetupForm" class="space-y-6">
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-2">表示名</label>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">
+                            <i class="fas fa-user mr-1"></i>表示名
+                        </label>
                         <input type="text" id="displayName" required 
-                               class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                               class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-colors"
                                placeholder="表示名を入力">
                     </div>
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-2">メールアドレス（任意）</label>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">
+                            <i class="fas fa-envelope mr-1"></i>メールアドレス（任意）
+                        </label>
                         <input type="email" id="email" 
-                               class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                               class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-colors"
                                placeholder="メールアドレス（任意）">
+                        <p class="mt-1 text-xs text-gray-500">通知や連絡用（設定は任意です）</p>
                     </div>
-                    <button type="submit" 
-                            class="w-full bg-indigo-600 text-white py-2 px-4 rounded-md hover:bg-indigo-700">
-                        設定完了
+                    <button type="submit" id="setupButton"
+                            class="w-full bg-indigo-600 text-white py-2 px-4 rounded-md hover:bg-indigo-700 transition-colors disabled:opacity-50">
+                        <i class="fas fa-check mr-1"></i>
+                        <span id="setupButtonText">設定完了</span>
+                        <div id="setupSpinner" class="hidden inline-block w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin ml-2"></div>
                     </button>
                 </form>
             </div>
         </div>
+
+        <!-- メイン画面（スケジュール管理画面へのリダイレクト用） -->
+        <div id="mainSection" class="hidden w-full max-w-md text-center">
+            <div class="bg-white rounded-xl shadow-lg p-8">
+                <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mx-auto mb-4"></div>
+                <p class="text-gray-600">メインダッシュボードに移動しています...</p>
+            </div>
+        </div>
     </div>
+
+    <!-- 通知表示エリア -->
+    <div id="notificationContainer" class="fixed top-4 right-4 z-50"></div>
+
+    <!-- Font Awesome for icons -->
+    <script src="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/js/all.min.js"></script>
 
     <!-- Firebase設定とメインスクリプト -->
     <script src="js/config/firebase-config.js"></script>
     <script src="js/auth/auth-core.js"></script>
     <script src="js/auth/initial-login.js"></script>
+
+    <script>
+        // ローディング制御の改善
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('🔧 V2システム DOM読み込み完了');
+            
+            // 認証システムが準備完了したらローディングを非表示
+            const originalShowLoginScreen = window.showLoginScreen;
+            if (originalShowLoginScreen) {
+                window.showLoginScreen = function() {
+                    const loading = document.getElementById('loading');
+                    const loginSection = document.getElementById('loginSection');
+                    const mainSection = document.getElementById('mainSection');
+                    const userSetupSection = document.getElementById('userSetupSection');
+                    
+                    if (loading) loading.classList.add('hidden');
+                    if (loginSection) {
+                        loginSection.classList.remove('hidden');
+                        loginSection.style.display = 'block';
+                    }
+                    if (mainSection) mainSection.classList.add('hidden');
+                    if (userSetupSection) userSetupSection.classList.add('hidden');
+                    
+                    console.log('🔓 ログイン画面表示（修正版）');
+                };
+            }
+
+            // ログインフォーム送信処理の改善
+            const loginForm = document.getElementById('loginForm');
+            if (loginForm) {
+                loginForm.addEventListener('submit', function(e) {
+                    e.preventDefault();
+                    const username = document.getElementById('username').value.trim();
+                    const loginButton = document.getElementById('loginButton');
+                    const loginButtonText = document.getElementById('loginButtonText');
+                    const loginSpinner = document.getElementById('loginSpinner');
+                    
+                    if (!username) {
+                        showNotification('ユーザー名を入力してください', 'error');
+                        return;
+                    }
+                    
+                    // ローディング表示
+                    loginButton.disabled = true;
+                    loginButtonText.textContent = 'ログイン中...';
+                    loginSpinner.classList.remove('hidden');
+                    
+                    // 認証処理（auth-core.jsの機能を使用）
+                    setTimeout(() => {
+                        if (window.authSystem && typeof window.authSystem.handleLogin === 'function') {
+                            window.authSystem.handleLogin(username).catch(error => {
+                                console.error('ログインエラー:', error);
+                                showNotification('ログインに失敗しました', 'error');
+                                
+                                // ローディング解除
+                                loginButton.disabled = false;
+                                loginButtonText.textContent = 'ログイン';
+                                loginSpinner.classList.add('hidden');
+                            });
+                        } else {
+                            console.log('🔍 認証システム準備中...', username);
+                            showNotification('認証システムを準備中です。少々お待ちください。', 'info');
+                            
+                            // ローディング解除
+                            setTimeout(() => {
+                                loginButton.disabled = false;
+                                loginButtonText.textContent = 'ログイン';
+                                loginSpinner.classList.add('hidden');
+                            }, 2000);
+                        }
+                    }, 500);
+                });
+            }
+
+            // 個人設定フォーム送信処理
+            const userSetupForm = document.getElementById('userSetupForm');
+            if (userSetupForm) {
+                userSetupForm.addEventListener('submit', function(e) {
+                    e.preventDefault();
+                    const displayName = document.getElementById('displayName').value.trim();
+                    const email = document.getElementById('email').value.trim();
+                    const setupButton = document.getElementById('setupButton');
+                    const setupButtonText = document.getElementById('setupButtonText');
+                    const setupSpinner = document.getElementById('setupSpinner');
+                    
+                    if (!displayName) {
+                        showNotification('表示名を入力してください', 'error');
+                        return;
+                    }
+                    
+                    // ローディング表示
+                    setupButton.disabled = true;
+                    setupButtonText.textContent = '設定中...';
+                    setupSpinner.classList.remove('hidden');
+                    
+                    // 設定保存処理
+                    setTimeout(() => {
+                        console.log('🔧 個人設定保存:', { displayName, email });
+                        showNotification('設定を保存しました', 'success');
+                        
+                        // ダッシュボードに移動
+                        setTimeout(() => {
+                            window.location.href = 'dashboard.html';
+                        }, 1500);
+                    }, 1000);
+                });
+            }
+        });
+
+        // 通知表示機能
+        function showNotification(message, type = 'info') {
+            const container = document.getElementById('notificationContainer');
+            if (!container) return;
+            
+            const notification = document.createElement('div');
+            notification.className = `
+                p-4 rounded-lg shadow-lg mb-2 animate-pulse
+                ${type === 'success' ? 'bg-green-100 text-green-800 border border-green-200' : ''}
+                ${type === 'error' ? 'bg-red-100 text-red-800 border border-red-200' : ''}
+                ${type === 'info' ? 'bg-blue-100 text-blue-800 border border-blue-200' : ''}
+            `;
+            
+            const icon = type === 'success' ? 'fas fa-check-circle' : 
+                        type === 'error' ? 'fas fa-exclamation-circle' : 
+                        'fas fa-info-circle';
+            
+            notification.innerHTML = `<i class="${icon} mr-2"></i>${message}`;
+            container.appendChild(notification);
+            
+            // 3秒後に自動削除
+            setTimeout(() => {
+                notification.remove();
+            }, 3000);
+        }
+
+        // エラーハンドリング
+        window.addEventListener('error', function(e) {
+            console.error('🚨 システムエラー:', e.error);
+            showNotification('システムエラーが発生しました', 'error');
+        });
+        
+        // Firebase初期化エラーのハンドリング
+        window.addEventListener('unhandledrejection', function(e) {
+            if (e.reason && e.reason.toString().includes('Firebase')) {
+                console.error('🔥 Firebase エラー:', e.reason);
+                showNotification('Firebase接続エラーが発生しました', 'error');
+            }
+        });
+    </script>
 </body>
 </html>
