@@ -119,154 +119,109 @@
     <script src="js/auth/auth-core.js"></script>
     <script src="js/auth/initial-login.js"></script>
 
-    <script>
-        // ローディング制御の改善
-        document.addEventListener('DOMContentLoaded', function() {
-            console.log('🔧 V2システム DOM読み込み完了');
-            
-            // 認証システムが準備完了したらローディングを非表示
-            const originalShowLoginScreen = window.showLoginScreen;
-            if (originalShowLoginScreen) {
-                window.showLoginScreen = function() {
-                    const loading = document.getElementById('loading');
-                    const loginSection = document.getElementById('loginSection');
-                    const mainSection = document.getElementById('mainSection');
-                    const userSetupSection = document.getElementById('userSetupSection');
-                    
-                    if (loading) loading.classList.add('hidden');
-                    if (loginSection) {
-                        loginSection.classList.remove('hidden');
-                        loginSection.style.display = 'block';
-                    }
-                    if (mainSection) mainSection.classList.add('hidden');
-                    if (userSetupSection) userSetupSection.classList.add('hidden');
-                    
-                    console.log('🔓 ログイン画面表示（修正版）');
-                };
-            }
+    <!-- 追加：DOM制御強化スクリプト -->
+<script>
+// DOM制御強化システム
+class DOMController {
+    constructor() {
+        this.init();
+    }
 
-            // ログインフォーム送信処理の改善
-            const loginForm = document.getElementById('loginForm');
-            if (loginForm) {
-                loginForm.addEventListener('submit', function(e) {
-                    e.preventDefault();
-                    const username = document.getElementById('username').value.trim();
-                    const loginButton = document.getElementById('loginButton');
-                    const loginButtonText = document.getElementById('loginButtonText');
-                    const loginSpinner = document.getElementById('loginSpinner');
-                    
-                    if (!username) {
-                        showNotification('ユーザー名を入力してください', 'error');
-                        return;
-                    }
-                    
-                    // ローディング表示
-                    loginButton.disabled = true;
-                    loginButtonText.textContent = 'ログイン中...';
-                    loginSpinner.classList.remove('hidden');
-                    
-                    // 認証処理（auth-core.jsの機能を使用）
-                    setTimeout(() => {
-                        if (window.authSystem && typeof window.authSystem.handleLogin === 'function') {
-                            window.authSystem.handleLogin(username).catch(error => {
-                                console.error('ログインエラー:', error);
-                                showNotification('ログインに失敗しました', 'error');
-                                
-                                // ローディング解除
-                                loginButton.disabled = false;
-                                loginButtonText.textContent = 'ログイン';
-                                loginSpinner.classList.add('hidden');
-                            });
-                        } else {
-                            console.log('🔍 認証システム準備中...', username);
-                            showNotification('認証システムを準備中です。少々お待ちください。', 'info');
-                            
-                            // ローディング解除
-                            setTimeout(() => {
-                                loginButton.disabled = false;
-                                loginButtonText.textContent = 'ログイン';
-                                loginSpinner.classList.add('hidden');
-                            }, 2000);
-                        }
-                    }, 500);
-                });
-            }
+    init() {
+        // 少し遅延してDOM制御実行
+        setTimeout(() => {
+            this.forceShowLoginScreen();
+        }, 1000);
+    }
 
-            // 個人設定フォーム送信処理
-            const userSetupForm = document.getElementById('userSetupForm');
-            if (userSetupForm) {
-                userSetupForm.addEventListener('submit', function(e) {
-                    e.preventDefault();
-                    const displayName = document.getElementById('displayName').value.trim();
-                    const email = document.getElementById('email').value.trim();
-                    const setupButton = document.getElementById('setupButton');
-                    const setupButtonText = document.getElementById('setupButtonText');
-                    const setupSpinner = document.getElementById('setupSpinner');
-                    
-                    if (!displayName) {
-                        showNotification('表示名を入力してください', 'error');
-                        return;
-                    }
-                    
-                    // ローディング表示
-                    setupButton.disabled = true;
-                    setupButtonText.textContent = '設定中...';
-                    setupSpinner.classList.remove('hidden');
-                    
-                    // 設定保存処理
-                    setTimeout(() => {
-                        console.log('🔧 個人設定保存:', { displayName, email });
-                        showNotification('設定を保存しました', 'success');
-                        
-                        // ダッシュボードに移動
-                        setTimeout(() => {
-                            window.location.href = 'dashboard.html';
-                        }, 1500);
-                    }, 1000);
-                });
-            }
-        });
+    forceShowLoginScreen() {
+        console.log('🔧 DOM制御強化: ログイン画面強制表示');
+        
+        // 各要素取得
+        const loading = document.getElementById('loading');
+        const loginSection = document.getElementById('loginSection');
+        const mainSection = document.getElementById('mainSection');
+        const userSetupSection = document.getElementById('userSetupSection');
 
-        // 通知表示機能
-        function showNotification(message, type = 'info') {
-            const container = document.getElementById('notificationContainer');
-            if (!container) return;
-            
-            const notification = document.createElement('div');
-            notification.className = `
-                p-4 rounded-lg shadow-lg mb-2 animate-pulse
-                ${type === 'success' ? 'bg-green-100 text-green-800 border border-green-200' : ''}
-                ${type === 'error' ? 'bg-red-100 text-red-800 border border-red-200' : ''}
-                ${type === 'info' ? 'bg-blue-100 text-blue-800 border border-blue-200' : ''}
-            `;
-            
-            const icon = type === 'success' ? 'fas fa-check-circle' : 
-                        type === 'error' ? 'fas fa-exclamation-circle' : 
-                        'fas fa-info-circle';
-            
-            notification.innerHTML = `<i class="${icon} mr-2"></i>${message}`;
-            container.appendChild(notification);
-            
-            // 3秒後に自動削除
-            setTimeout(() => {
-                notification.remove();
-            }, 3000);
+        // ローディング非表示
+        if (loading) {
+            loading.style.display = 'none';
+            loading.classList.add('hidden');
+            console.log('✅ ローディング画面非表示');
         }
 
-        // エラーハンドリング
-        window.addEventListener('error', function(e) {
-            console.error('🚨 システムエラー:', e.error);
-            showNotification('システムエラーが発生しました', 'error');
-        });
+        // メイン画面非表示
+        if (mainSection) {
+            mainSection.style.display = 'none';
+            mainSection.classList.add('hidden');
+        }
+
+        // ユーザー設定画面非表示
+        if (userSetupSection) {
+            userSetupSection.style.display = 'none';
+            userSetupSection.classList.add('hidden');
+        }
+
+        // ログイン画面表示
+        if (loginSection) {
+            loginSection.style.display = 'block';
+            loginSection.classList.remove('hidden');
+            loginSection.classList.add('fade-in');
+            console.log('✅ ログイン画面強制表示完了');
+            
+            // フォームイベント再設定
+            this.setupLoginForm();
+        } else {
+            console.error('❌ loginSection要素が見つかりません');
+        }
+    }
+
+    setupLoginForm() {
+        const loginForm = document.getElementById('loginForm');
+        const usernameInput = document.getElementById('username');
         
-        // Firebase初期化エラーのハンドリング
-        window.addEventListener('unhandledrejection', function(e) {
-            if (e.reason && e.reason.toString().includes('Firebase')) {
-                console.error('🔥 Firebase エラー:', e.reason);
-                showNotification('Firebase接続エラーが発生しました', 'error');
-            }
-        });
-    </script>
+        if (loginForm && !loginForm.hasAttribute('data-setup')) {
+            loginForm.setAttribute('data-setup', 'true');
+            loginForm.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const username = usernameInput.value.trim();
+                
+                if (!username) {
+                    alert('ユーザー名を入力してください');
+                    return;
+                }
+                
+                console.log('🔐 ログイン試行:', username);
+                
+                // グローバル関数呼び出し（auth-core.js経由）
+                if (window.handleLogin) {
+                    window.handleLogin(username);
+                } else {
+                    console.error('❌ ログイン処理関数が見つかりません');
+                }
+            });
+            console.log('✅ ログインフォームイベント設定完了');
+        }
+    }
+}
+
+// DOM読み込み完了後に実行
+document.addEventListener('DOMContentLoaded', () => {
+    console.log('🔧 V2システム DOM読み込み完了');
+    new DOMController();
+});
+
+// 認証状態変更時のフォールバック
+window.addEventListener('load', () => {
+    setTimeout(() => {
+        const loginSection = document.getElementById('loginSection');
+        if (loginSection && loginSection.style.display === 'none') {
+            console.log('🔧 フォールバック: ログイン画面再表示');
+            new DOMController();
+        }
+    }, 2000);
+});
+</script>
 </body>
 </html>
 
