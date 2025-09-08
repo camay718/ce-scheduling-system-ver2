@@ -102,6 +102,11 @@
             color: white;
         }
         
+        .btn-small {
+            padding: 6px 12px;
+            font-size: 12px;
+        }
+        
         .status {
             padding: 12px 16px;
             border-radius: 8px;
@@ -175,6 +180,16 @@
             background: #9ae6b4;
             color: #22543d;
         }
+        
+        .password-display {
+            font-family: 'Courier New', monospace;
+            background: #f7fafc;
+            padding: 8px 12px;
+            border-radius: 6px;
+            border: 1px solid #e2e8f0;
+            font-size: 14px;
+            font-weight: bold;
+        }
     </style>
 </head>
 <body>
@@ -214,32 +229,49 @@
                         </div>
                         
                         <div class="form-group">
-                            <label for="email" class="form-label">
-                                <i class="fas fa-envelope mr-2"></i>メールアドレス（任意）
+                            <label for="role" class="form-label">
+                                <i class="fas fa-key mr-2"></i>権限レベル *
                             </label>
-                            <input 
-                                type="email" 
-                                id="email" 
-                                class="form-input" 
-                                placeholder="例: tanaka@example.com"
-                                autocomplete="off"
-                            >
+                            <select id="role" class="form-select" required>
+                                <option value="">権限を選択</option>
+                                <option value="viewer">スタッフ (閲覧のみ)</option>
+                                <option value="editor">エディタ (スケジュール編集可)</option>
+                                <option value="admin">管理者 (全権限)</option>
+                            </select>
                         </div>
                     </div>
                     
                     <div class="form-group">
-                        <label for="role" class="form-label">
-                            <i class="fas fa-key mr-2"></i>権限レベル *
+                        <label for="email" class="form-label">
+                            <i class="fas fa-envelope mr-2"></i>メールアドレス（任意）
                         </label>
-                        <select id="role" class="form-select" required>
-                            <option value="">権限を選択</option>
-                            <option value="admin">管理者 (全権限)</option>
-                            <option value="editor">編集者 (スケジュール編集可)</option>
-                            <option value="viewer">閲覧者 (閲覧のみ)</option>
-                        </select>
+                        <input 
+                            type="email" 
+                            id="email" 
+                            class="form-input" 
+                            placeholder="例: tanaka@example.com（パスワードリセット用）"
+                            autocomplete="off"
+                        >
                     </div>
                     
-                    <button type="button" id="createUserBtn" class="btn btn-primary">
+                    <div class="form-group">
+                        <label class="form-label">
+                            <i class="fas fa-lock mr-2"></i>初回パスワード
+                        </label>
+                        <div class="flex items-center gap-3">
+                            <div id="generatedPassword" class="password-display flex-1">
+                                パスワードを生成してください
+                            </div>
+                            <button type="button" id="generatePasswordBtn" class="btn btn-outline btn-small">
+                                <i class="fas fa-random mr-1"></i>パスワード生成
+                            </button>
+                        </div>
+                        <p class="text-sm text-gray-600 mt-2">
+                            生成されたパスワードを新規ユーザーに伝達してください
+                        </p>
+                    </div>
+                    
+                    <button type="button" id="createUserBtn" class="btn btn-primary" disabled>
                         <i class="fas fa-plus mr-2"></i>ユーザーを作成
                     </button>
                 </form>
@@ -250,8 +282,9 @@
                     </h4>
                     <ol class="text-blue-700 text-sm space-y-1">
                         <li>1. 上記フォームで新規ユーザー情報を入力</li>
-                        <li>2. 新規ユーザーには「初回ログイン時はパスワード欄を空欄」と伝達</li>
-                        <li>3. 新規ユーザーが初回ログイン後、表示名とパスワードを自身で設定</li>
+                        <li>2. パスワード生成ボタンで安全なパスワードを生成</li>
+                        <li>3. 生成されたパスワードを新規ユーザーに伝達</li>
+                        <li>4. 新規ユーザーが初回ログイン後、表示名とパスワードを自身で設定</li>
                     </ol>
                 </div>
 
@@ -262,22 +295,52 @@
                     </h4>
                     <div class="text-yellow-700 text-sm">
                         <p class="mb-2"><strong>パスワードリセット機能:</strong></p>
-                        <ul class="space-y-1 ml-4">
-                            <li>• メールアドレス認証によるパスワードリセット</li>
-                            <li>• セキュアなリセットトークン生成</li>
-                            <li>• 期限付きリセットリンクの送信</li>
-                            <li>• ユーザー自身でのパスワード再設定</li>
-                            <li>• リセット履歴の管理者確認</li>
+                        <ul class="space-y-1 ml-4 list-disc list-inside">
+                            <li>メールアドレス認証によるパスワードリセット</li>
+                            <li>セキュアなリセットトークン生成</li>
+                            <li>期限付きリセットリンクの送信</li>
+                            <li>ユーザー自身でのパスワード再設定</li>
+                            <li>リセット履歴の管理者確認</li>
                         </ul>
                     </div>
                 </div>
             </section>
 
-            <!-- ユーザー一覧セクション -->
+            <!-- 初回ログイン待機リスト -->
+            <section class="section">
+                <h2 class="text-2xl font-bold text-gray-800 mb-6 flex items-center">
+                    <i class="fas fa-clock text-yellow-600 mr-3"></i>
+                    初回ログイン待機リスト
+                </h2>
+                
+                <div class="overflow-x-auto">
+                    <table class="user-table">
+                        <thead>
+                            <tr>
+                                <th><i class="fas fa-user mr-2"></i>ユーザー名</th>
+                                <th><i class="fas fa-key mr-2"></i>権限</th>
+                                <th><i class="fas fa-envelope mr-2"></i>メールアドレス</th>
+                                <th><i class="fas fa-lock mr-2"></i>初回パスワード</th>
+                                <th><i class="fas fa-calendar mr-2"></i>作成日時</th>
+                                <th><i class="fas fa-cog mr-2"></i>操作</th>
+                            </tr>
+                        </thead>
+                        <tbody id="pendingUsersTableBody">
+                            <tr>
+                                <td colspan="6" class="text-center text-gray-500">
+                                    <i class="fas fa-spinner fa-spin mr-2"></i>データを読み込み中...
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <!-- アクティブユーザー一覧 -->
             <section class="section">
                 <h2 class="text-2xl font-bold text-gray-800 mb-6 flex items-center">
                     <i class="fas fa-users text-green-600 mr-3"></i>
-                    登録ユーザー一覧
+                    アクティブユーザー一覧
                 </h2>
                 
                 <div class="overflow-x-auto">
@@ -288,31 +351,18 @@
                                 <th><i class="fas fa-id-card mr-2"></i>表示名</th>
                                 <th><i class="fas fa-envelope mr-2"></i>メールアドレス</th>
                                 <th><i class="fas fa-key mr-2"></i>権限</th>
-                                <th><i class="fas fa-info-circle mr-2"></i>ステータス</th>
-                                <th><i class="fas fa-calendar mr-2"></i>作成日時</th>
+                                <th><i class="fas fa-calendar mr-2"></i>最終ログイン</th>
                                 <th><i class="fas fa-cog mr-2"></i>操作</th>
                             </tr>
                         </thead>
-                        <tbody id="userTableBody">
+                        <tbody id="activeUsersTableBody">
                             <tr>
-                                <td colspan="7" class="text-center text-gray-500">
+                                <td colspan="6" class="text-center text-gray-500">
                                     <i class="fas fa-spinner fa-spin mr-2"></i>データを読み込み中...
                                 </td>
                             </tr>
                         </tbody>
                     </table>
-                </div>
-
-                <div class="mt-6 p-4 bg-green-50 border-l-4 border-green-400 rounded">
-                    <h4 class="font-semibold text-green-800 mb-2">
-                        <i class="fas fa-lightbulb mr-2"></i>ユーザー管理のヒント
-                    </h4>
-                    <ul class="text-green-700 text-sm space-y-1">
-                        <li><strong>初期状態</strong>: 作成直後のユーザー（個人設定未完了）</li>
-                        <li><strong>設定完了</strong>: 個人設定を完了したアクティブユーザー</li>
-                        <li><strong>権限変更</strong>: 編集機能で後から権限レベルを変更可能</li>
-                        <li><strong>安全な削除</strong>: 削除前に確認ダイアログが表示されます</li>
-                    </ul>
                 </div>
             </section>
         </main>
@@ -338,7 +388,9 @@
     class AdminUserManagement {
         constructor() {
             this.database = null;
-            this.users = [];
+            this.pendingUsers = [];
+            this.activeUsers = [];
+            this.currentPassword = '';
             this.init();
         }
 
@@ -368,10 +420,30 @@
         }
 
         setupEventListeners() {
+            const generateBtn = document.getElementById('generatePasswordBtn');
+            if (generateBtn) {
+                generateBtn.onclick = () => this.generatePassword();
+            }
+
             const createBtn = document.getElementById('createUserBtn');
             if (createBtn) {
                 createBtn.onclick = () => this.createUser();
             }
+        }
+
+        generatePassword() {
+            // 8文字の安全なパスワードを生成
+            const chars = 'ABCDEFGHJKMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789';
+            let password = '';
+            for (let i = 0; i < 8; i++) {
+                password += chars.charAt(Math.floor(Math.random() * chars.length));
+            }
+            
+            this.currentPassword = password;
+            document.getElementById('generatedPassword').textContent = password;
+            document.getElementById('createUserBtn').disabled = false;
+            
+            console.log('🔑 パスワード生成完了');
         }
 
         async createUser() {
@@ -379,8 +451,8 @@
             const email = document.getElementById('email').value.trim();
             const role = document.getElementById('role').value;
 
-            if (!username || !role) {
-                this.showStatus('ユーザー名と権限は必須です', 'error');
+            if (!username || !role || !this.currentPassword) {
+                this.showStatus('すべての必須項目を入力し、パスワードを生成してください', 'error');
                 return;
             }
 
@@ -392,38 +464,36 @@
             }
 
             try {
-                // ユーザー名重複チェック
-                const existingUsernameSnap = await this.database.ref(`${window.DATA_ROOT}/usernames/${username}`).once('value');
-                if (existingUsernameSnap.exists()) {
+                // ユーザー名重複チェック（両方のテーブル）
+                const [usernameSnap, pendingSnap] = await Promise.all([
+                    this.database.ref(`${window.DATA_ROOT}/usernames/${username}`).once('value'),
+                    this.database.ref(`${window.DATA_ROOT}/pendingUsers/${username}`).once('value')
+                ]);
+
+                if (usernameSnap.exists() || pendingSnap.exists()) {
                     this.showStatus('このユーザー名は既に存在します', 'error');
                     return;
                 }
 
-                // 新しいユーザーのUIDを生成
-                const newUserRef = this.database.ref(`${window.DATA_ROOT}/users`).push();
-                const newUid = newUserRef.key;
-
-                const newUserData = {
-                    uid: newUid,
+                // 初回ログイン待機リストに追加
+                const pendingUserData = {
                     username: username,
-                    displayName: username,
                     email: email || null,
-                    password: null,
                     role: role,
-                    department: null,
-                    setupCompleted: false,
+                    initialPassword: this.currentPassword,
                     createdAt: firebase.database.ServerValue.TIMESTAMP,
-                    lastLogin: 0
+                    createdBy: 'admin'
                 };
 
-                // usersとusernamesに書き込み
-                await newUserRef.set(newUserData);
-                await this.database.ref(`${window.DATA_ROOT}/usernames/${username}`).set(newUid);
+                await this.database.ref(`${window.DATA_ROOT}/pendingUsers/${username}`).set(pendingUserData);
 
-                this.showStatus(`ユーザー「${username}」を作成しました。初回ログイン時はパスワード欄を空にしてください`, 'success');
+                this.showStatus(`ユーザー「${username}」を作成しました。\n初回パスワード: ${this.currentPassword}\n\nこのパスワードを新規ユーザーに伝達してください。`, 'success');
                 
                 // フォームリセット
                 document.getElementById('createUserForm').reset();
+                document.getElementById('generatedPassword').textContent = 'パスワードを生成してください';
+                document.getElementById('createUserBtn').disabled = true;
+                this.currentPassword = '';
 
             } catch (error) {
                 console.error('❌ ユーザー作成エラー:', error);
@@ -433,11 +503,18 @@
 
         async loadUsers() {
             try {
-                const usersRef = this.database.ref(`${window.DATA_ROOT}/users`);
-                usersRef.on('value', (snapshot) => {
+                // 初回ログイン待機リスト
+                this.database.ref(`${window.DATA_ROOT}/pendingUsers`).on('value', (snapshot) => {
+                    const pending = snapshot.val() || {};
+                    this.pendingUsers = Object.values(pending);
+                    this.renderPendingUsersTable();
+                });
+
+                // アクティブユーザー一覧
+                this.database.ref(`${window.DATA_ROOT}/users`).on('value', (snapshot) => {
                     const users = snapshot.val() || {};
-                    this.users = Object.values(users);
-                    this.renderUserTable();
+                    this.activeUsers = Object.values(users).filter(user => user.setupCompleted);
+                    this.renderActiveUsersTable();
                 });
             } catch (error) {
                 console.error('❌ ユーザー読み込みエラー:', error);
@@ -445,36 +522,33 @@
             }
         }
 
-        renderUserTable() {
-            const tbody = document.getElementById('userTableBody');
+        renderPendingUsersTable() {
+            const tbody = document.getElementById('pendingUsersTableBody');
             if (!tbody) return;
 
-            if (this.users.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="7" class="text-center text-gray-500">登録ユーザーがありません</td></tr>';
+            if (this.pendingUsers.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="6" class="text-center text-gray-500">初回ログイン待機中のユーザーはありません</td></tr>';
                 return;
             }
 
-            tbody.innerHTML = this.users.map(user => {
+            tbody.innerHTML = this.pendingUsers.map(user => {
                 const createdAt = user.createdAt ? new Date(user.createdAt).toLocaleString('ja-JP') : '不明';
                 const roleClass = `badge-${user.role}`;
-                const statusClass = user.setupCompleted ? 'badge-active' : 'badge-initial';
-                const statusText = user.setupCompleted ? '設定完了' : '初期状態';
 
                 return `
                     <tr>
                         <td class="font-medium">${user.username}</td>
-                        <td>${user.displayName || '-'}</td>
-                        <td>${user.email || '-'}</td>
                         <td><span class="badge ${roleClass}">${user.role}</span></td>
-                        <td><span class="badge ${statusClass}">${statusText}</span></td>
+                        <td>${user.email || '-'}</td>
+                        <td class="password-display">${user.initialPassword}</td>
                         <td class="text-sm text-gray-600">${createdAt}</td>
                         <td>
-                            <button onclick="adminUserManagement.editUser('${user.uid}')" 
-                                    class="text-blue-600 hover:text-blue-800 mr-2">
-                                <i class="fas fa-edit"></i> 編集
+                            <button onclick="adminUserManagement.showPassword('${user.username}', '${user.initialPassword}')" 
+                                    class="text-blue-600 hover:text-blue-800 mr-2 text-sm">
+                                <i class="fas fa-eye"></i> 確認
                             </button>
-                            <button onclick="adminUserManagement.deleteUser('${user.uid}', '${user.username}')" 
-                                    class="text-red-600 hover:text-red-800">
+                            <button onclick="adminUserManagement.deletePendingUser('${user.username}')" 
+                                    class="text-red-600 hover:text-red-800 text-sm">
                                 <i class="fas fa-trash"></i> 削除
                             </button>
                         </td>
@@ -483,11 +557,64 @@
             }).join('');
         }
 
+        renderActiveUsersTable() {
+            const tbody = document.getElementById('activeUsersTableBody');
+            if (!tbody) return;
+
+            if (this.activeUsers.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="6" class="text-center text-gray-500">アクティブユーザーがありません</td></tr>';
+                return;
+            }
+
+            tbody.innerHTML = this.activeUsers.map(user => {
+                const lastLogin = user.lastLogin ? new Date(user.lastLogin).toLocaleString('ja-JP') : '未ログイン';
+                const roleClass = `badge-${user.role}`;
+
+                return `
+                    <tr>
+                        <td class="font-medium">${user.username}</td>
+                        <td>${user.displayName || '-'}</td>
+                        <td>${user.email || '-'}</td>
+                        <td><span class="badge ${roleClass}">${user.role}</span></td>
+                        <td class="text-sm text-gray-600">${lastLogin}</td>
+                        <td>
+                            <button onclick="adminUserManagement.editUser('${user.uid}')" 
+                                    class="text-blue-600 hover:text-blue-800 mr-2 text-sm">
+                                <i class="fas fa-edit"></i> 編集
+                            </button>
+                            <button onclick="adminUserManagement.deleteUser('${user.uid}', '${user.username}')" 
+                                    class="text-red-600 hover:text-red-800 text-sm">
+                                <i class="fas fa-trash"></i> 削除
+                            </button>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        showPassword(username, password) {
+            alert(`${username} の初回パスワード:\n\n${password}\n\nこのパスワードを本人に伝達してください。`);
+        }
+
+        async deletePendingUser(username) {
+            if (!confirm(`初回ログイン待機中のユーザー「${username}」を削除しますか？`)) {
+                return;
+            }
+
+            try {
+                await this.database.ref(`${window.DATA_ROOT}/pendingUsers/${username}`).remove();
+                this.showStatus(`待機中ユーザー「${username}」を削除しました`, 'success');
+            } catch (error) {
+                console.error('❌ 待機ユーザー削除エラー:', error);
+                this.showStatus('待機ユーザーの削除に失敗しました', 'error');
+            }
+        }
+
         async editUser(uid) {
-            const user = this.users.find(u => u.uid === uid);
+            const user = this.activeUsers.find(u => u.uid === uid);
             if (!user) return;
 
-            const newRole = prompt(`${user.username}の権限を変更してください:\n\nadmin: 管理者\neditor: 編集者\nviewer: 閲覧者\n\n現在: ${user.role}`, user.role);
+            const newRole = prompt(`${user.username}の権限を変更してください:\n\nviewer: スタッフ\neditor: エディタ\nadmin: 管理者\n\n現在: ${user.role}`, user.role);
             
             if (newRole && ['admin', 'editor', 'viewer'].includes(newRole) && newRole !== user.role) {
                 try {
@@ -530,7 +657,7 @@
 
             setTimeout(() => {
                 statusDiv.style.display = 'none';
-            }, 5000);
+            }, 8000);
         }
     }
 
