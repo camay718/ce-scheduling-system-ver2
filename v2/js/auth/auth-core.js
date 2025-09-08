@@ -131,60 +131,82 @@ class AuthSystemCore {
     }
 
     // パスワード認証ログイン処理
-    async handleUsernamePasswordLogin(username, password) {
-        try {
-            console.log('🔐 ユーザー名・パスワードログイン開始:', username);
-            
-            // 1. ユーザー名からUID取得
-            const usernameSnapshot = await this.database.ref(`ceScheduleV2/usernames/${username}`).once('value');
-            const uid = usernameSnapshot.val();
-            
-            if (!uid) {
-                throw new Error('ユーザー名が見つかりません');
-            }
-            
-            console.log('✅ UID取得成功:', uid);
-            
-            // 2. ユーザーデータ取得・パスワード確認
-            const userSnapshot = await this.database.ref(`ceScheduleV2/users/${uid}`).once('value');
-            const userData = userSnapshot.val();
-            
-            if (!userData) {
-                throw new Error('ユーザーデータが見つかりません');
-            }
-            
-            // 3. パスワード確認
-            if (userData.password !== password) {
-                throw new Error('パスワードが正しくありません');
-            }
-            
-            console.log('✅ パスワード認証成功');
-            
-            // 4. 匿名認証実行
-            const authResult = await this.auth.signInAnonymously();
-            console.log('✅ 匿名認証完了:', authResult.user.uid);
-            
-            // 5. セッションにUID保存
-            sessionStorage.setItem('targetUID', uid);
-            sessionStorage.setItem('currentUsername', username);
-            
-            // 6. 最終ログイン時刻更新
-            await this.database.ref(`ceScheduleV2/users/${uid}`).update({
-                lastLogin: firebase.database.ServerValue.TIMESTAMP
-            });
-            
-            // 7. ダッシュボードに遷移
-            console.log('✅ ログイン完了 → ダッシュボードへ');
-            window.location.href = 'dashboard.html';
-            
-            return true;
-            
-        } catch (error) {
-            console.error('❌ ログイン処理エラー:', error);
-            alert('ログインに失敗しました: ' + error.message);
-            return false;
+async handleUsernamePasswordLogin(username, password) {
+    try {
+        console.log('🔐 ユーザー名・パスワードログイン開始:', username);
+        
+        // 1. ユーザー名からUID取得
+        const usernameSnapshot = await this.database.ref(`ceScheduleV2/usernames/${username}`).once('value');
+        const uid = usernameSnapshot.val();
+        
+        if (!uid) {
+            throw new Error('ユーザー名が見つかりません');
         }
+        
+        console.log('✅ UID取得成功:', uid);
+        
+        // 2. ユーザーデータ取得・パスワード確認
+        const userSnapshot = await this.database.ref(`ceScheduleV2/users/${uid}`).once('value');
+        const userData = userSnapshot.val();
+        
+        if (!userData) {
+            throw new Error('ユーザーデータが見つかりません');
+        }
+        
+        // 🔍 デバッグ：実際のユーザーデータを表示
+        console.log('🔍 デバッグ - 取得したユーザーデータ:', {
+            username: userData.username,
+            password: userData.password,
+            setupCompleted: userData.setupCompleted,
+            displayName: userData.displayName,
+            role: userData.role
+        });
+        
+        console.log('🔍 デバッグ - 入力されたパスワード:', password);
+        console.log('🔍 デバッグ - データベース内パスワード:', userData.password);
+        console.log('🔍 デバッグ - パスワード一致確認:', userData.password === password);
+        
+        // 3. パスワード確認
+        if (!userData.password) {
+            // パスワード未設定の場合は初回ログイン扱い
+            console.log('⚠️ パスワード未設定 → 初回ログイン処理へ');
+            return await this.handleInitialLogin(username);
+        }
+        
+        if (userData.password !== password) {
+            console.error('❌ パスワード不一致');
+            console.error('期待値:', userData.password);
+            console.error('入力値:', password);
+            throw new Error('パスワードが正しくありません');
+        }
+        
+        console.log('✅ パスワード認証成功');
+        
+        // 4. 匿名認証実行
+        const authResult = await this.auth.signInAnonymously();
+        console.log('✅ 匿名認証完了:', authResult.user.uid);
+        
+        // 5. セッションにUID保存
+        sessionStorage.setItem('targetUID', uid);
+        sessionStorage.setItem('currentUsername', username);
+        
+        // 6. 最終ログイン時刻更新
+        await this.database.ref(`ceScheduleV2/users/${uid}`).update({
+            lastLogin: firebase.database.ServerValue.TIMESTAMP
+        });
+        
+        // 7. ダッシュボードに遷移
+        console.log('✅ ログイン完了 → ダッシュボードへ');
+        window.location.href = 'dashboard.html';
+        
+        return true;
+        
+    } catch (error) {
+        console.error('❌ ログイン処理エラー:', error);
+        alert('ログインに失敗しました: ' + error.message);
+        return false;
     }
+}
 
     // 初回ログイン処理（パスワード未設定ユーザー用）
     async handleInitialLogin(username) {
