@@ -227,7 +227,13 @@ async handleUsernamePasswordLogin(username, password) {
         
         return true;
         
-        console.log('🎯 ログイン完了 - セッション確認:', {
+    } catch (error) {
+        console.error('❌ ログイン処理エラー:', error);
+        alert('ログインに失敗しました: ' + error.message);
+        return false;
+    }
+}
+console.log('🎯 ログイン完了 - セッション確認:', {
     targetUID: sessionStorage.getItem('targetUID'),
     currentUsername: sessionStorage.getItem('currentUsername'),
     currentURL: window.location.href
@@ -238,13 +244,6 @@ setTimeout(() => {
     console.log('🚀 ダッシュボードに遷移実行');
     window.location.href = 'dashboard.html';
 }, 1000);
-        
-    } catch (error) {
-        console.error('❌ ログイン処理エラー:', error);
-        alert('ログインに失敗しました: ' + error.message);
-        return false;
-    }
-}
 
     // 初回ログイン処理（パスワード未設定ユーザー用）
     async handleInitialLogin(username) {
