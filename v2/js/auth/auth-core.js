@@ -426,5 +426,61 @@ window.handleLogin = (username, password) => {
         return false;
     }
 };
+class UserSetupManager {
+    static async getCurrentUserInfo() {
+        try {
+            const user = auth.currentUser;
+            if (!user) return null;
 
+            const targetUID = sessionStorage.getItem('targetUID') || user.uid;
+            const userSnapshot = await database.ref(`ceScheduleV2/users/${targetUID}`).once('value');
+            const userData = userSnapshot.val();
+            
+            if (userData) {
+                window.userRole = userData.role || 'viewer';
+                return userData;
+            }
+            return null;
+        } catch (error) {
+            console.error('ユーザー情報取得エラー:', error);
+            return null;
+        }
+    }
+
+    static async updateUserInfo(data) {
+        try {
+            const user = auth.currentUser;
+            if (!user) throw new Error('認証されていません');
+
+            const targetUID = sessionStorage.getItem('targetUID') || user.uid;
+            await database.ref(`ceScheduleV2/users/${targetUID}`).update({
+                ...data,
+                lastUpdated: firebase.database.ServerValue.TIMESTAMP
+            });
+            return true;
+        } catch (error) {
+            console.error('ユーザー情報更新エラー:', error);
+            return false;
+        }
+    }
+
+    static async checkUserPermission() {
+        const userInfo = await this.getCurrentUserInfo();
+        return userInfo ? userInfo.role : 'viewer';
+    }
+
+    static hasPermission(requiredRole) {
+        const roleHierarchy = { 'admin': 3, 'editor': 2, 'viewer': 1 };
+        const userRoleLevel = roleHierarchy[window.userRole] || 1;
+        const requiredRoleLevel = roleHierarchy[requiredRole] || 1;
+        
+        return userRoleLevel >= requiredRoleLevel;
+    }
+}
+
+// グローバルに公開
+window.UserSetupManager = UserSetupManager;
+
+console.log('✅ UserSetupManager クラス追加完了');
 console.log('🔒 認証システムコア読み込み完了（パスワード認証版）');
+
