@@ -1,6 +1,5 @@
 /**
- * CE管理システム - V2統合版（V1完全互換）
- * リアルタイム同期、V1スタイル表示、詳細編集機能
+ * CE管理システム - V2統合版（日別ステータス対応）
  */
 (function() {
     'use strict';
@@ -11,6 +10,7 @@
             this.isInitialized = false;
             this.editingCEIndex = -1;
             this.dbRef = null;
+            this.currentDisplayDate = new Date();
             this.init();
         }
 
@@ -48,9 +48,9 @@
                     this.normalizeCEData();
                     console.log('✅ CEリストリアルタイム更新:', this.ceList.length, '名');
                 } else {
-                    // 初回起動時：V1互換の初期CEリストを作成
-                    this.ceList = JSON.parse(JSON.stringify(window.CE_LIST_INITIAL)).map(ce => ({
+                    this.ceList = JSON.parse(JSON.stringify(window.CE_LIST_INITIAL)).map((ce, index) => ({
                         ...ce,
+                        id: `initial_ce_${index}_${Date.now()}`,
                         status: {
                             monday: '', tuesday: '', wednesday: '', thursday: '',
                             friday: '', saturday: '', sunday: ''
@@ -68,13 +68,11 @@
         }
 
         normalizeCEData() {
-            this.ceList = this.ceList.map(ce => {
-                // workTypeの正規化
+            this.ceList = this.ceList.map((ce, index) => {
                 const validWorkTypes = ['OPE', 'ME', 'HD', 'FLEX'];
                 const workType = (ce.workType || 'ME').toUpperCase();
                 const normalizedWorkType = validWorkTypes.includes(workType) ? workType : 'ME';
 
-                // statusの正規化
                 const defaultStatus = {
                     monday: '', tuesday: '', wednesday: '', thursday: '',
                     friday: '', saturday: '', sunday: ''
@@ -82,6 +80,7 @@
                 const status = Object.assign({}, defaultStatus, ce.status || {});
 
                 return {
+                    id: ce.id || `normalized_ce_${index}_${Date.now()}`,
                     ...ce,
                     workType: normalizedWorkType,
                     status: status,
@@ -111,30 +110,28 @@
             this.ceList.forEach((ce, index) => {
                 const ceElement = document.createElement('div');
                 ceElement.className = `ce-item worktype-${ce.workType.toLowerCase()}`;
+                
+                // 日別ステータス表示（CEDailyStatusManagerから取得）
+                const statusBadge = this.renderStatusBadge(ce);
+                
                 ceElement.innerHTML = `
-                    ${this.renderStatusBadge(ce)}
+                    ${statusBadge}
                     <div class="font-medium">${ce.name}</div>
                     <div class="text-xs opacity-75">${ce.workType}</div>
                 `;
                 ceElement.draggable = window.userRole !== 'viewer';
+                ceElement.dataset.ceId = ce.id;
                 ceElement.dataset.ceIndex = index;
                 ceElement.dataset.ceName = ce.name;
                 ceElement.dataset.workType = ce.workType;
                 
-                // ダブルクリックで編集（V1互換）
-                ceElement.addEventListener('dblclick', () => {
-                    if (window.userRole === 'viewer') {
-                        window.showMessage('編集権限がありません', 'warning');
-                    } else {
-                        this.openCEEditModal(index);
-                    }
-                });
+                // ダブルクリック機能を削除（要望に応じて）
                 
                 // ドラッグ機能（閲覧者以外）
                 if (window.userRole !== 'viewer') {
                     ceElement.addEventListener('dragstart', (e) => {
                         const dragData = {
-                            ceIndex: index,
+                            ceId: ce.id,
                             ceName: ce.name,
                             workType: ce.workType
                         };
@@ -152,42 +149,64 @@
                 container.appendChild(ceElement);
             });
             
+            // 人数表示の更新
+            const countEl = document.getElementById('ceListCount');
+            if (countEl) {
+                countEl.textContent = this.ceList.length;
+            }
+            
             console.log('✅ CEリスト表示完了:', this.ceList.length, '名');
         }
 
         renderStatusBadge(ce) {
-            const today = new Date();
+            // CEDailyStatusManagerから現在の日付のステータスを取得
+            if (window.ceDailyStatus && window.ceDailyStatus.isInitialized) {
+                const status = window.ceDailyStatus.getStatusForCE(ce.id);
+                if (status) {
+                    return `<span class="status-badge status-${status}">${status}</span>`;
+                }
+            }
+            
+            // フォールバック：曜日テンプレートから取得
+            const today = this.currentDisplayDate || new Date();
             const dayNames = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
             const currentDay = dayNames[today.getDay()];
             const status = ce.status?.[currentDay] || '';
             
             if (!status) return '';
-            
             return `<span class="status-badge status-${status}">${status}</span>`;
         }
 
         setupEventListeners() {
-            // CE編集保存ボタン
             const saveCEButton = document.getElementById('saveCEButton');
             if (saveCEButton && !saveCEButton.dataset.ceManagerBound) {
                 saveCEButton.dataset.ceManagerBound = 'true';
                 saveCEButton.addEventListener('click', () => this.saveCEFromModal());
             }
+
+            const deleteCEButton = document.getElementById('deleteCEButton');
+            if (deleteCEButton && !deleteCEButton.dataset.ceManagerBound) {
+                deleteCEButton.dataset.ceManagerBound = 'true';
+                deleteCEButton.addEventListener('click', () => this.deleteCEFromModal());
+            }
         }
 
         openCEEditModal(index) {
+            if (window.userRole === 'viewer') {
+                window.showMessage('編集権限がありません', 'warning');
+                return;
+            }
+
             this.editingCEIndex = index;
             const ce = this.ceList[index];
             if (!ce) return;
 
-            // 基本情報の設定
             const nameInput = document.getElementById('editCEName');
             const workTypeSelect = document.getElementById('editCEWorkType');
             
             if (nameInput) nameInput.value = ce.name || '';
             if (workTypeSelect) workTypeSelect.value = ce.workType || 'ME';
 
-            // 曜日ごとのステータス設定（V1互換）
             const dayNames = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
             dayNames.forEach(day => {
                 const select = document.getElementById(`ceStatus_${day}`);
@@ -206,7 +225,6 @@
             const ce = this.ceList[this.editingCEIndex];
             if (!ce) return;
 
-            // 基本情報の更新
             const nameInput = document.getElementById('editCEName');
             const workTypeSelect = document.getElementById('editCEWorkType');
             
@@ -218,7 +236,6 @@
                 return;
             }
 
-            // 重複チェック（自分以外で同じ名前があるか）
             const duplicateIndex = this.ceList.findIndex((other, idx) => 
                 idx !== this.editingCEIndex && other.name === newName
             );
@@ -230,7 +247,6 @@
             ce.name = newName;
             ce.workType = newWorkType;
             
-            // 曜日ごとのステータスを更新
             if (!ce.status) ce.status = {};
             const dayNames = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
             dayNames.forEach(day => {
@@ -247,7 +263,11 @@
                 await this.saveCEList();
                 window.closeModal('ceEditModal');
                 window.showMessage('CEを更新しました', 'success');
-                console.log('✅ CE更新完了:', ce.name);
+                
+                // CEリスト管理画面も更新
+                if (window.ceDailyStatus) {
+                    window.ceDailyStatus.renderCEManagementTable();
+                }
             } catch (error) {
                 console.error('❌ CE保存エラー:', error);
                 window.showMessage('CEの保存に失敗しました', 'error');
@@ -256,7 +276,35 @@
             }
         }
 
-        // 新しいCEの追加（サイドバーの機能を活用）
+        async deleteCEFromModal() {
+            if (this.editingCEIndex === -1) return;
+            
+            const ceToDelete = this.ceList[this.editingCEIndex];
+            if (!ceToDelete) return;
+
+            if (!confirm(`CE「${ceToDelete.name}」を削除しますか？\n\nこの操作は元に戻せません。`)) {
+                return;
+            }
+
+            try {
+                this.ceList.splice(this.editingCEIndex, 1);
+                await this.saveCEList();
+                
+                window.closeModal('ceEditModal');
+                window.showMessage(`${ceToDelete.name}を削除しました`, 'success');
+                
+                // CEリスト管理画面も更新
+                if (window.ceDailyStatus) {
+                    window.ceDailyStatus.renderCEManagementTable();
+                }
+            } catch (error) {
+                console.error('❌ CE削除エラー:', error);
+                window.showMessage('CEの削除に失敗しました', 'error');
+            } finally {
+                this.editingCEIndex = -1;
+            }
+        }
+
         async addNewCE(name, workType = 'ME') {
             if (window.userRole === 'viewer') {
                 window.showMessage('編集権限がありません', 'warning');
@@ -268,13 +316,13 @@
                 return;
             }
 
-            // 重複チェック
             if (this.ceList.some(ce => ce.name === name.trim())) {
                 window.showMessage('同じ名前のCEが既に存在します', 'warning');
                 return;
             }
 
             const newCE = {
+                id: `ce_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
                 name: name.trim(),
                 workType: workType.toUpperCase(),
                 department: null,
@@ -291,7 +339,6 @@
             try {
                 await this.saveCEList();
                 window.showMessage(`${name}を追加しました`, 'success');
-                console.log('✅ CE追加完了:', name);
             } catch (error) {
                 console.error('❌ CE追加エラー:', error);
                 window.showMessage('CEの追加に失敗しました', 'error');
@@ -299,7 +346,6 @@
         }
     }
 
-    // グローバル公開
     window.CEManager = CEManager;
-    console.log('👥 CEマネージャークラス読み込み完了（V1完全互換版）');
+    console.log('👥 CEマネージャークラス読み込み完了（日別ステータス対応版）');
 })();
