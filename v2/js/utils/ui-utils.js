@@ -69,7 +69,7 @@ function showModal(modalId) {
         return false;
     }
     
-    modal.style.display = 'block';
+    modal.style.display = 'flex';
     modal.classList.remove('hidden');
     document.body.style.overflow = 'hidden';
     
