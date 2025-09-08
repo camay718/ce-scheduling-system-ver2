@@ -45,48 +45,74 @@ class AuthSystemCore {
     }
 
     async handleAuthStateChange(user) {
-        if (user) {
-            console.log('🔐 認証ユーザー:', user.uid);
-            this.currentUser = user;
-            
-            if (!user.isAnonymous) {
-                // 通常認証ユーザー
-                await this.handleAuthenticatedUser(user);
-            } else {
-                // 匿名ユーザー
-                console.log('ℹ️ 匿名/未認証ユーザー - ログイン画面表示');
-                this.showLoginScreen();
-            }
+    if (user) {
+        console.log('🔐 認証ユーザー:', user.uid);
+        this.currentUser = user;
+        
+        // セッションにターゲットUIDがあるかチェック
+        const targetUID = sessionStorage.getItem('targetUID');
+        
+        if (targetUID) {
+            // V2ログイン済み → 認証済みユーザーとして処理
+            console.log('✅ V2ログイン済み → 認証処理開始');
+            await this.handleAuthenticatedUser(user);
+        } else if (!user.isAnonymous) {
+            // 通常認証ユーザー
+            console.log('✅ 通常認証ユーザー → 認証処理開始');
+            await this.handleAuthenticatedUser(user);
         } else {
-            console.log('🔓 未認証状態');
-            this.currentUser = null;
+            // 匿名ユーザー（未ログイン）
+            console.log('ℹ️ 匿名/未認証ユーザー - ログイン画面表示');
             this.showLoginScreen();
         }
+    } else {
+        console.log('🔓 未認証状態');
+        this.currentUser = null;
+        this.showLoginScreen();
     }
+}
 
-    async handleAuthenticatedUser(user) {
-        try {
-            // セッションからターゲットUID取得
-            const targetUID = sessionStorage.getItem('targetUID');
-            const uid = targetUID || user.uid;
+ async handleAuthenticatedUser(user) {
+    try {
+        // セッションからターゲットUID取得
+        const targetUID = sessionStorage.getItem('targetUID');
+        const uid = targetUID || user.uid;
+        
+        console.log('🔍 ユーザーデータ取得開始:', uid);
+        
+        // ユーザーデータ取得
+        const userSnapshot = await this.database.ref(`ceScheduleV2/users/${uid}`).once('value');
+        
+        if (userSnapshot.exists()) {
+            const userData = userSnapshot.val();
+            console.log('✅ ユーザーデータ取得成功:', {
+                username: userData.username,
+                displayName: userData.displayName,
+                role: userData.role,
+                setupCompleted: userData.setupCompleted
+            });
             
-            // ユーザーデータ取得
-            const userSnapshot = await this.database.ref(`ceScheduleV2/users/${uid}`).once('value');
-            
-            if (userSnapshot.exists()) {
-                const userData = userSnapshot.val();
-                console.log('✅ ユーザーデータ取得:', userData);
-                
-                // メイン画面へ
-                this.showMainScreen(userData);
+            // 個人設定完了確認
+            if (userData.setupCompleted) {
+                console.log('✅ 個人設定完了 → ダッシュボードへ遷移');
+                // 直接dashboard.htmlに遷移
+                if (window.location.pathname.includes('index.html') || window.location.pathname.endsWith('/')) {
+                    window.location.href = 'dashboard.html';
+                }
             } else {
-                console.log('⚠️ ユーザーデータが見つかりません');
-                this.handleMissingUserData(user);
+                console.log('⚠️ 個人設定未完了 → 設定画面表示');
+                this.showUserSetupScreen(userData);
             }
-        } catch (error) {
-            console.error('❌ 認証ユーザー処理エラー:', error);
+        } else {
+            console.log('⚠️ ユーザーデータが見つかりません');
+            this.handleMissingUserData(user);
         }
+    } catch (error) {
+        console.error('❌ 認証ユーザー処理エラー:', error);
+        // エラー時はログイン画面に戻る
+        this.showLoginScreen();
     }
+}
 
     handleMissingUserData(user) {
         console.log('🔧 ユーザーデータ作成が必要');
