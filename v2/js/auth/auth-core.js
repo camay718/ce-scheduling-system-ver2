@@ -227,6 +227,18 @@ async handleUsernamePasswordLogin(username, password) {
         
         return true;
         
+        console.log('🎯 ログイン完了 - セッション確認:', {
+    targetUID: sessionStorage.getItem('targetUID'),
+    currentUsername: sessionStorage.getItem('currentUsername'),
+    currentURL: window.location.href
+});
+
+// 少し遅延してから遷移
+setTimeout(() => {
+    console.log('🚀 ダッシュボードに遷移実行');
+    window.location.href = 'dashboard.html';
+}, 1000);
+        
     } catch (error) {
         console.error('❌ ログイン処理エラー:', error);
         alert('ログインに失敗しました: ' + error.message);
