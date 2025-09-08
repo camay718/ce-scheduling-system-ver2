@@ -164,28 +164,31 @@
         }
 
         renderEventChips(events) {
-            if (!events || events.length === 0) return '';
+    if (!events || events.length === 0) return '';
 
-            const maxDisplay = 3;
-            let html = '';
+    const maxDisplay = 3;
+    let html = '';
 
-            events.slice(0, maxDisplay).forEach(event => {
-                const color = window.getDepartmentColor ? window.getDepartmentColor(event.department) : '#2563eb';
-                html += `
-                    <div class="text-xs p-1 rounded text-white truncate" 
-                         style="background-color: ${color};"
-                         title="${event.name} (${event.startTime || ''}-${event.endTime || ''})">
-                        ${event.name}
-                    </div>
-                `;
-            });
+    events.slice(0, maxDisplay).forEach(event => {
+        const color = window.getDepartmentColor ? window.getDepartmentColor(event.department) : '#2563eb';
+        const timeDisplay = event.startTime && event.endTime ? ` (${event.startTime}-${event.endTime})` : '';
+        
+        html += `
+            <div class="text-xs p-1 rounded text-white truncate cursor-pointer hover:opacity-80 transition-opacity" 
+                 style="background-color: ${color};"
+                 title="${event.name}${timeDisplay}\n部門: ${event.department}\n必要人数: ${event.requiredPeople || 1}名"
+                 onclick="event.stopPropagation(); window.openEventEditModal('${window.DateUtils.formatDateISO(new Date(event.date))}', '${event.id}')">
+                <i class="fas fa-briefcase mr-1"></i>${event.name}
+            </div>
+        `;
+    });
 
-            if (events.length > maxDisplay) {
-                html += `<div class="text-xs text-gray-500">+${events.length - maxDisplay}件</div>`;
-            }
+    if (events.length > maxDisplay) {
+        html += `<div class="text-xs text-gray-500 cursor-pointer hover:text-gray-700" onclick="window.openDateModal('${window.DateUtils.formatDateISO(new Date(events[0].date))}')">+${events.length - maxDisplay}件 クリックで詳細</div>`;
+    }
 
-            return html;
-        }
+    return html;
+}
 
         // サンプルデータ追加（開発用）
         async addSampleData() {
