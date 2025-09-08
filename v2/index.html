@@ -4,7 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>CEスケジュール管理システム V2</title>
-    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css">
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
@@ -15,6 +16,9 @@
             to { opacity: 1; transform: translateY(0); }
         }
         .hidden { display: none !important; }
+        body {
+            font-family: 'Noto Sans JP', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        }
     </style>
 </head>
 <body class="bg-gradient-to-br from-blue-50 to-indigo-100 min-h-screen">
@@ -29,32 +33,47 @@
         <div id="loginSection" class="hidden w-full max-w-md fade-in">
             <div class="bg-white rounded-xl shadow-lg p-8">
                 <div class="text-center mb-8">
+                    <div class="bg-indigo-100 rounded-full w-16 h-16 flex items-center justify-center mx-auto mb-4">
+                        <i class="fas fa-calendar-alt text-2xl text-indigo-600"></i>
+                    </div>
                     <h1 class="text-2xl font-bold text-gray-900 mb-2">CEスケジュール管理システム V2</h1>
                     <p class="text-gray-600">ログインしてください</p>
                 </div>
 
                 <form id="loginForm" class="space-y-6">
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-2">ユーザー名</label>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">
+                            <i class="fas fa-user mr-1"></i>ユーザー名
+                        </label>
                         <input type="text" id="username" required 
                                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-colors"
                                placeholder="ユーザー名を入力" autocomplete="username">
                     </div>
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-2">パスワード</label>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">
+                            <i class="fas fa-lock mr-1"></i>パスワード
+                        </label>
                         <input type="password" id="loginPassword" 
                                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-colors"
                                placeholder="パスワードを入力（初回は空欄でOK）" autocomplete="current-password">
-                        <p class="mt-1 text-xs text-gray-500">※ 初回ログインはパスワード欄を空にしてください</p>
+                        <p class="mt-1 text-xs text-gray-500">
+                            <i class="fas fa-info-circle mr-1"></i>初回ログインはパスワード欄を空にしてください
+                        </p>
                     </div>
                     <button type="submit" id="loginButton"
                             class="w-full bg-indigo-600 text-white py-2 px-4 rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-colors disabled:opacity-50">
-                        <span id="loginButtonText">ログイン</span>
+                        <span id="loginButtonText">
+                            <i class="fas fa-sign-in-alt mr-1"></i>ログイン
+                        </span>
                     </button>
                 </form>
 
                 <div class="mt-6 text-center border-t pt-4">
-                    <p class="text-sm text-gray-600 mt-4">管理者の方は <a href="pages/admin-dashboard.html" class="text-indigo-600 hover:text-indigo-800 font-medium">こちら</a></p>
+                    <p class="text-sm text-gray-600">管理者の方は 
+                        <a href="pages/admin-dashboard.html" class="text-indigo-600 hover:text-indigo-800 font-medium">
+                            <i class="fas fa-cog mr-1"></i>こちら
+                        </a>
+                    </p>
                 </div>
             </div>
         </div>
@@ -63,7 +82,9 @@
         <div id="userSetupSection" class="hidden w-full max-w-md fade-in">
             <div class="bg-white rounded-xl shadow-lg p-8">
                 <div class="text-center mb-6">
-                    <i class="fas fa-user-cog text-3xl text-indigo-600 mb-3"></i>
+                    <div class="bg-green-100 rounded-full w-16 h-16 flex items-center justify-center mx-auto mb-4">
+                        <i class="fas fa-user-cog text-2xl text-green-600"></i>
+                    </div>
                     <h2 class="text-xl font-semibold text-gray-900">個人設定</h2>
                     <p class="text-gray-600 text-sm">初回ログイン時の設定を行います</p>
                 </div>
@@ -105,10 +126,13 @@
             </div>
         </div>
 
-        <!-- メイン画面（スケジュール管理画面へのリダイレクト用） -->
+        <!-- メイン画面（遷移画面） -->
         <div id="mainSection" class="hidden w-full max-w-md text-center">
             <div class="bg-white rounded-xl shadow-lg p-8">
-                <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mx-auto mb-4"></div>
+                <div class="bg-blue-100 rounded-full w-16 h-16 flex items-center justify-center mx-auto mb-4">
+                    <i class="fas fa-chart-line text-2xl text-blue-600"></i>
+                </div>
+                <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600 mx-auto mb-4"></div>
                 <p class="text-gray-600">メインダッシュボードに移動しています...</p>
             </div>
         </div>
@@ -117,456 +141,182 @@
     <!-- 通知表示エリア -->
     <div id="notificationContainer" class="fixed top-4 right-4 z-50"></div>
 
-    <!-- Font Awesome for icons -->
-    <script src="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/js/all.min.js"></script>
-
-    <!-- Firebase設定とメインスクリプト -->
+    <!-- Firebase設定とスクリプト読み込み -->
     <script src="js/config/firebase-config.js"></script>
     <script src="js/auth/auth-core.js"></script>
     <script src="js/auth/initial-login.js"></script>
 
-    <!-- DOM制御強化スクリプト -->
+    <!-- DOM制御のみのスクリプト -->
     <script>
-    // V2認証システムコア（パスワード認証対応版）
-    class AuthSystemCore {
-        constructor() {
-            this.auth = null;
-            this.database = null;
-            this.currentUser = null;
-            this.isInitialized = false;
-            this.init();
-        }
-
-        async init() {
-            console.log('🔐 認証システムV2 初期化中...');
-            
-            // Firebase準備待機
-            await this.waitForFirebase();
-            
-            // Firebase初期化確認
-            this.auth = firebase.auth();
-            this.database = firebase.database();
-            
-            // 認証状態リスナー設定
-            this.auth.onAuthStateChanged((user) => {
-                this.handleAuthStateChange(user);
-            });
-            
-            this.isInitialized = true;
-            console.log('✅ 認証システムインスタンス作成完了');
-        }
-
-        async waitForFirebase() {
-            let attempts = 0;
-            const maxAttempts = 50;
-            
-            while (attempts < maxAttempts) {
-                if (typeof firebase !== 'undefined' && firebase.auth && firebase.database) {
-                    console.log('✅ Firebase準備完了、認証システム初期化開始');
-                    return;
-                }
-                
-                await new Promise(resolve => setTimeout(resolve, 100));
-                attempts++;
-            }
-            
-            throw new Error('Firebase初期化タイムアウト');
-        }
-
-        async handleAuthStateChange(user) {
-            if (user) {
-                console.log('🔐 認証ユーザー:', user.uid);
-                this.currentUser = user;
-                
-                // セッションにターゲットUIDがあるかチェック
-                const targetUID = sessionStorage.getItem('targetUID');
-                
-                if (targetUID) {
-                    // V2ログイン済み → 認証済みユーザーとして処理
-                    console.log('✅ V2ログイン済み → 認証処理開始');
-                    await this.handleAuthenticatedUser(user);
-                } else if (!user.isAnonymous) {
-                    // 通常認証ユーザー
-                    console.log('✅ 通常認証ユーザー → 認証処理開始');
-                    await this.handleAuthenticatedUser(user);
-                } else {
-                    // 匿名ユーザー（未ログイン）
-                    console.log('ℹ️ 匿名/未認証ユーザー - ログイン画面表示');
-                    this.showLoginScreen();
-                }
-            } else {
-                console.log('🔓 未認証状態');
-                this.currentUser = null;
-                this.showLoginScreen();
-            }
-        }
-
-        async handleAuthenticatedUser(user) {
-            try {
-                const targetUID = sessionStorage.getItem('targetUID');
-                const uid = targetUID || user.uid;
-                
-                console.log('🔍 ユーザーデータ取得開始:', uid);
-                
-                const userSnapshot = await this.database.ref(`ceScheduleV2/users/${uid}`).once('value');
-                
-                if (userSnapshot.exists()) {
-                    const userData = userSnapshot.val();
-                    console.log('✅ ユーザーデータ取得成功:', userData.username);
-                    
-                    if (userData.setupCompleted) {
-                        console.log('✅ 個人設定完了 → ダッシュボードへ遷移');
-                        
-                        // index.htmlからのみ遷移許可
-                        const currentPath = window.location.pathname;
-                        console.log('🔍 現在のパス:', currentPath);
-                        
-                        if (currentPath.includes('index.html') || 
-                            currentPath.endsWith('v2/') || 
-                            currentPath.endsWith('/')) {
-                            
-                            console.log('🚀 ダッシュボード遷移許可 - 実行中');
-                            
-                            // 遷移フラグ設定（重複防止）
-                            if (!sessionStorage.getItem('dashboardRedirecting')) {
-                                sessionStorage.setItem('dashboardRedirecting', 'true');
-                                
-                                setTimeout(() => {
-                                    sessionStorage.removeItem('dashboardRedirecting');
-                                    window.location.href = 'dashboard.html';
-                                }, 800);
-                            }
-                        } else {
-                            console.log('⚠️ index.html以外からのアクセス - 遷移スキップ');
-                        }
-                    } else {
-                        console.log('⚠️ 個人設定未完了 → 設定画面表示');
-                        this.showUserSetupScreen(userData);
-                    }
-                } else {
-                    console.log('⚠️ ユーザーデータが見つかりません');
-                    this.handleMissingUserData(user);
-                }
-            } catch (error) {
-                console.error('❌ 認証ユーザー処理エラー:', error);
-                this.showLoginScreen();
-            }
-        }
-
-        handleMissingUserData(user) {
-            console.log('🔧 ユーザーデータ作成が必要');
-            this.showLoginScreen();
-        }
-
-        showLoginScreen() {
-            console.log('🔓 ログイン画面を表示');
-            const loginSection = document.getElementById('loginSection');
-            const mainSection = document.getElementById('mainSection');
-            
-            if (loginSection) {
-                loginSection.style.display = 'block';
-            }
-            if (mainSection) {
-                mainSection.style.display = 'none';
-            }
-        }
-
-        async handleUsernamePasswordLogin(username, password) {
-            try {
-                console.log('🔐 ユーザー名・パスワードログイン開始:', username);
-                
-                const usernameSnapshot = await this.database.ref(`ceScheduleV2/usernames/${username}`).once('value');
-                const uid = usernameSnapshot.val();
-                
-                if (!uid) {
-                    throw new Error('ユーザー名が見つかりません');
-                }
-                
-                console.log('✅ UID取得成功:', uid);
-                
-                const userSnapshot = await this.database.ref(`ceScheduleV2/users/${uid}`).once('value');
-                const userData = userSnapshot.val();
-                
-                if (!userData) {
-                    throw new Error('ユーザーデータが見つかりません');
-                }
-                
-                if (!userData.password) {
-                    console.log('⚠️ パスワード未設定 → 初回ログイン処理へ');
-                    return await this.handleInitialLogin(username);
-                }
-                
-                if (userData.password !== password) {
-                    throw new Error('パスワードが正しくありません');
-                }
-                
-                console.log('✅ パスワード認証成功');
-                
-                const authResult = await this.auth.signInAnonymously();
-                console.log('✅ 匿名認証完了:', authResult.user.uid);
-                
-                sessionStorage.setItem('targetUID', uid);
-                sessionStorage.setItem('currentUsername', username);
-                
-                await this.database.ref(`ceScheduleV2/users/${uid}`).update({
-                    lastLogin: firebase.database.ServerValue.TIMESTAMP
-                });
-                
-                console.log('🎯 ログイン完了 - セッション確認:', {
-                    targetUID: sessionStorage.getItem('targetUID'),
-                    currentUsername: sessionStorage.getItem('currentUsername')
-                });
-                
-                console.log('🚀 ダッシュボード遷移実行');
-                setTimeout(() => {
-                    window.location.href = 'dashboard.html';
-                }, 500);
-                
-                return true;
-                
-            } catch (error) {
-                console.error('❌ ログイン処理エラー:', error);
-                alert('ログインに失敗しました: ' + error.message);
-                return false;
-            }
-        }
-
-        async handleInitialLogin(username) {
-            try {
-                console.log('🔐 初回ログイン処理開始:', username);
-                
-                const usernameSnapshot = await this.database.ref(`ceScheduleV2/usernames/${username}`).once('value');
-                const uid = usernameSnapshot.val();
-                
-                if (!uid) {
-                    throw new Error('ユーザー名が見つかりません');
-                }
-                
-                const userSnapshot = await this.database.ref(`ceScheduleV2/users/${uid}`).once('value');
-                const userData = userSnapshot.val();
-                
-                if (!userData) {
-                    throw new Error('ユーザーデータが見つかりません');
-                }
-                
-                if (!userData.password || !userData.setupCompleted) {
-                    console.log('⚠️ 個人設定が必要 → 設定画面へ');
-                    
-                    await this.auth.signInAnonymously();
-                    
-                    sessionStorage.setItem('targetUID', uid);
-                    sessionStorage.setItem('currentUsername', username);
-                    
-                    this.showUserSetupScreen(userData);
-                    return true;
-                } else {
-                    throw new Error('このユーザーは既に設定済みです。パスワードを入力してログインしてください。');
-                }
-                
-            } catch (error) {
-                console.error('❌ 初回ログイン処理エラー:', error);
-                alert(error.message);
-                return false;
-            }
-        }
-
-        showUserSetupScreen(userData) {
-            console.log('🔧 個人設定画面を表示');
-            
-            const loginSection = document.getElementById('loginSection');
-            const userSetupSection = document.getElementById('userSetupSection');
-            
-            if (loginSection) {
-                loginSection.style.display = 'none';
-                loginSection.classList.add('hidden');
-            }
-            
-            if (userSetupSection) {
-                userSetupSection.style.display = 'block';
-                userSetupSection.classList.remove('hidden');
-                
-                if (userData) {
-                    const displayNameInput = document.getElementById('displayName');
-                    const emailInput = document.getElementById('email');
-                    
-                    if (displayNameInput) displayNameInput.value = userData.displayName || '';
-                    if (emailInput) emailInput.value = userData.email || '';
-                }
-                
-                this.setupUserSetupForm();
-            }
-        }
-
-        setupUserSetupForm() {
-            const userSetupForm = document.getElementById('userSetupForm');
-            
-            if (userSetupForm && !userSetupForm.hasAttribute('data-setup')) {
-                userSetupForm.setAttribute('data-setup', 'true');
-                
-                userSetupForm.addEventListener('submit', async (e) => {
-                    e.preventDefault();
-                    await this.handleUserSetupComplete();
-                });
-            }
-        }
-
-        async handleUserSetupComplete() {
-            try {
-                const displayName = document.getElementById('displayName').value.trim();
-                const email = document.getElementById('email').value.trim();
-                const password = document.getElementById('setupPassword').value.trim();
-                
-                if (!displayName) {
-                    alert('表示名を入力してください');
-                    return;
-                }
-                
-                if (!password) {
-                    alert('パスワードを設定してください');
-                    return;
-                }
-                
-                const targetUID = sessionStorage.getItem('targetUID');
-                
-                if (!targetUID) {
-                    console.error('❌ ターゲットUIDが見つかりません');
-                    return;
-                }
-                
-                console.log('💾 ユーザー設定保存開始');
-                
-                const updateData = {
-                    displayName: displayName,
-                    email: email,
-                    password: password,
-                    setupCompleted: true,
-                    lastLogin: firebase.database.ServerValue.TIMESTAMP,
-                    lastUpdated: firebase.database.ServerValue.TIMESTAMP
-                };
-                
-                await this.database.ref(`ceScheduleV2/users/${targetUID}`).update(updateData);
-                console.log('✅ ユーザー設定保存完了');
-                
-                console.log('🚀 ダッシュボードに遷移');
-                window.location.href = 'dashboard.html';
-                
-            } catch (error) {
-                console.error('❌ 設定保存エラー:', error);
-                alert('設定の保存に失敗しました: ' + error.message);
-            }
-        }
-    }
-
-    // DOM制御強化システム
-    class DOMController {
+    // 軽量なDOM制御システム（AuthSystemCoreは外部ファイルから使用）
+    class LoginController {
         constructor() {
             this.init();
         }
 
         init() {
+            console.log('🎮 ログインコントローラー初期化');
+            
+            // 少し遅延してログイン画面を表示
             setTimeout(() => {
-                this.forceShowLoginScreen();
+                this.showLoginScreen();
             }, 1000);
+            
+            // イベントリスナー設定
+            this.setupEventListeners();
         }
 
-        forceShowLoginScreen() {
-            console.log('🔧 DOM制御強化: ログイン画面強制表示');
+        showLoginScreen() {
+            console.log('📱 ログイン画面表示制御');
             
             const loading = document.getElementById('loading');
             const loginSection = document.getElementById('loginSection');
             const mainSection = document.getElementById('mainSection');
             const userSetupSection = document.getElementById('userSetupSection');
 
+            // ローディング非表示
             if (loading) {
                 loading.style.display = 'none';
                 loading.classList.add('hidden');
                 console.log('✅ ローディング画面非表示');
             }
 
+            // 他画面非表示
             if (mainSection) {
                 mainSection.style.display = 'none';
                 mainSection.classList.add('hidden');
             }
-
             if (userSetupSection) {
                 userSetupSection.style.display = 'none';
                 userSetupSection.classList.add('hidden');
             }
 
+            // ログイン画面表示
             if (loginSection) {
                 loginSection.style.display = 'block';
                 loginSection.classList.remove('hidden');
                 loginSection.classList.add('fade-in');
-                console.log('✅ ログイン画面強制表示完了');
-                
-                this.setupLoginForm();
-            } else {
-                console.error('❌ loginSection要素が見つかりません');
+                console.log('✅ ログイン画面表示完了');
             }
         }
 
-        setupLoginForm() {
+        setupEventListeners() {
+            // ログインフォーム処理
             const loginForm = document.getElementById('loginForm');
-            const usernameInput = document.getElementById('username');
-            const passwordInput = document.getElementById('loginPassword');
-            
             if (loginForm && !loginForm.hasAttribute('data-setup')) {
                 loginForm.setAttribute('data-setup', 'true');
-                loginForm.addEventListener('submit', async (e) => {
+                loginForm.addEventListener('submit', (e) => {
                     e.preventDefault();
-                    const username = usernameInput.value.trim();
-                    const password = passwordInput.value.trim();
-                    
-                    if (!username) {
-                        alert('ユーザー名を入力してください');
-                        return;
-                    }
-                    
-                    console.log('🔐 ログイン試行:', username, password ? '(パスワードあり)' : '(初回ログイン)');
-                    
-                    if (window.authSystemInstance) {
-                        if (password) {
-                            window.authSystemInstance.handleUsernamePasswordLogin(username, password);
-                        } else {
-                            window.authSystemInstance.handleInitialLogin(username);
-                        }
-                    } else {
-                        console.error('❌ 認証システムインスタンスが見つかりません');
-                    }
+                    this.handleLoginSubmit();
                 });
-                console.log('✅ ログインフォームイベント設定完了');
             }
+
+            // ユーザー設定フォーム処理
+            const userSetupForm = document.getElementById('userSetupForm');
+            if (userSetupForm && !userSetupForm.hasAttribute('data-setup')) {
+                userSetupForm.setAttribute('data-setup', 'true');
+                userSetupForm.addEventListener('submit', (e) => {
+                    e.preventDefault();
+                    this.handleUserSetupSubmit();
+                });
+            }
+
+            console.log('🔗 イベントリスナー設定完了');
+        }
+
+        handleLoginSubmit() {
+            const username = document.getElementById('username').value.trim();
+            const password = document.getElementById('loginPassword').value.trim();
+            
+            if (!username) {
+                this.showNotification('ユーザー名を入力してください', 'error');
+                return;
+            }
+            
+            console.log('🔐 ログインフォーム送信:', username, password ? '(パスワードあり)' : '(初回ログイン)');
+            
+            // 外部のauth-core.jsのhandleLogin関数を呼び出し
+            if (window.handleLogin) {
+                window.handleLogin(username, password);
+            } else {
+                console.error('❌ handleLogin関数が見つかりません');
+                this.showNotification('認証システムエラーが発生しました', 'error');
+            }
+        }
+
+        handleUserSetupSubmit() {
+            const displayName = document.getElementById('displayName').value.trim();
+            const email = document.getElementById('email').value.trim();
+            const password = document.getElementById('setupPassword').value.trim();
+            
+            if (!displayName) {
+                this.showNotification('表示名を入力してください', 'error');
+                return;
+            }
+            
+            if (!password) {
+                this.showNotification('パスワードを設定してください', 'error');
+                return;
+            }
+            
+            console.log('💾 ユーザー設定フォーム送信');
+            
+            // 外部のauth-core.jsの設定完了関数を呼び出し
+            if (window.authSystemInstance && window.authSystemInstance.handleUserSetupComplete) {
+                window.authSystemInstance.handleUserSetupComplete();
+            } else {
+                console.error('❌ ユーザー設定完了関数が見つかりません');
+                this.showNotification('設定システムエラーが発生しました', 'error');
+            }
+        }
+
+        showNotification(message, type = 'info') {
+            const container = document.getElementById('notificationContainer');
+            if (!container) return;
+
+            const notification = document.createElement('div');
+            const bgColor = type === 'error' ? 'bg-red-100 border-red-400 text-red-700' : 
+                           type === 'success' ? 'bg-green-100 border-green-400 text-green-700' : 
+                           'bg-blue-100 border-blue-400 text-blue-700';
+            
+            notification.className = `${bgColor} border px-4 py-3 rounded mb-2 shadow-lg fade-in`;
+            notification.innerHTML = `
+                <div class="flex items-center">
+                    <i class="fas fa-${type === 'error' ? 'exclamation-triangle' : type === 'success' ? 'check-circle' : 'info-circle'} mr-2"></i>
+                    <span>${message}</span>
+                    <button onclick="this.parentElement.parentElement.remove()" class="ml-4 font-bold">×</button>
+                </div>
+            `;
+            
+            container.appendChild(notification);
+            
+            // 自動削除
+            setTimeout(() => {
+                notification.remove();
+            }, 5000);
         }
     }
 
-    // システム初期化
-    let authSystemInstance = null;
-    
-    document.addEventListener('DOMContentLoaded', async () => {
-        console.log('🔧 V2システム DOM読み込み完了');
-        
-        try {
-            authSystemInstance = new AuthSystemCore();
-            window.authSystemInstance = authSystemInstance;
-            
-            new DOMController();
-            
-            console.log('✅ V2認証システム初期化完了');
-            
-        } catch (error) {
-            console.error('❌ 認証システム初期化失敗:', error);
-        }
+    // DOM読み込み完了後に初期化
+    document.addEventListener('DOMContentLoaded', () => {
+        console.log('🚀 CEスケジュール管理システム V2 DOM読み込み完了');
+        new LoginController();
     });
 
+    // フォールバック
     window.addEventListener('load', () => {
         setTimeout(() => {
+            const loading = document.getElementById('loading');
             const loginSection = document.getElementById('loginSection');
-            if (loginSection && loginSection.style.display === 'none') {
-                console.log('🔧 フォールバック: ログイン画面再表示');
-                new DOMController();
+            
+            if (loading && loading.style.display !== 'none') {
+                console.log('🔄 フォールバック: ログイン画面強制表示');
+                new LoginController();
             }
-        }, 2000);
+        }, 3000);
     });
+
+    console.log('✅ ログインコントローラーシステム読み込み完了');
     </script>
 </body>
 </html>
