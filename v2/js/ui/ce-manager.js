@@ -1,5 +1,5 @@
 /**
- * CE管理システム - V2統合版（日別ステータス対応）
+ * CE管理システム - V2統合版（日別ステータス完全対応）
  */
 (function() {
     'use strict';
@@ -125,8 +125,6 @@
                 ceElement.dataset.ceName = ce.name;
                 ceElement.dataset.workType = ce.workType;
                 
-                // ダブルクリック機能を削除（要望に応じて）
-                
                 // ドラッグ機能（閲覧者以外）
                 if (window.userRole !== 'viewer') {
                     ceElement.addEventListener('dragstart', (e) => {
@@ -159,11 +157,23 @@
         }
 
         renderStatusBadge(ce) {
-            // CEDailyStatusManagerから現在の日付のステータスを取得
+            // CEDailyStatusManagerから現在の表示日付のステータスを取得
             if (window.ceDailyStatus && window.ceDailyStatus.isInitialized) {
-                const status = window.ceDailyStatus.getStatusForCE(ce.id);
-                if (status) {
+                const status = window.ceDailyStatus.getStatusForCE(ce.id, this.currentDisplayDate);
+                if (typeof status === 'string' && status) {
                     return `<span class="status-badge status-${status}">${status}</span>`;
+                } else if (status && typeof status.then === 'function') {
+                    // Promiseの場合は非同期で更新
+                    status.then(s => {
+                        if (s) {
+                            const element = document.querySelector(`[data-ce-id="${ce.id}"]`);
+                            if (element) {
+                                const existingBadge = element.querySelector('.status-badge');
+                                if (existingBadge) existingBadge.remove();
+                                element.insertAdjacentHTML('afterbegin', `<span class="status-badge status-${s}">${s}</span>`);
+                            }
+                        }
+                    });
                 }
             }
             
@@ -182,12 +192,6 @@
             if (saveCEButton && !saveCEButton.dataset.ceManagerBound) {
                 saveCEButton.dataset.ceManagerBound = 'true';
                 saveCEButton.addEventListener('click', () => this.saveCEFromModal());
-            }
-
-            const deleteCEButton = document.getElementById('deleteCEButton');
-            if (deleteCEButton && !deleteCEButton.dataset.ceManagerBound) {
-                deleteCEButton.dataset.ceManagerBound = 'true';
-                deleteCEButton.addEventListener('click', () => this.deleteCEFromModal());
             }
         }
 
@@ -264,42 +268,12 @@
                 window.closeModal('ceEditModal');
                 window.showMessage('CEを更新しました', 'success');
                 
-                // CEリスト管理画面も更新
                 if (window.ceDailyStatus) {
                     window.ceDailyStatus.renderCEManagementTable();
                 }
             } catch (error) {
                 console.error('❌ CE保存エラー:', error);
                 window.showMessage('CEの保存に失敗しました', 'error');
-            } finally {
-                this.editingCEIndex = -1;
-            }
-        }
-
-        async deleteCEFromModal() {
-            if (this.editingCEIndex === -1) return;
-            
-            const ceToDelete = this.ceList[this.editingCEIndex];
-            if (!ceToDelete) return;
-
-            if (!confirm(`CE「${ceToDelete.name}」を削除しますか？\n\nこの操作は元に戻せません。`)) {
-                return;
-            }
-
-            try {
-                this.ceList.splice(this.editingCEIndex, 1);
-                await this.saveCEList();
-                
-                window.closeModal('ceEditModal');
-                window.showMessage(`${ceToDelete.name}を削除しました`, 'success');
-                
-                // CEリスト管理画面も更新
-                if (window.ceDailyStatus) {
-                    window.ceDailyStatus.renderCEManagementTable();
-                }
-            } catch (error) {
-                console.error('❌ CE削除エラー:', error);
-                window.showMessage('CEの削除に失敗しました', 'error');
             } finally {
                 this.editingCEIndex = -1;
             }
@@ -338,14 +312,14 @@
             
             try {
                 await this.saveCEList();
-                window.showMessage(`${name}を追加しました`, 'success');
+                console.log(`✅ CE追加完了: ${name}`);
             } catch (error) {
                 console.error('❌ CE追加エラー:', error);
-                window.showMessage('CEの追加に失敗しました', 'error');
+                throw error;
             }
         }
     }
 
     window.CEManager = CEManager;
-    console.log('👥 CEマネージャークラス読み込み完了（日別ステータス対応版）');
+    console.log('👥 CEマネージャークラス読み込み完了（日別ステータス完全対応版）');
 })();
