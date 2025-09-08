@@ -255,19 +255,18 @@
                     <div class="overflow-x-auto">
                         <table id="scheduleTable" class="schedule-table">
                             <thead>
-                                <tr>
-                                    <th class="w-20">時間</th>
-                                    <th>月曜日</th>
-                                    <th>火曜日</th>
-                                    <th>水曜日</th>
-                                    <th>木曜日</th>
-                                    <th>金曜日</th>
-                                    <th>土曜日</th>
-                                    <th>日曜日</th>
-                                </tr>
+                              <tr>
+                               <th class="w-20">日</th>
+                               <th>月</th>
+                               <th>火</th>
+                               <th>水</th>
+                               <th>木</th>
+                               <th>金</th>
+                               <th>土</th>
+                             </tr>
                             </thead>
                             <tbody id="scheduleTableBody">
-                                <!-- スケジュールテーブルの内容がここに生成される -->
+                            <!-- 月間カレンダーがここに描画されます -->
                             </tbody>
                         </table>
                     </div>
@@ -594,5 +593,44 @@
     console.log('📊 ダッシュボード認証システム読み込み完了（修正版）');
     </script>
 
+<!-- V2カレンダー機能 -->
+    <script defer src="js/utils/date-utils.js?v=20241209"></script>
+    <script defer src="js/schedule/schedule-core.js?v=20241209"></script>
+    <script defer src="js/schedule/calendar-view.js?v=20241209"></script>
+    
+    <!-- カレンダー初期化 -->
+    <script>
+    // カレンダー初期化の統合
+    (function() {
+        const originalInit = DashboardAuth.prototype.showDashboard;
+        
+        DashboardAuth.prototype.showDashboard = function() {
+            originalInit.call(this);
+            
+            // カレンダー初期化（少し遅延して実行）
+            setTimeout(async () => {
+                try {
+                    if (window.CalendarView) {
+                        window.calendarView = new window.CalendarView();
+                        
+                        // 開発用サンプルデータ（初回のみ）
+                        if (!localStorage.getItem('sampleDataAdded')) {
+                            setTimeout(() => {
+                                if (window.calendarView.addSampleData) {
+                                    window.calendarView.addSampleData();
+                                    localStorage.setItem('sampleDataAdded', 'true');
+                                }
+                            }, 2000);
+                        }
+                        
+                        console.log('🎉 V2カレンダーシステム起動完了');
+                    }
+                } catch (error) {
+                    console.error('❌ カレンダー初期化エラー:', error);
+                }
+            }, 1000);
+        };
+    })();
+    </script>
 </body>
 </html>
