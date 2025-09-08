@@ -1,5 +1,5 @@
 /**
- * CE日別勤務状態管理システム - 完全修正版
+ * CE日別勤務状態管理システム - Firebase同期対応版
  */
 (function() {
     'use strict';
@@ -9,6 +9,7 @@
             this.selectedDate = new Date();
             this.statusData = {}; // {ceId: status}
             this.isInitialized = false;
+            this.statusListener = null;
             this.init();
         }
 
@@ -16,7 +17,7 @@
             try {
                 await this.waitForDependencies();
                 this.setupEventListeners();
-                await this.loadStatusForDate();
+                await this.setupRealtimeStatusListener();
                 this.isInitialized = true;
                 console.log('📅 CE日別勤務状態管理初期化完了');
             } catch (error) {
@@ -27,7 +28,7 @@
         async waitForDependencies() {
             let attempts = 0;
             while (attempts < 50) {
-                if (window.database && window.DATA_ROOT && window.ceManager) {
+                if (window.database && window.DATA_ROOT && window.ceManager && window.showMessage) {
                     return;
                 }
                 await new Promise(resolve => setTimeout(resolve, 100));
@@ -37,29 +38,33 @@
         }
 
         setupEventListeners() {
-            // 日付選択
             const dateInput = document.getElementById('ceStatusDate');
             if (dateInput && !dateInput.dataset.bound) {
                 dateInput.dataset.bound = 'true';
                 dateInput.value = this.formatDate(this.selectedDate);
                 dateInput.onchange = async (e) => {
                     this.selectedDate = new Date(e.target.value + 'T00:00:00');
-                    await this.loadStatusForDate();
-                    this.updateMainScheduleCEList();
+                    await this.setupRealtimeStatusListener();
+                    this.updateMainCEList();
                 };
             }
         }
 
-        async loadStatusForDate() {
+        async setupRealtimeStatusListener() {
+            // 既存のリスナーを削除
+            if (this.statusListener) {
+                this.statusListener.off();
+            }
+
             const dateKey = this.formatDate(this.selectedDate);
-            try {
-                const snapshot = await window.database.ref(`${window.DATA_ROOT}/ceStatus/byDate/${dateKey}`).once('value');
+            const statusRef = window.database.ref(`${window.DATA_ROOT}/ceStatus/byDate/${dateKey}`);
+            
+            this.statusListener = statusRef.on('value', (snapshot) => {
                 this.statusData = snapshot.val() || {};
                 this.renderCEManagementTable();
-                console.log(`✅ ${dateKey} の日別ステータス読み込み完了`);
-            } catch (error) {
-                console.error('❌ 日別ステータス読み込みエラー:', error);
-            }
+                this.updateMainCEList();
+                console.log(`✅ ${dateKey} の勤務状態リアルタイム更新`);
+            });
         }
 
         async updateCEStatus(ceId, status) {
@@ -67,14 +72,10 @@
             try {
                 if (status === '') {
                     await window.database.ref(`${window.DATA_ROOT}/ceStatus/byDate/${dateKey}/${ceId}`).remove();
-                    delete this.statusData[ceId];
                 } else {
                     await window.database.ref(`${window.DATA_ROOT}/ceStatus/byDate/${dateKey}/${ceId}`).set(status);
-                    this.statusData[ceId] = status;
                 }
-                
                 window.showMessage('勤務状態を更新しました', 'success');
-                this.updateMainScheduleCEList();
             } catch (error) {
                 console.error('❌ CE勤務状態更新エラー:', error);
                 window.showMessage('勤務状態の更新に失敗しました', 'error');
@@ -94,7 +95,6 @@
                 try {
                     await window.ceManager.addNewCE(name, workType);
                     document.getElementById('newCEName').value = '';
-                    this.renderCEManagementTable();
                     window.showMessage(`${name}を追加しました`, 'success');
                 } catch (error) {
                     console.error('❌ CE追加エラー:', error);
@@ -115,13 +115,42 @@
             try {
                 window.ceManager.ceList.splice(ceIndex, 1);
                 await window.ceManager.saveCEList();
-                
                 window.showMessage(`${ceName} を削除しました`, 'success');
-                this.renderCEManagementTable();
-                this.updateMainScheduleCEList();
             } catch (error) {
                 console.error('❌ CE削除エラー:', error);
                 window.showMessage('CEの削除に失敗しました', 'error');
+            }
+        }
+
+        async sortCEList(sortType) {
+            if (!window.ceManager?.ceList) return;
+
+            const ceList = window.ceManager.ceList;
+            
+            switch (sortType) {
+                case 'name':
+                    ceList.sort((a, b) => a.name.localeCompare(b.name, 'ja'));
+                    break;
+                case 'workType':
+                    ceList.sort((a, b) => a.workType.localeCompare(b.workType));
+                    break;
+                case 'department':
+                    ceList.sort((a, b) => {
+                        const deptA = a.department || 'zzz';
+                        const deptB = b.department || 'zzz';
+                        return deptA.localeCompare(deptB, 'ja');
+                    });
+                    break;
+                default:
+                    return;
+            }
+
+            try {
+                await window.ceManager.saveCEList();
+                window.showMessage(`${sortType}順で並び替えました`, 'success');
+            } catch (error) {
+                console.error('❌ 並び替えエラー:', error);
+                window.showMessage('並び替えに失敗しました', 'error');
             }
         }
 
@@ -138,9 +167,6 @@
 
                 const row = document.createElement('tr');
                 row.className = 'border-b hover:bg-gray-50';
-                
-                // ダブルクリックで削除
-                row.ondblclick = () => this.deleteCE(index);
                 
                 row.innerHTML = `
                     <td class="p-3">
@@ -166,21 +192,25 @@
                     </td>
                     <td class="p-3 text-center">
                         <button onclick="window.ceManager.openCEEditModal(${index})" 
-                                class="text-blue-600 hover:text-blue-800 text-xs">
-                            <i class="fas fa-edit"></i> 編集
+                                class="text-blue-600 hover:text-blue-800 text-xs mr-2">
+                            <i class="fas fa-edit"></i>
+                        </button>
+                        <button onclick="window.ceDailyStatus.deleteCE(${index})" 
+                                class="text-red-600 hover:text-red-800 text-xs">
+                            <i class="fas fa-trash"></i>
                         </button>
                     </td>
                 `;
                 tbody.appendChild(row);
             });
 
-            // CE追加フォーム（最下部）
-            const addRow = document.createElement('tr');
-            addRow.innerHTML = `
+            // CE管理フォーム（最下部）
+            const controlRow = document.createElement('tr');
+            controlRow.innerHTML = `
                 <td colspan="5" class="p-3 bg-gray-50">
-                    <div class="flex items-center gap-3">
+                    <div class="flex items-center gap-3 flex-wrap">
                         <input type="text" id="newCEName" placeholder="新しいCE名" 
-                               class="px-3 py-2 border rounded-lg flex-1">
+                               class="px-3 py-2 border rounded-lg">
                         <select id="newCEWorkType" class="px-3 py-2 border rounded-lg">
                             <option value="ME">ME</option>
                             <option value="OPE">OPE</option>
@@ -188,34 +218,67 @@
                             <option value="FLEX">FLEX</option>
                         </select>
                         <button onclick="window.ceDailyStatus.addNewCE()" 
-                                class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg">
+                                class="bg-green-600 hover:bg-green-700 text-white px-3 py-2 rounded-lg text-sm">
                             <i class="fas fa-plus mr-1"></i>追加
                         </button>
-                        <span class="text-xs text-gray-500">※ダブルクリックで削除</span>
+                        <div class="border-l pl-3 ml-3">
+                            <label class="text-sm font-medium mr-2">並び替え:</label>
+                            <button onclick="window.ceDailyStatus.sortCEList('name')" 
+                                    class="bg-blue-600 hover:bg-blue-700 text-white px-2 py-1 rounded text-xs mr-1">
+                                名前順
+                            </button>
+                            <button onclick="window.ceDailyStatus.sortCEList('workType')" 
+                                    class="bg-blue-600 hover:bg-blue-700 text-white px-2 py-1 rounded text-xs mr-1">
+                                勤務区分順
+                            </button>
+                        </div>
                     </div>
                 </td>
             `;
-            tbody.appendChild(addRow);
+            tbody.appendChild(controlRow);
         }
 
-        // メイン画面のCEリスト更新
-        updateMainScheduleCEList() {
-            if (window.ceManager && window.ceManager.displayCEList) {
+        updateMainCEList() {
+            if (window.ceManager?.displayCEList) {
                 window.ceManager.currentDisplayDate = this.selectedDate;
                 window.ceManager.displayCEList();
             }
+            
+            if (window.dashboardAuth) {
+                window.dashboardAuth.selectedDate = this.selectedDate;
+                window.dashboardAuth.renderDailySchedule();
+            }
         }
 
-        // 特定CEの特定日付のステータスを取得
-        getStatusForCE(ceId) {
-            return this.statusData[ceId] || '';
+        getStatusForCE(ceId, targetDate = null) {
+            const dateKey = this.formatDate(targetDate || this.selectedDate);
+            if (dateKey === this.formatDate(this.selectedDate)) {
+                return this.statusData[ceId] || '';
+            } else {
+                // 異なる日付の場合は非同期で取得
+                return new Promise(async (resolve) => {
+                    try {
+                        const snapshot = await window.database.ref(`${window.DATA_ROOT}/ceStatus/byDate/${dateKey}/${ceId}`).once('value');
+                        resolve(snapshot.val() || '');
+                    } catch (e) {
+                        console.error('getStatusForCE error:', e);
+                        resolve('');
+                    }
+                });
+            }
         }
 
         formatDate(date) {
             return date.toISOString().slice(0, 10);
         }
+
+        destroy() {
+            if (this.statusListener) {
+                this.statusListener.off();
+            }
+        }
     }
 
     window.CEDailyStatusManager = CEDailyStatusManager;
-    console.log('📅 CE日別勤務状態管理システム読み込み完了');
+    console.log('📅 CE日別勤務状態管理システム読み込み完了（Firebase同期対応）');
 })();
