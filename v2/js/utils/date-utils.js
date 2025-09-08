@@ -2,7 +2,6 @@
  * 日付処理ユーティリティ V2統合版
  * V1機能 + 月間カレンダー対応
  */
-
 // ========= 基本日付処理（V1継承） =========
 function formatDateISO(date) {
     if (!date) return '';
