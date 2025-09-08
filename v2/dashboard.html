@@ -117,6 +117,35 @@
             margin: 20px;
             text-align: center;
         }
+        /* V1 CE Item Styles */
+.ce-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(90px,1fr));
+    gap: 8px;
+}
+
+.ce-item {
+    background: linear-gradient(135deg, var(--ce-color), var(--ce-color-light));
+    border-radius: 10px;
+    padding: 8px 10px;
+    font-weight: 600;
+    text-align: center;
+    box-shadow: 0 1px 6px rgba(0,0,0,0.08);
+    font-size: 12px;
+    cursor: grab;
+    position: relative;
+    transition: all 0.2s ease;
+}
+
+.ce-item:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+}
+
+.ce-item.worktype-ope { --ce-color:#87CEEB; --ce-color-light:#B0E0E6; color:#1E3A8A;}
+.ce-item.worktype-me { --ce-color:#90EE90; --ce-color-light:#98FB98; color:#006400;}
+.ce-item.worktype-hd { --ce-color:#FFB6C1; --ce-color-light:#FFC0CB; color:#8B008B;}
+.ce-item.worktype-flex { --ce-color:#FFFF99; --ce-color-light:#FFFFE0; color:#B8860B;}
     </style>
 </head>
 <body class="bg-gray-50">
@@ -720,6 +749,7 @@
     <script defer src="js/schedule/schedule-core.js?v=20241210"></script>
     <script defer src="js/schedule/calendar-view.js?v=20241210"></script>
     <script defer src="js/schedule/event-manager.js?v=20241210"></script>
+     <script defer src="js/ui/ce-manager.js?v=20241211"></script> 
     
     <!-- 統合システム初期化（修正版） -->
     <script>
@@ -848,7 +878,25 @@
                                 await new Promise(resolve => setTimeout(resolve, 100));
                                 eventManagerAttempts++;
                             }
-                            
+                            // CEManagerインスタンス作成（EventManagerの後に追加）
+if (window.CEManager && !window.ceManager) {
+    setTimeout(async () => {
+        console.log('👥 CEManagerインスタンス作成中...');
+        window.ceManager = new window.CEManager();
+        
+        // CEManager初期化完了を待つ
+        let ceManagerAttempts = 0;
+        while (ceManagerAttempts < 30) {
+            if (window.ceManager && window.ceManager.isInitialized) {
+                console.log('✅ CEManager初期化完了');
+                break;
+            }
+            await new Promise(resolve => setTimeout(resolve, 100));
+            ceManagerAttempts++;
+        }
+    }, 1000);
+}
+
                             // 開発用サンプルデータ（初回のみ）
                             if (!localStorage.getItem('sampleDataAdded') && window.eventManager?.isInitialized) {
                                 setTimeout(async () => {
