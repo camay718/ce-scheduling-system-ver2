@@ -465,60 +465,45 @@
             </div>
 
             <!-- CEリスト管理 -->
-            <div id="ceManagementContent" class="screen-content" style="display:none;">
-                <div class="mb-4 flex justify-between items-center">
-                    <h2 class="text-2xl font-bold">CEリスト管理</h2>
-                    <div class="flex items-center gap-3">
-                        <input type="date" id="ceStatusDate" class="px-3 py-2 border border-gray-300 rounded-lg">
-                        <span class="text-sm text-gray-600">この日付の勤務状態を設定</span>
-                        <button id="logoutButton2" class="bg-gray-500 text-white px-4 py-2 rounded-lg hover:bg-gray-600">
-                            <i class="fas fa-sign-out-alt mr-2"></i>ログアウト
-                        </button>
-                    </div>
-                </div>
-                
-                <!-- CE追加フォーム -->
-                <div class="glassmorphism rounded-2xl p-4 mb-4">
-                    <h3 class="font-semibold mb-3"><i class="fas fa-user-plus mr-2"></i>CE追加</h3>
-                    <div class="grid grid-cols-1 md:grid-cols-4 gap-3">
-                        <input type="text" id="newCEName" placeholder="CE名" class="px-3 py-2 border rounded-lg">
-                        <select id="newCEWorkType" class="px-3 py-2 border rounded-lg">
-                            <option value="ME">ME</option>
-                            <option value="OPE">OPE</option>
-                            <option value="HD">HD</option>
-                            <option value="FLEX">FLEX</option>
-                        </select>
-                        <select id="newCEDepartment" class="px-3 py-2 border rounded-lg">
-                            <option value="">部門未設定</option>
-                            <!-- 動的に追加されます -->
-                        </select>
-                        <button id="addNewCEBtn" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg">
-                            <i class="fas fa-plus mr-1"></i>追加
-                        </button>
-                    </div>
-                </div>
-                
-                <!-- CEリスト管理テーブル -->
-                <div class="glassmorphism rounded-2xl p-4">
-                    <div class="overflow-x-auto">
-                        <table class="w-full text-sm">
-                            <thead class="bg-gray-50">
-                                <tr>
-                                    <th class="p-3 text-left">CE名</th>
-                                    <th class="p-3 text-center">勤務区分</th>
-                                    <th class="p-3 text-center">部門</th>
-                                    <th class="p-3 text-center">選択日の勤務状態</th>
-                                    <th class="p-3 text-center">操作</th>
-                                </tr>
-                            </thead>
-                            <tbody id="ceManagementTableBody">
-                                <!-- 動的生成 -->
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
-
+<div id="ceManagementContent" class="screen-content" style="display:none;">
+    <div class="mb-4 flex justify-between items-center">
+        <h2 class="text-2xl font-bold">CEリスト管理</h2>
+        <div class="flex items-center gap-3">
+            <input type="date" id="ceStatusDate" class="px-3 py-2 border border-gray-300 rounded-lg">
+            <span class="text-sm text-gray-600">この日付の勤務状態を設定</span>
+            <button id="logoutButton2" class="bg-gray-500 text-white px-4 py-2 rounded-lg hover:bg-gray-600">
+                <i class="fas fa-sign-out-alt mr-2"></i>ログアウト
+            </button>
+        </div>
+    </div>
+    
+    <!-- CEリスト管理テーブル -->
+    <div class="glassmorphism rounded-2xl p-4 mb-4">
+        <div class="overflow-x-auto">
+            <table class="w-full text-sm">
+                <thead class="bg-gray-50">
+                    <tr>
+                        <th class="p-3 text-left">CE名</th>
+                        <th class="p-3 text-center">勤務区分</th>
+                        <th class="p-3 text-center">部門</th>
+                        <th class="p-3 text-center">選択日の勤務状態</th>
+                        <th class="p-3 text-center">操作</th>
+                    </tr>
+                </thead>
+                <tbody id="ceManagementTableBody">
+                    <!-- 動的生成（CE追加フォームも含む） -->
+                </tbody>
+            </table>
+        </div>
+        <div class="mt-2 text-xs text-gray-500 bg-yellow-50 p-2 rounded">
+            <i class="fas fa-info-circle mr-1"></i>
+            <strong>操作方法:</strong> 
+            行をダブルクリックで削除（確認あり） | 
+            編集ボタンでCE基本情報編集 | 
+            勤務状態は選択日のみ設定
+        </div>
+    </div>
+</div>
             <!-- 月間カレンダー -->
             <div id="calendarContent" class="screen-content" style="display:none;">
                 <div class="mb-4 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
@@ -1102,50 +1087,55 @@
         }
 
         addTaskToSection(event) {
-            const taskList = document.querySelector(`[data-department="${event.department}"]`);
-            if (!taskList) return;
+    const taskList = document.querySelector(`[data-department="${event.department}"]`);
+    if (!taskList) return;
 
-            const taskElement = document.createElement('div');
-            taskElement.className = 'task-item';
-            
-            const assignments = Array.isArray(event.assignments) ? event.assignments : [];
-            const assignmentChips = assignments.map(ce => {
-                const name = typeof ce === 'string' ? ce : ce.name || '';
-                return `<span class="chip">${name}<span class="remove" onclick="window.dashboardAuth.removeAssignment('${this.formatDate(this.selectedDate)}', '${event.id}', '${name}')">&times;</span></span>`;
-            }).join('');
+    const taskElement = document.createElement('div');
+    taskElement.className = 'task-item';
+    
+    const assignments = Array.isArray(event.assignments) ? event.assignments : [];
+    const assignmentChips = assignments.map(ce => {
+        const name = typeof ce === 'string' ? ce : ce.name || '';
+        const workType = typeof ce === 'object' ? ce.workType || 'ME' : 'ME';
+        return `<span class="chip worktype-${workType.toLowerCase()}">${name}<span class="remove" onclick="window.dashboardAuth.removeAssignment('${this.formatDate(this.selectedDate)}', '${event.id}', '${name}')">&times;</span></span>`;
+    }).join('');
 
-            taskElement.innerHTML = `
-                <div class="flex justify-between items-start mb-2">
-                    <div class="font-semibold text-sm">${event.name}</div>
-                    <div class="text-xs text-gray-500">${event.startTime || '--'}-${event.endTime || '--'}</div>
-                </div>
-                <div class="text-xs text-gray-600 mb-2">
-                    件数: ${event.count || 1} | 必要人数: ${event.requiredPeople || 1}名 | 現在: ${assignments.length}名
-                </div>
-                <div class="assignment-dropzone" 
-                     data-date="${this.formatDate(this.selectedDate)}" 
-                     data-event-id="${event.id}"
-                     ondragover="event.preventDefault();" 
-                     ondragenter="this.classList.add('dragover')" 
-                     ondragleave="this.classList.remove('dragover')" 
-                     ondrop="window.dashboardAuth.handleDrop(event)">
-                    <div class="text-xs text-gray-400 mb-1">CEをドロップして配置</div>
-                    <div class="assignments">${assignmentChips || '<span class="text-xs text-gray-400">未配置</span>'}</div>
-                </div>
-            `;
+    // 備考の表示追加
+    const memoDisplay = event.memo ? `<div class="text-xs text-blue-600 mt-1 bg-blue-50 p-1 rounded"><i class="fas fa-sticky-note mr-1"></i>${event.memo}</div>` : '';
 
-            if (window.userRole !== 'viewer') {
-                taskElement.onclick = (e) => {
-                    if (!e.target.classList.contains('remove') && !e.target.closest('.assignment-dropzone')) {
-                        if (window.eventManager) {
-                            window.eventManager.openEventModal('edit', this.formatDate(this.selectedDate), event);
-                        }
-                    }
-                };
+    taskElement.innerHTML = `
+        <div class="flex justify-between items-start mb-2">
+            <div class="font-semibold text-sm">${event.name}</div>
+            <div class="text-xs text-gray-500">${event.startTime || '--'}-${event.endTime || '--'}</div>
+        </div>
+        <div class="text-xs text-gray-600 mb-2">
+            件数: ${event.count || 1} | 必要人数: ${event.requiredPeople || 1}名 | 現在: ${assignments.length}名
+        </div>
+        ${memoDisplay}
+        <div class="assignment-dropzone" 
+             data-date="${this.formatDate(this.selectedDate)}" 
+             data-event-id="${event.id}"
+             ondragover="event.preventDefault();" 
+             ondragenter="this.classList.add('dragover')" 
+             ondragleave="this.classList.remove('dragover')" 
+             ondrop="window.dashboardAuth.handleDrop(event)">
+            <div class="text-xs text-gray-400 mb-1">CEをドロップして配置</div>
+            <div class="assignments">${assignmentChips || '<span class="text-xs text-gray-400">未配置</span>'}</div>
+        </div>
+    `;
+
+    if (window.userRole !== 'viewer') {
+        taskElement.onclick = (e) => {
+            if (!e.target.classList.contains('remove') && !e.target.closest('.assignment-dropzone')) {
+                if (window.eventManager) {
+                    window.eventManager.openEventModal('edit', this.formatDate(this.selectedDate), event);
+                }
             }
+        };
+    }
 
-            taskList.appendChild(taskElement);
-        }
+    taskList.appendChild(taskElement);
+}
 
         async handleDrop(ev) {
             ev.preventDefault();
@@ -1214,83 +1204,85 @@
             }
         }
 
-        setupAdminSettings() {
-            const settingsContent = document.getElementById('settingsContent');
-            if (!settingsContent) return;
+  setupAdminSettings() {
+    const settingsContent = document.getElementById('settingsContent');
+    if (!settingsContent) return;
 
-            if (window.userRole === 'admin') {
-                settingsContent.innerHTML = `
-                    <h2 class="text-2xl font-bold mb-6">設定</h2>
-                    
-                    <div class="glassmorphism rounded-2xl p-6 mb-6">
-                        <h3 class="text-lg font-semibold mb-4 text-red-600">
-                            <i class="fas fa-shield-alt mr-2"></i>管理者機能
-                        </h3>
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <button id="exportDataBtn" class="bg-green-600 hover:bg-green-700 text-white px-4 py-3 rounded-lg">
-                                <i class="fas fa-download mr-2"></i>データエクスポート
-                            </button>
-                            <button id="clearMonthBtn" class="bg-red-600 hover:bg-red-700 text-white px-4 py-3 rounded-lg">
-                                <i class="fas fa-trash mr-2"></i>当月データクリア
-                            </button>
-                            <button id="backupBtn" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-3 rounded-lg">
-                                <i class="fas fa-save mr-2"></i>データバックアップ
-                            </button>
-                            <button id="userManageBtn" class="bg-purple-600 hover:bg-purple-700 text-white px-4 py-3 rounded-lg">
-                                <i class="fas fa-users-cog mr-2"></i>ユーザー管理
-                            </button>
-                        </div>
-                    </div>
-                    
-                    <div class="glassmorphism rounded-2xl p-6">
-                        <h3 class="text-lg font-semibold mb-4">
-                            <i class="fas fa-cog mr-2"></i>一般設定
-                        </h3>
-                        <div class="space-y-4">
-                            <div>
-                                <label class="block text-sm font-medium mb-2">表示名</label>
-                                <input type="text" id="displayNameSetting" class="w-full px-3 py-2 border rounded-lg" 
-                                       value="${window.currentUserData?.displayName || ''}">
-                            </div>
-                            <div>
-                                <label class="block text-sm font-medium mb-2">メールアドレス</label>
-                                <input type="email" id="emailSetting" class="w-full px-3 py-2 border rounded-lg" 
-                                       value="${window.currentUserData?.email || ''}">
-                            </div>
-                            <button id="saveSettingsBtn" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg">
-                                <i class="fas fa-save mr-2"></i>設定保存
-                            </button>
-                        </div>
-                    </div>
-                `;
-                
-                this.setupAdminEventListeners();
-            } else {
-                settingsContent.innerHTML = `
-                    <h2 class="text-2xl font-bold mb-6">設定</h2>
-                    <div class="glassmorphism rounded-2xl p-6">
-                        <h3 class="text-lg font-semibold mb-4">個人設定</h3>
-                        <div class="space-y-4">
-                            <div>
-                                <label class="block text-sm font-medium mb-2">表示名</label>
-                                <input type="text" id="displayNameSetting" class="w-full px-3 py-2 border rounded-lg" 
-                                       value="${window.currentUserData?.displayName || ''}">
-                            </div>
-                            <div>
-                                <label class="block text-sm font-medium mb-2">メールアドレス</label>
-                                <input type="email" id="emailSetting" class="w-full px-3 py-2 border rounded-lg" 
-                                       value="${window.currentUserData?.email || ''}">
-                            </div>
-                            <button id="saveSettingsBtn" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg">
-                                <i class="fas fa-save mr-2"></i>設定保存
-                            </button>
-                        </div>
-                    </div>
-                `;
-            }
+    if (window.userRole === 'admin') {
+        settingsContent.innerHTML = `
+            <h2 class="text-2xl font-bold mb-6">設定</h2>
             
-            this.setupSettingsEventListeners();
-        }
+            <div class="glassmorphism rounded-2xl p-6 mb-6">
+                <h3 class="text-lg font-semibold mb-4 text-red-600">
+                    <i class="fas fa-shield-alt mr-2"></i>管理者機能
+                </h3>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <button onclick="window.open('pages/admin-dashboard.html', '_blank')" 
+                            class="bg-purple-600 hover:bg-purple-700 text-white px-4 py-3 rounded-lg">
+                        <i class="fas fa-users-cog mr-2"></i>ユーザー管理ダッシュボード
+                    </button>
+                    <button id="exportDataBtn" class="bg-green-600 hover:bg-green-700 text-white px-4 py-3 rounded-lg">
+                        <i class="fas fa-download mr-2"></i>データエクスポート
+                    </button>
+                    <button id="clearMonthBtn" class="bg-red-600 hover:bg-red-700 text-white px-4 py-3 rounded-lg">
+                        <i class="fas fa-trash mr-2"></i>当月データクリア
+                    </button>
+                    <button id="backupBtn" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-3 rounded-lg">
+                        <i class="fas fa-save mr-2"></i>データバックアップ
+                    </button>
+                </div>
+            </div>
+            
+            <div class="glassmorphism rounded-2xl p-6">
+                <h3 class="text-lg font-semibold mb-4">
+                    <i class="fas fa-cog mr-2"></i>一般設定
+                </h3>
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium mb-2">表示名</label>
+                        <input type="text" id="displayNameSetting" class="w-full px-3 py-2 border rounded-lg" 
+                               value="${window.currentUserData?.displayName || ''}">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium mb-2">メールアドレス</label>
+                        <input type="email" id="emailSetting" class="w-full px-3 py-2 border rounded-lg" 
+                               value="${window.currentUserData?.email || ''}">
+                    </div>
+                    <button id="saveSettingsBtn" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg">
+                        <i class="fas fa-save mr-2"></i>設定保存
+                    </button>
+                </div>
+            </div>
+        `;
+        
+        this.setupAdminEventListeners();
+    } else {
+        // 一般ユーザー設定（変更なし）
+        settingsContent.innerHTML = `
+            <h2 class="text-2xl font-bold mb-6">設定</h2>
+            <div class="glassmorphism rounded-2xl p-6">
+                <h3 class="text-lg font-semibold mb-4">個人設定</h3>
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium mb-2">表示名</label>
+                        <input type="text" id="displayNameSetting" class="w-full px-3 py-2 border rounded-lg" 
+                               value="${window.currentUserData?.displayName || ''}">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium mb-2">メールアドレス</label>
+                        <input type="email" id="emailSetting" class="w-full px-3 py-2 border rounded-lg" 
+                               value="${window.currentUserData?.email || ''}">
+                    </div>
+                    <button id="saveSettingsBtn" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg">
+                        <i class="fas fa-save mr-2"></i>設定保存
+                    </button>
+                </div>
+            </div>
+        `;
+    }
+    
+    this.setupSettingsEventListeners();
+}
 
         setupAdminEventListeners() {
             const clearBtn = document.getElementById('clearMonthBtn');
