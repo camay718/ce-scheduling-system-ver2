@@ -34,24 +34,24 @@
                 </div>
 
                 <form id="loginForm" class="space-y-6">
-    <div>
-        <label class="block text-sm font-medium text-gray-700 mb-2">ユーザー名</label>
-        <input type="text" id="username" required 
-               class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-colors"
-               placeholder="ユーザー名を入力">
-    </div>
-    <div>
-        <label class="block text-sm font-medium text-gray-700 mb-2">パスワード</label>
-        <input type="password" id="password" 
-               class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-colors"
-               placeholder="パスワードを入力（初回は空欄でOK）">
-        <p class="mt-1 text-xs text-gray-500">※ 初回ログインはパスワード欄を空にしてください</p>
-    </div>
-    <button type="submit" id="loginButton"
-            class="w-full bg-indigo-600 text-white py-2 px-4 rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-colors disabled:opacity-50">
-        <span id="loginButtonText">ログイン</span>
-    </button>
-</form>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">ユーザー名</label>
+                        <input type="text" id="username" required 
+                               class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-colors"
+                               placeholder="ユーザー名を入力" autocomplete="username">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">パスワード</label>
+                        <input type="password" id="password" 
+                               class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-colors"
+                               placeholder="パスワードを入力（初回は空欄でOK）" autocomplete="current-password">
+                        <p class="mt-1 text-xs text-gray-500">※ 初回ログインはパスワード欄を空にしてください</p>
+                    </div>
+                    <button type="submit" id="loginButton"
+                            class="w-full bg-indigo-600 text-white py-2 px-4 rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-colors disabled:opacity-50">
+                        <span id="loginButtonText">ログイン</span>
+                    </button>
+                </form>
 
                 <div class="mt-6 text-center border-t pt-4">
                     <p class="text-sm text-gray-600 mt-4">管理者の方は <a href="pages/admin-dashboard.html" class="text-indigo-600 hover:text-indigo-800 font-medium">こちら</a></p>
@@ -86,6 +86,15 @@
                                placeholder="メールアドレス（任意）">
                         <p class="mt-1 text-xs text-gray-500">通知や連絡用（設定は任意です）</p>
                     </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">
+                            <i class="fas fa-key mr-1"></i>パスワード設定
+                        </label>
+                        <input type="password" id="password" required
+                               class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-colors"
+                               placeholder="パスワードを設定してください" autocomplete="new-password">
+                        <p class="mt-1 text-xs text-gray-500">今後のログインで使用するパスワードを設定してください</p>
+                    </div>
                     <button type="submit" id="setupButton"
                             class="w-full bg-indigo-600 text-white py-2 px-4 rounded-md hover:bg-indigo-700 transition-colors disabled:opacity-50">
                         <i class="fas fa-check mr-1"></i>
@@ -116,110 +125,110 @@
     <script src="js/auth/auth-core.js"></script>
     <script src="js/auth/initial-login.js"></script>
 
-    <!-- 追加：DOM制御強化スクリプト -->
-<script>
-// DOM制御強化システム
-class DOMController {
-    constructor() {
-        this.init();
-    }
-
-    init() {
-        // 少し遅延してDOM制御実行
-        setTimeout(() => {
-            this.forceShowLoginScreen();
-        }, 1000);
-    }
-
-    forceShowLoginScreen() {
-        console.log('🔧 DOM制御強化: ログイン画面強制表示');
-        
-        // 各要素取得
-        const loading = document.getElementById('loading');
-        const loginSection = document.getElementById('loginSection');
-        const mainSection = document.getElementById('mainSection');
-        const userSetupSection = document.getElementById('userSetupSection');
-
-        // ローディング非表示
-        if (loading) {
-            loading.style.display = 'none';
-            loading.classList.add('hidden');
-            console.log('✅ ローディング画面非表示');
+    <!-- DOM制御強化スクリプト -->
+    <script>
+    // DOM制御強化システム
+    class DOMController {
+        constructor() {
+            this.init();
         }
 
-        // メイン画面非表示
-        if (mainSection) {
-            mainSection.style.display = 'none';
-            mainSection.classList.add('hidden');
+        init() {
+            // 少し遅延してDOM制御実行
+            setTimeout(() => {
+                this.forceShowLoginScreen();
+            }, 1000);
         }
 
-        // ユーザー設定画面非表示
-        if (userSetupSection) {
-            userSetupSection.style.display = 'none';
-            userSetupSection.classList.add('hidden');
-        }
-
-        // ログイン画面表示
-        if (loginSection) {
-            loginSection.style.display = 'block';
-            loginSection.classList.remove('hidden');
-            loginSection.classList.add('fade-in');
-            console.log('✅ ログイン画面強制表示完了');
+        forceShowLoginScreen() {
+            console.log('🔧 DOM制御強化: ログイン画面強制表示');
             
-            // フォームイベント再設定
-            this.setupLoginForm();
-        } else {
-            console.error('❌ loginSection要素が見つかりません');
-        }
-    }
+            // 各要素取得
+            const loading = document.getElementById('loading');
+            const loginSection = document.getElementById('loginSection');
+            const mainSection = document.getElementById('mainSection');
+            const userSetupSection = document.getElementById('userSetupSection');
 
-   setupLoginForm() {
-    const loginForm = document.getElementById('loginForm');
-    const usernameInput = document.getElementById('username');
-    const passwordInput = document.getElementById('password');
-    
-    if (loginForm && !loginForm.hasAttribute('data-setup')) {
-        loginForm.setAttribute('data-setup', 'true');
-        loginForm.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const username = usernameInput.value.trim();
-            const password = passwordInput.value.trim();
-            
-            if (!username) {
-                alert('ユーザー名を入力してください');
-                return;
+            // ローディング非表示
+            if (loading) {
+                loading.style.display = 'none';
+                loading.classList.add('hidden');
+                console.log('✅ ローディング画面非表示');
             }
-            
-            console.log('🔐 ログイン試行:', username, password ? '(パスワードあり)' : '(初回ログイン)');
-            
-            // グローバル関数呼び出し
-            if (window.handleLogin) {
-                window.handleLogin(username, password);
+
+            // メイン画面非表示
+            if (mainSection) {
+                mainSection.style.display = 'none';
+                mainSection.classList.add('hidden');
+            }
+
+            // ユーザー設定画面非表示
+            if (userSetupSection) {
+                userSetupSection.style.display = 'none';
+                userSetupSection.classList.add('hidden');
+            }
+
+            // ログイン画面表示
+            if (loginSection) {
+                loginSection.style.display = 'block';
+                loginSection.classList.remove('hidden');
+                loginSection.classList.add('fade-in');
+                console.log('✅ ログイン画面強制表示完了');
+                
+                // フォームイベント再設定
+                this.setupLoginForm();
             } else {
-                console.error('❌ ログイン処理関数が見つかりません');
+                console.error('❌ loginSection要素が見つかりません');
             }
-        });
-        console.log('✅ ログインフォームイベント設定完了');
-    }
-}
-
-// DOM読み込み完了後に実行
-document.addEventListener('DOMContentLoaded', () => {
-    console.log('🔧 V2システム DOM読み込み完了');
-    new DOMController();
-});
-
-// 認証状態変更時のフォールバック
-window.addEventListener('load', () => {
-    setTimeout(() => {
-        const loginSection = document.getElementById('loginSection');
-        if (loginSection && loginSection.style.display === 'none') {
-            console.log('🔧 フォールバック: ログイン画面再表示');
-            new DOMController();
         }
-    }, 2000);
-});
-</script>
+
+        setupLoginForm() {
+            const loginForm = document.getElementById('loginForm');
+            const usernameInput = document.getElementById('username');
+            const passwordInput = document.getElementById('password');
+            
+            if (loginForm && !loginForm.hasAttribute('data-setup')) {
+                loginForm.setAttribute('data-setup', 'true');
+                loginForm.addEventListener('submit', async (e) => {
+                    e.preventDefault();
+                    const username = usernameInput.value.trim();
+                    const password = passwordInput.value.trim();
+                    
+                    if (!username) {
+                        alert('ユーザー名を入力してください');
+                        return;
+                    }
+                    
+                    console.log('🔐 ログイン試行:', username, password ? '(パスワードあり)' : '(初回ログイン)');
+                    
+                    // グローバル関数呼び出し
+                    if (window.handleLogin) {
+                        window.handleLogin(username, password);
+                    } else {
+                        console.error('❌ ログイン処理関数が見つかりません');
+                    }
+                });
+                console.log('✅ ログインフォームイベント設定完了');
+            }
+        }
+    }
+
+    // DOM読み込み完了後に実行
+    document.addEventListener('DOMContentLoaded', () => {
+        console.log('🔧 V2システム DOM読み込み完了');
+        new DOMController();
+    });
+
+    // 認証状態変更時のフォールバック
+    window.addEventListener('load', () => {
+        setTimeout(() => {
+            const loginSection = document.getElementById('loginSection');
+            if (loginSection && loginSection.style.display === 'none') {
+                console.log('🔧 フォールバック: ログイン画面再表示');
+                new DOMController();
+            }
+        }, 2000);
+    });
+    </script>
 </body>
 </html>
-
