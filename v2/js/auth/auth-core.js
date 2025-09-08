@@ -1,48 +1,4 @@
-<!DOCTYPE html>
-<html lang="ja">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>V2認証システム - 修正版 auth-core.js</title>
-    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css">
-</head>
-<body class="bg-gray-100 min-h-screen">
-    <div class="container mx-auto px-4 py-8">
-        <div class="bg-white rounded-lg shadow-lg p-6">
-            <div class="flex items-center mb-6">
-                <i class="fas fa-code text-blue-600 text-2xl mr-3"></i>
-                <h1 class="text-2xl font-bold text-gray-800">V2認証システム - 修正版 auth-core.js</h1>
-            </div>
-            
-            <div class="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
-                <h2 class="text-red-800 font-semibold mb-2">
-                    <i class="fas fa-exclamation-triangle mr-2"></i>修正内容
-                </h2>
-                <ul class="text-red-700 text-sm space-y-1">
-                    <li>• ユーザー名ベースログイン処理をAuthSystemCoreクラス内に統合</li>
-                    <li>• 構文エラーの修正（クラス外部メソッド定義を修正）</li>
-                    <li>• グローバル関数の正しい設定</li>
-                </ul>
-            </div>
-
-            <div class="bg-green-50 border border-green-200 rounded-lg p-4 mb-6">
-                <h2 class="text-green-800 font-semibold mb-2">
-                    <i class="fas fa-clipboard mr-2"></i>使用方法
-                </h2>
-                <p class="text-green-700 text-sm">
-                    以下のコードを <code class="bg-gray-200 px-1 rounded">v2/js/auth/auth-core.js</code> に完全置換してください
-                </p>
-            </div>
-
-            <div class="bg-gray-50 rounded-lg p-4">
-                <div class="flex justify-between items-center mb-3">
-                    <h3 class="font-semibold text-gray-700">修正版 auth-core.js</h3>
-                    <button onclick="copyCode()" class="bg-blue-600 text-white px-3 py-1 rounded text-sm hover:bg-blue-700">
-                        <i class="fas fa-copy mr-1"></i>コピー
-                    </button>
-                </div>
-                <pre id="codeContent" class="bg-gray-900 text-green-400 p-4 rounded text-xs overflow-x-auto max-h-96 overflow-y-auto"><code>// V2認証システムコア（修正版）
+// V2認証システムコア（パスワード認証対応版）
 class AuthSystemCore {
     constructor() {
         this.auth = null;
@@ -72,18 +28,20 @@ class AuthSystemCore {
     }
 
     async waitForFirebase() {
-        const maxWaitTime = 10000; // 10秒
-        const startTime = Date.now();
+        let attempts = 0;
+        const maxAttempts = 50;
         
-        while (!window.firebase && (Date.now() - startTime) < maxWaitTime) {
+        while (attempts < maxAttempts) {
+            if (typeof firebase !== 'undefined' && firebase.auth && firebase.database) {
+                console.log('✅ Firebase準備完了、認証システム初期化開始');
+                return;
+            }
+            
             await new Promise(resolve => setTimeout(resolve, 100));
+            attempts++;
         }
         
-        if (!window.firebase) {
-            throw new Error('Firebase初期化タイムアウト');
-        }
-        
-        console.log('✅ Firebase準備完了、認証システム初期化開始');
+        throw new Error('Firebase初期化タイムアウト');
     }
 
     async handleAuthStateChange(user) {
@@ -108,25 +66,19 @@ class AuthSystemCore {
 
     async handleAuthenticatedUser(user) {
         try {
-            // セッションからターゲットUIDを取得
-            const targetUID = sessionStorage.getItem('targetUID') || user.uid;
+            // セッションからターゲットUID取得
+            const targetUID = sessionStorage.getItem('targetUID');
+            const uid = targetUID || user.uid;
             
             // ユーザーデータ取得
-            const userSnapshot = await this.database.ref(`ceScheduleV2/users/${targetUID}`).once('value');
+            const userSnapshot = await this.database.ref(`ceScheduleV2/users/${uid}`).once('value');
             
             if (userSnapshot.exists()) {
                 const userData = userSnapshot.val();
                 console.log('✅ ユーザーデータ取得:', userData);
                 
-                // 設定完了確認
-                if (userData.setupCompleted) {
-                    // ダッシュボードに遷移
-                    console.log('🚀 設定完了済み - ダッシュボードに遷移');
-                    window.location.href = 'dashboard.html';
-                } else {
-                    // 個人設定画面表示
-                    this.showUserSetupScreen(userData);
-                }
+                // メイン画面へ
+                this.showMainScreen(userData);
             } else {
                 console.log('⚠️ ユーザーデータが見つかりません');
                 this.handleMissingUserData(user);
@@ -137,8 +89,7 @@ class AuthSystemCore {
     }
 
     handleMissingUserData(user) {
-        console.log('⚠️ ユーザーデータ不足 - 管理者に確認を促す');
-        alert('ユーザーデータが見つかりません。管理者に確認してください。');
+        console.log('🔧 ユーザーデータ作成が必要');
         this.showLoginScreen();
     }
 
@@ -157,6 +108,7 @@ class AuthSystemCore {
 
     showMainScreen(userData) {
         console.log('🏠 メイン画面を表示');
+        
         const loginSection = document.getElementById('loginSection');
         const mainSection = document.getElementById('mainSection');
         
@@ -176,67 +128,54 @@ class AuthSystemCore {
         if (userNameElement) {
             userNameElement.textContent = userData.displayName || userData.username || 'ユーザー';
         }
-        
-        // 権限表示
-        const userRoleElement = document.getElementById('userRole');
-        if (userRoleElement) {
-            const roleNames = {
-                'admin': '管理者',
-                'editor': '編集者',
-                'viewer': '閲覧者'
-            };
-            userRoleElement.textContent = roleNames[userData.role] || '閲覧者';
-        }
     }
 
-    // 🆕 ユーザー名ベースログイン処理
-    async handleUsernameLogin(username) {
+    // パスワード認証ログイン処理
+    async handleUsernamePasswordLogin(username, password) {
         try {
-            console.log('🔐 ユーザー名ログイン開始:', username);
+            console.log('🔐 ユーザー名・パスワードログイン開始:', username);
             
-            // 1. ユーザー名からUIDを取得
+            // 1. ユーザー名からUID取得
             const usernameSnapshot = await this.database.ref(`ceScheduleV2/usernames/${username}`).once('value');
             const uid = usernameSnapshot.val();
             
             if (!uid) {
-                console.error('❌ ユーザー名が見つかりません:', username);
-                alert('ユーザー名が見つかりません。管理者に確認してください。');
-                return false;
+                throw new Error('ユーザー名が見つかりません');
             }
             
             console.log('✅ UID取得成功:', uid);
             
-            // 2. ユーザーデータ取得
+            // 2. ユーザーデータ取得・パスワード確認
             const userSnapshot = await this.database.ref(`ceScheduleV2/users/${uid}`).once('value');
             const userData = userSnapshot.val();
             
             if (!userData) {
-                console.error('❌ ユーザーデータが見つかりません');
-                alert('ユーザーデータが見つかりません。管理者に確認してください。');
-                return false;
+                throw new Error('ユーザーデータが見つかりません');
             }
             
-            console.log('✅ ユーザーデータ取得:', userData);
+            // 3. パスワード確認
+            if (userData.password !== password) {
+                throw new Error('パスワードが正しくありません');
+            }
             
-            // 3. 匿名認証実行
+            console.log('✅ パスワード認証成功');
+            
+            // 4. 匿名認証実行
             const authResult = await this.auth.signInAnonymously();
             console.log('✅ 匿名認証完了:', authResult.user.uid);
             
-            // 4. セッションにUID保存
+            // 5. セッションにUID保存
             sessionStorage.setItem('targetUID', uid);
             sessionStorage.setItem('currentUsername', username);
             
-            // 5. 個人設定完了確認
-            if (userData.setupCompleted) {
-                console.log('✅ 設定完了済み → ダッシュボードへ');
-                // ダッシュボードに遷移
-                setTimeout(() => {
-                    window.location.href = 'dashboard.html';
-                }, 1000);
-            } else {
-                console.log('⚠️ 個人設定が必要 → 設定画面へ');
-                this.showUserSetupScreen(userData);
-            }
+            // 6. 最終ログイン時刻更新
+            await this.database.ref(`ceScheduleV2/users/${uid}`).update({
+                lastLogin: firebase.database.ServerValue.TIMESTAMP
+            });
+            
+            // 7. ダッシュボードに遷移
+            console.log('✅ ログイン完了 → ダッシュボードへ');
+            window.location.href = 'dashboard.html';
             
             return true;
             
@@ -247,7 +186,53 @@ class AuthSystemCore {
         }
     }
 
-    // 🆕 個人設定画面表示
+    // 初回ログイン処理（パスワード未設定ユーザー用）
+    async handleInitialLogin(username) {
+        try {
+            console.log('🔐 初回ログイン処理開始:', username);
+            
+            // ユーザー名からUID取得
+            const usernameSnapshot = await this.database.ref(`ceScheduleV2/usernames/${username}`).once('value');
+            const uid = usernameSnapshot.val();
+            
+            if (!uid) {
+                throw new Error('ユーザー名が見つかりません');
+            }
+            
+            // ユーザーデータ取得
+            const userSnapshot = await this.database.ref(`ceScheduleV2/users/${uid}`).once('value');
+            const userData = userSnapshot.val();
+            
+            if (!userData) {
+                throw new Error('ユーザーデータが見つかりません');
+            }
+            
+            // パスワード未設定または個人設定未完了の場合
+            if (!userData.password || !userData.setupCompleted) {
+                console.log('⚠️ 個人設定が必要 → 設定画面へ');
+                
+                // 匿名認証
+                await this.auth.signInAnonymously();
+                
+                // セッション保存
+                sessionStorage.setItem('targetUID', uid);
+                sessionStorage.setItem('currentUsername', username);
+                
+                // 個人設定画面表示
+                this.showUserSetupScreen(userData);
+                return true;
+            } else {
+                throw new Error('このユーザーは既に設定済みです。パスワードを入力してログインしてください。');
+            }
+            
+        } catch (error) {
+            console.error('❌ 初回ログイン処理エラー:', error);
+            alert(error.message);
+            return false;
+        }
+    }
+
+    // 個人設定画面表示
     showUserSetupScreen(userData) {
         console.log('🔧 個人設定画面を表示');
         
@@ -277,7 +262,7 @@ class AuthSystemCore {
         }
     }
 
-    // 🆕 ユーザー設定フォーム処理
+    // ユーザー設定フォーム処理
     setupUserSetupForm() {
         const userSetupForm = document.getElementById('userSetupForm');
         
@@ -291,19 +276,24 @@ class AuthSystemCore {
         }
     }
 
-    // 🆕 ユーザー設定完了処理
+    // ユーザー設定完了処理
     async handleUserSetupComplete() {
         try {
             const displayName = document.getElementById('displayName').value.trim();
             const email = document.getElementById('email').value.trim();
+            const password = document.getElementById('password').value.trim();
             
             if (!displayName) {
                 alert('表示名を入力してください');
                 return;
             }
             
+            if (!password) {
+                alert('パスワードを設定してください');
+                return;
+            }
+            
             const targetUID = sessionStorage.getItem('targetUID');
-            const username = sessionStorage.getItem('currentUsername');
             
             if (!targetUID) {
                 console.error('❌ ターゲットUIDが見つかりません');
@@ -316,6 +306,7 @@ class AuthSystemCore {
             const updateData = {
                 displayName: displayName,
                 email: email,
+                password: password, // 実際の運用では暗号化が必要
                 setupCompleted: true,
                 lastLogin: firebase.database.ServerValue.TIMESTAMP,
                 lastUpdated: firebase.database.ServerValue.TIMESTAMP
@@ -326,9 +317,7 @@ class AuthSystemCore {
             
             // ダッシュボードに遷移
             console.log('🚀 ダッシュボードに遷移');
-            setTimeout(() => {
-                window.location.href = 'dashboard.html';
-            }, 1000);
+            window.location.href = 'dashboard.html';
             
         } catch (error) {
             console.error('❌ 設定保存エラー:', error);
@@ -336,42 +325,39 @@ class AuthSystemCore {
         }
     }
 
-    // 🆕 isAdmin メソッドを追加
+    // 管理者権限確認
     isAdmin() {
-        if (!this.currentUser) return false;
-        const targetUID = sessionStorage.getItem('targetUID') || this.currentUser.uid;
-        // 実際の権限チェックはここで実装
-        return true; // 開発用
+        const userRole = this.getUserRole();
+        return userRole === 'admin';
     }
 
-    // 🆕 現在のユーザー情報取得
+    // 現在のユーザー情報取得
     getCurrentUser() {
         return this.currentUser;
     }
 
-    // 🆕 ユーザー権限取得
+    // ユーザー権限取得
     getUserRole() {
-        // セッションや現在のユーザーから権限を取得
-        return 'viewer'; // デフォルト
+        // 実装：ユーザーデータから権限を取得
+        return 'viewer'; // 仮実装
     }
 
-    // 🆕 ログアウト機能
+    // ログアウト機能
     async logout() {
         try {
             await this.auth.signOut();
             sessionStorage.clear();
             console.log('✅ ログアウト完了');
-            window.location.href = 'index.html';
         } catch (error) {
             console.error('❌ ログアウトエラー:', error);
         }
     }
 
-    // 🆕 匿名ログイン（開発用）
+    // 匿名ログイン（開発用）
     async signInAnonymously() {
         try {
             const result = await this.auth.signInAnonymously();
-            console.log('✅ 匿名ログイン完了');
+            console.log('✅ 匿名ログイン成功:', result.user.uid);
             return result.user;
         } catch (error) {
             console.error('❌ 匿名ログインエラー:', error);
@@ -390,56 +376,33 @@ document.addEventListener('DOMContentLoaded', async () => {
         
         // グローバル関数設定
         window.authSystem = authSystem;
+        window.authSystemInstance = authSystem;
         window.logout = () => authSystem.logout();
         window.getCurrentUser = () => authSystem.getCurrentUser();
         window.getUserRole = () => authSystem.getUserRole();
         window.isAdmin = () => authSystem.isAdmin();
         
-        // 🆕 ユーザー名ベースログイン関数
-        window.handleLogin = (username) => {
-            if (authSystem) {
-                return authSystem.handleUsernameLogin(username);
-            } else {
-                console.error('❌ 認証システムインスタンスが見つかりません');
-                return false;
-            }
-        };
-        
-        // グローバルインスタンス保存
-        window.authSystemInstance = authSystem;
-        
         console.log('✅ グローバル関数設定完了');
+        
     } catch (error) {
         console.error('❌ 認証システム初期化失敗:', error);
     }
 });
 
-console.log('🔒 認証システムコア読み込み完了（修正版）');</code></pre>
-            </div>
-        </div>
-    </div>
-
-    <script>
-        function copyCode() {
-            const codeContent = document.getElementById('codeContent').textContent;
-            navigator.clipboard.writeText(codeContent).then(() => {
-                // 成功メッセージ表示
-                const button = event.target.closest('button');
-                const originalText = button.innerHTML;
-                button.innerHTML = '<i class="fas fa-check mr-1"></i>コピー完了';
-                button.classList.remove('bg-blue-600', 'hover:bg-blue-700');
-                button.classList.add('bg-green-600');
-                
-                setTimeout(() => {
-                    button.innerHTML = originalText;
-                    button.classList.remove('bg-green-600');
-                    button.classList.add('bg-blue-600', 'hover:bg-blue-700');
-                }, 2000);
-            }).catch(err => {
-                console.error('コピーに失敗しました:', err);
-                alert('コピーに失敗しました。手動でコードを選択してコピーしてください。');
-            });
+// グローバル関数として公開
+window.handleLogin = (username, password) => {
+    if (window.authSystemInstance) {
+        if (password) {
+            // パスワード付きログイン
+            return window.authSystemInstance.handleUsernamePasswordLogin(username, password);
+        } else {
+            // 初回ログイン（パスワード未設定）
+            return window.authSystemInstance.handleInitialLogin(username);
         }
-    </script>
-</body>
-</html>
+    } else {
+        console.error('❌ 認証システムインスタンスが見つかりません');
+        return false;
+    }
+};
+
+console.log('🔒 認証システムコア読み込み完了（パスワード認証版）');
