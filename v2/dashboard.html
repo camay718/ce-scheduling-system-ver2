@@ -714,100 +714,174 @@
     })();
     </script>
  <!-- V2統合機能のスクリプト読み込み -->
-    <script defer src="js/data/constants.js?v=20241209"></script>
-    <script defer src="js/utils/ui-utils.js?v=20241209"></script>
-    <script defer src="js/schedule/event-manager.js?v=20241209"></script>
+    <script defer src="js/data/constants.js?v=20241210"></script>
+    <script defer src="js/utils/ui-utils.js?v=20241210"></script>
+    <script defer src="js/utils/date-utils.js?v=20241210"></script>
+    <script defer src="js/schedule/schedule-core.js?v=20241210"></script>
+    <script defer src="js/schedule/calendar-view.js?v=20241210"></script>
+    <script defer src="js/schedule/event-manager.js?v=20241210"></script>
     
-    <!-- 統合システム初期化 -->
+    <!-- 統合システム初期化（修正版） -->
     <script>
-    // カレンダーとイベント管理の統合初期化
+    // V2システム統合初期化（タイミング修正版）
     (function() {
         const originalShowDashboard = DashboardAuth.prototype.showDashboard;
         
         DashboardAuth.prototype.showDashboard = function() {
+            // 元の処理を実行
             originalShowDashboard.call(this);
             
-            // V2システム統合初期化
-            setTimeout(async () => {
-                try {
-                    // 依存関係の確認
-                    let attempts = 0;
-                    while (attempts < 30) {
-                        if (window.CalendarView && window.EventManager && window.DEPARTMENTS) {
-                            break;
+            // 🔧 即座に関数を上書き（カレンダー描画前に実行）
+            window.openDateModal = function(dateKey) {
+                console.log('📅 日付クリック:', dateKey);
+                
+                // EventManagerの準備確認
+                if (!window.eventManager || !window.eventManager.isInitialized) {
+                    console.log('⚠️ EventManager初期化待機中...');
+                    
+                    // 初期化を待って再試行
+                    setTimeout(() => {
+                        if (window.eventManager && window.eventManager.isInitialized) {
+                            window.openDateModal(dateKey);
+                        } else {
+                            window.showMessage ? 
+                                window.showMessage(`${dateKey}\nシステム初期化中です。しばらく待ってから再度お試しください。`, 'warning') :
+                                alert(`${dateKey}\nシステム初期化中です。しばらく待ってから再度お試しください。`);
                         }
-                        await new Promise(resolve => setTimeout(resolve, 100));
-                        attempts++;
-                    }
-
-                    if (window.CalendarView) {
-                        window.calendarView = new window.CalendarView();
-                        
-                        // EventManagerインスタンス作成
-                        window.eventManager = new window.EventManager();
-                        
-                        // 開発用サンプルデータ（初回のみ）
-                        if (!localStorage.getItem('sampleDataAdded')) {
-                            setTimeout(async () => {
-                                if (window.eventManager && window.eventManager.scheduleCore) {
-                                    const todayKey = window.DateUtils.formatDateISO(new Date());
-                                    const sampleEvent = {
-                                        date: todayKey,
-                                        name: 'サンプル業務',
-                                        department: '血液浄化',
-                                        startTime: '09:00',
-                                        endTime: '12:00',
-                                        count: 1,
-                                        requiredPeople: 1,
-                                        memo: 'V2システム動作確認用'
-                                    };
-                                    
-                                    await window.eventManager.scheduleCore.addEvent(sampleEvent);
-                                    localStorage.setItem('sampleDataAdded', 'true');
-                                    console.log('✅ サンプルデータ追加完了');
-                                }
-                            }, 2000);
-                        }
-                        
-                        console.log('🎉 V2統合システム起動完了');
-                    }
-                } catch (error) {
-                    console.error('❌ V2システム初期化エラー:', error);
+                    }, 1000);
+                    return;
                 }
-            }, 1000);
-        };
-        
-        // グローバル関数の更新
-        window.openDateModal = (dateKey) => {
-            if (window.eventManager) {
+                
                 // 権限に応じた動作
                 if (window.userRole === 'viewer') {
                     // 閲覧者は詳細表示のみ
                     const events = window.calendarView?.scheduleCore?.getEventsByDate(dateKey) || [];
                     if (events.length === 0) {
-                        alert(`${dateKey}\n業務はありません`);
+                        window.showMessage ? 
+                            window.showMessage(`${dateKey}\n業務はありません`, 'info') :
+                            alert(`${dateKey}\n業務はありません`);
                     } else {
                         const eventList = events.map(e => 
-                            `• ${e.name} (${e.startTime}-${e.endTime}) [${e.department}]`
+                            `• ${e.name} (${e.startTime || '--'}-${e.endTime || '--'}) [${e.department}]`
                         ).join('\n');
-                        alert(`${dateKey} の業務一覧:\n\n${eventList}`);
+                        const message = `${dateKey} の業務一覧:\n\n${eventList}`;
+                        window.showMessage ? 
+                            window.showMessage(message, 'info') :
+                            alert(message);
                     }
                 } else {
                     // 編集権限があるユーザーは追加モーダル
+                    console.log('📝 業務追加モーダルを開きます');
                     window.eventManager.openEventModal('create', dateKey);
                 }
-            }
-        };
-        
-        // イベント編集用グローバル関数
-        window.openEventEditModal = (dateKey, eventId) => {
-            if (window.eventManager && window.calendarView) {
-                const events = window.calendarView.scheduleCore.getEventsByDate(dateKey);
-                const event = events.find(e => e.id === eventId);
-                if (event) {
-                    window.eventManager.openEventModal('edit', dateKey, event);
+            };
+            
+            // イベント編集用関数も即座に定義
+            window.openEventEditModal = function(dateKey, eventId) {
+                console.log('📝 イベント編集:', dateKey, eventId);
+                
+                if (!window.eventManager || !window.eventManager.isInitialized) {
+                    console.log('⚠️ EventManager未初期化');
+                    window.showMessage ? 
+                        window.showMessage('システム初期化中です。しばらく待ってから再度お試しください。', 'warning') :
+                        alert('システム初期化中です。しばらく待ってから再度お試しください。');
+                    return;
                 }
-            }
+                
+                if (window.calendarView && window.calendarView.scheduleCore) {
+                    const events = window.calendarView.scheduleCore.getEventsByDate(dateKey);
+                    const event = events.find(e => e.id === eventId);
+                    if (event) {
+                        window.eventManager.openEventModal('edit', dateKey, event);
+                    } else {
+                        console.error('❌ イベントが見つかりません:', eventId);
+                        window.showMessage ? 
+                            window.showMessage('編集対象の業務が見つかりません。', 'error') :
+                            alert('編集対象の業務が見つかりません。');
+                    }
+                }
+            };
+
+            // V2システム統合初期化（非同期）
+            setTimeout(async () => {
+                try {
+                    console.log('🔄 V2統合システム初期化開始');
+                    
+                    // 依存関係の確認
+                    let attempts = 0;
+                    const maxAttempts = 50;
+                    
+                    while (attempts < maxAttempts) {
+                        if (window.CalendarView && window.EventManager && window.DEPARTMENTS && window.showMessage) {
+                            console.log('✅ 全依存関係確認完了');
+                            break;
+                        }
+                        
+                        console.log(`⏳ 依存関係確認中... (${attempts + 1}/${maxAttempts})`);
+                        await new Promise(resolve => setTimeout(resolve, 100));
+                        attempts++;
+                    }
+
+                    if (attempts >= maxAttempts) {
+                        throw new Error('依存関係の初期化がタイムアウトしました');
+                    }
+
+                    // CalendarViewインスタンス作成
+                    if (window.CalendarView && !window.calendarView) {
+                        console.log('📅 CalendarViewインスタンス作成中...');
+                        window.calendarView = new window.CalendarView();
+                    }
+                    
+                    // EventManagerインスタンス作成
+                    if (window.EventManager && !window.eventManager) {
+                        setTimeout(async () => {
+                            console.log('📝 EventManagerインスタンス作成中...');
+                            window.eventManager = new window.EventManager();
+                            
+                            // EventManager初期化完了を待つ
+                            let eventManagerAttempts = 0;
+                            while (eventManagerAttempts < 30) {
+                                if (window.eventManager && window.eventManager.isInitialized) {
+                                    console.log('✅ EventManager初期化完了');
+                                    break;
+                                }
+                                await new Promise(resolve => setTimeout(resolve, 100));
+                                eventManagerAttempts++;
+                            }
+                            
+                            // 開発用サンプルデータ（初回のみ）
+                            if (!localStorage.getItem('sampleDataAdded') && window.eventManager?.isInitialized) {
+                                setTimeout(async () => {
+                                    try {
+                                        const todayKey = window.DateUtils.formatDateISO(new Date());
+                                        const sampleEvent = {
+                                            date: todayKey,
+                                            name: 'サンプル業務',
+                                            department: '血液浄化',
+                                            startTime: '09:00',
+                                            endTime: '12:00',
+                                            count: 1,
+                                            requiredPeople: 1,
+                                            memo: 'V2システム動作確認用'
+                                        };
+                                        
+                                        await window.eventManager.scheduleCore.addEvent(sampleEvent);
+                                        localStorage.setItem('sampleDataAdded', 'true');
+                                        console.log('✅ サンプルデータ追加完了');
+                                    } catch (error) {
+                                        console.error('❌ サンプルデータ追加エラー:', error);
+                                    }
+                                }, 2000);
+                            }
+                            
+                            console.log('🎉 V2統合システム起動完了');
+                            
+                        }, 800);
+                    }
+                } catch (error) {
+                    console.error('❌ V2システム初期化エラー:', error);
+                }
+            }, 1200);
         };
     })();
     </script>
