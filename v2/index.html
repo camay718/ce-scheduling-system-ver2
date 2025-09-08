@@ -173,32 +173,33 @@ class DOMController {
         }
     }
 
-    setupLoginForm() {
-        const loginForm = document.getElementById('loginForm');
-        const usernameInput = document.getElementById('username');
-        
-        if (loginForm && !loginForm.hasAttribute('data-setup')) {
-            loginForm.setAttribute('data-setup', 'true');
-            loginForm.addEventListener('submit', async (e) => {
-                e.preventDefault();
-                const username = usernameInput.value.trim();
-                
-                if (!username) {
-                    alert('ユーザー名を入力してください');
-                    return;
-                }
-                
-                console.log('🔐 ログイン試行:', username);
-                
-                // グローバル関数呼び出し（auth-core.js経由）
-                if (window.handleLogin) {
-                    window.handleLogin(username);
-                } else {
-                    console.error('❌ ログイン処理関数が見つかりません');
-                }
-            });
-            console.log('✅ ログインフォームイベント設定完了');
-        }
+   setupLoginForm() {
+    const loginForm = document.getElementById('loginForm');
+    const usernameInput = document.getElementById('username');
+    const passwordInput = document.getElementById('password');
+    
+    if (loginForm && !loginForm.hasAttribute('data-setup')) {
+        loginForm.setAttribute('data-setup', 'true');
+        loginForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const username = usernameInput.value.trim();
+            const password = passwordInput.value.trim();
+            
+            if (!username) {
+                alert('ユーザー名を入力してください');
+                return;
+            }
+            
+            console.log('🔐 ログイン試行:', username, password ? '(パスワードあり)' : '(初回ログイン)');
+            
+            // グローバル関数呼び出し
+            if (window.handleLogin) {
+                window.handleLogin(username, password);
+            } else {
+                console.error('❌ ログイン処理関数が見つかりません');
+            }
+        });
+        console.log('✅ ログインフォームイベント設定完了');
     }
 }
 
