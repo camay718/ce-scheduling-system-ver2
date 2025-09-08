@@ -4,54 +4,233 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>管理者ダッシュボード - CEスケジュール管理システム V2</title>
-    <link rel="stylesheet" href="../css/admin.css">
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css">
     
-    <!-- Firebase CDN -->
-    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
+    <!-- Firebase SDK -->
+    <script defer src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+    <script defer src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+    <script defer src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+    
+    <style>
+        body {
+            font-family: 'Noto Sans JP', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+        
+        .admin-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        .admin-header {
+            background: rgba(255, 255, 255, 0.9);
+            backdrop-filter: blur(10px);
+            border-radius: 16px;
+            padding: 30px;
+            text-align: center;
+            margin-bottom: 30px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+        }
+        
+        .section {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 16px;
+            padding: 30px;
+            margin-bottom: 30px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+        }
+        
+        .form-group {
+            margin-bottom: 20px;
+        }
+        
+        .form-label {
+            display: block;
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: #2d3748;
+        }
+        
+        .form-input, .form-select {
+            width: 100%;
+            padding: 12px 16px;
+            border: 2px solid #e2e8f0;
+            border-radius: 8px;
+            font-size: 16px;
+            transition: all 0.3s ease;
+        }
+        
+        .form-input:focus, .form-select:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+        
+        .btn {
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-weight: 600;
+            text-decoration: none;
+            display: inline-block;
+            transition: all 0.3s ease;
+            border: none;
+            cursor: pointer;
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(102, 126, 234, 0.3);
+        }
+        
+        .btn-outline {
+            background: transparent;
+            border: 2px solid #667eea;
+            color: #667eea;
+        }
+        
+        .btn-outline:hover {
+            background: #667eea;
+            color: white;
+        }
+        
+        .status {
+            padding: 12px 16px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            font-weight: 500;
+        }
+        
+        .status.success {
+            background: #c6f6d5;
+            color: #22543d;
+            border: 1px solid #9ae6b4;
+        }
+        
+        .status.error {
+            background: #fed7d7;
+            color: #742a2a;
+            border: 1px solid #fc8181;
+        }
+        
+        .user-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        
+        .user-table th,
+        .user-table td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #e2e8f0;
+        }
+        
+        .user-table th {
+            background: #f7fafc;
+            font-weight: 600;
+            color: #2d3748;
+        }
+        
+        .user-table tr:hover {
+            background: #f7fafc;
+        }
+        
+        .badge {
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+        
+        .badge-admin {
+            background: #fed7d7;
+            color: #742a2a;
+        }
+        
+        .badge-editor {
+            background: #bee3f8;
+            color: #2a4365;
+        }
+        
+        .badge-viewer {
+            background: #c6f6d5;
+            color: #22543d;
+        }
+        
+        .badge-initial {
+            background: #faf089;
+            color: #744210;
+        }
+        
+        .badge-active {
+            background: #9ae6b4;
+            color: #22543d;
+        }
+    </style>
 </head>
 <body>
     <div class="admin-container">
         <header class="admin-header">
-            <h1>管理者ダッシュボード</h1>
-            <p>CEスケジュール管理システム V2 - ユーザー管理</p>
+            <h1 class="text-3xl font-bold text-gray-800 mb-2">
+                <i class="fas fa-shield-alt text-purple-600 mr-3"></i>
+                管理者ダッシュボード
+            </h1>
+            <p class="text-gray-600">CEスケジュール管理システム V2 - ユーザー管理</p>
         </header>
 
-        <main class="admin-content">
+        <main>
             <!-- ユーザー作成セクション -->
-            <section class="create-user-section">
-                <h2 class="section-title">新規ユーザー作成</h2>
+            <section class="section">
+                <h2 class="text-2xl font-bold text-gray-800 mb-6 flex items-center">
+                    <i class="fas fa-user-plus text-blue-600 mr-3"></i>
+                    新規ユーザー作成
+                </h2>
                 
                 <div id="status" class="status" style="display: none;"></div>
                 
                 <form id="createUserForm">
-                    <div class="form-group">
-                        <label for="username" class="form-label">ユーザー名 *</label>
-                        <input 
-                            type="text" 
-                            id="username" 
-                            class="form-input" 
-                            placeholder="例: 田中太郎"
-                            required
-                            autocomplete="off"
-                        >
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div class="form-group">
+                            <label for="username" class="form-label">
+                                <i class="fas fa-user mr-2"></i>ユーザー名 *
+                            </label>
+                            <input 
+                                type="text" 
+                                id="username" 
+                                class="form-input" 
+                                placeholder="例: tanaka"
+                                required
+                                autocomplete="off"
+                            >
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="email" class="form-label">
+                                <i class="fas fa-envelope mr-2"></i>メールアドレス（任意）
+                            </label>
+                            <input 
+                                type="email" 
+                                id="email" 
+                                class="form-input" 
+                                placeholder="例: tanaka@example.com"
+                                autocomplete="off"
+                            >
+                        </div>
                     </div>
                     
                     <div class="form-group">
-                        <label for="email" class="form-label">メールアドレス *</label>
-                        <input 
-                            type="email" 
-                            id="email" 
-                            class="form-input" 
-                            placeholder="例: tanaka@example.com"
-                            required
-                            autocomplete="off"
-                        >
-                    </div>
-                    
-                    <div class="form-group">
-                        <label for="role" class="form-label">権限レベル *</label>
+                        <label for="role" class="form-label">
+                            <i class="fas fa-key mr-2"></i>権限レベル *
+                        </label>
                         <select id="role" class="form-select" required>
                             <option value="">権限を選択</option>
                             <option value="admin">管理者 (全権限)</option>
@@ -61,49 +240,74 @@
                     </div>
                     
                     <button type="button" id="createUserBtn" class="btn btn-primary">
-                        ユーザーを作成
+                        <i class="fas fa-plus mr-2"></i>ユーザーを作成
                     </button>
                 </form>
 
-                <div style="margin-top: 20px; padding: 15px; background: #f7fafc; border-radius: 8px; border-left: 4px solid #3182ce;">
-                    <h4 style="margin: 0 0 10px 0; color: #2a4365;">📋 作成フロー</h4>
-                    <ol style="margin: 0; color: #4a5568; font-size: 0.9rem;">
-                        <li>上記フォームで新規ユーザー情報を入力</li>
-                        <li>システムが自動的に安全なパスワードを生成</li>
-                        <li>Firebase AuthenticationとDatabaseに同期登録</li>
-                        <li>生成されたパスワードを新規ユーザーに伝達</li>
-                        <li>新規ユーザーが初回ログイン後、個人設定を完了</li>
+                <div class="mt-6 p-4 bg-blue-50 border-l-4 border-blue-400 rounded">
+                    <h4 class="font-semibold text-blue-800 mb-2">
+                        <i class="fas fa-info-circle mr-2"></i>作成フロー
+                    </h4>
+                    <ol class="text-blue-700 text-sm space-y-1">
+                        <li>1. 上記フォームで新規ユーザー情報を入力</li>
+                        <li>2. 新規ユーザーには「初回ログイン時はパスワード欄を空欄」と伝達</li>
+                        <li>3. 新規ユーザーが初回ログイン後、表示名とパスワードを自身で設定</li>
                     </ol>
+                </div>
+
+                <!-- パスワードリセット機能の構想 -->
+                <div class="mt-6 p-4 bg-yellow-50 border-l-4 border-yellow-400 rounded">
+                    <h4 class="font-semibold text-yellow-800 mb-2">
+                        <i class="fas fa-lightbulb mr-2"></i>将来実装予定機能
+                    </h4>
+                    <div class="text-yellow-700 text-sm">
+                        <p class="mb-2"><strong>パスワードリセット機能:</strong></p>
+                        <ul class="space-y-1 ml-4">
+                            <li>• メールアドレス認証によるパスワードリセット</li>
+                            <li>• セキュアなリセットトークン生成</li>
+                            <li>• 期限付きリセットリンクの送信</li>
+                            <li>• ユーザー自身でのパスワード再設定</li>
+                            <li>• リセット履歴の管理者確認</li>
+                        </ul>
+                    </div>
                 </div>
             </section>
 
             <!-- ユーザー一覧セクション -->
-            <section class="user-list-section">
-                <h2 class="section-title">登録ユーザー一覧</h2>
+            <section class="section">
+                <h2 class="text-2xl font-bold text-gray-800 mb-6 flex items-center">
+                    <i class="fas fa-users text-green-600 mr-3"></i>
+                    登録ユーザー一覧
+                </h2>
                 
-                <div class="table-container">
+                <div class="overflow-x-auto">
                     <table class="user-table">
                         <thead>
                             <tr>
-                                <th>ユーザー名</th>
-                                <th>メールアドレス</th>
-                                <th>権限</th>
-                                <th>ステータス</th>
-                                <th>作成日時</th>
-                                <th>操作</th>
+                                <th><i class="fas fa-user mr-2"></i>ユーザー名</th>
+                                <th><i class="fas fa-id-card mr-2"></i>表示名</th>
+                                <th><i class="fas fa-envelope mr-2"></i>メールアドレス</th>
+                                <th><i class="fas fa-key mr-2"></i>権限</th>
+                                <th><i class="fas fa-info-circle mr-2"></i>ステータス</th>
+                                <th><i class="fas fa-calendar mr-2"></i>作成日時</th>
+                                <th><i class="fas fa-cog mr-2"></i>操作</th>
                             </tr>
                         </thead>
                         <tbody id="userTableBody">
                             <tr>
-                                <td colspan="6" class="text-center">データを読み込み中...</td>
+                                <td colspan="7" class="text-center text-gray-500">
+                                    <i class="fas fa-spinner fa-spin mr-2"></i>データを読み込み中...
+                                </td>
                             </tr>
                         </tbody>
                     </table>
                 </div>
 
-                <div style="margin-top: 20px; padding: 15px; background: #f0fff4; border-radius: 8px; border-left: 4px solid #38a169;">
-                    <h4 style="margin: 0 0 10px 0; color: #22543d;">💡 ユーザー管理のヒント</h4>
-                    <ul style="margin: 0; color: #2f855a; font-size: 0.9rem;">
+                <div class="mt-6 p-4 bg-green-50 border-l-4 border-green-400 rounded">
+                    <h4 class="font-semibold text-green-800 mb-2">
+                        <i class="fas fa-lightbulb mr-2"></i>ユーザー管理のヒント
+                    </h4>
+                    <ul class="text-green-700 text-sm space-y-1">
                         <li><strong>初期状態</strong>: 作成直後のユーザー（個人設定未完了）</li>
                         <li><strong>設定完了</strong>: 個人設定を完了したアクティブユーザー</li>
                         <li><strong>権限変更</strong>: 編集機能で後から権限レベルを変更可能</li>
@@ -114,20 +318,227 @@
         </main>
 
         <!-- ナビゲーション -->
-        <footer style="text-align: center; margin-top: 40px;">
-            <a href="../index.html" class="btn btn-outline" style="margin-right: 10px;">
-                ← ログイン画面に戻る
-            </a>
-            <a href="schedule-dashboard.html" class="btn btn-primary">
-                スケジュール管理 →
-            </a>
+        <footer class="text-center">
+            <div class="flex justify-center space-x-4">
+                <a href="../index.html" class="btn btn-outline">
+                    <i class="fas fa-arrow-left mr-2"></i>ログイン画面に戻る
+                </a>
+                <a href="../dashboard.html" class="btn btn-primary">
+                    <i class="fas fa-tachometer-alt mr-2"></i>スケジュール管理
+                </a>
+            </div>
         </footer>
     </div>
 
     <!-- Firebase設定を最初に読み込み -->
-    <script src="../js/config/firebase-config.js"></script>
+    <script defer src="../js/config/firebase-config.js"></script>
     
-    <!-- メインスクリプトを最後に読み込み -->
-    <script src="../js/admin/admin-user-management.js"></script>
+    <!-- メインスクリプト -->
+    <script>
+    class AdminUserManagement {
+        constructor() {
+            this.database = null;
+            this.users = [];
+            this.init();
+        }
+
+        async init() {
+            try {
+                await this.waitForFirebase();
+                this.database = firebase.database();
+                this.setupEventListeners();
+                this.loadUsers();
+                console.log('✅ 管理者ユーザー管理初期化完了');
+            } catch (error) {
+                console.error('❌ 管理者ユーザー管理初期化エラー:', error);
+                this.showStatus('初期化に失敗しました', 'error');
+            }
+        }
+
+        async waitForFirebase() {
+            let attempts = 0;
+            while (attempts < 30) {
+                if (window.firebase && window.firebase.database && window.DATA_ROOT) {
+                    return;
+                }
+                await new Promise(resolve => setTimeout(resolve, 200));
+                attempts++;
+            }
+            throw new Error('Firebase初期化タイムアウト');
+        }
+
+        setupEventListeners() {
+            const createBtn = document.getElementById('createUserBtn');
+            if (createBtn) {
+                createBtn.onclick = () => this.createUser();
+            }
+        }
+
+        async createUser() {
+            const username = document.getElementById('username').value.trim();
+            const email = document.getElementById('email').value.trim();
+            const role = document.getElementById('role').value;
+
+            if (!username || !role) {
+                this.showStatus('ユーザー名と権限は必須です', 'error');
+                return;
+            }
+
+            // ユーザー名バリデーション
+            const alphanumericRegex = /^[a-zA-Z0-9]+$/;
+            if (username.length < 3 || username.length > 20 || !alphanumericRegex.test(username)) {
+                this.showStatus('ユーザー名は半角英数字3文字以上20文字以内で入力してください', 'error');
+                return;
+            }
+
+            try {
+                // ユーザー名重複チェック
+                const existingUsernameSnap = await this.database.ref(`${window.DATA_ROOT}/usernames/${username}`).once('value');
+                if (existingUsernameSnap.exists()) {
+                    this.showStatus('このユーザー名は既に存在します', 'error');
+                    return;
+                }
+
+                // 新しいユーザーのUIDを生成
+                const newUserRef = this.database.ref(`${window.DATA_ROOT}/users`).push();
+                const newUid = newUserRef.key;
+
+                const newUserData = {
+                    uid: newUid,
+                    username: username,
+                    displayName: username,
+                    email: email || null,
+                    password: null,
+                    role: role,
+                    department: null,
+                    setupCompleted: false,
+                    createdAt: firebase.database.ServerValue.TIMESTAMP,
+                    lastLogin: 0
+                };
+
+                // usersとusernamesに書き込み
+                await newUserRef.set(newUserData);
+                await this.database.ref(`${window.DATA_ROOT}/usernames/${username}`).set(newUid);
+
+                this.showStatus(`ユーザー「${username}」を作成しました。初回ログイン時はパスワード欄を空にしてください`, 'success');
+                
+                // フォームリセット
+                document.getElementById('createUserForm').reset();
+
+            } catch (error) {
+                console.error('❌ ユーザー作成エラー:', error);
+                this.showStatus(`ユーザー作成に失敗しました: ${error.message}`, 'error');
+            }
+        }
+
+        async loadUsers() {
+            try {
+                const usersRef = this.database.ref(`${window.DATA_ROOT}/users`);
+                usersRef.on('value', (snapshot) => {
+                    const users = snapshot.val() || {};
+                    this.users = Object.values(users);
+                    this.renderUserTable();
+                });
+            } catch (error) {
+                console.error('❌ ユーザー読み込みエラー:', error);
+                this.showStatus('ユーザー一覧の読み込みに失敗しました', 'error');
+            }
+        }
+
+        renderUserTable() {
+            const tbody = document.getElementById('userTableBody');
+            if (!tbody) return;
+
+            if (this.users.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="7" class="text-center text-gray-500">登録ユーザーがありません</td></tr>';
+                return;
+            }
+
+            tbody.innerHTML = this.users.map(user => {
+                const createdAt = user.createdAt ? new Date(user.createdAt).toLocaleString('ja-JP') : '不明';
+                const roleClass = `badge-${user.role}`;
+                const statusClass = user.setupCompleted ? 'badge-active' : 'badge-initial';
+                const statusText = user.setupCompleted ? '設定完了' : '初期状態';
+
+                return `
+                    <tr>
+                        <td class="font-medium">${user.username}</td>
+                        <td>${user.displayName || '-'}</td>
+                        <td>${user.email || '-'}</td>
+                        <td><span class="badge ${roleClass}">${user.role}</span></td>
+                        <td><span class="badge ${statusClass}">${statusText}</span></td>
+                        <td class="text-sm text-gray-600">${createdAt}</td>
+                        <td>
+                            <button onclick="adminUserManagement.editUser('${user.uid}')" 
+                                    class="text-blue-600 hover:text-blue-800 mr-2">
+                                <i class="fas fa-edit"></i> 編集
+                            </button>
+                            <button onclick="adminUserManagement.deleteUser('${user.uid}', '${user.username}')" 
+                                    class="text-red-600 hover:text-red-800">
+                                <i class="fas fa-trash"></i> 削除
+                            </button>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        async editUser(uid) {
+            const user = this.users.find(u => u.uid === uid);
+            if (!user) return;
+
+            const newRole = prompt(`${user.username}の権限を変更してください:\n\nadmin: 管理者\neditor: 編集者\nviewer: 閲覧者\n\n現在: ${user.role}`, user.role);
+            
+            if (newRole && ['admin', 'editor', 'viewer'].includes(newRole) && newRole !== user.role) {
+                try {
+                    await this.database.ref(`${window.DATA_ROOT}/users/${uid}`).update({
+                        role: newRole,
+                        updatedAt: firebase.database.ServerValue.TIMESTAMP
+                    });
+
+                    this.showStatus(`${user.username}の権限を${newRole}に変更しました`, 'success');
+                } catch (error) {
+                    console.error('❌ 権限変更エラー:', error);
+                    this.showStatus('権限の変更に失敗しました', 'error');
+                }
+            }
+        }
+
+        async deleteUser(uid, username) {
+            if (!confirm(`ユーザー「${username}」を削除しますか？\n\nこの操作は元に戻せません。`)) {
+                return;
+            }
+
+            try {
+                await this.database.ref(`${window.DATA_ROOT}/users/${uid}`).remove();
+                await this.database.ref(`${window.DATA_ROOT}/usernames/${username}`).remove();
+
+                this.showStatus(`ユーザー「${username}」を削除しました`, 'success');
+            } catch (error) {
+                console.error('❌ ユーザー削除エラー:', error);
+                this.showStatus('ユーザーの削除に失敗しました', 'error');
+            }
+        }
+
+        showStatus(message, type) {
+            const statusDiv = document.getElementById('status');
+            if (!statusDiv) return;
+
+            statusDiv.className = `status ${type}`;
+            statusDiv.textContent = message;
+            statusDiv.style.display = 'block';
+
+            setTimeout(() => {
+                statusDiv.style.display = 'none';
+            }, 5000);
+        }
+    }
+
+    // 初期化
+    let adminUserManagement = null;
+    document.addEventListener('DOMContentLoaded', () => {
+        adminUserManagement = new AdminUserManagement();
+    });
+    </script>
 </body>
 </html>
