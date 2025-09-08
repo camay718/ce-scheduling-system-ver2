@@ -1,5 +1,5 @@
 /**
- * 月間カレンダー表示 - V2統合版
+ * 月間カレンダー表示 - V2統合版（修正版）
  */
 (function() {
     'use strict';
@@ -138,13 +138,13 @@
                     ].filter(Boolean).join(' ');
 
                     html += `
-                        <td class="${cellClass}" data-date="${dateKey}" onclick="openDateModal('${dateKey}')">
+                        <td class="${cellClass}" data-date="${dateKey}" onclick="window.openDateModal('${dateKey}')">
                             <div class="h-full w-full min-h-[80px] p-2">
                                 <div class="font-medium text-sm mb-1 ${isToday ? 'text-blue-700' : dateInfo.isCurrentMonth ? '' : 'text-gray-400'}">
                                     ${dateInfo.date.getDate()}
                                 </div>
                                 <div class="space-y-1">
-                                    ${this.renderEventChips(events)}
+                                    ${this.renderEventChips(events, dateKey)}
                                 </div>
                             </div>
                         </td>
@@ -163,32 +163,32 @@
             console.log('✅ カレンダー描画完了');
         }
 
-        renderEventChips(events) {
-    if (!events || events.length === 0) return '';
+        renderEventChips(events, dateKey) {
+            if (!events || events.length === 0) return '';
 
-    const maxDisplay = 3;
-    let html = '';
+            const maxDisplay = 3;
+            let html = '';
 
-    events.slice(0, maxDisplay).forEach(event => {
-        const color = window.getDepartmentColor ? window.getDepartmentColor(event.department) : '#2563eb';
-        const timeDisplay = event.startTime && event.endTime ? ` (${event.startTime}-${event.endTime})` : '';
-        
-        html += `
-            <div class="text-xs p-1 rounded text-white truncate cursor-pointer hover:opacity-80 transition-opacity" 
-                 style="background-color: ${color};"
-                 title="${event.name}${timeDisplay}\n部門: ${event.department}\n必要人数: ${event.requiredPeople || 1}名"
-                 onclick="event.stopPropagation(); window.openEventEditModal('${window.DateUtils.formatDateISO(new Date(event.date))}', '${event.id}')">
-                <i class="fas fa-briefcase mr-1"></i>${event.name}
-            </div>
-        `;
-    });
+            events.slice(0, maxDisplay).forEach(event => {
+                const color = window.getDepartmentColor ? window.getDepartmentColor(event.department) : '#2563eb';
+                const timeDisplay = event.startTime && event.endTime ? ` (${event.startTime}-${event.endTime})` : '';
+                
+                html += `
+                    <div class="text-xs p-1 rounded text-white truncate cursor-pointer hover:opacity-80 transition-opacity" 
+                         style="background-color: ${color};"
+                         title="${event.name}${timeDisplay}&#10;部門: ${event.department}&#10;必要人数: ${event.requiredPeople || 1}名"
+                         onclick="event.stopPropagation(); window.openEventEditModal('${dateKey}', '${event.id}')">
+                        <i class="fas fa-briefcase mr-1"></i>${event.name}
+                    </div>
+                `;
+            });
 
-    if (events.length > maxDisplay) {
-        html += `<div class="text-xs text-gray-500 cursor-pointer hover:text-gray-700" onclick="window.openDateModal('${window.DateUtils.formatDateISO(new Date(events[0].date))}')">+${events.length - maxDisplay}件 クリックで詳細</div>`;
-    }
+            if (events.length > maxDisplay) {
+                html += `<div class="text-xs text-gray-500 cursor-pointer hover:text-gray-700" onclick="window.openDateModal('${dateKey}')">+${events.length - maxDisplay}件 クリックで詳細</div>`;
+            }
 
-    return html;
-}
+            return html;
+        }
 
         // サンプルデータ追加（開発用）
         async addSampleData() {
@@ -216,11 +216,14 @@
         }
     }
 
-    // グローバル関数
+    // 🔧 重要: 古いプレースホルダー関数を削除
+    // 以下のような関数定義があれば削除またはコメントアウトしてください
+    /*
     window.openDateModal = (dateKey) => {
         console.log('📅 日付クリック:', dateKey);
         alert(`${dateKey}の詳細画面を表示します（実装予定）`);
     };
+    */
 
     // グローバル公開
     window.CalendarView = CalendarView;
