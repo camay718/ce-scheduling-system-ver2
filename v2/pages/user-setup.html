@@ -14,10 +14,10 @@
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
     
-    <!-- カスタムCSS -->
-    <link rel="stylesheet" href="../css/main.css">
-    <link rel="stylesheet" href="../css/auth.css">
-    <link rel="stylesheet" href="../css/registration.css">
+<!-- 以下をコメントアウト -->
+<!-- <link rel="stylesheet" href="../css/main.css"> -->
+<!-- <link rel="stylesheet" href="../css/auth.css"> -->
+<!-- <link rel="stylesheet" href="../css/registration.css"> -->
 </head>
 <body>
     <!-- メッセージコンテナ -->
@@ -138,11 +138,11 @@
         </div>
     </div>
 
-    <!-- JavaScript読み込み -->
-    <script src="../js/core/firebase-config.js?v=20241205-5"></script>
-    <script src="../js/auth/initial-login.js?v=20241205-5"></script>
-    <script src="../js/user/user-setup.js?v=20241205-5"></script>
-
+   <!-- JavaScript読み込みもコメントアウト -->
+<!-- <script src="../js/core/firebase-config.js?v=20241205-5"></script> -->
+<!-- <script src="../js/auth/initial-login.js?v=20241205-5"></script> -->
+<!-- <script src="../js/user/user-setup.js?v=20241205-5"></script> -->
+<script src="../js/config/firebase-config.js"></script>
  <script>
 // パスワードハッシュ化ユーティリティ（PBKDF2-SHA256）
 async function hashPassword(password, saltB64 = null, iterations = 120000) {
