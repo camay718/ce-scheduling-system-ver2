@@ -3,238 +3,270 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CEスケジュール管理システム V2</title>
+    <title>ログイン - CEスケジュール管理システム V2</title>
+    
+    <!-- 外部ライブラリ -->
     <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css">
-    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+    
     <style>
-        .fade-in { animation: fadeIn 0.5s ease-in; }
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(10px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-        .hidden { display: none !important; }
         body {
-            font-family: 'Noto Sans JP', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            font-family: 'Noto Sans JP', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            color: #333;
         }
-    </style>
-</head>
-<body class="bg-gradient-to-br from-blue-50 to-indigo-100 min-h-screen">
-    <div id="app" class="min-h-screen flex items-center justify-center p-4">
-        <!-- ローディング画面 -->
-        <div id="loading" class="text-center">
-            <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mx-auto mb-4"></div>
-            <p class="text-gray-600">システムを初期化しています...</p>
-        </div>
-
-        <!-- ログイン画面 -->
-        <div id="loginSection" class="hidden w-full max-w-md fade-in">
-            <div class="bg-white rounded-xl shadow-lg p-8">
-                <div class="text-center mb-8">
-                    <div class="bg-indigo-100 rounded-full w-16 h-16 flex items-center justify-center mx-auto mb-4">
-                        <i class="fas fa-calendar-alt text-2xl text-indigo-600"></i>
-                    </div>
-                    <h1 class="text-2xl font-bold text-gray-900 mb-2">CEスケジュール管理システム V2</h1>
-                    <p class="text-gray-600">ログインしてください</p>
-                </div>
-
-                <form id="loginForm" class="space-y-6">
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-2">
-                            <i class="fas fa-user mr-1"></i>ユーザー名
-                        </label>
-                        <input type="text" id="username" required 
-                               class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-colors"
-                               placeholder="ユーザー名を入力" autocomplete="username">
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-2">
-                            <i class="fas fa-lock mr-1"></i>パスワード
-                        </label>
-                        <input type="password" id="loginPassword" 
-                               class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-colors"
-                               placeholder="パスワードを入力（初回は空欄でOK）" autocomplete="current-password">
-                        <p class="mt-1 text-xs text-gray-500">
-                            <i class="fas fa-info-circle mr-1"></i>初回ログインはパスワード欄を空にしてください
-                        </p>
-                    </div>
-                    <button type="submit" id="loginButton"
-                            class="w-full bg-indigo-600 text-white py-2 px-4 rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-colors disabled:opacity-50">
-                        <span id="loginButtonText">
-                            <i class="fas fa-sign-in-alt mr-1"></i>ログイン
-                        </span>
-                    </button>
-                </form>
-
-                <div class="mt-6 text-center border-t pt-4">
-                    <p class="text-sm text-gray-600">管理者の方は 
-                        <a href="pages/admin-dashboard.html" class="text-indigo-600 hover:text-indigo-800 font-medium">
-                            <i class="fas fa-cog mr-1"></i>こちら
-                        </a>
-                    </p>
-                </div>
-            </div>
-        </div>
-
-        <!-- 個人設定画面 -->
-        <div id="userSetupSection" class="hidden w-full max-w-md fade-in">
-            <div class="bg-white rounded-xl shadow-lg p-8">
-                <div class="text-center mb-6">
-                    <div class="bg-green-100 rounded-full w-16 h-16 flex items-center justify-center mx-auto mb-4">
-                        <i class="fas fa-user-cog text-2xl text-green-600"></i>
-                    </div>
-                    <h2 class="text-xl font-semibold text-gray-900">個人設定</h2>
-                    <p class="text-gray-600 text-sm">初回ログイン時の設定を行います</p>
-                </div>
-                
-                <form id="userSetupForm" class="space-y-6">
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-2">
-                            <i class="fas fa-user mr-1"></i>表示名
-                        </label>
-                        <input type="text" id="displayName" required 
-                               class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-colors"
-                               placeholder="表示名を入力">
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-2">
-                            <i class="fas fa-envelope mr-1"></i>メールアドレス（任意）
-                        </label>
-                        <input type="email" id="email" 
-                               class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-colors"
-                               placeholder="メールアドレス（任意）" autocomplete="email">
-                        <p class="mt-1 text-xs text-gray-500">通知や連絡用（設定は任意です）</p>
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-2">
-                            <i class="fas fa-key mr-1"></i>パスワード設定
-                        </label>
-                        <input type="password" id="setupPassword" required
-                               class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-colors"
-                               placeholder="パスワードを設定してください" autocomplete="new-password">
-                        <p class="mt-1 text-xs text-gray-500">今後のログインで使用するパスワードを設定してください</p>
-                    </div>
-                    <button type="submit" id="setupButton"
-                            class="w-full bg-indigo-600 text-white py-2 px-4 rounded-md hover:bg-indigo-700 transition-colors disabled:opacity-50">
-                        <i class="fas fa-check mr-1"></i>
-                        <span id="setupButtonText">設定完了</span>
-                        <div id="setupSpinner" class="hidden inline-block w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin ml-2"></div>
-                    </button>
-                </form>
-            </div>
-        </div>
-
-        <!-- メイン画面（遷移画面） -->
-        <div id="mainSection" class="hidden w-full max-w-md text-center">
-            <div class="bg-white rounded-xl shadow-lg p-8">
-                <div class="bg-blue-100 rounded-full w-16 h-16 flex items-center justify-center mx-auto mb-4">
-                    <i class="fas fa-chart-line text-2xl text-blue-600"></i>
-                </div>
-                <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600 mx-auto mb-4"></div>
-                <p class="text-gray-600">メインダッシュボードに移動しています...</p>
-            </div>
-        </div>
-    </div>
-
-    <!-- 通知表示エリア -->
-    <div id="notificationContainer" class="fixed top-4 right-4 z-50"></div>
-
-    <!-- Firebase設定とスクリプト読み込み -->
-    <script src="js/config/firebase-config.js"></script>
-    <script src="js/auth/auth-core.js"></script>
-    <script src="js/auth/initial-login.js"></script>
-
-    <script>
-document.addEventListener('DOMContentLoaded', async () => {
-    // Firebase初期化完了を確実に待機
-    await window.waitForFirebase();
-
-    const loginForm = document.getElementById('loginForm');
-    const usernameInput = document.getElementById('username');
-    const passwordInput = document.getElementById('password');
-    const statusMessage = document.getElementById('statusMessage');
-    let forgotPasswordBtn = document.getElementById('forgotPasswordBtn');
-
-    function showStatus(message, type) {
-        if (statusMessage) {
-            statusMessage.textContent = message;
-            statusMessage.className = `status-message ${type}`;
-            statusMessage.style.display = 'block';
-            setTimeout(() => {
-                statusMessage.style.display = 'none';
-            }, 5000);
-        } else {
-            // フォールバック: alert表示
-            console.log(`${type.toUpperCase()}: ${message}`);
-            alert(message);
+        
+        .login-container {
+            background: rgba(255, 255, 255, 0.9);
+            backdrop-filter: blur(10px);
+            border-radius: 16px;
+            padding: 40px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            width: 100%;
+            max-width: 400px;
         }
-    }
-
-    // パスワード忘れボタンの自動追加（存在しない場合）
-    if (!forgotPasswordBtn && loginForm) {
-        forgotPasswordBtn = document.createElement('button');
-        forgotPasswordBtn.type = 'button';
-        forgotPasswordBtn.id = 'forgotPasswordBtn';
-        forgotPasswordBtn.textContent = 'パスワードがわからなくなったら？';
-        forgotPasswordBtn.style.cssText = `
+        
+        .form-input {
+            width: 100%;
+            padding: 12px 16px;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            font-size: 16px;
+            transition: border-color 0.3s ease;
+        }
+        
+        .form-input:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            width: 100%;
+        }
+        
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(102, 126, 234, 0.3);
+        }
+        
+        .btn-primary:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        .status-message {
+            padding: 12px 16px;
+            border-radius: 8px;
+            margin-top: 15px;
+            font-size: 14px;
+            font-weight: 500;
+        }
+        
+        .status-message.success {
+            background-color: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        
+        .status-message.error {
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        
+        .status-message.info {
+            background-color: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+        
+        .forgot-password-btn {
             background: none;
             border: none;
-            color: #3b82f6;
+            color: #667eea;
             text-decoration: underline;
             cursor: pointer;
             font-size: 14px;
-            margin-top: 10px;
+            margin-top: 15px;
             display: block;
             width: 100%;
             text-align: center;
-            padding: 5px;
-        `;
-        
-        // ログインフォームの後に追加
-        if (loginForm.parentNode) {
-            loginForm.parentNode.insertBefore(forgotPasswordBtn, loginForm.nextSibling);
+            padding: 8px;
+            transition: color 0.3s ease;
         }
-    }
+        
+        .forgot-password-btn:hover {
+            color: #764ba2;
+        }
+    </style>
+</head>
+<body>
+    <div class="login-container">
+        <h2 class="text-3xl font-bold text-center text-gray-800 mb-8">
+            <i class="fas fa-calendar-check text-purple-600 mr-2"></i>
+            CEスケジュール管理システム V2
+        </h2>
+        
+        <form id="loginForm" class="space-y-6">
+            <div>
+                <label for="username" class="block text-gray-700 text-sm font-bold mb-2">
+                    <i class="fas fa-user mr-2"></i>ユーザー名
+                </label>
+                <input type="text" id="username" class="form-input" 
+                       placeholder="ユーザー名を入力" required autocomplete="username">
+            </div>
+            
+            <div>
+                <label for="password" class="block text-gray-700 text-sm font-bold mb-2">
+                    <i class="fas fa-lock mr-2"></i>パスワード
+                </label>
+                <input type="password" id="password" class="form-input" 
+                       placeholder="パスワードを入力" required autocomplete="current-password">
+            </div>
+            
+            <button type="submit" id="loginBtn" class="btn-primary">
+                <i class="fas fa-sign-in-alt mr-2"></i>ログイン
+            </button>
+            
+            <div id="statusMessage" class="status-message" style="display: none;"></div>
+        </form>
+        
+        <button type="button" id="forgotPasswordBtn" class="forgot-password-btn">
+            <i class="fas fa-question-circle mr-1"></i>パスワードがわからなくなったら？
+        </button>
+    </div>
 
-    // パスワード忘れボタンのイベント設定
-    if (forgotPasswordBtn) {
-        forgotPasswordBtn.addEventListener('click', () => {
-            alert('パスワードがわからなくなった場合:\n\nシステム管理者にお問い合わせください。\n管理者がパスワードをリセットし、新しい初回パスワードを発行します。\n\n📞 管理者連絡先: システム管理者まで');
-        });
-    }
+    <!-- Firebase SDK（defer属性を削除して即座に読み込み） -->
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+    
+    <!-- Firebase設定（Promise化対応済み） -->
+    <script src="js/config/firebase-config.js"></script>
+    
+    <!-- ログイン処理（競合を排除したクリーンな実装） -->
+    <script>
+    document.addEventListener('DOMContentLoaded', async () => {
+        console.log('🔐 ログイン処理開始（クリーン版）');
+        
+        // Firebase初期化完了を確実に待機
+        try {
+            await window.waitForFirebase();
+            console.log('✅ Firebase初期化完了');
+        } catch (error) {
+            console.error('❌ Firebase初期化エラー:', error);
+            showStatus('システム初期化に失敗しました', 'error');
+            return;
+        }
 
-    if (loginForm) {
+        // フォーム要素の取得
+        const loginForm = document.getElementById('loginForm');
+        const usernameInput = document.getElementById('username');
+        const passwordInput = document.getElementById('password');
+        const statusMessage = document.getElementById('statusMessage');
+        const loginBtn = document.getElementById('loginBtn');
+        const forgotPasswordBtn = document.getElementById('forgotPasswordBtn');
+
+        // 要素の存在確認
+        if (!loginForm || !usernameInput || !passwordInput) {
+            console.error('❌ 必要なフォーム要素が見つかりません');
+            alert('ログインフォームの初期化に失敗しました。ページをリロードしてください。');
+            return;
+        }
+
+        console.log('✅ フォーム要素の取得完了');
+
+        function showStatus(message, type) {
+            console.log(`📢 ステータス [${type}]: ${message}`);
+            
+            if (statusMessage) {
+                statusMessage.textContent = message;
+                statusMessage.className = `status-message ${type}`;
+                statusMessage.style.display = 'block';
+                
+                // 成功メッセージ以外は自動で非表示
+                if (type !== 'success') {
+                    setTimeout(() => {
+                        statusMessage.style.display = 'none';
+                    }, 5000);
+                }
+            }
+        }
+
+        function setLoading(isLoading) {
+            if (loginBtn) {
+                loginBtn.disabled = isLoading;
+                loginBtn.innerHTML = isLoading 
+                    ? '<i class="fas fa-spinner fa-spin mr-2"></i>処理中...'
+                    : '<i class="fas fa-sign-in-alt mr-2"></i>ログイン';
+            }
+        }
+
+        // パスワード忘れボタンのイベント
+        if (forgotPasswordBtn) {
+            forgotPasswordBtn.addEventListener('click', () => {
+                alert(`パスワードがわからなくなった場合:
+
+システム管理者にお問い合わせください。
+管理者がパスワードをリセットし、新しい初回パスワードを発行します。
+
+📞 管理者連絡先: システム管理者まで`);
+            });
+        }
+
+        // ログイン処理
         loginForm.addEventListener('submit', async (e) => {
             e.preventDefault();
             
-            const username = usernameInput?.value?.trim();
-            const password = passwordInput?.value?.trim();
+            const username = usernameInput.value.trim();
+            const password = passwordInput.value.trim();
+
+            console.log('🔍 ログイン試行開始');
+            console.log('- ユーザー名:', username ? `"${username}"` : '(空)');
+            console.log('- パスワード:', password ? '(入力あり)' : '(空)');
 
             if (!username || !password) {
                 showStatus('ユーザー名とパスワードを入力してください', 'error');
                 return;
             }
 
-            try {
-                showStatus('ログイン処理中...', 'info');
+            setLoading(true);
+            showStatus('ログイン処理中...', 'info');
 
-                // 1. 既存のアクティブユーザーとしてログインを試行
+            try {
+                console.log('🔍 データベース接続確認');
+                
+                // 1. アクティブユーザーとしてログインを試行
+                console.log('🔍 アクティブユーザーチェック');
                 const usernameSnap = await window.database
                     .ref(`${window.DATA_ROOT}/usernames/${username}`)
                     .once('value');
                 
                 if (usernameSnap.exists()) {
                     const uid = usernameSnap.val().uid || usernameSnap.val();
+                    console.log('🆔 UID取得:', uid);
+                    
                     const userSnap = await window.database
                         .ref(`${window.DATA_ROOT}/users/${uid}`)
                         .once('value');
                     const userData = userSnap.val();
 
                     if (userData && userData.setupCompleted) {
-                        // 【注意】現在は簡易実装：アクティブユーザーはパスワード照合をスキップ
-                        // 将来的にはハッシュ化されたパスワードとの照合を実装してください
+                        console.log('✅ アクティブユーザー認証成功');
                         
                         sessionStorage.setItem('targetUID', uid);
                         sessionStorage.setItem('currentUsername', username);
@@ -252,21 +284,25 @@ document.addEventListener('DOMContentLoaded', async () => {
                     }
                 }
 
-                // 2. 初回ログイン待機リスト（pendingUsers）からログインを試行
+                // 2. 初回ログイン待機リストからログインを試行
+                console.log('🔍 初回ログイン待機リストチェック');
                 const pendingSnap = await window.database
                     .ref(`${window.DATA_ROOT}/pendingUsers/${username}`)
                     .once('value');
                 
                 if (pendingSnap.exists()) {
                     const pendingUserData = pendingSnap.val();
+                    console.log('📋 待機リストユーザー発見');
                     
                     // 初回パスワードとの照合
                     if (pendingUserData.initialPassword === password) {
-                        showStatus('初回ログイン認証成功！アカウントを有効化中...', 'success');
+                        console.log('✅ 初回パスワード認証成功');
+                        showStatus('初回ログイン認証成功！アカウントを有効化中...', 'info');
                         
-                        // 初回ログイン成功 → アクティブユーザーとして登録
+                        // 匿名認証でFirebaseユーザーを作成
                         const authResult = await window.auth.signInAnonymously();
                         const uid = authResult.user.uid;
+                        console.log('🆔 新規UID生成:', uid);
 
                         const newUserData = {
                             uid: uid,
@@ -287,6 +323,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                         updates[`${window.DATA_ROOT}/pendingUsers/${username}`] = null; // 削除
 
                         await window.database.ref().update(updates);
+                        console.log('✅ アカウント有効化完了');
 
                         sessionStorage.setItem('targetUID', uid);
                         sessionStorage.setItem('currentUsername', username);
@@ -296,25 +333,23 @@ document.addEventListener('DOMContentLoaded', async () => {
                             window.location.href = 'dashboard.html';
                         }, 1500);
                         return;
-                    } else {
-                        showStatus('初回パスワードが間違っています', 'error');
-                        return;
                     }
                 }
                 
                 // 3. どちらにも該当しない場合
+                console.log('❌ ユーザーまたはパスワードが無効');
                 showStatus('ユーザー名またはパスワードが間違っています', 'error');
 
             } catch (error) {
                 console.error('❌ ログインエラー:', error);
                 showStatus(`ログインに失敗しました: ${error.message}`, 'error');
+            } finally {
+                setLoading(false);
             }
         });
-    } else {
-        console.error('❌ ログインフォーム（id="loginForm"）が見つかりません');
-        alert('ログインフォームが見つかりません。HTMLの構造を確認してください。');
-    }
-});
-</script>
+        
+        console.log('✅ ログイン処理初期化完了');
+    });
+    </script>
 </body>
 </html>
