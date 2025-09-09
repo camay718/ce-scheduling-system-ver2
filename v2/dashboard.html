@@ -802,14 +802,14 @@ Copy<!DOCTYPE html>
             console.log('📊 ダッシュボード認証チェック開始');
             
             try {
-                await window.waitForFirebase();
-                await this.checkAuthWithRetry();
-            } catch (error) {
-                console.error('❌ ダッシュボード初期化エラー:', error);
-                this.redirectToLogin();
-            }
-        }
-
+        // 【修正】Firebase初期化完了を確実に待機
+        await window.waitForFirebase();
+        await this.checkAuthWithRetry();
+    } catch (error) {
+        console.error('❌ ダッシュボード初期化エラー:', error);
+        this.redirectToLogin();
+    }
+}
         async checkAuthWithRetry(maxRetries = 3) {
             for (let attempt = 1; attempt <= maxRetries; attempt++) {
                 try {
