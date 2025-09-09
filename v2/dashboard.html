@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+Copy<!DOCTYPE html>
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
@@ -17,10 +17,9 @@
     <script defer src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
     <script defer src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
     
-    <!-- Firebase設定 -->
-    <script defer src="js/config/firebase-config.js?v=20241212"></script>
+    <!-- Firebase設定（最優先読み込み） -->
+    <script src="js/config/firebase-config.js?v=20241212"></script>
     
-    <!-- V1互換スタイル -->
     <style>
         :root {
             --primary-gradient: linear-gradient(135deg, #E8F5E8 0%, #D4F1D4 100%);
@@ -61,7 +60,7 @@
             box-shadow: 0 6px 18px rgba(0,0,0,0.15); 
         }
 
-        /* V1 CE Item Styles */
+        /* CE Item Styles */
         .ce-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(90px,1fr));
@@ -94,10 +93,27 @@
             font-weight: 600;
         }
 
-        .ce-item.worktype-ope, .ce-item-mini.worktype-ope { --ce-color:#87CEEB; --ce-color-light:#B0E0E6; background: linear-gradient(135deg, #87CEEB, #B0E0E6); color:#1E3A8A;}
-        .ce-item.worktype-me, .ce-item-mini.worktype-me { --ce-color:#90EE90; --ce-color-light:#98FB98; background: linear-gradient(135deg, #90EE90, #98FB98); color:#006400;}
-        .ce-item.worktype-hd, .ce-item-mini.worktype-hd { --ce-color:#FFB6C1; --ce-color-light:#FFC0CB; background: linear-gradient(135deg, #FFB6C1, #FFC0CB); color:#8B008B;}
-        .ce-item.worktype-flex, .ce-item-mini.worktype-flex { --ce-color:#FFFF99; --ce-color-light:#FFFFE0; background: linear-gradient(135deg, #FFFF99, #FFFFE0); color:#B8860B;}
+        /* 勤務区分色分け */
+        .ce-item.worktype-ope, .ce-item-mini.worktype-ope { 
+            --ce-color:#87CEEB; --ce-color-light:#B0E0E6; 
+            background: linear-gradient(135deg, #87CEEB, #B0E0E6); 
+            color:#1E3A8A;
+        }
+        .ce-item.worktype-me, .ce-item-mini.worktype-me { 
+            --ce-color:#90EE90; --ce-color-light:#98FB98; 
+            background: linear-gradient(135deg, #90EE90, #98FB98); 
+            color:#006400;
+        }
+        .ce-item.worktype-hd, .ce-item-mini.worktype-hd { 
+            --ce-color:#FFB6C1; --ce-color-light:#FFC0CB; 
+            background: linear-gradient(135deg, #FFB6C1, #FFC0CB); 
+            color:#8B008B;
+        }
+        .ce-item.worktype-flex, .ce-item-mini.worktype-flex { 
+            --ce-color:#FFFF99; --ce-color-light:#FFFFE0; 
+            background: linear-gradient(135deg, #FFFF99, #FFFFE0); 
+            color:#B8860B;
+        }
 
         /* 配置されたCEチップの勤務区分色分け */
         .chip {
@@ -232,37 +248,31 @@
             50% { opacity: 1; }
         }
 
-        /* スケジュールテーブル */
-        .schedule-table {
-            border-collapse: collapse;
-            width: 100%;
-        }
-        
-        .schedule-table th,
-        .schedule-table td {
-            border: 1px solid #e5e7eb;
-            text-align: center;
-            vertical-align: top;
-            min-height: 80px;
-        }
-        
-        .schedule-table th {
-            background: #2563eb;
-            color: white;
-            font-weight: 600;
-            padding: 0.75rem;
-        }
-        
-        .schedule-cell {
-            min-height: 80px;
-            padding: 0.5rem;
-            position: relative;
-            cursor: pointer;
-            transition: all 0.2s ease;
+        /* CE管理4列グリッド */
+        .ce-management-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 16px;
+            padding: 16px 0;
         }
 
-        .schedule-cell:hover {
-            background-color: rgba(37, 99, 235, 0.05);
+        .ce-management-card {
+            border: 1px solid #e5e7eb;
+            border-radius: 8px;
+            padding: 12px;
+            background: white;
+            transition: all 0.2s ease;
+            position: relative;
+        }
+
+        .ce-management-card:hover {
+            border-color: #3b82f6;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        .ce-management-card.dragging {
+            opacity: 0.5;
+            transform: rotate(2deg);
         }
 
         /* 部門別レイアウト */
@@ -406,7 +416,7 @@
                 </button>
             </nav>
 
-            <!-- 月予定設定 -->
+            <!-- 月予定設定（修正版：機能実装） -->
             <div class="mb-4 sidebar-text">
                 <h3 class="text-sm font-medium text-gray-700 mb-2">月予定設定</h3>
                 <div class="space-y-2">
@@ -419,7 +429,7 @@
                 </div>
             </div>
 
-            <!-- テンプレート -->
+            <!-- テンプレート（修正版：縦配置） -->
             <div class="sidebar-text">
                 <h3 class="text-sm font-medium text-gray-700 mb-2">テンプレート</h3>
                 <div class="space-y-2">
@@ -489,39 +499,67 @@
                 </div>
             </div>
 
-            <!-- CEリスト管理 -->
+            <!-- CEリスト管理（完全修正版：4列レイアウト、日付前後ボタン） -->
             <div id="ceManagementContent" class="screen-content" style="display:none;">
                 <div class="mb-4 flex justify-between items-center">
                     <h2 class="text-2xl font-bold">CEリスト管理</h2>
                     <div class="flex items-center gap-3">
+                        <button id="prevStatusDateBtn" class="bg-gray-600 hover:bg-gray-700 text-white px-3 py-2 rounded-lg">
+                            <i class="fas fa-chevron-left mr-1"></i>前日
+                        </button>
                         <input type="date" id="ceStatusDate" class="px-3 py-2 border border-gray-300 rounded-lg">
+                        <button id="nextStatusDateBtn" class="bg-gray-600 hover:bg-gray-700 text-white px-3 py-2 rounded-lg">
+                            翌日<i class="fas fa-chevron-right ml-1"></i>
+                        </button>
+                        <button id="todayStatusBtn" class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-2 rounded-lg">
+                            <i class="fas fa-calendar-day mr-1"></i>今日
+                        </button>
                         <span class="text-sm text-gray-600">この日付の勤務状態を設定</span>
                     </div>
                 </div>
                 
-                <!-- CEリスト管理テーブル -->
+                <!-- CE管理コントロール -->
                 <div class="glassmorphism rounded-2xl p-4 mb-4">
-                    <div class="overflow-x-auto">
-                        <table class="w-full text-sm">
-                            <thead class="bg-gray-50">
-                                <tr>
-                                    <th class="p-3 text-left">CE名</th>
-                                    <th class="p-3 text-center">勤務区分</th>
-                                    <th class="p-3 text-center">部門</th>
-                                    <th class="p-3 text-center">選択日の勤務状態</th>
-                                    <th class="p-3 text-center">操作</th>
-                                </tr>
-                            </thead>
-                            <tbody id="ceManagementTableBody">
-                                <!-- 動的生成 -->
-                            </tbody>
-                        </table>
+                    <div class="flex items-center justify-between mb-4">
+                        <h3 class="text-lg font-semibold">CE管理コントロール</h3>
+                        <div class="flex items-center gap-3">
+                            <div class="flex items-center gap-2">
+                                <input type="text" id="newCEName" placeholder="新しいCE名" 
+                                       class="px-3 py-2 border border-gray-300 rounded-lg">
+                                <select id="newCEWorkType" class="px-3 py-2 border border-gray-300 rounded-lg">
+                                    <option value="ME">ME</option>
+                                    <option value="OPE">OPE</option>
+                                    <option value="HD">HD</option>
+                                    <option value="FLEX">FLEX</option>
+                                </select>
+                                <button id="addNewCEBtn" class="bg-green-600 hover:bg-green-700 text-white px-3 py-2 rounded-lg">
+                                    <i class="fas fa-plus mr-1"></i>追加
+                                </button>
+                            </div>
+                            <div class="border-l pl-3 ml-3">
+                                <label class="text-sm font-medium mr-2">並び替え:</label>
+                                <button id="sortByNameBtn" class="bg-blue-600 hover:bg-blue-700 text-white px-2 py-1 rounded text-xs mr-1">
+                                    名前順
+                                </button>
+                                <button id="sortByWorkTypeBtn" class="bg-blue-600 hover:bg-blue-700 text-white px-2 py-1 rounded text-xs">
+                                    勤務区分順
+                                </button>
+                            </div>
+                        </div>
                     </div>
-                    <div class="mt-2 text-xs text-gray-500 bg-yellow-50 p-2 rounded">
+                </div>
+
+                <!-- CE管理4列グリッド -->
+                <div class="glassmorphism rounded-2xl p-4 mb-4">
+                    <div id="ceManagementGrid" class="ce-management-grid">
+                        <!-- 動的生成 -->
+                    </div>
+                    <div class="mt-4 text-xs text-gray-500 bg-yellow-50 p-2 rounded">
                         <i class="fas fa-info-circle mr-1"></i>
                         <strong>操作方法:</strong> 
+                        ドラッグで並び替え | 
+                        編集ボタンで基本情報編集 | 
                         削除ボタンで削除（確認あり） | 
-                        編集ボタンでCE基本情報編集 | 
                         勤務状態は選択日のみ設定
                     </div>
                 </div>
@@ -746,12 +784,14 @@
     <script defer src="js/ui/ce-manager.js?v=20241212"></script>
     <script defer src="js/ui/ce-daily-status.js?v=20241212"></script>
 
-    <!-- Dashboard専用JavaScript -->
+    <!-- Dashboard専用JavaScript（完全修正版） -->
     <script>
     class DashboardAuth {
         constructor() {
             this.isInitialized = false;
             this.selectedDate = new Date();
+            this.ceStatusDate = new Date();
+            this.currentMonth = new Date();
             this.init();
         }
 
@@ -762,25 +802,12 @@
             console.log('📊 ダッシュボード認証チェック開始');
             
             try {
-                await this.waitForFirebase();
+                await window.waitForFirebase();
                 await this.checkAuthWithRetry();
             } catch (error) {
                 console.error('❌ ダッシュボード初期化エラー:', error);
                 this.redirectToLogin();
             }
-        }
-
-        async waitForFirebase() {
-            let attempts = 0;
-            while (attempts < 30) {
-                if (window.auth && window.database && window.DATA_ROOT) {
-                    console.log('✅ Firebase準備完了');
-                    return;
-                }
-                await new Promise(resolve => setTimeout(resolve, 200));
-                attempts++;
-            }
-            throw new Error('Firebase初期化失敗');
         }
 
         async checkAuthWithRetry(maxRetries = 3) {
@@ -859,8 +886,8 @@
             this.updateUserDisplay();
             this.setupNavigation();
             this.setupSidebar();
-            this.setupLogoutButtons();
             this.setupDailySchedule();
+            this.setupCEManagement();
             this.initializeV2System();
         }
 
@@ -891,15 +918,10 @@
                     element.onclick = () => {
                         this.showScreen(tab.content, tab.id);
                         
-                        if (tab.id === 'ceManagementTab' && window.ceDailyStatus) {
+                        if (tab.id === 'ceManagementTab') {
                             setTimeout(() => {
-                                // CE管理画面に切り替わったときに日付を今日にリセットし、テーブルを再描画
-                                const dateInput = document.getElementById('ceStatusDate');
-                                if (dateInput) {
-                                    dateInput.value = window.DateUtils.formatDateISO(new Date());
-                                    window.ceDailyStatus.selectedDate = new Date();
-                                }
-                                window.ceDailyStatus.renderCEManagementTable();
+                                this.setupCEManagementDate();
+                                this.renderCEManagementGrid();
                             }, 100);
                         }
                         
@@ -927,27 +949,82 @@
                 toggleSidebar.onclick = () => sidebar.classList.toggle('expanded');
             }
 
+            // 月予定設定の機能実装
+            this.setupMonthSelector();
+            
+            // テンプレート機能
+            this.setupTemplateButtons();
+        }
+
+        setupMonthSelector() {
+            const monthSelector = document.getElementById('monthSelector');
             const todayButton = document.getElementById('todayButton');
+            
+            if (monthSelector) {
+                // 初期値設定
+                const currentYM = `${this.currentMonth.getFullYear()}-${String(this.currentMonth.getMonth() + 1).padStart(2, '0')}`;
+                monthSelector.value = currentYM;
+                
+                // 月選択時の処理
+                monthSelector.onchange = (e) => {
+                    const [year, month] = e.target.value.split('-');
+                    this.currentMonth = new Date(parseInt(year), parseInt(month) - 1, 1);
+                    
+                    // カレンダービューに反映
+                    if (window.calendarView) {
+                        window.calendarView.setMonth(parseInt(year), parseInt(month) - 1);
+                    }
+                    
+                    console.log('📅 月予定設定変更:', this.currentMonth);
+                    window.showMessage(`${year}年${month}月に設定しました`, 'success');
+                };
+            }
+            
             if (todayButton) {
                 todayButton.onclick = () => {
+                    this.currentMonth = new Date();
+                    const currentYM = `${this.currentMonth.getFullYear()}-${String(this.currentMonth.getMonth() + 1).padStart(2, '0')}`;
+                    
+                    if (monthSelector) {
+                        monthSelector.value = currentYM;
+                    }
+                    
+                    // カレンダービューに反映
                     if (window.calendarView) {
                         window.calendarView.goToToday();
                     }
+                    
+                    window.showMessage('今月に設定しました', 'success');
+                    console.log('📅 今月ボタン実行完了');
                 };
             }
         }
 
-        setupLogoutButtons() {
-            const logoutButton = document.getElementById('logoutButton');
-            if (logoutButton) {
-                logoutButton.onclick = window.handleLogout;
+        setupTemplateButtons() {
+            const saveButton = document.getElementById('templateSaveButton');
+            const loadButton = document.getElementById('templateLoadButton');
+            
+            if (saveButton) {
+                saveButton.onclick = () => {
+                    // テンプレート保存機能（実装予定）
+                    window.showMessage('テンプレート保存機能（実装予定）', 'info');
+                    console.log('💾 テンプレート保存実行');
+                };
+            }
+            
+            if (loadButton) {
+                loadButton.onclick = () => {
+                    // テンプレート読込機能（実装予定）
+                    window.showMessage('テンプレート読込機能（実装予定）', 'info');
+                    console.log('📂 テンプレート読込実行');
+                };
             }
         }
 
         setupDailySchedule() {
             const datePicker = document.getElementById('scheduleDatePicker');
             if (datePicker) {
-                datePicker.value = window.DateUtils.formatDateISO(this.selectedDate);
+                datePicker.value = this.formatDate(this.selectedDate);
                 datePicker.onchange = (e) => {
                     this.selectedDate = new Date(e.target.value + 'T00:00:00');
                     this.renderDailySchedule();
@@ -961,7 +1038,7 @@
             if (prevDayBtn) {
                 prevDayBtn.onclick = () => {
                     this.selectedDate.setDate(this.selectedDate.getDate() - 1);
-                    datePicker.value = window.DateUtils.formatDateISO(this.selectedDate);
+                    datePicker.value = this.formatDate(this.selectedDate);
                     this.renderDailySchedule();
                 };
             }
@@ -969,7 +1046,7 @@
             if (nextDayBtn) {
                 nextDayBtn.onclick = () => {
                     this.selectedDate.setDate(this.selectedDate.getDate() + 1);
-                    datePicker.value = window.DateUtils.formatDateISO(this.selectedDate);
+                    datePicker.value = this.formatDate(this.selectedDate);
                     this.renderDailySchedule();
                 };
             }
@@ -977,7 +1054,7 @@
             if (todayBtn) {
                 todayBtn.onclick = () => {
                     this.selectedDate = new Date();
-                    datePicker.value = window.DateUtils.formatDateISO(this.selectedDate);
+                    datePicker.value = this.formatDate(this.selectedDate);
                     this.renderDailySchedule();
                 };
             }
@@ -988,6 +1065,238 @@
             }
 
             this.renderDailySchedule();
+        }
+
+        setupCEManagement() {
+            // CE管理日付操作の設定
+            this.setupCEManagementDate();
+            
+            // CE管理コントロールの設定
+            this.setupCEManagementControls();
+        }
+
+        setupCEManagementDate() {
+            const dateInput = document.getElementById('ceStatusDate');
+            const prevBtn = document.getElementById('prevStatusDateBtn');
+            const nextBtn = document.getElementById('nextStatusDateBtn');
+            const todayBtn = document.getElementById('todayStatusBtn');
+            
+            if (dateInput) {
+                dateInput.value = this.formatDate(this.ceStatusDate);
+                dateInput.onchange = (e) => {
+                    this.ceStatusDate = new Date(e.target.value + 'T00:00:00');
+                    this.updateCEStatusDate();
+                };
+            }
+            
+            if (prevBtn) {
+                prevBtn.onclick = () => {
+                    this.ceStatusDate.setDate(this.ceStatusDate.getDate() - 1);
+                    dateInput.value = this.formatDate(this.ceStatusDate);
+                    this.updateCEStatusDate();
+                };
+            }
+            
+            if (nextBtn) {
+                nextBtn.onclick = () => {
+                    this.ceStatusDate.setDate(this.ceStatusDate.getDate() + 1);
+                    dateInput.value = this.formatDate(this.ceStatusDate);
+                    this.updateCEStatusDate();
+                };
+            }
+            
+            if (todayBtn) {
+                todayBtn.onclick = () => {
+                    this.ceStatusDate = new Date();
+                    dateInput.value = this.formatDate(this.ceStatusDate);
+                    this.updateCEStatusDate();
+                };
+            }
+        }
+
+        updateCEStatusDate() {
+            // CE日別勤務状態管理の日付を更新
+            if (window.ceDailyStatus) {
+                window.ceDailyStatus.selectedDate = this.ceStatusDate;
+                window.ceDailyStatus.setupRealtimeStatusListener();
+            }
+            
+            // CE管理グリッドを再描画
+            this.renderCEManagementGrid();
+            
+            console.log('📅 CE管理日付更新:', this.formatDate(this.ceStatusDate));
+        }
+
+        setupCEManagementControls() {
+            const addBtn = document.getElementById('addNewCEBtn');
+            const sortNameBtn = document.getElementById('sortByNameBtn');
+            const sortWorkTypeBtn = document.getElementById('sortByWorkTypeBtn');
+            
+            if (addBtn) {
+                addBtn.onclick = () => this.addNewCE();
+            }
+            
+            if (sortNameBtn) {
+                sortNameBtn.onclick = () => this.sortCEList('name');
+            }
+            
+            if (sortWorkTypeBtn) {
+                sortWorkTypeBtn.onclick = () => this.sortCEList('workType');
+            }
+        }
+
+        async addNewCE() {
+            if (window.userRole === 'viewer') {
+                window.showMessage('編集権限がありません', 'warning');
+                return;
+            }
+            
+            const nameInput = document.getElementById('newCEName');
+            const workTypeInput = document.getElementById('newCEWorkType');
+            
+            const name = nameInput?.value?.trim();
+            const workType = workTypeInput?.value || 'ME';
+            
+            if (!name) {
+                window.showMessage('CE名を入力してください', 'warning');
+                return;
+            }
+            
+            if (window.ceManager?.isInitialized) {
+                try {
+                    await window.ceManager.addNewCE(name, workType);
+                    nameInput.value = '';
+                    window.showMessage(`${name}を追加しました`, 'success');
+                    setTimeout(() => this.renderCEManagementGrid(), 500);
+                } catch (error) {
+                    console.error('❌ CE追加エラー:', error);
+                    window.showMessage('CEの追加に失敗しました', 'error');
+                }
+            }
+        }
+
+        async sortCEList(sortType) {
+            if (!window.ceManager?.ceList || window.userRole === 'viewer') return;
+            
+            const ceList = window.ceManager.ceList;
+            
+            switch (sortType) {
+                case 'name':
+                    ceList.sort((a, b) => a.name.localeCompare(b.name, 'ja'));
+                    break;
+                case 'workType':
+                    ceList.sort((a, b) => a.workType.localeCompare(b.workType));
+                    break;
+                default:
+                    return;
+            }
+
+            try {
+                await window.ceManager.saveCEList();
+                window.showMessage(`${sortType}順で並び替えました`, 'success');
+                setTimeout(() => this.renderCEManagementGrid(), 300);
+            } catch (error) {
+                console.error('❌ 並び替えエラー:', error);
+                window.showMessage('並び替えに失敗しました', 'error');
+            }
+        }
+
+        async renderCEManagementGrid() {
+            const grid = document.getElementById('ceManagementGrid');
+            if (!grid || !window.ceManager?.ceList) return;
+            
+            grid.innerHTML = '';
+            
+            const ceList = window.ceManager.ceList;
+            const dateKey = this.formatDate(this.ceStatusDate);
+            
+            for (let i = 0; i < ceList.length; i++) {
+                const ce = ceList[i];
+                const card = document.createElement('div');
+                card.className = 'ce-management-card';
+                card.dataset.ceIndex = i;
+                
+                // 日別ステータス取得
+                let currentStatus = '';
+                if (window.ceDailyStatus?.statusData) {
+                    currentStatus = window.ceDailyStatus.statusData[ce.id] || '';
+                }
+                
+                card.innerHTML = `
+                    <div class="flex items-center justify-between mb-2">
+                        <div class="ce-item-mini worktype-${ce.workType.toLowerCase()}">
+                            ${ce.name}
+                        </div>
+                        <div class="text-xs text-gray-500">${ce.workType}</div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="block text-xs font-medium mb-1">勤務状態 (${this.formatDate(this.ceStatusDate)})</label>
+                        <select class="w-full p-1 border rounded text-xs" onchange="window.dashboardAuth.updateCEStatus('${ce.id}', this.value)">
+                            <option value="" ${currentStatus === '' ? 'selected' : ''}>通常</option>
+                            <option value="早" ${currentStatus === '早' ? 'selected' : ''}>早出</option>
+                            <option value="当" ${currentStatus === '当' ? 'selected' : ''}>当直</option>
+                            <option value="非" ${currentStatus === '非' ? 'selected' : ''}>非番</option>
+                            <option value="休" ${currentStatus === '休' ? 'selected' : ''}>休み</option>
+                            <option value="出" ${currentStatus === '出' ? 'selected' : ''}>出張</option>
+                        </select>
+                    </div>
+                    <div class="flex justify-between">
+                        <button onclick="window.ceManager.openCEEditModal(${i})" 
+                                class="text-blue-600 hover:text-blue-800 text-xs">
+                            <i class="fas fa-edit mr-1"></i>編集
+                        </button>
+                        <button onclick="window.dashboardAuth.deleteCE(${i})" 
+                                class="text-red-600 hover:text-red-800 text-xs">
+                            <i class="fas fa-trash mr-1"></i>削除
+                        </button>
+                    </div>
+                `;
+                
+                grid.appendChild(card);
+            }
+            
+            console.log('🔄 CE管理グリッド更新完了:', ceList.length, '名');
+        }
+
+        async updateCEStatus(ceId, status) {
+            if (window.userRole === 'viewer') return;
+            
+            try {
+                if (window.ceDailyStatus?.isInitialized) {
+                    await window.ceDailyStatus.updateCEStatus(ceId, status);
+                    
+                    // メインCEリストに反映
+                    if (window.ceManager) {
+                        window.ceManager.currentDisplayDate = this.ceStatusDate;
+                        window.ceManager.displayCEList();
+                    }
+                }
+            } catch (error) {
+                console.error('❌ CE勤務状態更新エラー:', error);
+                window.showMessage('勤務状態の更新に失敗しました', 'error');
+            }
+        }
+
+        async deleteCE(ceIndex) {
+            if (window.userRole === 'viewer') return;
+            
+            if (window.ceManager?.ceList[ceIndex]) {
+                const ceName = window.ceManager.ceList[ceIndex].name;
+                
+                if (!confirm(`${ceName} を削除しますか？\n\nこの操作は元に戻せません。`)) {
+                    return;
+                }
+                
+                try {
+                    window.ceManager.ceList.splice(ceIndex, 1);
+                    await window.ceManager.saveCEList();
+                    this.renderCEManagementGrid();
+                    window.showMessage(`${ceName} を削除しました`, 'success');
+                } catch (error) {
+                    console.error('❌ CE削除エラー:', error);
+                    window.showMessage('CEの削除に失敗しました', 'error');
+                }
+            }
         }
 
         renderDailySchedule() {
@@ -1016,7 +1325,7 @@
             ];
 
             grid.innerHTML = '';
-            grid.className = 'space-y-4 mb-6'; // グリッドコンテナのクラスをリセット
+            grid.className = 'space-y-4 mb-6';
 
             // 最初の6部門を3列2行で配置
             const mainGrid = document.createElement('div');
@@ -1102,7 +1411,7 @@
                 return;
             }
             
-            const dateKey = window.DateUtils.formatDateISO(this.selectedDate);
+            const dateKey = this.formatDate(this.selectedDate);
             if (window.eventManager?.openEventModal) {
                 window.eventManager.openEventModal('create', dateKey);
                 setTimeout(() => {
@@ -1149,16 +1458,13 @@
             const ceName = dragData.ceName;
             const workType = dragData.workType || '';
             
-            // ドロップ先のイベントを特定（簡易実装）
             const target = ev.target.closest('.task-item');
             if (target) {
                 const eventId = target.dataset.eventId;
-                const dateKey = window.DateUtils.formatDateISO(this.selectedDate);
+                const dateKey = this.formatDate(this.selectedDate);
                 
-                // 既存の割当処理を呼び出し
                 if (window.eventManager && eventId) {
                     try {
-                        // イベントデータ取得と割当処理
                         const snapshot = await window.database.ref(`${window.DATA_ROOT}/events/byDate/${dateKey}/${eventId}`).once('value');
                         const event = snapshot.val();
                         if (!event) return;
@@ -1206,9 +1512,8 @@
         }
 
         async loadDailyTasks() {
-            const dateKey = window.DateUtils.formatDateISO(this.selectedDate);
+            const dateKey = this.formatDate(this.selectedDate);
             
-            // まず既存のタスクをクリア
             document.querySelectorAll('.task-list').forEach(list => list.innerHTML = '');
 
             try {
@@ -1238,10 +1543,9 @@
             const assignmentChips = assignments.map(ce => {
                 const name = typeof ce === 'string' ? ce : ce.name || '';
                 const workType = typeof ce === 'object' ? ce.workType || 'ME' : 'ME';
-                return `<span class="chip worktype-${workType.toLowerCase()}">${name}<span class="remove" onclick="window.dashboardAuth.removeAssignment('${window.DateUtils.formatDateISO(this.selectedDate)}', '${event.id}', '${name}')">&times;</span></span>`;
+                return `<span class="chip worktype-${workType.toLowerCase()}">${name}<span class="remove" onclick="window.dashboardAuth.removeAssignment('${this.formatDate(this.selectedDate)}', '${event.id}', '${name}')">&times;</span></span>`;
             }).join('');
 
-            // 備考の表示
             const memoDisplay = event.memo ? `<div class="text-xs text-blue-600 mt-1 bg-blue-50 p-1 rounded"><i class="fas fa-sticky-note mr-1"></i>${event.memo}</div>` : '';
 
             taskElement.innerHTML = `
@@ -1254,7 +1558,7 @@
                 </div>
                 ${memoDisplay}
                 <div class="assignment-dropzone" 
-                     data-date="${window.DateUtils.formatDateISO(this.selectedDate)}" 
+                     data-date="${this.formatDate(this.selectedDate)}" 
                      data-event-id="${event.id}"
                      ondragover="event.preventDefault();" 
                      ondragenter="this.classList.add('dragover')" 
@@ -1267,10 +1571,9 @@
 
             if (window.userRole !== 'viewer') {
                 taskElement.onclick = (e) => {
-                    // RemoveAssignmentボタンやドロップゾーン内のクリックではモーダルを開かない
                     if (!e.target.classList.contains('remove') && !e.target.closest('.assignment-dropzone')) {
                         if (window.eventManager) {
-                            window.eventManager.openEventModal('edit', window.DateUtils.formatDateISO(this.selectedDate), event);
+                            window.eventManager.openEventModal('edit', this.formatDate(this.selectedDate), event);
                         }
                     }
                 };
@@ -1279,7 +1582,6 @@
             taskList.appendChild(taskElement);
         }
 
-
         updateCEListCount() {
             const countEl = document.getElementById('ceListCount');
             if (countEl && window.ceManager?.ceList) {
@@ -1287,85 +1589,105 @@
             }
         }
 
-  setupAdminSettings() {
-    const settingsContent = document.getElementById('settingsContent');
-    if (!settingsContent) return;
+        setupAdminSettings() {
+            const settingsContent = document.getElementById('settingsContent');
+            if (!settingsContent) return;
 
-    if (window.userRole === 'admin') {
-        settingsContent.innerHTML = `
-            <h2 class="text-2xl font-bold mb-6">設定</h2>
+            if (window.userRole === 'admin') {
+                settingsContent.innerHTML = `
+                    <h2 class="text-2xl font-bold mb-6">設定</h2>
+                    
+                    <div class="glassmorphism rounded-2xl p-6 mb-6">
+                        <h3 class="text-lg font-semibold mb-4 text-red-600">
+                            <i class="fas fa-shield-alt mr-2"></i>管理者機能
+                        </h3>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <button onclick="window.open('pages/admin-dashboard.html', '_blank')" 
+                                    class="bg-purple-600 hover:bg-purple-700 text-white px-4 py-3 rounded-lg">
+                                <i class="fas fa-users-cog mr-2"></i>ユーザー管理ダッシュボード
+                            </button>
+                            <button id="exportDataBtn" class="bg-green-600 hover:bg-green-700 text-white px-4 py-3 rounded-lg">
+                                <i class="fas fa-download mr-2"></i>データエクスポート
+                            </button>
+                            <button id="clearMonthBtn" class="bg-red-600 hover:bg-red-700 text-white px-4 py-3 rounded-lg">
+                                <i class="fas fa-trash mr-2"></i>当月データクリア
+                            </button>
+                            <button id="backupBtn" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-3 rounded-lg">
+                                <i class="fas fa-save mr-2"></i>データバックアップ
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div class="glassmorphism rounded-2xl p-6 mb-6">
+                        <h3 class="text-lg font-semibold mb-4">
+                            <i class="fas fa-cog mr-2"></i>一般設定
+                        </h3>
+                        <div class="space-y-4">
+                            <div>
+                                <label class="block text-sm font-medium mb-2">表示名</label>
+                                <input type="text" id="displayNameSetting" class="w-full px-3 py-2 border rounded-lg" 
+                                       value="${window.currentUserData?.displayName || ''}">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium mb-2">メールアドレス</label>
+                                <input type="email" id="emailSetting" class="w-full px-3 py-2 border rounded-lg" 
+                                       value="${window.currentUserData?.email || ''}">
+                            </div>
+                            <button id="saveSettingsBtn" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg">
+                                <i class="fas fa-save mr-2"></i>設定保存
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <!-- 変更履歴（実装予定） -->
+                    <div class="glassmorphism rounded-2xl p-6">
+                        <h3 class="text-lg font-semibold mb-4">
+                            <i class="fas fa-history mr-2"></i>変更履歴
+                        </h3>
+                        <div class="p-4 text-center text-gray-500 border border-dashed border-gray-300 rounded">
+                            <i class="fas fa-clock mr-2"></i>変更履歴機能（次回実装予定）
+                        </div>
+                    </div>
+                `;
+                
+                this.setupAdminEventListeners();
+            } else {
+                settingsContent.innerHTML = `
+                    <h2 class="text-2xl font-bold mb-6">設定</h2>
+                    
+                    <div class="glassmorphism rounded-2xl p-6 mb-6">
+                        <h3 class="text-lg font-semibold mb-4">個人設定</h3>
+                        <div class="space-y-4">
+                            <div>
+                                <label class="block text-sm font-medium mb-2">表示名</label>
+                                <input type="text" id="displayNameSetting" class="w-full px-3 py-2 border rounded-lg" 
+                                       value="${window.currentUserData?.displayName || ''}">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium mb-2">メールアドレス</label>
+                                <input type="email" id="emailSetting" class="w-full px-3 py-2 border rounded-lg" 
+                                       value="${window.currentUserData?.email || ''}">
+                            </div>
+                            <button id="saveSettingsBtn" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg">
+                                <i class="fas fa-save mr-2"></i>設定保存
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <!-- 変更履歴（実装予定） -->
+                    <div class="glassmorphism rounded-2xl p-6">
+                        <h3 class="text-lg font-semibold mb-4">
+                            <i class="fas fa-history mr-2"></i>変更履歴
+                        </h3>
+                        <div class="p-4 text-center text-gray-500 border border-dashed border-gray-300 rounded">
+                            <i class="fas fa-clock mr-2"></i>変更履歴機能（次回実装予定）
+                        </div>
+                    </div>
+                `;
+            }
             
-            <div class="glassmorphism rounded-2xl p-6 mb-6">
-                <h3 class="text-lg font-semibold mb-4 text-red-600">
-                    <i class="fas fa-shield-alt mr-2"></i>管理者機能
-                </h3>
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <button onclick="window.open('pages/admin-dashboard.html', '_blank')" 
-                            class="bg-purple-600 hover:bg-purple-700 text-white px-4 py-3 rounded-lg">
-                        <i class="fas fa-users-cog mr-2"></i>ユーザー管理ダッシュボード
-                    </button>
-                    <button id="exportDataBtn" class="bg-green-600 hover:bg-green-700 text-white px-4 py-3 rounded-lg">
-                        <i class="fas fa-download mr-2"></i>データエクスポート
-                    </button>
-                    <button id="clearMonthBtn" class="bg-red-600 hover:bg-red-700 text-white px-4 py-3 rounded-lg">
-                        <i class="fas fa-trash mr-2"></i>当月データクリア
-                    </button>
-                    <button id="backupBtn" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-3 rounded-lg">
-                        <i class="fas fa-save mr-2"></i>データバックアップ
-                    </button>
-                </div>
-            </div>
-            
-            <div class="glassmorphism rounded-2xl p-6">
-                <h3 class="text-lg font-semibold mb-4">
-                    <i class="fas fa-cog mr-2"></i>一般設定
-                </h3>
-                <div class="space-y-4">
-                    <div>
-                        <label class="block text-sm font-medium mb-2">表示名</label>
-                        <input type="text" id="displayNameSetting" class="w-full px-3 py-2 border rounded-lg" 
-                               value="${window.currentUserData?.displayName || ''}">
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium mb-2">メールアドレス</label>
-                        <input type="email" id="emailSetting" class="w-full px-3 py-2 border rounded-lg" 
-                               value="${window.currentUserData?.email || ''}">
-                    </div>
-                    <button id="saveSettingsBtn" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg">
-                        <i class="fas fa-save mr-2"></i>設定保存
-                    </button>
-                </div>
-            </div>
-        `;
-        
-        this.setupAdminEventListeners();
-    } else {
-        // 一般ユーザー設定（変更なし）
-        settingsContent.innerHTML = `
-            <h2 class="text-2xl font-bold mb-6">設定</h2>
-            <div class="glassmorphism rounded-2xl p-6">
-                <h3 class="text-lg font-semibold mb-4">個人設定</h3>
-                <div class="space-y-4">
-                    <div>
-                        <label class="block text-sm font-medium mb-2">表示名</label>
-                        <input type="text" id="displayNameSetting" class="w-full px-3 py-2 border rounded-lg" 
-                               value="${window.currentUserData?.displayName || ''}">
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium mb-2">メールアドレス</label>
-                        <input type="email" id="emailSetting" class="w-full px-3 py-2 border rounded-lg" 
-                               value="${window.currentUserData?.email || ''}">
-                    </div>
-                    <button id="saveSettingsBtn" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg">
-                        <i class="fas fa-save mr-2"></i>設定保存
-                    </button>
-                </div>
-            </div>
-        `;
-    }
-    
-    this.setupSettingsEventListeners();
-}
+            this.setupSettingsEventListeners();
+        }
 
         setupAdminEventListeners() {
             const clearBtn = document.getElementById('clearMonthBtn');
@@ -1426,7 +1748,12 @@
             }
         }
 
+        formatDate(date) {
+            return date.toISOString().slice(0, 10);
+        }
+
         initializeV2System() {
+            // グローバル関数の定義
             window.openDateModal = (dateKey) => {
                 console.log('📅 日付クリック:', dateKey);
                 
@@ -1447,6 +1774,7 @@
                 }
             };
 
+            // V2システム初期化
             setTimeout(async () => {
                 try {
                     console.log('🔄 V2統合システム初期化開始');
@@ -1490,6 +1818,7 @@
         }
     }
 
+    // グローバル関数
     window.handleLogout = async () => {
         try {
             console.log('🚪 ログアウト処理開始');
@@ -1511,6 +1840,7 @@
         }
     };
 
+    // 初期化
     if (!window.dashboardAuthInitialized) {
         window.dashboardAuthInitialized = true;
         document.addEventListener('DOMContentLoaded', () => {
@@ -1518,7 +1848,7 @@
         });
     }
 
-    console.log('📊 ダッシュボード認証システム読み込み完了（V2完全統合版）');
+    console.log('📊 ダッシュボード認証システム読み込み完了（V2完全統合・フィードバック対応版）');
     </script>
 
 </body>
