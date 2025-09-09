@@ -240,20 +240,6 @@
                             </select>
                         </div>
                     </div>
-                    
-                    <div class="form-group">
-                        <label for="email" class="form-label">
-                            <i class="fas fa-envelope mr-2"></i>メールアドレス（任意）
-                        </label>
-                        <input 
-                            type="email" 
-                            id="email" 
-                            class="form-input" 
-                            placeholder="例: tanaka@example.com（パスワードリセット用）"
-                            autocomplete="off"
-                        >
-                    </div>
-                    
                     <div class="form-group">
                         <label class="form-label">
                             <i class="fas fa-lock mr-2"></i>初回パスワード
@@ -446,67 +432,67 @@ class AdminUserManagement {
         this.showStatus('パスワードを生成しました', 'success');
     }
 
-    async createUser() {
-        if (!this.isReady) {
-            this.showStatus('初期化中です。少し待ってから再度お試しください', 'error');
-            return;
-        }
-
-        const username = document.getElementById('username')?.value?.trim();
-        const email = document.getElementById('email')?.value?.trim() || null;
-        const role = document.getElementById('role')?.value;
-
-        if (!username || !role || !this.currentPassword) {
-            this.showStatus('ユーザー名・権限・初回パスワード（生成）が必要です', 'error');
-            return;
-        }
-
-        // ユーザー名バリデーション
-        const alphanumericRegex = /^[a-zA-Z0-9]+$/;
-        if (username.length < 3 || username.length > 20 || !alphanumericRegex.test(username)) {
-            this.showStatus('ユーザー名は半角英数字3〜20文字で入力してください', 'error');
-            return;
-        }
-
-        try {
-            // ユーザー名重複チェック（両方のテーブル）
-            const [usernameSnap, pendingSnap] = await Promise.all([
-                this.database.ref(`${window.DATA_ROOT}/usernames/${username}`).once('value'),
-                this.database.ref(`${window.DATA_ROOT}/pendingUsers/${username}`).once('value')
-            ]);
-
-            if (usernameSnap.exists() || pendingSnap.exists()) {
-                this.showStatus('このユーザー名は既に存在します', 'error');
-                return;
-            }
-
-            // 初回ログイン待機リストに追加
-            const pendingUserData = {
-                username: username,
-                email: email,
-                role: role,
-                initialPassword: this.currentPassword,
-                createdAt: firebase.database.ServerValue.TIMESTAMP,
-                createdBy: 'admin'
-            };
-
-            await this.database.ref(`${window.DATA_ROOT}/pendingUsers/${username}`).set(pendingUserData);
-
-            this.showStatus(`ユーザー「${username}」を作成しました。初回パスワード: ${this.currentPassword}`, 'success');
-            
-            // フォームリセット
-            document.getElementById('createUserForm')?.reset();
-            const passwordDisplay = document.getElementById('generatedPassword');
-            if (passwordDisplay) passwordDisplay.textContent = 'パスワードを生成してください';
-            const createBtn = document.getElementById('createUserBtn');
-            if (createBtn) createBtn.disabled = true;
-            this.currentPassword = '';
-
-        } catch (error) {
-            console.error('❌ ユーザー作成エラー:', error);
-            this.showStatus(`ユーザー作成に失敗しました: ${error.message}`, 'error');
-        }
+async createUser() {
+    if (!this.isReady) {
+        this.showStatus('初期化中です。少し待ってから再度お試しください', 'error');
+        return;
     }
+
+    const username = document.getElementById('username')?.value?.trim();
+    // const email = document.getElementById('email')?.value?.trim() || null; // 削除
+    const role = document.getElementById('role')?.value;
+
+    if (!username || !role || !this.currentPassword) {
+        this.showStatus('ユーザー名・権限・初回パスワード（生成）が必要です', 'error');
+        return;
+    }
+
+    // バリデーション
+    const alphanumericRegex = /^[a-zA-Z0-9]+$/;
+    if (username.length < 3 || username.length > 20 || !alphanumericRegex.test(username)) {
+        this.showStatus('ユーザー名は半角英数字3〜20文字で入力してください', 'error');
+        return;
+    }
+
+    try {
+        // 重複チェック
+        const [usernameSnap, pendingSnap] = await Promise.all([
+            this.database.ref(`${window.DATA_ROOT}/usernames/${username}`).once('value'),
+            this.database.ref(`${window.DATA_ROOT}/pendingUsers/${username}`).once('value')
+        ]);
+
+        if (usernameSnap.exists() || pendingSnap.exists()) {
+            this.showStatus('このユーザー名は既に存在します', 'error');
+            return;
+        }
+
+        // 初回ログイン待機リストに追加（メールアドレスなし）
+        const pendingUserData = {
+            username: username,
+            // email: email, // 削除
+            role: role,
+            initialPassword: this.currentPassword,
+            createdAt: firebase.database.ServerValue.TIMESTAMP,
+            createdBy: 'admin'
+        };
+
+        await this.database.ref(`${window.DATA_ROOT}/pendingUsers/${username}`).set(pendingUserData);
+
+        this.showStatus(`ユーザー「${username}」を作成しました。初回パスワード: ${this.currentPassword}`, 'success');
+        
+        // フォームリセット
+        document.getElementById('createUserForm')?.reset();
+        const passwordDisplay = document.getElementById('generatedPassword');
+        if (passwordDisplay) passwordDisplay.textContent = 'パスワードを生成してください';
+        const createBtn = document.getElementById('createUserBtn');
+        if (createBtn) createBtn.disabled = true;
+        this.currentPassword = '';
+
+    } catch (error) {
+        console.error('❌ ユーザー作成エラー:', error);
+        this.showStatus(`ユーザー作成に失敗しました: ${error.message}`, 'error');
+    }
+}
 
     async loadUsers() {
         try {
