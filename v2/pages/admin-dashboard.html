@@ -384,288 +384,353 @@
     <script defer src="../js/config/firebase-config.js"></script>
     
     <!-- メインスクリプト -->
-    <script>
-    class AdminUserManagement {
-        constructor() {
-            this.database = null;
-            this.pendingUsers = [];
-            this.activeUsers = [];
-            this.currentPassword = '';
-            this.init();
-        }
+    Copy<script>
+class AdminUserManagement {
+    constructor() {
+        this.database = null;
+        this.pendingUsers = [];
+        this.activeUsers = [];
+        this.currentPassword = '';
+        this.isReady = false;
+        this.init();
+    }
 
-        async init() {
-            try {
-                await this.waitForFirebase();
-                this.database = firebase.database();
-                this.setupEventListeners();
-                this.loadUsers();
-                console.log('✅ 管理者ユーザー管理初期化完了');
-            } catch (error) {
-                console.error('❌ 管理者ユーザー管理初期化エラー:', error);
-                this.showStatus('初期化に失敗しました', 'error');
-            }
-        }
-
-        async waitForFirebase() {
-            let attempts = 0;
-            while (attempts < 30) {
-                if (window.firebase && window.firebase.database && window.DATA_ROOT) {
-                    return;
-                }
-                await new Promise(resolve => setTimeout(resolve, 200));
-                attempts++;
-            }
-            throw new Error('Firebase初期化タイムアウト');
-        }
-
-        setupEventListeners() {
-            const generateBtn = document.getElementById('generatePasswordBtn');
-            if (generateBtn) {
-                generateBtn.onclick = () => this.generatePassword();
-            }
-
-            const createBtn = document.getElementById('createUserBtn');
-            if (createBtn) {
-                createBtn.onclick = () => this.createUser();
-            }
-        }
-
-        generatePassword() {
-            // 8文字の安全なパスワードを生成
-            const chars = 'ABCDEFGHJKMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789';
-            let password = '';
-            for (let i = 0; i < 8; i++) {
-                password += chars.charAt(Math.floor(Math.random() * chars.length));
-            }
+    async init() {
+        try {
+            // 【修正】Firebase初期化完了を確実に待機
+            console.log('⏳ Firebase初期化待機中...');
+            await window.waitForFirebase();
+            console.log('✅ Firebase準備完了');
             
-            this.currentPassword = password;
-            document.getElementById('generatedPassword').textContent = password;
-            document.getElementById('createUserBtn').disabled = false;
+            this.database = firebase.database();
+            this.isReady = true;
+            this.setupEventListeners();
+            await this.loadUsers();
             
-            console.log('🔑 パスワード生成完了');
-        }
-
-        async createUser() {
-            const username = document.getElementById('username').value.trim();
-            const email = document.getElementById('email').value.trim();
-            const role = document.getElementById('role').value;
-
-            if (!username || !role || !this.currentPassword) {
-                this.showStatus('すべての必須項目を入力し、パスワードを生成してください', 'error');
-                return;
-            }
-
-            // ユーザー名バリデーション
-            const alphanumericRegex = /^[a-zA-Z0-9]+$/;
-            if (username.length < 3 || username.length > 20 || !alphanumericRegex.test(username)) {
-                this.showStatus('ユーザー名は半角英数字3文字以上20文字以内で入力してください', 'error');
-                return;
-            }
-
-            try {
-                // ユーザー名重複チェック（両方のテーブル）
-                const [usernameSnap, pendingSnap] = await Promise.all([
-                    this.database.ref(`${window.DATA_ROOT}/usernames/${username}`).once('value'),
-                    this.database.ref(`${window.DATA_ROOT}/pendingUsers/${username}`).once('value')
-                ]);
-
-                if (usernameSnap.exists() || pendingSnap.exists()) {
-                    this.showStatus('このユーザー名は既に存在します', 'error');
-                    return;
-                }
-
-                // 初回ログイン待機リストに追加
-                const pendingUserData = {
-                    username: username,
-                    email: email || null,
-                    role: role,
-                    initialPassword: this.currentPassword,
-                    createdAt: firebase.database.ServerValue.TIMESTAMP,
-                    createdBy: 'admin'
-                };
-
-                await this.database.ref(`${window.DATA_ROOT}/pendingUsers/${username}`).set(pendingUserData);
-
-                this.showStatus(`ユーザー「${username}」を作成しました。\n初回パスワード: ${this.currentPassword}\n\nこのパスワードを新規ユーザーに伝達してください。`, 'success');
-                
-                // フォームリセット
-                document.getElementById('createUserForm').reset();
-                document.getElementById('generatedPassword').textContent = 'パスワードを生成してください';
-                document.getElementById('createUserBtn').disabled = true;
-                this.currentPassword = '';
-
-            } catch (error) {
-                console.error('❌ ユーザー作成エラー:', error);
-                this.showStatus(`ユーザー作成に失敗しました: ${error.message}`, 'error');
-            }
-        }
-
-        async loadUsers() {
-            try {
-                // 初回ログイン待機リスト
-                this.database.ref(`${window.DATA_ROOT}/pendingUsers`).on('value', (snapshot) => {
-                    const pending = snapshot.val() || {};
-                    this.pendingUsers = Object.values(pending);
-                    this.renderPendingUsersTable();
-                });
-
-                // アクティブユーザー一覧
-                this.database.ref(`${window.DATA_ROOT}/users`).on('value', (snapshot) => {
-                    const users = snapshot.val() || {};
-                    this.activeUsers = Object.values(users).filter(user => user.setupCompleted);
-                    this.renderActiveUsersTable();
-                });
-            } catch (error) {
-                console.error('❌ ユーザー読み込みエラー:', error);
-                this.showStatus('ユーザー一覧の読み込みに失敗しました', 'error');
-            }
-        }
-
-        renderPendingUsersTable() {
-            const tbody = document.getElementById('pendingUsersTableBody');
-            if (!tbody) return;
-
-            if (this.pendingUsers.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="6" class="text-center text-gray-500">初回ログイン待機中のユーザーはありません</td></tr>';
-                return;
-            }
-
-            tbody.innerHTML = this.pendingUsers.map(user => {
-                const createdAt = user.createdAt ? new Date(user.createdAt).toLocaleString('ja-JP') : '不明';
-                const roleClass = `badge-${user.role}`;
-
-                return `
-                    <tr>
-                        <td class="font-medium">${user.username}</td>
-                        <td><span class="badge ${roleClass}">${user.role}</span></td>
-                        <td>${user.email || '-'}</td>
-                        <td class="password-display">${user.initialPassword}</td>
-                        <td class="text-sm text-gray-600">${createdAt}</td>
-                        <td>
-                            <button onclick="adminUserManagement.showPassword('${user.username}', '${user.initialPassword}')" 
-                                    class="text-blue-600 hover:text-blue-800 mr-2 text-sm">
-                                <i class="fas fa-eye"></i> 確認
-                            </button>
-                            <button onclick="adminUserManagement.deletePendingUser('${user.username}')" 
-                                    class="text-red-600 hover:text-red-800 text-sm">
-                                <i class="fas fa-trash"></i> 削除
-                            </button>
-                        </td>
-                    </tr>
-                `;
-            }).join('');
-        }
-
-        renderActiveUsersTable() {
-            const tbody = document.getElementById('activeUsersTableBody');
-            if (!tbody) return;
-
-            if (this.activeUsers.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="6" class="text-center text-gray-500">アクティブユーザーがありません</td></tr>';
-                return;
-            }
-
-            tbody.innerHTML = this.activeUsers.map(user => {
-                const lastLogin = user.lastLogin ? new Date(user.lastLogin).toLocaleString('ja-JP') : '未ログイン';
-                const roleClass = `badge-${user.role}`;
-
-                return `
-                    <tr>
-                        <td class="font-medium">${user.username}</td>
-                        <td>${user.displayName || '-'}</td>
-                        <td>${user.email || '-'}</td>
-                        <td><span class="badge ${roleClass}">${user.role}</span></td>
-                        <td class="text-sm text-gray-600">${lastLogin}</td>
-                        <td>
-                            <button onclick="adminUserManagement.editUser('${user.uid}')" 
-                                    class="text-blue-600 hover:text-blue-800 mr-2 text-sm">
-                                <i class="fas fa-edit"></i> 編集
-                            </button>
-                            <button onclick="adminUserManagement.deleteUser('${user.uid}', '${user.username}')" 
-                                    class="text-red-600 hover:text-red-800 text-sm">
-                                <i class="fas fa-trash"></i> 削除
-                            </button>
-                        </td>
-                    </tr>
-                `;
-            }).join('');
-        }
-
-        showPassword(username, password) {
-            alert(`${username} の初回パスワード:\n\n${password}\n\nこのパスワードを本人に伝達してください。`);
-        }
-
-        async deletePendingUser(username) {
-            if (!confirm(`初回ログイン待機中のユーザー「${username}」を削除しますか？`)) {
-                return;
-            }
-
-            try {
-                await this.database.ref(`${window.DATA_ROOT}/pendingUsers/${username}`).remove();
-                this.showStatus(`待機中ユーザー「${username}」を削除しました`, 'success');
-            } catch (error) {
-                console.error('❌ 待機ユーザー削除エラー:', error);
-                this.showStatus('待機ユーザーの削除に失敗しました', 'error');
-            }
-        }
-
-        async editUser(uid) {
-            const user = this.activeUsers.find(u => u.uid === uid);
-            if (!user) return;
-
-            const newRole = prompt(`${user.username}の権限を変更してください:\n\nviewer: スタッフ\neditor: エディタ\nadmin: 管理者\n\n現在: ${user.role}`, user.role);
-            
-            if (newRole && ['admin', 'editor', 'viewer'].includes(newRole) && newRole !== user.role) {
-                try {
-                    await this.database.ref(`${window.DATA_ROOT}/users/${uid}`).update({
-                        role: newRole,
-                        updatedAt: firebase.database.ServerValue.TIMESTAMP
-                    });
-
-                    this.showStatus(`${user.username}の権限を${newRole}に変更しました`, 'success');
-                } catch (error) {
-                    console.error('❌ 権限変更エラー:', error);
-                    this.showStatus('権限の変更に失敗しました', 'error');
-                }
-            }
-        }
-
-        async deleteUser(uid, username) {
-            if (!confirm(`ユーザー「${username}」を削除しますか？\n\nこの操作は元に戻せません。`)) {
-                return;
-            }
-
-            try {
-                await this.database.ref(`${window.DATA_ROOT}/users/${uid}`).remove();
-                await this.database.ref(`${window.DATA_ROOT}/usernames/${username}`).remove();
-
-                this.showStatus(`ユーザー「${username}」を削除しました`, 'success');
-            } catch (error) {
-                console.error('❌ ユーザー削除エラー:', error);
-                this.showStatus('ユーザーの削除に失敗しました', 'error');
-            }
-        }
-
-        showStatus(message, type) {
-            const statusDiv = document.getElementById('status');
-            if (!statusDiv) return;
-
-            statusDiv.className = `status ${type}`;
-            statusDiv.textContent = message;
-            statusDiv.style.display = 'block';
-
-            setTimeout(() => {
-                statusDiv.style.display = 'none';
-            }, 8000);
+            console.log('✅ 管理者ユーザー管理初期化完了');
+            this.showStatus('初期化が完了しました', 'success');
+        } catch (error) {
+            console.error('❌ 管理者ユーザー管理初期化エラー:', error);
+            this.showStatus('初期化に失敗しました: ' + (error?.message || error), 'error');
         }
     }
 
-    // 初期化
-    let adminUserManagement = null;
-    document.addEventListener('DOMContentLoaded', () => {
-        adminUserManagement = new AdminUserManagement();
-    });
-    </script>
+    setupEventListeners() {
+        const generateBtn = document.getElementById('generatePasswordBtn');
+        if (generateBtn) {
+            generateBtn.onclick = () => this.generatePassword();
+        }
+
+        const createBtn = document.getElementById('createUserBtn');
+        if (createBtn) {
+            createBtn.onclick = () => this.createUser();
+        }
+    }
+
+    generatePassword() {
+        // 8文字の安全なパスワードを生成
+        const chars = 'ABCDEFGHJKMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789';
+        let password = '';
+        for (let i = 0; i < 8; i++) {
+            password += chars.charAt(Math.floor(Math.random() * chars.length));
+        }
+        
+        this.currentPassword = password;
+        const display = document.getElementById('generatedPassword');
+        if (display) display.textContent = password;
+
+        const createBtn = document.getElementById('createUserBtn');
+        if (createBtn) createBtn.disabled = false;
+        
+        console.log('🔑 パスワード生成完了');
+        this.showStatus('パスワードを生成しました', 'success');
+    }
+
+    async createUser() {
+        if (!this.isReady) {
+            this.showStatus('初期化中です。少し待ってから再度お試しください', 'error');
+            return;
+        }
+
+        const username = document.getElementById('username')?.value?.trim();
+        const email = document.getElementById('email')?.value?.trim() || null;
+        const role = document.getElementById('role')?.value;
+
+        if (!username || !role || !this.currentPassword) {
+            this.showStatus('ユーザー名・権限・初回パスワード（生成）が必要です', 'error');
+            return;
+        }
+
+        // ユーザー名バリデーション
+        const alphanumericRegex = /^[a-zA-Z0-9]+$/;
+        if (username.length < 3 || username.length > 20 || !alphanumericRegex.test(username)) {
+            this.showStatus('ユーザー名は半角英数字3〜20文字で入力してください', 'error');
+            return;
+        }
+
+        try {
+            // ユーザー名重複チェック（両方のテーブル）
+            const [usernameSnap, pendingSnap] = await Promise.all([
+                this.database.ref(`${window.DATA_ROOT}/usernames/${username}`).once('value'),
+                this.database.ref(`${window.DATA_ROOT}/pendingUsers/${username}`).once('value')
+            ]);
+
+            if (usernameSnap.exists() || pendingSnap.exists()) {
+                this.showStatus('このユーザー名は既に存在します', 'error');
+                return;
+            }
+
+            // 初回ログイン待機リストに追加
+            const pendingUserData = {
+                username: username,
+                email: email,
+                role: role,
+                initialPassword: this.currentPassword,
+                createdAt: firebase.database.ServerValue.TIMESTAMP,
+                createdBy: 'admin'
+            };
+
+            await this.database.ref(`${window.DATA_ROOT}/pendingUsers/${username}`).set(pendingUserData);
+
+            this.showStatus(`ユーザー「${username}」を作成しました。初回パスワード: ${this.currentPassword}`, 'success');
+            
+            // フォームリセット
+            document.getElementById('createUserForm')?.reset();
+            const passwordDisplay = document.getElementById('generatedPassword');
+            if (passwordDisplay) passwordDisplay.textContent = 'パスワードを生成してください';
+            const createBtn = document.getElementById('createUserBtn');
+            if (createBtn) createBtn.disabled = true;
+            this.currentPassword = '';
+
+        } catch (error) {
+            console.error('❌ ユーザー作成エラー:', error);
+            this.showStatus(`ユーザー作成に失敗しました: ${error.message}`, 'error');
+        }
+    }
+
+    async loadUsers() {
+        try {
+            // 初回ログイン待機リスト
+            this.database.ref(`${window.DATA_ROOT}/pendingUsers`).on('value', (snapshot) => {
+                const pending = snapshot.val() || {};
+                this.pendingUsers = Object.values(pending);
+                this.renderPendingUsersTable();
+            }, (error) => {
+                console.error('❌ 待機ユーザー読み込みエラー:', error);
+                this.showStatus('待機ユーザー読み込みに失敗しました', 'error');
+            });
+
+            // アクティブユーザー一覧
+            this.database.ref(`${window.DATA_ROOT}/users`).on('value', (snapshot) => {
+                const users = snapshot.val() || {};
+                this.activeUsers = Object.values(users).filter(user => user.setupCompleted);
+                this.renderActiveUsersTable();
+            }, (error) => {
+                console.error('❌ アクティブユーザー読み込みエラー:', error);
+                this.showStatus('アクティブユーザー読み込みに失敗しました', 'error');
+            });
+        } catch (error) {
+            console.error('❌ ユーザー読み込みエラー:', error);
+            this.showStatus('ユーザー一覧の読み込みに失敗しました', 'error');
+        }
+    }
+
+    renderPendingUsersTable() {
+        const tbody = document.getElementById('pendingUsersTableBody');
+        if (!tbody) return;
+
+        if (this.pendingUsers.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="6" class="text-center text-gray-500">初回ログイン待機中のユーザーはありません</td></tr>';
+            return;
+        }
+
+        tbody.innerHTML = this.pendingUsers.map(user => {
+            const createdAt = user.createdAt ? new Date(user.createdAt).toLocaleString('ja-JP') : '不明';
+            const roleClass = `badge-${user.role}`;
+
+            return `
+                <tr>
+                    <td class="font-medium">${user.username}</td>
+                    <td><span class="badge ${roleClass}">${user.role}</span></td>
+                    <td>${user.email || '-'}</td>
+                    <td class="password-display">${user.initialPassword}</td>
+                    <td class="text-sm text-gray-600">${createdAt}</td>
+                    <td>
+                        <button onclick="adminUserManagement.showPassword('${user.username}', '${user.initialPassword}')" 
+                                class="text-blue-600 hover:text-blue-800 mr-2 text-sm">
+                            <i class="fas fa-eye"></i> 確認
+                        </button>
+                        <button onclick="adminUserManagement.deletePendingUser('${user.username}')" 
+                                class="text-red-600 hover:text-red-800 text-sm">
+                            <i class="fas fa-trash"></i> 削除
+                        </button>
+                    </td>
+                </tr>
+            `;
+        }).join('');
+    }
+
+    renderActiveUsersTable() {
+        const tbody = document.getElementById('activeUsersTableBody');
+        if (!tbody) return;
+
+        if (this.activeUsers.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="6" class="text-center text-gray-500">アクティブユーザーがありません</td></tr>';
+            return;
+        }
+
+        tbody.innerHTML = this.activeUsers.map(user => {
+            const lastLogin = user.lastLogin ? new Date(user.lastLogin).toLocaleString('ja-JP') : '未ログイン';
+            const roleClass = `badge-${user.role}`;
+
+            return `
+                <tr>
+                    <td class="font-medium">${user.username}</td>
+                    <td>${user.displayName || '-'}</td>
+                    <td>${user.email || '-'}</td>
+                    <td><span class="badge ${roleClass}">${user.role}</span></td>
+                    <td class="text-sm text-gray-600">${lastLogin}</td>
+                    <td>
+                        <button onclick="adminUserManagement.editUser('${user.uid}')" 
+                                class="text-blue-600 hover:text-blue-800 mr-2 text-sm">
+                            <i class="fas fa-edit"></i> 編集
+                        </button>
+                        <button onclick="adminUserManagement.resetUserPassword('${user.uid}', '${user.username}')" 
+                                class="text-orange-600 hover:text-orange-800 mr-2 text-sm">
+                            <i class="fas fa-key"></i> リセット
+                        </button>
+                        <button onclick="adminUserManagement.deleteUser('${user.uid}', '${user.username}')" 
+                                class="text-red-600 hover:text-red-800 text-sm">
+                            <i class="fas fa-trash"></i> 削除
+                        </button>
+                    </td>
+                </tr>
+            `;
+        }).join('');
+    }
+
+    showPassword(username, password) {
+        alert(`${username} の初回パスワード:\n\n${password}\n\nこのパスワードを本人に伝達してください。`);
+    }
+
+    async deletePendingUser(username) {
+        if (!confirm(`初回ログイン待機中のユーザー「${username}」を削除しますか？`)) {
+            return;
+        }
+
+        try {
+            await this.database.ref(`${window.DATA_ROOT}/pendingUsers/${username}`).remove();
+            this.showStatus(`待機中ユーザー「${username}」を削除しました`, 'success');
+        } catch (error) {
+            console.error('❌ 待機ユーザー削除エラー:', error);
+            this.showStatus('待機ユーザーの削除に失敗しました', 'error');
+        }
+    }
+
+    async editUser(uid) {
+        const user = this.activeUsers.find(u => u.uid === uid);
+        if (!user) return;
+
+        const newRole = prompt(`${user.username}の権限を変更してください:\n\nviewer: スタッフ\neditor: エディタ\nadmin: 管理者\n\n現在: ${user.role}`, user.role);
+        
+        if (newRole && ['admin', 'editor', 'viewer'].includes(newRole) && newRole !== user.role) {
+            try {
+                await this.database.ref(`${window.DATA_ROOT}/users/${uid}`).update({
+                    role: newRole,
+                    updatedAt: firebase.database.ServerValue.TIMESTAMP
+                });
+
+                this.showStatus(`${user.username}の権限を${newRole}に変更しました`, 'success');
+            } catch (error) {
+                console.error('❌ 権限変更エラー:', error);
+                this.showStatus('権限の変更に失敗しました', 'error');
+            }
+        }
+    }
+
+    // 【新機能】パスワードリセット（→初回ログイン待機リストに移行）
+    async resetUserPassword(uid, username) {
+        if (!confirm(`ユーザー「${username}」のパスワードをリセットしますか？\n\nこのユーザーは初回ログイン待機リストに移行され、新しい初回パスワードが生成されます。`)) {
+            return;
+        }
+
+        try {
+            // 現在のユーザーデータを取得
+            const userSnapshot = await this.database.ref(`${window.DATA_ROOT}/users/${uid}`).once('value');
+            const userData = userSnapshot.val();
+            
+            if (!userData) {
+                this.showStatus('ユーザーデータが見つかりません', 'error');
+                return;
+            }
+
+            // 新しい初回パスワード生成
+            const chars = 'ABCDEFGHJKMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789';
+            let newPassword = '';
+            for (let i = 0; i < 8; i++) {
+                newPassword += chars.charAt(Math.floor(Math.random() * chars.length));
+            }
+
+            // 初回ログイン待機リストに追加
+            const pendingUserData = {
+                username: userData.username,
+                email: userData.email || null,
+                role: userData.role,
+                initialPassword: newPassword,
+                createdAt: firebase.database.ServerValue.TIMESTAMP,
+                createdBy: 'admin_reset',
+                resetFrom: uid
+            };
+
+            // データベース更新（アクティブ→待機への移行）
+            await this.database.ref(`${window.DATA_ROOT}/pendingUsers/${userData.username}`).set(pendingUserData);
+            await this.database.ref(`${window.DATA_ROOT}/users/${uid}`).remove();
+            await this.database.ref(`${window.DATA_ROOT}/usernames/${userData.username}`).remove();
+
+            this.showStatus(`リセット完了: ${username} の新しい初回パスワードは ${newPassword} です`, 'success');
+
+        } catch (error) {
+            console.error('❌ パスワードリセットエラー:', error);
+            this.showStatus('パスワードリセットに失敗しました', 'error');
+        }
+    }
+
+    async deleteUser(uid, username) {
+        if (!confirm(`ユーザー「${username}」を削除しますか？\n\nこの操作は元に戻せません。`)) {
+            return;
+        }
+
+        try {
+            await this.database.ref(`${window.DATA_ROOT}/users/${uid}`).remove();
+            await this.database.ref(`${window.DATA_ROOT}/usernames/${username}`).remove();
+
+            this.showStatus(`ユーザー「${username}」を削除しました`, 'success');
+        } catch (error) {
+            console.error('❌ ユーザー削除エラー:', error);
+            this.showStatus('ユーザーの削除に失敗しました', 'error');
+        }
+    }
+
+    showStatus(message, type) {
+        const statusDiv = document.getElementById('status');
+        if (!statusDiv) return;
+
+        statusDiv.className = `status ${type}`;
+        statusDiv.textContent = message;
+        statusDiv.style.display = 'block';
+
+        clearTimeout(this._statusTimer);
+        this._statusTimer = setTimeout(() => {
+            statusDiv.style.display = 'none';
+        }, 8000);
+    }
+}
+
+// 初期化
+let adminUserManagement = null;
+document.addEventListener('DOMContentLoaded', () => {
+    adminUserManagement = new AdminUserManagement();
+});
+</script>
 </body>
 </html>
