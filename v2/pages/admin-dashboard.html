@@ -649,52 +649,65 @@ class AdminUserManagement {
     }
 
     // 【新機能】パスワードリセット（→初回ログイン待機リストに移行）
-    async resetUserPassword(uid, username) {
-        if (!confirm(`ユーザー「${username}」のパスワードをリセットしますか？\n\nこのユーザーは初回ログイン待機リストに移行され、新しい初回パスワードが生成されます。`)) {
+async resetUserPassword(uid, username) {
+    if (!confirm(`ユーザー「${username}」のパスワードをリセットしますか？\n\n⚠️ 実行内容:\n• ユーザーが初回ログイン待機リストに移行されます\n• 新しい初回パスワードが生成されます\n• ユーザーは新パスワードで再ログインが必要になります`)) {
+        return;
+    }
+
+    try {
+        this.showStatus('パスワードリセット処理中...', 'info');
+
+        const userSnapshot = await this.database.ref(`${window.DATA_ROOT}/users/${uid}`).once('value');
+        const userData = userSnapshot.val();
+        
+        if (!userData) {
+            this.showStatus('ユーザーデータが見つかりません', 'error');
             return;
         }
 
-        try {
-            // 現在のユーザーデータを取得
-            const userSnapshot = await this.database.ref(`${window.DATA_ROOT}/users/${uid}`).once('value');
-            const userData = userSnapshot.val();
-            
-            if (!userData) {
-                this.showStatus('ユーザーデータが見つかりません', 'error');
-                return;
-            }
-
-            // 新しい初回パスワード生成
-            const chars = 'ABCDEFGHJKMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789';
-            let newPassword = '';
-            for (let i = 0; i < 8; i++) {
-                newPassword += chars.charAt(Math.floor(Math.random() * chars.length));
-            }
-
-            // 初回ログイン待機リストに追加
-            const pendingUserData = {
-                username: userData.username,
-                email: userData.email || null,
-                role: userData.role,
-                initialPassword: newPassword,
-                createdAt: firebase.database.ServerValue.TIMESTAMP,
-                createdBy: 'admin_reset',
-                resetFrom: uid
-            };
-
-            // データベース更新（アクティブ→待機への移行）
-            await this.database.ref(`${window.DATA_ROOT}/pendingUsers/${userData.username}`).set(pendingUserData);
-            await this.database.ref(`${window.DATA_ROOT}/users/${uid}`).remove();
-            await this.database.ref(`${window.DATA_ROOT}/usernames/${userData.username}`).remove();
-
-            this.showStatus(`リセット完了: ${username} の新しい初回パスワードは ${newPassword} です`, 'success');
-
-        } catch (error) {
-            console.error('❌ パスワードリセットエラー:', error);
-            this.showStatus('パスワードリセットに失敗しました', 'error');
+        // 新しい初回パスワード生成
+        const chars = 'ABCDEFGHJKMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789';
+        let newPassword = '';
+        for (let i = 0; i < 8; i++) {
+            newPassword += chars.charAt(Math.floor(Math.random() * chars.length));
         }
-    }
 
+        // 初回ログイン待機リストに追加（リセット専用フラグ付き）
+        const pendingUserData = {
+            username: userData.username,
+            email: userData.email || null,
+            role: userData.role,
+            initialPassword: newPassword,
+            createdAt: firebase.database.ServerValue.TIMESTAMP,
+            createdBy: 'admin_reset',
+            resetFrom: uid,
+            isPasswordReset: true, // 【重要】リセットフラグ
+            originalDisplayName: userData.displayName // 元の表示名を保持
+        };
+
+        // データベース更新（アトミック操作）
+        const updates = {};
+        updates[`${window.DATA_ROOT}/pendingUsers/${userData.username}`] = pendingUserData;
+        updates[`${window.DATA_ROOT}/users/${uid}`] = null; // 削除
+        updates[`${window.DATA_ROOT}/usernames/${userData.username}`] = null; // 削除
+
+        await this.database.ref().update(updates);
+
+        this.showStatus(`✅ リセット完了！\n\nユーザー: ${username}\n新パスワード: ${newPassword}\n\n📋 このパスワードを本人に伝達してください。`, 'success');
+
+        // パスワードをクリップボードにコピー（可能であれば）
+        try {
+            await navigator.clipboard.writeText(newPassword);
+            console.log('📋 新パスワードをクリップボードにコピーしました');
+        } catch (clipError) {
+            console.log('📋 クリップボードコピー非対応');
+        }
+
+    } catch (error) {
+        console.error('❌ パスワードリセットエラー:', error);
+        this.showStatus(`パスワードリセットに失敗しました: ${error.message}`, 'error');
+    }
+}
     async deleteUser(uid, username) {
         if (!confirm(`ユーザー「${username}」を削除しますか？\n\nこの操作は元に戻せません。`)) {
             return;
