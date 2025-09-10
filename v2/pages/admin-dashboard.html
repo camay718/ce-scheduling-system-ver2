@@ -58,10 +58,11 @@
                                 type="text" 
                                 id="username" 
                                 class="input-unified" 
-                                placeholder="例: tanaka"
+                                placeholder="例: tanaka または 田中太郎"
                                 required
                                 autocomplete="off"
                             >
+                            <p class="text-xs text-gray-500 mt-1">全角文字・半角文字どちらでも使用できます</p>
                         </div>
                         
                         <div>
@@ -112,7 +113,7 @@
                 </div>
             </section>
 
-            <!-- 初回ログイン待機リスト（メールアドレス列削除） -->
+            <!-- 初回ログイン待機リスト -->
             <section class="glass-card p-6 mb-6">
                 <h2 class="text-2xl font-bold text-gray-800 mb-6 flex items-center">
                     <i class="fas fa-clock text-yellow-600 mr-3"></i>
@@ -141,7 +142,7 @@
                 </div>
             </section>
 
-            <!-- アクティブユーザー一覧（メールアドレス列削除） -->
+            <!-- アクティブユーザー一覧 -->
             <section class="glass-card p-6 mb-6">
                 <h2 class="text-2xl font-bold text-gray-800 mb-6 flex items-center">
                     <i class="fas fa-users text-green-600 mr-3"></i>
@@ -184,9 +185,8 @@
         </footer>
     </div>
 
-    <!-- メインスクリプト -->
+    <!-- 統一メッセージシステム -->
     <script>
-    // 統一メッセージシステム
     window.showMessage = window.showMessage || ((msg, type='info') => {
         let cont = document.getElementById('messageContainer');
         if (!cont) {
@@ -202,7 +202,10 @@
         cont.appendChild(div);
         setTimeout(() => div.remove(), 5000);
     });
+    </script>
 
+    <!-- メインスクリプト -->
+    <script>
     class AdminUserManagement {
         constructor() {
             this.database = null;
@@ -276,9 +279,10 @@
                 return;
             }
 
-            const alphanumericRegex = /^[a-zA-Z0-9]+$/;
-            if (username.length < 3 || username.length > 20 || !alphanumericRegex.test(username)) {
-                window.showMessage('ユーザー名は半角英数字3〜20文字で入力してください', 'error');
+            // ユーザー名バリデーション（全角対応・Firebase禁止文字のみチェック）
+            const forbiddenChars = /[.#$\[\]\/]/;
+            if (username.length < 1 || username.length > 50 || forbiddenChars.test(username)) {
+                window.showMessage('ユーザー名は50文字以内で、. # $ [ ] / を含まないでください', 'error');
                 return;
             }
 
@@ -293,7 +297,7 @@
                     return;
                 }
 
-                // 初回ログイン待機リストに追加（メールアドレスなし）
+                // 初回ログイン待機リストに追加
                 const pendingUserData = {
                     username: username,
                     role: role,
