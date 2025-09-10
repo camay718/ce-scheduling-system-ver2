@@ -24,7 +24,7 @@
     <script src="js/config/firebase-config.js?v=20241212"></script>
     
     <style>
-        /* CE管理専用スタイル（theme-unified.cssを補完） */
+        /* CE管理専用スタイル */
         .ce-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(90px,1fr));
@@ -170,45 +170,23 @@
         .sync-dot.pulse { animation: pulse 2s infinite; }
         @keyframes pulse { 0%, 100% { opacity: 0.8; } 50% { opacity: 1; } }
 
-        /* CE管理グリッド（ドラッグ対応） */
-        .ce-management-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-            gap: 16px;
-            padding: 16px 0;
-        }
-
-        .ce-management-card {
-            border: 1px solid #e5e7eb;
-            border-radius: 8px;
-            padding: 12px;
-            background: white;
-            transition: all 0.2s ease;
-            position: relative;
-            cursor: move;
-        }
-
-        .ce-management-card:hover {
-            border-color: var(--brand-primary);
-            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-        }
-
-        .ce-management-card.dragging {
-            opacity: 0.5;
-            transform: rotate(2deg) scale(0.95);
-            z-index: 1000;
-        }
-
-        /* 部門セクション */
+        /* 部門セクション（強調配色版） */
         .department-section {
-            border: 2px solid #e5e7eb;
+            border: 4px solid var(--dept-color, #e5e7eb);
             border-radius: 12px;
             background: rgba(255,255,255,0.8);
             min-height: 200px;
             transition: all 0.2s ease;
+            position: relative;
         }
-        .department-section:hover { border-color: var(--brand-primary); }
-        .department-section.drag-over { border-color: #10b981; background: rgba(16, 185, 129, 0.05); }
+        .department-section:hover { 
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+        .department-section.drag-over { 
+            border-color: #10b981; 
+            background: rgba(16, 185, 129, 0.05);
+            box-shadow: 0 0 0 4px rgba(16, 185, 129, 0.1);
+        }
 
         .task-item {
             background: rgba(59, 130, 246, 0.1);
@@ -276,7 +254,7 @@
 
     <!-- メインインターフェース -->
     <div id="mainInterface" style="display:none;">
-        <!-- サイドバー -->
+        <!-- サイドバー（最適化版） -->
         <div id="sidebar" class="sidebar p-4">
             <div class="mb-3 flex justify-between items-center">
                 <button id="toggleSidebar" class="p-2 rounded-lg hover:bg-gray-200" title="サイドバー表示/非表示">
@@ -303,7 +281,7 @@
                     <i class="fas fa-users mr-2"></i><span class="sidebar-text">CEリスト管理</span>
                 </button>
                 <button id="calendarTab" class="nav-tab w-full text-left p-3 rounded-lg hover:bg-green-100 font-medium">
-                    <i class="fas fa-calendar-alt mr-2"></i><span class="sidebar-text">月間カレンダー</span>
+                    <i class="fas fa-calendar-week mr-2"></i><span class="sidebar-text">週間カレンダー</span>
                 </button>
                 <button id="departmentTimelineTab" class="nav-tab w-full text-left p-3 rounded-lg hover:bg-green-100 font-medium">
                     <i class="fas fa-chart-gantt mr-2"></i><span class="sidebar-text">業務別タイムライン</span>
@@ -319,21 +297,8 @@
                 </button>
             </nav>
 
-            <!-- 月予定設定 -->
-            <div class="mb-4 sidebar-text">
-                <h3 class="text-sm font-medium text-gray-700 mb-2">月予定設定</h3>
-                <div class="space-y-2">
-                    <input type="month" id="monthSelector" class="w-full p-2 border border-gray-300 rounded-lg text-sm"/>
-                </div>
-                <div class="mt-2">
-                    <button id="todayButton" class="w-full p-2 bg-blue-500 text-white rounded-lg text-sm hover:bg-blue-600">
-                        <i class="fas fa-calendar-day mr-1"></i>今月
-                    </button>
-                </div>
-            </div>
-
-            <!-- テンプレート -->
-            <div class="sidebar-text">
+            <!-- テンプレート（縦配置版） -->
+            <div class="sidebar-text mb-4">
                 <h3 class="text-sm font-medium text-gray-700 mb-2">テンプレート</h3>
                 <div class="space-y-2">
                     <button id="templateSaveButton" class="w-full p-2 bg-green-500 text-white rounded-lg text-sm hover:bg-green-600">
@@ -368,7 +333,7 @@
 
         <!-- メインコンテンツ -->
         <div class="main-content p-4">
-            <!-- 日別スケジュール -->
+            <!-- 日別スケジュール（9部門・3x3レイアウト） -->
             <div id="dailyScheduleContent" class="screen-content">
                 <div class="mb-4 flex justify-between items-center">
                     <h2 id="dailyScheduleTitle" class="text-2xl font-bold">日別スケジュール</h2>
@@ -388,8 +353,17 @@
                         </button>
                     </div>
                 </div>
+
+                <div class="mb-4 flex gap-3">
+                    <button id="addBulkEventBtn" class="btn-unified btn-primary-unified">
+                        <i class="fas fa-calendar-plus mr-1"></i>期間一括業務追加
+                    </button>
+                    <button id="addMonthlyTaskBtn" class="btn-unified btn-primary-unified">
+                        <i class="fas fa-calendar-alt mr-1"></i>月次業務追加
+                    </button>
+                </div>
                 
-                <div id="departmentGrid" class="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-6"></div>
+                <div id="departmentGrid" class="grid grid-cols-3 gap-4 mb-6"></div>
                 
                 <div class="glass-card p-4">
                     <h3 class="font-bold mb-3"><i class="fas fa-users mr-2"></i>CEリスト（<span id="ceListCount">--</span>名）</h3>
@@ -397,7 +371,7 @@
                 </div>
             </div>
 
-            <!-- CEリスト管理 -->
+            <!-- CEリスト管理（モーダル並び替え対応版） -->
             <div id="ceManagementContent" class="screen-content" style="display:none;">
                 <div class="mb-4 flex justify-between items-center">
                     <h2 class="text-2xl font-bold">CEリスト管理</h2>
@@ -436,6 +410,9 @@
                                 <label class="text-sm font-medium mr-2">並び替え:</label>
                                 <button id="sortByNameBtn" class="btn-unified btn-outline-unified btn-small">名前順</button>
                                 <button id="sortByWorkTypeBtn" class="btn-unified btn-outline-unified btn-small">勤務区分順</button>
+                                <button id="manualReorderBtn" class="btn-unified btn-primary-unified btn-small">
+                                    <i class="fas fa-arrows-alt mr-1"></i>手動並び替え
+                                </button>
                             </div>
                         </div>
                     </div>
@@ -445,29 +422,18 @@
                     <div id="ceManagementGrid" class="ce-management-grid"></div>
                     <div class="mt-4 text-xs text-gray-500 bg-yellow-50 p-2 rounded">
                         <i class="fas fa-info-circle mr-1"></i>
-                        <strong>操作方法:</strong> ドラッグで並び替え | 編集で基本情報編集 | 削除で削除（確認あり） | 勤務状態は選択日のみ設定
+                        <strong>操作方法:</strong> 手動並び替えボタンで順序変更 | 編集で基本情報編集 | 削除で削除（確認あり） | 勤務状態は選択日のみ設定
                     </div>
                 </div>
             </div>
 
-            <!-- 月間カレンダー -->
+            <!-- 週間カレンダー -->
             <div id="calendarContent" class="screen-content" style="display:none;">
                 <div class="mb-4 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                     <div class="flex items-center gap-2">
-                        <h2 id="calendarTitle" class="text-2xl font-bold">月間スケジュール</h2>
+                        <h2 id="calendarTitle" class="text-2xl font-bold">週間スケジュール</h2>
                         <button class="btn-unified btn-primary-unified btn-small" onclick="window.print()">
                             <i class="fas fa-print mr-1"></i>印刷
-                        </button>
-                    </div>
-                    <div class="flex items-center space-x-3">
-                        <button id="addEventButton" class="btn-unified btn-primary-unified">
-                            <i class="fas fa-plus mr-2"></i>業務追加
-                        </button>
-                        <div class="glass-card p-2">
-                            <div id="monthSummary" class="text-sm font-bold">読み込み中...</div>
-                        </div>
-                        <button id="clearEventsButton" class="bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600">
-                            <i class="fas fa-trash mr-2"></i>業務クリア
                         </button>
                     </div>
                 </div>
@@ -477,7 +443,7 @@
                         <i class="fas fa-chevron-left"></i>
                     </button>
                     <div id="currentWeek" class="bg-white px-6 py-2 font-semibold text-gray-900 min-w-[200px] text-center border-t border-b">
-                        2025年9月
+                        週間表示
                     </div>
                     <button id="nextWeekBtn" class="btn-unified btn-outline-unified rounded-r-md">
                         <i class="fas fa-chevron-right"></i>
@@ -485,14 +451,7 @@
                 </div>
 
                 <div class="glass-card p-4 mb-4">
-                    <div class="overflow-x-auto">
-                        <table id="scheduleTable" class="table-unified">
-                            <thead>
-                                <tr><th>日</th><th>月</th><th>火</th><th>水</th><th>木</th><th>金</th><th>土</th></tr>
-                            </thead>
-                            <tbody id="scheduleTableBody"></tbody>
-                        </table>
-                    </div>
+                    <div class="text-center text-gray-600">週間カレンダー機能（実装予定）</div>
                 </div>
             </div>
 
@@ -521,6 +480,198 @@
             <div id="settingsContent" class="screen-content" style="display:none;">
                 <!-- 設定内容は動的に生成されます -->
             </div>
+        </div>
+    </div>
+
+    <!-- CE手動並び替えモーダル -->
+    <div id="ceReorderModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div class="glass-card p-6 max-w-4xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-lg font-semibold">CE手動並び替え</h3>
+                <button onclick="closeModal('ceReorderModal')" class="text-gray-500 hover:text-gray-700">
+                    <i class="fas fa-times text-xl"></i>
+                </button>
+            </div>
+            
+            <div class="mb-4 p-3 bg-blue-50 border-l-4 border-blue-400 rounded">
+                <p class="text-blue-700 text-sm">
+                    <i class="fas fa-info-circle mr-2"></i>
+                    CEカードをドラッグ&ドロップして順序を変更できます。完了後「順序を保存」ボタンをクリックしてください。
+                </p>
+            </div>
+            
+            <div id="ceReorderGrid" class="ce-reorder-grid mb-6">
+                <!-- CE並び替えカードがここに動的生成されます -->
+            </div>
+            
+            <div class="flex justify-end space-x-3">
+                <button onclick="closeModal('ceReorderModal')" class="btn-unified btn-outline-unified">
+                    <i class="fas fa-times mr-1"></i>キャンセル
+                </button>
+                <button id="saveCEOrderBtn" class="btn-unified btn-primary-unified">
+                    <i class="fas fa-save mr-1"></i>順序を保存
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 期間一括業務追加モーダル -->
+    <div id="bulkEventModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div class="glass-card p-6 max-w-lg w-full mx-4 max-h-[90vh] overflow-y-auto">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-lg font-semibold">期間一括業務追加</h3>
+                <button onclick="closeModal('bulkEventModal')" class="text-gray-500 hover:text-gray-700">
+                    <i class="fas fa-times text-xl"></i>
+                </button>
+            </div>
+            
+            <form id="bulkEventForm" class="space-y-4">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">業務名</label>
+                        <input type="text" id="bulkEventName" required class="input-unified">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">部門</label>
+                        <select id="bulkEventDepartment" required class="input-unified">
+                            <option value="">部門を選択</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">開始時間</label>
+                        <input type="time" id="bulkEventStartTime" required class="input-unified">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">終了時間</label>
+                        <input type="time" id="bulkEventEndTime" required class="input-unified">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">件数</label>
+                        <input type="number" id="bulkEventCount" min="1" value="1" required class="input-unified">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">必要人数</label>
+                        <input type="number" id="bulkEventRequired" min="1" value="1" required class="input-unified">
+                    </div>
+                </div>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">開始日</label>
+                        <input type="date" id="bulkEventStartDate" required class="input-unified">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">終了日</label>
+                        <input type="date" id="bulkEventEndDate" required class="input-unified">
+                    </div>
+                </div>
+                
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">備考（任意）</label>
+                    <textarea id="bulkEventMemo" rows="3" class="input-unified resize-none" placeholder="申し送り事項など"></textarea>
+                </div>
+                
+                <div class="flex justify-end space-x-3 pt-4">
+                    <button type="button" onclick="closeModal('bulkEventModal')" class="btn-unified btn-outline-unified">
+                        キャンセル
+                    </button>
+                    <button type="submit" class="btn-unified btn-primary-unified">
+                        <i class="fas fa-calendar-plus mr-1"></i>期間一括追加
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- 月次業務追加モーダル -->
+    <div id="monthlyTaskModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div class="glass-card p-6 max-w-lg w-full mx-4 max-h-[90vh] overflow-y-auto">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-lg font-semibold">月次業務追加</h3>
+                <button onclick="closeModal('monthlyTaskModal')" class="text-gray-500 hover:text-gray-700">
+                    <i class="fas fa-times text-xl"></i>
+                </button>
+            </div>
+            
+            <form id="monthlyTaskForm" class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">業務内容</label>
+                    <input type="text" id="monthlyTaskName" required class="input-unified">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">部門</label>
+                    <select id="monthlyTaskDepartment" required class="input-unified">
+                        <option value="">部門を選択</option>
+                    </select>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">実施予定月</label>
+                        <input type="month" id="monthlyTaskMonth" required class="input-unified">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">目標件数</label>
+                        <input type="number" id="monthlyTaskTargetCount" min="1" value="1" required class="input-unified">
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">必要人数</label>
+                    <input type="number" id="monthlyTaskRequired" min="1" value="1" required class="input-unified">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">備考</label>
+                    <textarea id="monthlyTaskMemo" rows="3" class="input-unified resize-none" placeholder="月次業務の詳細など"></textarea>
+                </div>
+                
+                <div class="flex justify-end space-x-3 pt-4">
+                    <button type="button" id="deleteMonthlyTaskBtn" class="hidden bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-md text-sm">
+                        <i class="fas fa-trash mr-1"></i>削除
+                    </button>
+                    <button type="button" onclick="closeModal('monthlyTaskModal')" class="btn-unified btn-outline-unified">
+                        キャンセル
+                    </button>
+                    <button type="submit" class="btn-unified btn-primary-unified">
+                        <i class="fas fa-calendar-alt mr-1"></i>月次業務追加
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- 月次業務実施モーダル -->
+    <div id="monthlyTaskExecuteModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div class="glass-card p-6 max-w-md w-full mx-4">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-lg font-semibold">月次業務実施記録</h3>
+                <button onclick="closeModal('monthlyTaskExecuteModal')" class="text-gray-500 hover:text-gray-700">
+                    <i class="fas fa-times text-xl"></i>
+                </button>
+            </div>
+            
+            <form id="monthlyTaskExecuteForm" class="space-y-4">
+                <div id="monthlyTaskExecuteInfo" class="p-3 bg-blue-50 border-l-4 border-blue-400 rounded mb-4">
+                    <!-- 業務情報がここに表示されます -->
+                </div>
+                
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">実施件数</label>
+                    <input type="number" id="monthlyTaskExecuteCount" min="1" required class="input-unified">
+                </div>
+                
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">実施備考</label>
+                    <textarea id="monthlyTaskExecuteMemo" rows="3" class="input-unified resize-none" placeholder="実施内容の詳細など"></textarea>
+                </div>
+                
+                <div class="flex justify-end space-x-3 pt-4">
+                    <button type="button" onclick="closeModal('monthlyTaskExecuteModal')" class="btn-unified btn-outline-unified">
+                        キャンセル
+                    </button>
+                    <button type="submit" class="btn-unified btn-primary-unified">
+                        <i class="fas fa-check mr-1"></i>実施記録
+                    </button>
+                </div>
+            </form>
         </div>
     </div>
 
@@ -648,7 +799,7 @@
     <script defer src="js/ui/ce-manager.js?v=20241212"></script>
     <script defer src="js/ui/ce-daily-status.js?v=20241212"></script>
 
-    <!-- Dashboard専用JavaScript（機能拡張版） -->
+    <!-- Dashboard専用JavaScript（Phase 2完全実装版） -->
     <script>
     // 統一メッセージシステム
     window.showMessage = window.showMessage || ((msg, type='info') => {
@@ -667,12 +818,55 @@
         setTimeout(() => div.remove(), 5000);
     });
 
+    // モーダル制御関数
+    window.closeModal = (modalId) => {
+        document.getElementById(modalId).classList.add('hidden');
+    };
+
+    window.openModal = (modalId) => {
+        document.getElementById(modalId).classList.remove('hidden');
+    };
+
+    // ログアウト（監査ログ付き）
+    window.handleLogout = async () => {
+        try {
+            // 監査ログ記録
+            try {
+                const entry = {
+                    action: 'logout',
+                    details: {},
+                    uid: window.currentUserData?.uid || null,
+                    username: window.currentUserData?.username || 'unknown',
+                    displayName: window.currentUserData?.displayName || 'unknown',
+                    timestamp: firebase.database.ServerValue.TIMESTAMP,
+                    userAgent: navigator.userAgent.substring(0, 100)
+                };
+                
+                await window.database.ref(`${window.DATA_ROOT}/auditLogs`).push(entry);
+                console.log('📝 ログアウト監査ログ記録完了');
+            } catch (logError) {
+                console.warn('⚠️ ログアウト監査ログ記録失敗:', logError);
+            }
+
+            if (window.auth && window.auth.currentUser) {
+                await window.auth.signOut();
+            }
+        } catch (error) {
+            console.error('❌ ログアウトエラー:', error);
+        } finally {
+            sessionStorage.clear();
+            localStorage.clear();
+            window.location.href = 'index.html';
+        }
+    };
+
     class DashboardAuth {
         constructor() {
             this.isInitialized = false;
             this.selectedDate = new Date();
             this.ceStatusDate = new Date();
             this.currentMonth = new Date();
+            this.monthlyTasks = {};
             this.init();
         }
 
@@ -680,7 +874,7 @@
             if (this.isInitialized) return;
             this.isInitialized = true;
 
-            console.log('📊 ダッシュボード認証チェック開始');
+            console.log('📊 ダッシュボード認証チェック開始（Phase 2）');
             
             try {
                 await window.waitForFirebase();
@@ -750,6 +944,8 @@
             this.setupSidebar();
             this.setupDailySchedule();
             this.setupCEManagement();
+            this.setupModals();
+            this.loadMonthlyTasks();
             this.initializeV2System();
         }
 
@@ -810,63 +1006,17 @@
                 toggleSidebar.onclick = () => sidebar.classList.toggle('expanded');
             }
 
-            this.setupMonthSelector();
             this.setupTemplateButtons();
         }
 
-        setupMonthSelector() {
-            const monthSelector = document.getElementById('monthSelector');
-            const todayButton = document.getElementById('todayButton');
-            
-            if (monthSelector) {
-                const currentYM = `${this.currentMonth.getFullYear()}-${String(this.currentMonth.getMonth() + 1).padStart(2, '0')}`;
-                monthSelector.value = currentYM;
-                
-                monthSelector.onchange = (e) => {
-                    const [year, month] = e.target.value.split('-');
-                    this.currentMonth = new Date(parseInt(year), parseInt(month) - 1, 1);
-                    
-                    if (window.calendarView) {
-                        window.calendarView.setMonth(parseInt(year), parseInt(month) - 1);
-                    }
-                    
-                    window.showMessage(`${year}年${month}月に設定しました`, 'success');
-                };
-            }
-            
-            if (todayButton) {
-                todayButton.onclick = () => {
-                    this.currentMonth = new Date();
-                    const currentYM = `${this.currentMonth.getFullYear()}-${String(this.currentMonth.getMonth() + 1).padStart(2, '0')}`;
-                    
-                    if (monthSelector) {
-                        monthSelector.value = currentYM;
-                    }
-                    
-                    if (window.calendarView) {
-                        window.calendarView.goToToday();
-                    }
-                    
-                    window.showMessage('今月に設定しました', 'success');
-                };
-            }
-        }
-
         setupTemplateButtons() {
-            const saveButton = document.getElementById('templateSaveButton');
-            const loadButton = document.getElementById('templateLoadButton');
+            document.getElementById('templateSaveButton').onclick = () => {
+                window.showMessage('テンプレート保存機能（実装予定）', 'info');
+            };
             
-            if (saveButton) {
-                saveButton.onclick = () => {
-                    window.showMessage('テンプレート保存機能（実装予定）', 'info');
-                };
-            }
-            
-            if (loadButton) {
-                loadButton.onclick = () => {
-                    window.showMessage('テンプレート読込機能（実装予定）', 'info');
-                };
-            }
+            document.getElementById('templateLoadButton').onclick = () => {
+                window.showMessage('テンプレート読込機能（実装予定）', 'info');
+            };
         }
 
         setupDailySchedule() {
@@ -953,6 +1103,127 @@
             document.getElementById('addNewCEBtn').onclick = () => this.addNewCE();
             document.getElementById('sortByNameBtn').onclick = () => this.sortCEList('name');
             document.getElementById('sortByWorkTypeBtn').onclick = () => this.sortCEList('workType');
+            document.getElementById('manualReorderBtn').onclick = () => this.openCEReorderModal();
+        }
+
+        // CE手動並び替えモーダル
+        openCEReorderModal() {
+            if (window.userRole === 'viewer') {
+                window.showMessage('編集権限がありません', 'warning');
+                return;
+            }
+            
+            if (!window.ceManager?.ceList || window.ceManager.ceList.length === 0) {
+                window.showMessage('並び替えるCEがありません', 'info');
+                return;
+            }
+            
+            this.renderCEReorderGrid();
+            window.openModal('ceReorderModal');
+        }
+
+        renderCEReorderGrid() {
+            const grid = document.getElementById('ceReorderGrid');
+            if (!grid || !window.ceManager?.ceList) return;
+            
+            grid.innerHTML = '';
+            
+            const ceList = window.ceManager.ceList;
+            
+            ceList.forEach((ce, index) => {
+                const card = document.createElement('div');
+                card.className = 'ce-reorder-card';
+                card.draggable = true;
+                card.dataset.ceIndex = index;
+                
+                card.innerHTML = `
+                    <div class="text-center">
+                        <div class="ce-item-mini worktype-${ce.workType.toLowerCase()} mb-2">
+                            ${ce.name}
+                        </div>
+                        <div class="text-xs text-gray-500">${ce.workType}</div>
+                        <div class="text-xs text-gray-400 mt-2">
+                            <i class="fas fa-arrows-alt"></i> ドラッグして移動
+                        </div>
+                    </div>
+                `;
+                
+                // ドラッグイベント
+                card.addEventListener('dragstart', (e) => {
+                    e.dataTransfer.effectAllowed = 'move';
+                    e.dataTransfer.setData('text/plain', index.toString());
+                    card.classList.add('dragging');
+                });
+                
+                card.addEventListener('dragend', () => {
+                    card.classList.remove('dragging');
+                });
+                
+                grid.appendChild(card);
+            });
+            
+            // グリッドのドロップイベント
+            grid.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                const dragging = grid.querySelector('.dragging');
+                if (!dragging) return;
+
+                const afterElement = this.getDragAfterElement(grid, e.clientX, e.clientY);
+                if (afterElement == null) {
+                    grid.appendChild(dragging);
+                } else {
+                    grid.insertBefore(dragging, afterElement);
+                }
+            });
+            
+            // 保存ボタン
+            document.getElementById('saveCEOrderBtn').onclick = async () => {
+                await this.saveCEOrderFromModal();
+            };
+        }
+
+        getDragAfterElement(container, x, y) {
+            const draggableElements = [...container.querySelectorAll('.ce-reorder-card:not(.dragging)')];
+            
+            return draggableElements.reduce((closest, child) => {
+                const box = child.getBoundingClientRect();
+                const offsetX = x - (box.left + box.width / 2);
+                const offsetY = y - (box.top + box.height / 2);
+                const offset = Math.sqrt(offsetX * offsetX + offsetY * offsetY);
+                
+                if (offset < closest.offset) {
+                    return { offset: offset, element: child };
+                } else {
+                    return closest;
+                }
+            }, { offset: Number.POSITIVE_INFINITY }).element;
+        }
+
+        async saveCEOrderFromModal() {
+            try {
+                const grid = document.getElementById('ceReorderGrid');
+                const newOrder = Array.from(grid.querySelectorAll('.ce-reorder-card'))
+                    .map(card => parseInt(card.dataset.ceIndex));
+                
+                // CEリストを新しい順序で並び替え
+                const reorderedList = newOrder.map(index => window.ceManager.ceList[index]);
+                window.ceManager.ceList = reorderedList;
+                
+                await window.ceManager.saveCEList();
+                
+                // 監査ログ記録
+                await this.logAudit('ce_reorder', { count: reorderedList.length });
+                
+                window.showMessage('CEの順序を保存しました', 'success');
+                window.closeModal('ceReorderModal');
+                
+                // CE管理グリッドを再描画
+                setTimeout(() => this.renderCEManagementGrid(), 300);
+                
+            } catch (error) {
+                console.error('❌ 並び替え保存エラー:', error);
+                window.showMessage('順序の保存に失敗しました', 'error');
+            }
         }
 
         async addNewCE() {
@@ -1071,92 +1342,6 @@
                 
                 grid.appendChild(card);
             }
-            
-            // ドラッグ&ドロップ機能を有効化
-            this.enableCEManualReorder();
-        }
-
-        // CE手動並び替え機能
-        enableCEManualReorder() {
-            const grid = document.getElementById('ceManagementGrid');
-            if (!grid || window.userRole === 'viewer') return;
-
-            const cards = Array.from(grid.querySelectorAll('.ce-management-card'));
-            
-            cards.forEach((card, index) => {
-                card.draggable = true;
-                card.dataset.originalIndex = index;
-                
-                card.addEventListener('dragstart', (e) => {
-                    e.dataTransfer.effectAllowed = 'move';
-                    e.dataTransfer.setData('text/plain', card.dataset.ceIndex);
-                    card.classList.add('dragging');
-                });
-                
-                card.addEventListener('dragend', () => {
-                    card.classList.remove('dragging');
-                });
-            });
-
-            grid.addEventListener('dragover', (e) => {
-                e.preventDefault();
-                const dragging = grid.querySelector('.dragging');
-                if (!dragging) return;
-
-                const afterElement = this.getDragAfterElement(grid, e.clientX, e.clientY);
-                if (afterElement == null) {
-                    grid.appendChild(dragging);
-                } else {
-                    grid.insertBefore(dragging, afterElement);
-                }
-            });
-
-            grid.addEventListener('drop', async (e) => {
-                e.preventDefault();
-                await this.saveCEOrder();
-            });
-        }
-
-        getDragAfterElement(container, x, y) {
-            const draggableElements = [...container.querySelectorAll('.ce-management-card:not(.dragging)')];
-            
-            return draggableElements.reduce((closest, child) => {
-                const box = child.getBoundingClientRect();
-                const offsetX = x - (box.left + box.width / 2);
-                const offsetY = y - (box.top + box.height / 2);
-                const offset = Math.sqrt(offsetX * offsetX + offsetY * offsetY);
-                
-                if (offset < closest.offset) {
-                    return { offset: offset, element: child };
-                } else {
-                    return closest;
-                }
-            }, { offset: Number.POSITIVE_INFINITY }).element;
-        }
-
-        async saveCEOrder() {
-            try {
-                const grid = document.getElementById('ceManagementGrid');
-                const newOrder = Array.from(grid.querySelectorAll('.ce-management-card'))
-                    .map(card => parseInt(card.dataset.ceIndex));
-                
-                // CEリストを新しい順序で並び替え
-                const reorderedList = newOrder.map(index => window.ceManager.ceList[index]);
-                window.ceManager.ceList = reorderedList;
-                
-                await window.ceManager.saveCEList();
-                window.showMessage('CEの順序を保存しました', 'success');
-                
-                // 監査ログ記録
-                await this.logAudit('ce_reorder', { count: reorderedList.length });
-                
-                // インデックスを更新して再描画
-                setTimeout(() => this.renderCEManagementGrid(), 300);
-                
-            } catch (error) {
-                console.error('❌ 並び替え保存エラー:', error);
-                window.showMessage('順序の保存に失敗しました', 'error');
-            }
         }
 
         async updateCEStatus(ceId, status) {
@@ -1248,81 +1433,38 @@
 
             if (!grid) return;
 
-            const departments = [
-                '機器管理・人工呼吸', '血液浄化', '不整脈',
-                '心・カテーテル', '人工心肺・補助循環', '手術・麻酔',
-                '会議・ミーティング・勉強会・打ち合わせ', '出張・研修内容'
-            ];
-
             grid.innerHTML = '';
-            grid.className = 'space-y-4 mb-6';
+            grid.className = 'grid grid-cols-3 gap-4 mb-6';
 
-            const mainGrid = document.createElement('div');
-            mainGrid.className = 'grid grid-cols-1 lg:grid-cols-3 gap-4';
-            
-            departments.slice(0, 6).forEach(dept => {
+            // 9部門の3x3レイアウト
+            window.DEPARTMENTS.forEach(dept => {
                 const section = this.createDepartmentSection(dept);
-                mainGrid.appendChild(section);
+                grid.appendChild(section);
             });
-            grid.appendChild(mainGrid);
-
-            if (departments.length > 6) {
-                const additionalGrid = document.createElement('div');
-                additionalGrid.className = 'grid grid-cols-1 lg:grid-cols-2 gap-4';
-                
-                departments.slice(6).forEach(dept => {
-                    const section = this.createDepartmentSection(dept);
-                    additionalGrid.appendChild(section);
-                });
-                grid.appendChild(additionalGrid);
-            }
 
             this.loadDailyTasks();
+            this.loadMonthlyTasksForDate();
             this.updateCEListCount();
         }
 
         createDepartmentSection(dept) {
             const section = document.createElement('div');
             section.className = 'department-section p-4';
+            section.style.setProperty('--dept-color', window.DEPARTMENT_COLORS[dept] || '#e5e7eb');
             
-            const iconMap = {
-                '機器管理・人工呼吸': 'lungs',
-                '血液浄化': 'tint',
-                '不整脈': 'heartbeat',
-                '心・カテーテル': 'heart',
-                '人工心肺・補助循環': 'procedures',
-                '手術・麻酔': 'user-md',
-                '会議・ミーティング・勉強会・打ち合わせ': 'comments',
-                '出張・研修内容': 'plane'
-            };
-            
-            const colorMap = {
-                '機器管理・人工呼吸': '#90EE90',
-                '血液浄化': '#FFB6C1',
-                '不整脈': '#9370DB',
-                '心・カテーテル': '#32CD32',
-                '人工心肺・補助循環': '#4169E1',
-                '手術・麻酔': '#87CEEB',
-                '会議・ミーティング・勉強会・打ち合わせ': '#DDA0DD',
-                '出張・研修内容': '#F0E68C'
-            };
-
             section.innerHTML = `
                 <div class="flex items-center justify-between mb-3">
-                    <h3 class="font-bold text-lg flex items-center">
-                        <i class="fas fa-${iconMap[dept] || 'cog'} mr-2" style="color: ${colorMap[dept] || '#2563eb'}"></i>
-                        <span class="text-sm">${dept}</span>
+                    <h3 class="font-bold text-sm flex items-center">
+                        <i class="fas fa-${window.DEPARTMENT_ICONS[dept] || 'cog'} mr-2" style="color: ${window.DEPARTMENT_COLORS[dept] || '#2563eb'}"></i>
+                        <span>${dept}</span>
                     </h3>
                     ${window.userRole !== 'viewer' ? `
                     <button class="btn-unified btn-primary-unified btn-small" onclick="window.dashboardAuth.openQuickAddEvent('${dept}')">
                         <i class="fas fa-plus mr-1"></i>業務追加
                     </button>` : ''}
                 </div>
-                <div class="monthly-plans" style="display:none;">
-                    <div class="text-xs font-bold text-gray-600 mb-1">
-                        <i class="fas fa-calendar-alt mr-1"></i>月予定業務
-                    </div>
-                    <div class="monthly-plan-list"></div>
+                <div class="monthly-plans" data-department="${dept}">
+                    <!-- 月次業務がここに表示されます -->
                 </div>
                 <div class="task-list min-h-[120px] space-y-2" data-department="${dept}">
                     <!-- 業務がここに表示されます -->
@@ -1343,12 +1485,31 @@
             if (window.eventManager?.openEventModal) {
                 window.eventManager.openEventModal('create', dateKey);
                 setTimeout(() => {
-                    const deptSelect = document.getElementById('eventDepartment');
+                    this.populateDepartmentSelect(document.getElementById('eventDepartment'));
                     const dateInput = document.getElementById('eventDate');
-                    if (deptSelect) deptSelect.value = department;
                     if (dateInput) dateInput.value = dateKey;
+                    const deptSelect = document.getElementById('eventDepartment');
+                    if (deptSelect) deptSelect.value = department;
                 }, 50);
+            } else {
+                // 予備: 直接モーダルを開く
+                window.openModal('eventModal');
+                this.populateDepartmentSelect(document.getElementById('eventDepartment'));
+                document.getElementById('eventDate').value = dateKey;
+                document.getElementById('eventDepartment').value = department;
             }
+        }
+
+        populateDepartmentSelect(selectElement) {
+            if (!selectElement) return;
+            
+            selectElement.innerHTML = '<option value="">部門を選択</option>';
+            window.DEPARTMENTS.forEach(dept => {
+                const option = document.createElement('option');
+                option.value = dept;
+                option.textContent = dept;
+                selectElement.appendChild(option);
+            });
         }
 
         setupDropZone(section, department) {
@@ -1385,15 +1546,26 @@
             const ceName = dragData.ceName;
             const workType = dragData.workType || '';
             
-            const target = ev.target.closest('.task-item');
+            const target = ev.target.closest('.task-item, .monthly-event-item');
             if (target) {
                 const eventId = target.dataset.eventId;
+                const isMonthly = target.classList.contains('monthly-event-item');
                 const dateKey = this.formatDate(this.selectedDate);
                 
-                if (window.eventManager && eventId) {
+                if (eventId) {
                     try {
-                        const snapshot = await window.database.ref(`${window.DATA_ROOT}/events/byDate/${dateKey}/${eventId}`).once('value');
-                        const event = snapshot.val();
+                        let dataPath, event;
+                        
+                        if (isMonthly) {
+                            const snapshot = await window.database.ref(`${window.DATA_ROOT}/monthlyTasks/${eventId}`).once('value');
+                            event = snapshot.val();
+                            dataPath = `${window.DATA_ROOT}/monthlyTasks/${eventId}`;
+                        } else {
+                            const snapshot = await window.database.ref(`${window.DATA_ROOT}/events/byDate/${dateKey}/${eventId}`).once('value');
+                            event = snapshot.val();
+                            dataPath = `${window.DATA_ROOT}/events/byDate/${dateKey}/${eventId}`;
+                        }
+                        
                         if (!event) return;
 
                         const assignments = Array.isArray(event.assignments) ? event.assignments.slice() : [];
@@ -1403,10 +1575,10 @@
                         }
 
                         assignments.push({ name: ceName, workType });
-                        await window.database.ref(`${window.DATA_ROOT}/events/byDate/${dateKey}/${eventId}`).update({ assignments });
+                        await window.database.ref(dataPath).update({ assignments });
 
                         // 監査ログ記録
-                        await this.logAudit('event_assign', { 
+                        await this.logAudit(isMonthly ? 'monthly_task_assign' : 'event_assign', { 
                             date: dateKey, 
                             eventId, 
                             ceName 
@@ -1422,11 +1594,19 @@
             }
         }
 
-        async removeAssignment(dateKey, eventId, ceName) {
+        async removeAssignment(dateKey, eventId, ceName, isMonthly = false) {
             if (window.userRole === 'viewer') return;
             
             try {
-                const snapshot = await window.database.ref(`${window.DATA_ROOT}/events/byDate/${dateKey}/${eventId}`).once('value');
+                let dataPath;
+                
+                if (isMonthly) {
+                    dataPath = `${window.DATA_ROOT}/monthlyTasks/${eventId}`;
+                } else {
+                    dataPath = `${window.DATA_ROOT}/events/byDate/${dateKey}/${eventId}`;
+                }
+                
+                const snapshot = await window.database.ref(dataPath).once('value');
                 const event = snapshot.val();
                 if (!event) return;
 
@@ -1434,10 +1614,10 @@
                     (typeof a === 'string' ? a : a.name) !== ceName
                 );
                 
-                await window.database.ref(`${window.DATA_ROOT}/events/byDate/${dateKey}/${eventId}`).update({ assignments });
+                await window.database.ref(dataPath).update({ assignments });
                 
                 // 監査ログ記録
-                await this.logAudit('event_unassign', { 
+                await this.logAudit(isMonthly ? 'monthly_task_unassign' : 'event_unassign', { 
                     date: dateKey, 
                     eventId, 
                     ceName 
@@ -1454,7 +1634,11 @@
         async loadDailyTasks() {
             const dateKey = this.formatDate(this.selectedDate);
             
-            document.querySelectorAll('.task-list').forEach(list => list.innerHTML = '');
+            document.querySelectorAll('.task-list').forEach(list => {
+                // 通常業務のみクリア（月次業務は保持）
+                const normalTasks = list.querySelectorAll('.task-item');
+                normalTasks.forEach(task => task.remove());
+            });
 
             try {
                 if (window.database && window.DATA_ROOT) {
@@ -1469,6 +1653,40 @@
             } catch (error) {
                 console.error('❌ 日別タスク読み込みエラー:', error);
             }
+        }
+
+        // 月次業務読み込み
+        async loadMonthlyTasks() {
+            try {
+                const snapshot = await window.database.ref(`${window.DATA_ROOT}/monthlyTasks`).once('value');
+                const tasks = snapshot.val() || {};
+                this.monthlyTasks = tasks;
+                
+                console.log('📅 月次業務読み込み完了:', Object.keys(tasks).length, '件');
+            } catch (error) {
+                console.error('❌ 月次業務読み込みエラー:', error);
+            }
+        }
+
+        // 指定日の月次業務表示
+        loadMonthlyTasksForDate() {
+            const currentYear = this.selectedDate.getFullYear();
+            const currentMonth = this.selectedDate.getMonth() + 1;
+            const currentYearMonth = `${currentYear}-${String(currentMonth).padStart(2, '0')}`;
+            
+            // 月次業務エリアをクリア
+            document.querySelectorAll('.monthly-plans').forEach(area => {
+                area.innerHTML = '';
+                area.style.display = 'none';
+            });
+            
+            Object.keys(this.monthlyTasks).forEach(taskId => {
+                const task = { ...this.monthlyTasks[taskId], id: taskId };
+                
+                if (task.month === currentYearMonth) {
+                    this.addMonthlyTaskToSection(task);
+                }
+            });
         }
 
         addTaskToSection(event) {
@@ -1522,334 +1740,25 @@
             taskList.appendChild(taskElement);
         }
 
-        updateCEListCount() {
-            const countEl = document.getElementById('ceListCount');
-            if (countEl && window.ceManager?.ceList) {
-                countEl.textContent = window.ceManager.ceList.length;
-            }
-        }
+        addMonthlyTaskToSection(task) {
+            const monthlyPlansArea = document.querySelector(`[data-department="${task.department}"] .monthly-plans`);
+            if (!monthlyPlansArea) return;
 
-        setupAdminSettings() {
-            const settingsContent = document.getElementById('settingsContent');
-            if (!settingsContent) return;
-
-            if (window.userRole === 'admin') {
-                settingsContent.innerHTML = `
-                    <h2 class="text-2xl font-bold mb-6">設定</h2>
-                    
-                    <div class="glass-card p-6 mb-6">
-                        <h3 class="text-lg font-semibold mb-4 text-red-600">
-                            <i class="fas fa-shield-alt mr-2"></i>管理者機能
-                        </h3>
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <button onclick="window.open('pages/admin-dashboard.html', '_blank')" 
-                                    class="btn-unified btn-primary-unified">
-                                <i class="fas fa-users-cog mr-2"></i>ユーザー管理ダッシュボード
-                            </button>
-                            <button id="clearMonthBtn" class="bg-red-600 hover:bg-red-700 text-white px-4 py-3 rounded-lg">
-                                <i class="fas fa-trash mr-2"></i>当月データクリア
-                            </button>
-                        </div>
-                    </div>
-                    
-                    <div class="glass-card p-6 mb-6">
-                        <h3 class="text-lg font-semibold mb-4">
-                            <i class="fas fa-cog mr-2"></i>一般設定
-                        </h3>
-                        <div class="space-y-4">
-                            <div>
-                                <label class="block text-sm font-medium mb-2">表示名</label>
-                                <input type="text" id="displayNameSetting" class="input-unified" 
-                                       value="${window.currentUserData?.displayName || ''}">
-                            </div>
-                            <button id="saveSettingsBtn" class="btn-unified btn-primary-unified">
-                                <i class="fas fa-save mr-2"></i>設定保存
-                            </button>
-                        </div>
-                    </div>
-                `;
-                
-                // 変更履歴セクションを追加
-                const historySection = document.createElement('div');
-                historySection.className = 'glass-card p-6 mt-6';
-                historySection.innerHTML = `
-                    <h3 class="text-lg font-semibold mb-4">
-                        <i class="fas fa-history mr-2"></i>変更履歴
-                    </h3>
-                    <div class="mb-3 flex items-center gap-3">
-                        <select id="historyFilter" class="px-3 py-1 border rounded text-sm">
-                            <option value="all">すべて</option>
-                            <option value="ce_add">CE追加</option>
-                            <option value="ce_delete">CE削除</option>
-                            <option value="ce_reorder">CE並び替え</option>
-                            <option value="ce_status_update">勤務状態更新</option>
-                            <option value="event_assign">業務割当</option>
-                            <option value="event_unassign">業務割当解除</option>
-                        </select>
-                        <button id="refreshHistoryBtn" class="px-3 py-1 bg-blue-500 text-white rounded text-sm">
-                            <i class="fas fa-sync mr-1"></i>更新
-                        </button>
-                    </div>
-                    <div id="changeHistory" class="border border-gray-200 rounded-lg p-3" style="max-height:300px; overflow-y:auto;">
-                        <div class="text-sm text-gray-500 text-center">読み込み中...</div>
-                    </div>
-                `;
-                
-                settingsContent.appendChild(historySection);
-                
-                this.setupAdminEventListeners();
-                this.loadChangeHistory();
-                this.setupHistoryControls();
-            } else {
-                settingsContent.innerHTML = `
-                    <h2 class="text-2xl font-bold mb-6">設定</h2>
-                    
-                    <div class="glass-card p-6 mb-6">
-                        <h3 class="text-lg font-semibold mb-4">個人設定</h3>
-                        <div class="space-y-4">
-                            <div>
-                                <label class="block text-sm font-medium mb-2">表示名</label>
-                                <input type="text" id="displayNameSetting" class="input-unified" 
-                                       value="${window.currentUserData?.displayName || ''}">
-                            </div>
-                            <button id="saveSettingsBtn" class="btn-unified btn-primary-unified">
-                                <i class="fas fa-save mr-2"></i>設定保存
-                            </button>
-                        </div>
-                    </div>
-                `;
-            }
+            monthlyPlansArea.style.display = 'block';
             
-            this.setupSettingsEventListeners();
-        }
-
-        loadChangeHistory(filter = 'all') {
-            const historyDiv = document.getElementById('changeHistory');
-            if (!historyDiv) return;
-            
-            let query = window.database.ref(`${window.DATA_ROOT}/auditLogs`)
-                .orderByChild('timestamp')
-                .limitToLast(100);
-            
-            query.on('value', (snapshot) => {
-                const data = snapshot.val() || {};
-                const entries = Object.values(data)
-                    .sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0))
-                    .filter(entry => filter === 'all' || entry.action === filter);
-                
-                if (entries.length === 0) {
-                    historyDiv.innerHTML = '<div class="text-sm text-gray-500 text-center">履歴はありません</div>';
-                    return;
-                }
-                
-                const historyHTML = entries.map(entry => {
-                    const timestamp = entry.timestamp ? new Date(entry.timestamp).toLocaleString('ja-JP') : '不明';
-                    const actionText = this.getActionText(entry.action);
-                    const detailsText = this.formatDetails(entry.details);
-                    
-                    return `
-                        <div class="text-sm py-2 border-b border-gray-100 last:border-b-0">
-                            <div class="flex justify-between items-start">
-                                <div>
-                                    <span class="font-semibold text-blue-700">${entry.displayName || entry.username}</span>
-                                    <span class="text-gray-600 mx-2">•</span>
-                                    <span class="text-gray-800">${actionText}</span>
-                                </div>
-                                <span class="text-xs text-gray-500">${timestamp}</span>
-                            </div>
-                            ${detailsText ? `<div class="text-xs text-gray-600 mt-1">${detailsText}</div>` : ''}
-                        </div>
-                    `;
-                }).join('');
-                
-                historyDiv.innerHTML = historyHTML;
-            });
-        }
-
-        getActionText(action) {
-            const actionMap = {
-                'ce_add': 'CEを追加',
-                'ce_delete': 'CEを削除',
-                'ce_reorder': 'CEを並び替え',
-                'ce_status_update': '勤務状態を更新',
-                'event_assign': '業務にCEを割当',
-                'event_unassign': '業務からCEを解除'
-            };
-            return actionMap[action] || action;
-        }
-
-        formatDetails(details) {
-            if (!details || typeof details !== 'object') return '';
-            
-            const parts = [];
-            if (details.name) parts.push(`名前: ${details.name}`);
-            if (details.workType) parts.push(`区分: ${details.workType}`);
-            if (details.status) parts.push(`状態: ${details.status}`);
-            if (details.date) parts.push(`日付: ${details.date}`);
-            if (details.ceName) parts.push(`CE: ${details.ceName}`);
-            if (details.count) parts.push(`件数: ${details.count}`);
-            
-            return parts.join(' | ');
-        }
-
-        setupHistoryControls() {
-            const filterSelect = document.getElementById('historyFilter');
-            const refreshBtn = document.getElementById('refreshHistoryBtn');
-            
-            if (filterSelect) {
-                filterSelect.addEventListener('change', (e) => {
-                    this.loadChangeHistory(e.target.value);
-                });
+            if (!monthlyPlansArea.querySelector('.monthly-plans-header')) {
+                const header = document.createElement('div');
+                header.className = 'monthly-plans-header text-xs font-bold text-orange-600 mb-2';
+                header.innerHTML = '<i class="fas fa-calendar-alt mr-1"></i>月次業務';
+                monthlyPlansArea.appendChild(header);
             }
+
+            const taskElement = document.createElement('div');
+            taskElement.className = 'monthly-event-item';
+            taskElement.dataset.eventId = task.id;
             
-            if (refreshBtn) {
-                refreshBtn.addEventListener('click', () => {
-                    const currentFilter = filterSelect?.value || 'all';
-                    this.loadChangeHistory(currentFilter);
-                    window.showMessage('履歴を更新しました', 'success');
-                });
-            }
-        }
-
-        setupAdminEventListeners() {
-            const clearBtn = document.getElementById('clearMonthBtn');
-            if (clearBtn) {
-                clearBtn.onclick = async () => {
-                    if (!confirm('当月の業務データをすべてクリアしますか？\nこの操作は元に戻せません。')) return;
-                    
-                    try {
-                        const today = new Date();
-                        const year = today.getFullYear();
-                        const month = String(today.getMonth() + 1).padStart(2, '0');
-                        const startDate = `${year}-${month}-01`;
-                        const endDate = `${year}-${month}-31`;
-                        
-                        const ref = window.database.ref(`${window.DATA_ROOT}/events/byDate`);
-                        const query = ref.orderByKey().startAt(startDate).endAt(endDate);
-                        await query.ref.remove();
-                        
-                        window.showMessage('当月の業務データをクリアしました', 'success');
-                    } catch (error) {
-                        console.error('❌ データクリアエラー:', error);
-                        window.showMessage('データのクリアに失敗しました', 'error');
-                    }
-                };
-            }
-        }
-
-        setupSettingsEventListeners() {
-            const saveBtn = document.getElementById('saveSettingsBtn');
-            if (saveBtn) {
-                saveBtn.onclick = async () => {
-                    const displayName = document.getElementById('displayNameSetting')?.value.trim();
-                    
-                    if (!displayName) {
-                        window.showMessage('表示名を入力してください', 'warning');
-                        return;
-                    }
-
-                    try {
-                        const targetUID = sessionStorage.getItem('targetUID');
-                        await window.database.ref(`${window.DATA_ROOT}/users/${targetUID}`).update({
-                            displayName: displayName,
-                            lastUpdated: Date.now()
-                        });
-
-                        window.currentUserData.displayName = displayName;
-                        this.updateUserDisplay();
-                        
-                        window.showMessage('設定を保存しました', 'success');
-                    } catch (error) {
-                        console.error('❌ 設定保存エラー:', error);
-                        window.showMessage('設定の保存に失敗しました', 'error');
-                    }
-                };
-            }
-        }
-
-        formatDate(date) {
-            return date.toISOString().slice(0, 10);
-        }
-
-        initializeV2System() {
-            window.openDateModal = (dateKey) => {
-                if (window.userRole === 'viewer') {
-                    window.showMessage(`${dateKey}の詳細表示（開発中）`, 'info');
-                } else if (window.eventManager) {
-                    window.eventManager.openEventModal('create', dateKey);
-                }
-            };
-
-            window.openEventEditModal = (dateKey, eventId) => {
-                if (window.eventManager?.isInitialized) {
-                    const events = window.scheduleCore?.getEventsByDate(dateKey) || [];
-                    const event = events.find(e => e.id === eventId);
-                    if (event) {
-                        window.eventManager.openEventModal('edit', dateKey, event);
-                    }
-                }
-            };
-
-            setTimeout(async () => {
-                try {
-                    let attempts = 0;
-                    while (attempts < 50) {
-                        if (window.CalendarView && window.EventManager && window.CEManager && 
-                            window.DEPARTMENTS && window.showMessage && window.CEDailyStatusManager) {
-                            break;
-                        }
-                        await new Promise(resolve => setTimeout(resolve, 100));
-                        attempts++;
-                    }
-
-                    if (!window.calendarView) {
-                        window.calendarView = new window.CalendarView();
-                    }
-                    
-                    if (!window.eventManager) {
-                        window.eventManager = new window.EventManager();
-                    }
-                    
-                    if (!window.ceManager) {
-                        window.ceManager = new window.CEManager();
-                    }
-
-                    if (!window.ceDailyStatus) {
-                        window.ceDailyStatus = new window.CEDailyStatusManager();
-                    }
-                    
-                    console.log('🎉 V2統合システム起動完了');
-                } catch (error) {
-                    console.error('❌ V2システム初期化エラー:', error);
-                }
-            }, 1500);
-        }
-    }
-
-    // グローバル関数
-    window.handleLogout = async () => {
-        try {
-            if (window.auth && window.auth.currentUser) {
-                await window.auth.signOut();
-            }
-            sessionStorage.clear();
-            localStorage.clear();
-            window.location.href = 'index.html';
-        } catch (error) {
-            console.error('❌ ログアウトエラー:', error);
-            sessionStorage.clear();
-            window.location.href = 'index.html';
-        }
-    };
-
-    // 初期化
-    if (!window.dashboardAuthInitialized) {
-        window.dashboardAuthInitialized = true;
-        document.addEventListener('DOMContentLoaded', () => {
-            window.dashboardAuth = new DashboardAuth();
-        });
-    }
-    </script>
-
-</body>
-</html>
+            const assignments = Array.isArray(task.assignments) ? task.assignments : [];
+            const assignmentChips = assignments.map(ce => {
+                const name = typeof ce === 'string' ? ce : ce.name || '';
+                const workType = typeof ce === 'object' ? ce.workType || 'ME' : 'ME';
+                return `<span class="chip worktype-${workType.toLowerCase()}">${name}<span class="remove" onclick="window.dashboardAuth.removeAssignment('${this
