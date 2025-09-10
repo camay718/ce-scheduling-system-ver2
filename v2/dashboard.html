@@ -1298,7 +1298,98 @@ Copy<!DOCTYPE html>
                 }
             }
         }
+// CE管理グリッドの描画後に並び替え機能を有効化
+async renderCEManagementGrid() {
+    // 既存のコード...
+    
+    // 最後に並び替え機能を有効化
+    this.enableCEManualReorder();
+}
 
+// CE手動並び替え機能
+enableCEManualReorder() {
+    const grid = document.getElementById('ceManagementGrid');
+    if (!grid || window.userRole === 'viewer') return;
+
+    const cards = Array.from(grid.querySelectorAll('.ce-management-card'));
+    
+    cards.forEach((card, index) => {
+        card.draggable = true;
+        card.dataset.originalIndex = index;
+        
+        card.addEventListener('dragstart', (e) => {
+            e.dataTransfer.effectAllowed = 'move';
+            e.dataTransfer.setData('text/plain', card.dataset.ceIndex);
+            card.classList.add('dragging');
+            card.style.opacity = '0.5';
+        });
+        
+        card.addEventListener('dragend', () => {
+            card.classList.remove('dragging');
+            card.style.opacity = '1';
+        });
+    });
+
+    grid.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        const dragging = grid.querySelector('.dragging');
+        if (!dragging) return;
+
+        const afterElement = this.getDragAfterElement(grid, e.clientX, e.clientY);
+        if (afterElement == null) {
+            grid.appendChild(dragging);
+        } else {
+            grid.insertBefore(dragging, afterElement);
+        }
+    });
+
+    grid.addEventListener('drop', async (e) => {
+        e.preventDefault();
+        await this.saveCEOrder();
+    });
+}
+
+getDragAfterElement(container, x, y) {
+    const draggableElements = [...container.querySelectorAll('.ce-management-card:not(.dragging)')];
+    
+    return draggableElements.reduce((closest, child) => {
+        const box = child.getBoundingClientRect();
+        const offsetX = x - (box.left + box.width / 2);
+        const offsetY = y - (box.top + box.height / 2);
+        const offset = Math.sqrt(offsetX * offsetX + offsetY * offsetY);
+        
+        if (offset < closest.offset) {
+            return { offset: offset, element: child };
+        } else {
+            return closest;
+        }
+    }, { offset: Number.POSITIVE_INFINITY }).element;
+}
+
+async saveCEOrder() {
+    try {
+        const grid = document.getElementById('ceManagementGrid');
+        const newOrder = Array.from(grid.querySelectorAll('.ce-management-card'))
+            .map(card => parseInt(card.dataset.ceIndex));
+        
+        // CEリストを新しい順序で並び替え
+        const reorderedList = newOrder.map(index => window.ceManager.ceList[index]);
+        window.ceManager.ceList = reorderedList;
+        
+        await window.ceManager.saveCEList();
+        window.showMessage('CEの順序を保存しました', 'success');
+        
+        // 監査ログ記録
+        await this.logAudit('ce_reorder', { count: reorderedList.length });
+        
+        // インデックスを更新して再描画
+        setTimeout(() => this.renderCEManagementGrid(), 300);
+        
+    } catch (error) {
+        console.error('❌ 並び替え保存エラー:', error);
+        window.showMessage('順序の保存に失敗しました', 'error');
+    }
+}
         renderDailySchedule() {
             const title = document.getElementById('dailyScheduleTitle');
             const grid = document.getElementById('departmentGrid');
