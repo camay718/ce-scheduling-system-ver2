@@ -9,493 +9,319 @@
     <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css">
     
-    <!-- Firebase CDN -->
-    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+    <!-- 統一テーマ -->
+    <link rel="stylesheet" href="../css/theme-unified.css">
     
-<!-- 以下をコメントアウト -->
-<!-- <link rel="stylesheet" href="../css/main.css"> -->
-<!-- <link rel="stylesheet" href="../css/auth.css"> -->
-<!-- <link rel="stylesheet" href="../css/registration.css"> -->
+    <style>
+        .password-strength {
+            margin-top: 8px;
+            font-size: 12px;
+        }
+        
+        .strength-weak { color: #dc3545; }
+        .strength-medium { color: #ffc107; }
+        .strength-strong { color: #28a745; }
+    </style>
 </head>
-<body>
-    <!-- メッセージコンテナ -->
-    <div id="messageContainer" class="fixed top-4 left-1/2 transform -translate-x-1/2 z-50 w-96"></div>
-
-    <div class="registration-container">
-        <div class="registration-card">
-            <!-- プログレス表示 -->
-            <div class="progress-steps">
-                <div class="progress-step active">
-                    <div class="step-number">1</div>
-                    <div class="step-title">初期ログイン</div>
-                </div>
-                <div class="progress-step active">
-                    <div class="step-number">2</div>
-                    <div class="step-title">個人設定</div>
-                </div>
-                <div class="progress-step">
-                    <div class="step-number">3</div>
-                    <div class="step-title">完了</div>
-                </div>
+<body class="theme-unified">
+    <div class="center-layout">
+        <div class="glass-card center-card">
+            <div class="text-center mb-8">
+                <i class="fas fa-user-cog text-5xl text-green-600 mb-4"></i>
+                <h2 class="text-3xl font-bold text-gray-800">個人設定</h2>
+                <p class="text-gray-600 mt-2">CEスケジュール管理システム V2</p>
             </div>
-
-            <!-- ヘッダー -->
-            <div class="registration-header">
-                <h1 class="registration-title">
-                    <i class="fas fa-user-cog mr-2 text-blue-600"></i>
-                    個人設定の完了
-                </h1>
-                <p class="registration-subtitle">
-                    初期ログインありがとうございます。個人設定を完了してシステムをご利用ください。
+            
+            <div class="glass-card p-4 mb-6" style="background: rgba(255, 255, 255, 0.5);">
+                <h4 class="font-semibold text-gray-800 mb-2">
+                    <i class="fas fa-info-circle mr-2"></i>設定について
+                </h4>
+                <p id="setupInfo" class="text-gray-700 text-sm">
+                    初回ログインまたはパスワードリセット後は、表示名とパスワードの設定が必要です。
                 </p>
             </div>
-
-            <!-- 現在のユーザー情報表示 -->
-            <div id="currentUserInfo" class="bg-blue-50 p-4 rounded-lg mb-6">
-                <h3 class="font-semibold text-blue-800 mb-2">
-                    <i class="fas fa-info-circle mr-2"></i>現在の登録情報
-                </h3>
-                <div id="userInfoDetails"></div>
-            </div>
-
-            <!-- 個人設定フォーム -->
-            <form id="userSetupForm" class="space-y-4">
-                <!-- ユーザー名設定 -->
-                <div class="form-group">
-                    <label for="setupUsername" class="form-label required">
-                        <i class="fas fa-user mr-1 text-blue-500"></i>
-                        ユーザー名（ログインID）
+            
+            <form id="setupForm" class="space-y-6">
+                <div>
+                    <label for="displayName" class="block text-gray-700 text-sm font-bold mb-2">
+                        <i class="fas fa-id-card mr-2"></i>表示名 <span class="text-red-500">*</span>
                     </label>
-                    <input type="text" id="setupUsername" class="form-input" 
-                           placeholder="半角英数字3-20文字" required>
-                    <div id="usernameCheck" class="text-xs mt-1"></div>
-                    <div class="admin-help-text">
-                        今後ログイン時に使用するIDです。英数字、アンダースコア、ハイフンが使用可能
-                    </div>
+                    <input type="text" id="displayName" class="input-unified" 
+                           placeholder="表示する名前を入力" required>
+                    <p class="text-xs text-gray-500 mt-1">この名前が他のユーザーに表示されます</p>
                 </div>
-
-                <!-- パスワード設定 -->
-                <div class="form-group">
-                    <label for="setupPassword" class="form-label required">
-                        <i class="fas fa-lock mr-1 text-blue-500"></i>
-                        新しいパスワード
+                
+                <!-- メールアドレス項目は削除 -->
+                
+                <div>
+                    <label for="newPassword" class="block text-gray-700 text-sm font-bold mb-2">
+                        <i class="fas fa-lock mr-2"></i>新しいパスワード <span class="text-red-500">*</span>
                     </label>
-                    <input type="password" id="setupPassword" class="form-input" 
-                           placeholder="6文字以上の安全なパスワード" required>
-                    <div id="passwordStrength" class="text-xs mt-1"></div>
-                    <div class="admin-help-text">
-                        英数字を組み合わせた安全なパスワードを設定してください
-                    </div>
+                    <input type="password" id="newPassword" class="input-unified" 
+                           placeholder="新しいパスワードを入力" required>
+                    <div id="passwordStrength" class="password-strength"></div>
+                    <p class="text-xs text-gray-500 mt-1">8文字以上、英数字を含むパスワードを設定してください</p>
                 </div>
-
-                <!-- パスワード確認 -->
-                <div class="form-group">
-                    <label for="setupPasswordConfirm" class="form-label required">
-                        <i class="fas fa-lock mr-1 text-blue-500"></i>
-                        パスワード確認
+                
+                <div>
+                    <label for="confirmPassword" class="block text-gray-700 text-sm font-bold mb-2">
+                        <i class="fas fa-lock mr-2"></i>パスワード確認 <span class="text-red-500">*</span>
                     </label>
-                    <input type="password" id="setupPasswordConfirm" class="form-input" 
-                           placeholder="同じパスワードを再入力" required>
+                    <input type="password" id="confirmPassword" class="input-unified" 
+                           placeholder="パスワードを再入力" required>
                     <div id="passwordMatch" class="text-xs mt-1"></div>
                 </div>
-                <!-- 設定完了ボタン -->
-                <div class="flex space-x-3 mt-8">
-                    <button type="button" onclick="goBack()" 
-                            class="flex-1 py-3 px-4 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors">
-                        <i class="fas fa-arrow-left mr-2"></i>
-                        ログイン画面に戻る
-                    </button>
-                    <button type="submit" id="setupButton" 
-                            class="flex-1 btn-register py-3">
-                        <i class="fas fa-check mr-2"></i>
-                        設定完了
-                    </button>
-                </div>
+                
+                <button type="submit" id="setupBtn" class="btn-unified btn-primary-unified w-full">
+                    <i class="fas fa-save mr-2"></i>設定を保存してダッシュボードへ
+                </button>
+                
+                <div id="statusMessage" class="status-unified" style="display: none;"></div>
             </form>
-
-            <!-- 完了画面（隠し状態） -->
-            <div id="setupComplete" style="display: none;" class="text-center">
-                <div class="success-icon mb-6">
-                    <i class="fas fa-check-circle text-green-500 text-6xl"></i>
-                </div>
-                <h3 class="text-2xl font-bold text-gray-800 mb-4">
-                    設定完了！
-                </h3>
-                <div class="bg-green-50 p-6 rounded-lg mb-6">
-                    <div id="setupCompleteDetails"></div>
-                </div>
-                <p class="text-gray-600 mb-6">
-                    個人設定が完了しました。<br>
-                    今後は設定したユーザー名とパスワードでログインしてください。
+            
+            <div class="text-center mt-6">
+                <p class="text-xs text-gray-500">
+                    <i class="fas fa-shield-alt mr-1"></i>
+                    パスワードは安全に暗号化されて保存されます
                 </p>
-                <button onclick="goToLogin()" class="btn-register">
-                    <i class="fas fa-sign-in-alt mr-2"></i>
-                    ログイン画面へ
+            </div>
+            
+            <div class="text-center mt-4">
+                <button type="button" onclick="goBack()" class="btn-unified btn-outline-unified">
+                    <i class="fas fa-arrow-left mr-2"></i>ログイン画面に戻る
                 </button>
             </div>
         </div>
     </div>
 
-   <!-- JavaScript読み込みもコメントアウト -->
-<!-- <script src="../js/core/firebase-config.js?v=20241205-5"></script> -->
-<!-- <script src="../js/auth/initial-login.js?v=20241205-5"></script> -->
-<!-- <script src="../js/user/user-setup.js?v=20241205-5"></script> -->
-<script src="../js/config/firebase-config.js"></script>
- <script>
-// パスワードハッシュ化ユーティリティ（PBKDF2-SHA256）
-async function hashPassword(password, saltB64 = null, iterations = 120000) {
-    const enc = new TextEncoder();
-    const salt = saltB64 ? 
-        Uint8Array.from(atob(saltB64), c => c.charCodeAt(0)) : 
-        crypto.getRandomValues(new Uint8Array(16));
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
     
-    const keyMaterial = await crypto.subtle.importKey(
-        'raw', 
-        enc.encode(password), 
-        'PBKDF2', 
-        false, 
-        ['deriveBits']
-    );
+    <!-- Firebase設定 -->
+    <script src="../js/config/firebase-config.js"></script>
     
-    const bits = await crypto.subtle.deriveBits(
-        { name: 'PBKDF2', salt, iterations, hash: 'SHA-256' }, 
-        keyMaterial, 
-        256
-    );
-    
-    const hashBytes = new Uint8Array(bits);
-    const hashB64 = btoa(String.fromCharCode(...hashBytes));
-    const saltOutB64 = btoa(String.fromCharCode(...salt));
-    
-    return { 
-        hash: hashB64, 
-        salt: saltOutB64, 
-        iterations, 
-        algo: 'PBKDF2-SHA256' 
-    };
-}
-
-class UserSetupController {
-    constructor() {
-        this.isInitialized = false;
-        this.mode = 'initial'; // initial, setup, reset
-        this.username = '';
-        this.init();
+    <!-- 個人設定処理（統一版） -->
+    <script>
+    // パスワードハッシュ化ユーティリティ
+    async function hashPassword(password, saltB64 = null, iterations = 120000) {
+        const enc = new TextEncoder();
+        const salt = saltB64 ? 
+            Uint8Array.from(atob(saltB64), c => c.charCodeAt(0)) : 
+            crypto.getRandomValues(new Uint8Array(16));
+        
+        const keyMaterial = await crypto.subtle.importKey(
+            'raw', 
+            enc.encode(password), 
+            'PBKDF2', 
+            false, 
+            ['deriveBits']
+        );
+        
+        const bits = await crypto.subtle.deriveBits(
+            { name: 'PBKDF2', salt, iterations, hash: 'SHA-256' }, 
+            keyMaterial, 
+            256
+        );
+        
+        const hashBytes = new Uint8Array(bits);
+        const hashB64 = btoa(String.fromCharCode(...hashBytes));
+        const saltOutB64 = btoa(String.fromCharCode(...salt));
+        
+        return { 
+            hash: hashB64, 
+            salt: saltOutB64, 
+            iterations, 
+            algo: 'PBKDF2-SHA256' 
+        };
     }
 
-    async init() {
+    document.addEventListener('DOMContentLoaded', async () => {
         console.log('⚙️ 個人設定画面初期化開始');
         
-        // Firebase初期化完了を待機
         try {
             await window.waitForFirebase();
             console.log('✅ Firebase初期化完了');
         } catch (error) {
             console.error('❌ Firebase初期化エラー:', error);
-            this.showStatus('システム初期化に失敗しました', 'error');
+            window.showMessage('システム初期化に失敗しました', 'error');
             return;
         }
 
-        // URLパラメータとセッション確認
-        const urlParams = new URLSearchParams(window.location.search);
-        this.mode = urlParams.get('mode') || 'initial';
-        this.username = urlParams.get('username') || sessionStorage.getItem('currentUsername') || '';
-        
+        // セッション確認
         const targetUID = sessionStorage.getItem('targetUID');
+        const currentUsername = sessionStorage.getItem('currentUsername');
         
-        if (!targetUID || !this.username) {
-            console.log('❌ セッション情報不足 → ログイン画面へ');
-            alert('セッション情報が不足しています。ログイン画面に戻ります。');
-            window.location.href = '../index.html';
+        if (!targetUID || !currentUsername) {
+            console.log('❌ セッション情報なし → ログイン画面へ');
+            window.showMessage('セッション情報が不足しています', 'error');
+            setTimeout(() => {
+                window.location.href = '../index.html';
+            }, 2000);
             return;
         }
 
-        this.displayUserInfo();
-        this.setupEventListeners();
-        this.isInitialized = true;
-        
-        console.log('✅ 個人設定画面初期化完了');
-    }
+        // フォーム要素の取得
+        const setupForm = document.getElementById('setupForm');
+        const displayNameInput = document.getElementById('displayName');
+        const newPasswordInput = document.getElementById('newPassword');
+        const confirmPasswordInput = document.getElementById('confirmPassword');
+        const setupBtn = document.getElementById('setupBtn');
 
-    async displayUserInfo() {
-        const targetUID = sessionStorage.getItem('targetUID');
-        if (!targetUID) return;
+        function setLoading(isLoading) {
+            if (setupBtn) {
+                setupBtn.disabled = isLoading;
+                setupBtn.innerHTML = isLoading 
+                    ? '<i class="fas fa-spinner fa-spin mr-2"></i>保存中...'
+                    : '<i class="fas fa-save mr-2"></i>設定を保存してダッシュボードへ';
+            }
+        }
 
+        // パスワード強度チェック
+        function checkPasswordStrength(password) {
+            const strengthDiv = document.getElementById('passwordStrength');
+            if (!strengthDiv) return;
+            
+            let strength = 0;
+            
+            if (password.length >= 8) strength++;
+            if (/[a-z]/.test(password)) strength++;
+            if (/[A-Z]/.test(password)) strength++;
+            if (/[0-9]/.test(password)) strength++;
+            
+            if (password.length === 0) {
+                strengthDiv.innerHTML = '';
+            } else if (strength < 2) {
+                strengthDiv.innerHTML = '<span class="strength-weak"><i class="fas fa-times mr-1"></i>弱い</span>';
+            } else if (strength < 4) {
+                strengthDiv.innerHTML = '<span class="strength-medium"><i class="fas fa-exclamation-triangle mr-1"></i>普通</span>';
+            } else {
+                strengthDiv.innerHTML = '<span class="strength-strong"><i class="fas fa-check mr-1"></i>強い</span>';
+            }
+        }
+
+        // パスワード一致チェック
+        function checkPasswordMatch() {
+            const matchDiv = document.getElementById('passwordMatch');
+            if (!matchDiv) return;
+            
+            const password = newPasswordInput.value;
+            const confirm = confirmPasswordInput.value;
+            
+            if (confirm === '') {
+                matchDiv.innerHTML = '';
+            } else if (password === confirm) {
+                matchDiv.innerHTML = '<span class="text-green-600"><i class="fas fa-check mr-1"></i>パスワードが一致しています</span>';
+            } else {
+                matchDiv.innerHTML = '<span class="text-red-600"><i class="fas fa-times mr-1"></i>パスワードが一致しません</span>';
+            }
+        }
+
+        // イベントリスナーの設定
+        if (newPasswordInput) {
+            newPasswordInput.addEventListener('input', () => {
+                checkPasswordStrength(newPasswordInput.value);
+                checkPasswordMatch();
+            });
+        }
+
+        if (confirmPasswordInput) {
+            confirmPasswordInput.addEventListener('input', checkPasswordMatch);
+        }
+
+        // 既存のユーザー情報を読み込み
         try {
             const userSnap = await window.database.ref(`${window.DATA_ROOT}/users/${targetUID}`).once('value');
             const userData = userSnap.val();
             
             if (userData) {
-                const infoDiv = document.getElementById('userInfoDetails');
-                if (infoDiv) {
-                    infoDiv.innerHTML = `
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-                            <div>
-                                <strong>ユーザー名:</strong> ${userData.username || this.username}
-                            </div>
-                            <div>
-                                <strong>権限:</strong> ${userData.role || 'viewer'}
-                            </div>
-                            <div>
-                                <strong>作成日:</strong> ${userData.createdAt ? new Date(userData.createdAt).toLocaleDateString('ja-JP') : '不明'}
-                            </div>
-                            <div>
-                                <strong>状態:</strong> ${userData.passwordResetCompleted ? 'パスワードリセット後' : '初回ログイン'}
-                            </div>
-                        </div>
-                    `;
-                }
-
-                // プリセットデータの設定
-                const usernameInput = document.getElementById('setupUsername');
-                if (usernameInput) {
-                    usernameInput.value = userData.username || this.username;
-                    usernameInput.readOnly = true;
-                    usernameInput.style.backgroundColor = '#f3f4f6';
+                if (displayNameInput) displayNameInput.value = userData.displayName || currentUsername;
+                
+                const setupInfo = document.getElementById('setupInfo');
+                if (userData.passwordResetCompleted && setupInfo) {
+                    setupInfo.innerHTML = `パスワードがリセットされました。<br>新しい表示名とパスワードを設定してください。`;
                 }
             }
         } catch (error) {
             console.error('❌ ユーザー情報読み込みエラー:', error);
         }
-    }
 
-    setupEventListeners() {
-        const setupForm = document.getElementById('userSetupForm');
+        // フォーム送信処理
         if (setupForm) {
-            setupForm.addEventListener('submit', (e) => {
+            setupForm.addEventListener('submit', async (e) => {
                 e.preventDefault();
-                this.handleSetupSubmit();
+                
+                const displayName = displayNameInput.value.trim();
+                const newPassword = newPasswordInput.value;
+                const confirmPassword = confirmPasswordInput.value;
+
+                // バリデーション
+                if (!displayName) {
+                    window.showMessage('表示名を入力してください', 'error');
+                    return;
+                }
+
+                if (!newPassword) {
+                    window.showMessage('新しいパスワードを入力してください', 'error');
+                    return;
+                }
+
+                if (newPassword.length < 8) {
+                    window.showMessage('パスワードは8文字以上で入力してください', 'error');
+                    return;
+                }
+
+                if (newPassword !== confirmPassword) {
+                    window.showMessage('パスワードが一致しません', 'error');
+                    return;
+                }
+
+                setLoading(true);
+                window.showMessage('設定を保存中...', 'info');
+
+                try {
+                    // パスワードをハッシュ化
+                    const passwordRecord = await hashPassword(newPassword);
+                    
+                    // ユーザーデータの更新
+                    const updateData = {
+                        displayName: displayName,
+                        password: passwordRecord,
+                        hasCustomPassword: true,
+                        setupCompleted: true,
+                        needsSetup: false,
+                        lastUpdated: firebase.database.ServerValue.TIMESTAMP,
+                        passwordResetCompleted: false
+                    };
+
+                    await window.database.ref(`${window.DATA_ROOT}/users/${targetUID}`).update(updateData);
+
+                    sessionStorage.removeItem('needsSetup');
+
+                    window.showMessage('設定を保存しました！ダッシュボードに移動します...', 'success');
+                    
+                    setTimeout(() => {
+                        window.location.href = '../dashboard.html';
+                    }, 2000);
+
+                } catch (error) {
+                    console.error('❌ 設定保存エラー:', error);
+                    window.showMessage(`設定の保存に失敗しました: ${error.message}`, 'error');
+                    setLoading(false);
+                }
             });
         }
-
-        // リアルタイムバリデーション
-        const passwordInput = document.getElementById('setupPassword');
-        const confirmInput = document.getElementById('setupPasswordConfirm');
-
-        if (passwordInput) {
-            passwordInput.addEventListener('input', (e) => {
-                this.checkPasswordStrength(e.target.value);
-                this.checkPasswordMatch();
-            });
-        }
-
-        if (confirmInput) {
-            confirmInput.addEventListener('input', () => {
-                this.checkPasswordMatch();
-            });
-        }
-    }
-
-    checkPasswordStrength(password) {
-        const strengthDiv = document.getElementById('passwordStrength');
-        if (!strengthDiv) return;
         
-        if (!password) {
-            strengthDiv.innerHTML = '';
-            return;
-        }
+        console.log('✅ 個人設定画面初期化完了');
+    });
 
-        let strength = 0;
-        let feedback = [];
-
-        if (password.length >= 8) strength++;
-        else feedback.push('8文字以上');
-
-        if (/[a-z]/.test(password)) strength++;
-        else feedback.push('小文字');
-
-        if (/[A-Z]/.test(password)) strength++;
-        else feedback.push('大文字');
-
-        if (/[0-9]/.test(password)) strength++;
-        else feedback.push('数字');
-
-        if (strength < 2) {
-            strengthDiv.innerHTML = '<span class="strength-weak"><i class="fas fa-times mr-1"></i>弱い</span>';
-        } else if (strength < 3) {
-            strengthDiv.innerHTML = '<span class="strength-medium"><i class="fas fa-exclamation-triangle mr-1"></i>普通</span>';
-        } else {
-            strengthDiv.innerHTML = '<span class="strength-strong"><i class="fas fa-check mr-1"></i>強い</span>';
+    function goBack() {
+        if (confirm('設定を中断してログイン画面に戻りますか？')) {
+            sessionStorage.clear();
+            window.location.href = '../index.html';
         }
     }
-
-    checkPasswordMatch() {
-        const password = document.getElementById('setupPassword')?.value || '';
-        const confirm = document.getElementById('setupPasswordConfirm')?.value || '';
-        const matchDiv = document.getElementById('passwordMatch');
-        
-        if (!matchDiv) return;
-
-        if (!confirm) {
-            matchDiv.innerHTML = '';
-        } else if (password === confirm) {
-            matchDiv.innerHTML = '<span class="text-green-600"><i class="fas fa-check mr-1"></i>パスワードが一致しています</span>';
-        } else {
-            matchDiv.innerHTML = '<span class="text-red-600"><i class="fas fa-times mr-1"></i>パスワードが一致しません</span>';
-        }
-    }
-
-    async handleSetupSubmit() {
-        const button = document.getElementById('setupButton');
-        if (button) {
-            button.disabled = true;
-            button.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>設定中...';
-        }
-
-        try {
-            const setupData = {
-                username: document.getElementById('setupUsername')?.value?.trim(),
-                password: document.getElementById('setupPassword')?.value,
-                passwordConfirm: document.getElementById('setupPasswordConfirm')?.value
-                // メールアドレスは削除
-            };
-
-            // バリデーション
-            if (!setupData.username) {
-                throw new Error('ユーザー名が設定されていません');
-            }
-
-            if (!setupData.password) {
-                throw new Error('パスワードを入力してください');
-            }
-
-            if (setupData.password.length < 6) {
-                throw new Error('パスワードは6文字以上で入力してください');
-            }
-
-            if (setupData.password !== setupData.passwordConfirm) {
-                throw new Error('パスワードが一致しません');
-            }
-
-            const targetUID = sessionStorage.getItem('targetUID');
-            if (!targetUID) {
-                throw new Error('セッション情報が不足しています');
-            }
-
-            // パスワードをハッシュ化
-            const passwordRecord = await hashPassword(setupData.password);
-            
-            // ユーザーデータの更新
-            const updateData = {
-                displayName: setupData.username, // 表示名はユーザー名と同じに設定
-                password: passwordRecord,        // ハッシュ化されたパスワード
-                hasCustomPassword: true,
-                setupCompleted: true,
-                needsSetup: false,
-                lastUpdated: firebase.database.ServerValue.TIMESTAMP,
-                passwordResetCompleted: false
-            };
-
-            await window.database.ref(`${window.DATA_ROOT}/users/${targetUID}`).update(updateData);
-
-            // セッションフラグをクリア
-            sessionStorage.removeItem('needsSetup');
-
-            this.showSetupComplete(setupData);
-
-        } catch (error) {
-            console.error('❌ 設定保存エラー:', error);
-            this.showStatus(`設定の保存に失敗しました: ${error.message}`, 'error');
-        } finally {
-            if (button) {
-                button.disabled = false;
-                button.innerHTML = '<i class="fas fa-check mr-2"></i>設定完了';
-            }
-        }
-    }
-
-    showSetupComplete(setupData) {
-        // プログレス更新
-        const progressSteps = document.querySelectorAll('.progress-step');
-        if (progressSteps[2]) {
-            progressSteps[2].classList.add('active');
-        }
-
-        // フォーム非表示、完了画面表示
-        const userSetupForm = document.getElementById('userSetupForm');
-        const currentUserInfo = document.getElementById('currentUserInfo');
-        const setupComplete = document.getElementById('setupComplete');
-        
-        if (userSetupForm) userSetupForm.style.display = 'none';
-        if (currentUserInfo) currentUserInfo.style.display = 'none';
-        if (setupComplete) setupComplete.style.display = 'block';
-
-        // 完了詳細表示
-        const setupCompleteDetails = document.getElementById('setupCompleteDetails');
-        if (setupCompleteDetails) {
-            setupCompleteDetails.innerHTML = `
-                <div class="text-left space-y-2">
-                    <p><strong>設定完了ユーザー名:</strong> <code class="bg-white px-2 py-1 rounded font-mono">${setupData.username}</code></p>
-                    <p><strong>権限:</strong> ${this.getUserRole()}</p>
-                    <p class="text-sm text-gray-600 mt-4">
-                        <i class="fas fa-info-circle mr-1"></i>
-                        今後は上記のユーザー名とパスワードでログインしてください
-                    </p>
-                </div>
-            `;
-        }
-
-        // 3秒後にダッシュボードに自動遷移
-        setTimeout(() => {
-            window.location.href = '../dashboard.html';
-        }, 3000);
-    }
-
-    getUserRole() {
-        const targetUID = sessionStorage.getItem('targetUID');
-        // 実際にはDBから取得すべきですが、簡易実装として固定値
-        return 'viewer';
-    }
-
-    showStatus(message, type) {
-        console.log(`📢 ステータス [${type}]: ${message}`);
-        this.showMessage(message, type);
-    }
-
-    showMessage(text, type = 'info') {
-        const container = document.getElementById('messageContainer');
-        if (!container) return;
-        
-        const messageDiv = document.createElement('div');
-        messageDiv.className = `message ${type} px-4 py-2 mb-2 rounded-lg`;
-        
-        const icons = { success: 'check', error: 'times', warning: 'exclamation', info: 'info' };
-        messageDiv.innerHTML = `<i class="fas fa-${icons[type]}-circle mr-2"></i>${text}`;
-        
-        const colors = {
-            success: 'bg-green-100 text-green-800',
-            error: 'bg-red-100 text-red-800',
-            warning: 'bg-yellow-100 text-yellow-800',
-            info: 'bg-blue-100 text-blue-800'
-        };
-        messageDiv.className += ` ${colors[type]}`;
-        
-        container.appendChild(messageDiv);
-        setTimeout(() => messageDiv.remove(), 5000);
-    }
-}
-
-// グローバル関数
-function goBack() {
-    if (confirm('設定を中断してログイン画面に戻りますか？')) {
-        sessionStorage.clear();
-        window.location.href = '../index.html';
-    }
-}
-
-function goToLogin() {
-    sessionStorage.clear();
-    window.location.href = '../index.html';
-}
-
-// 初期化（競合排除版）
-document.addEventListener('DOMContentLoaded', () => {
-    window.userSetupController = new UserSetupController();
-});
-
-console.log('👤 ユーザー設定画面読み込み完了（修正版）');
-</script>
+    </script>
 </body>
 </html>
