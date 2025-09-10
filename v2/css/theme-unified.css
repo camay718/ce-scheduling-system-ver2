@@ -1,0 +1,171 @@
+/**
+ * CEスケジュール管理システム V2 - 統一テーマ
+ * ダッシュボードと同一の配色・デザインシステム
+ */
+
+:root {
+    --primary-gradient: linear-gradient(135deg, #E8F5E8 0%, #D4F1D4 100%);
+    --accent-color: #B8E6B8;
+    --text-color: #2C3E50;
+    --brand-primary: #4CAF50;
+    --brand-secondary: #45a049;
+    --glass-bg: rgba(255,255,255,0.7);
+    --glass-border: rgba(255,255,255,0.3);
+    --shadow-main: 0 8px 32px rgba(0,0,0,0.1);
+    --shadow-hover: 0 8px 25px rgba(76, 175, 80, 0.3);
+}
+
+/* 統一背景 */
+body.theme-unified {
+    background: var(--primary-gradient);
+    font-family: 'Noto Sans JP', 'Segoe UI', 'Hiragino Sans', sans-serif;
+    color: var(--text-color);
+    min-height: 100vh;
+    font-size: 14px;
+}
+
+/* ガラスモーフィズム統一カード */
+.glass-card {
+    background: var(--glass-bg);
+    backdrop-filter: blur(10px);
+    border: 1px solid var(--glass-border);
+    border-radius: 16px;
+    box-shadow: var(--shadow-main);
+}
+
+/* 統一ボタンシステム */
+.btn-unified {
+    padding: 12px 20px;
+    border-radius: 10px;
+    font-weight: 600;
+    transition: all 0.2s ease;
+    cursor: pointer;
+    border: none;
+    text-decoration: none;
+    display: inline-block;
+    text-align: center;
+}
+
+.btn-primary-unified {
+    background: linear-gradient(135deg, var(--brand-primary), var(--brand-secondary));
+    color: white;
+}
+
+.btn-primary-unified:hover {
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-hover);
+}
+
+.btn-outline-unified {
+    background: transparent;
+    border: 2px solid var(--brand-primary);
+    color: var(--brand-primary);
+}
+
+.btn-outline-unified:hover {
+    background: var(--brand-primary);
+    color: white;
+}
+
+/* 統一入力フィールド */
+.input-unified {
+    width: 100%;
+    padding: 12px 16px;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    font-size: 16px;
+    transition: border-color 0.3s ease;
+}
+
+.input-unified:focus {
+    outline: none;
+    border-color: var(--brand-primary);
+    box-shadow: 0 0 0 3px rgba(76, 175, 80, 0.1);
+}
+
+/* 統一ステータスメッセージ */
+.status-unified {
+    padding: 12px 16px;
+    border-radius: 8px;
+    margin-top: 15px;
+    font-size: 14px;
+    font-weight: 500;
+}
+
+.status-unified.success {
+    background-color: #d4edda;
+    color: #155724;
+    border: 1px solid #c3e6cb;
+}
+
+.status-unified.error {
+    background-color: #f8d7da;
+    color: #721c24;
+    border: 1px solid #f5c6cb;
+}
+
+.status-unified.info {
+    background-color: #d1ecf1;
+    color: #0c5460;
+    border: 1px solid #bee5eb;
+}
+
+/* 中央配置レイアウト */
+.center-layout {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    padding: 20px;
+}
+
+.center-card {
+    width: 100%;
+    max-width: 500px;
+    padding: 40px;
+}
+
+/* 管理者ダッシュボード専用 */
+.admin-layout {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 20px;
+}
+
+/* バッジシステム */
+.badge-unified {
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.badge-admin { background: #fed7d7; color: #742a2a; }
+.badge-editor { background: #bee3f8; color: #2a4365; }
+.badge-viewer { background: #c6f6d5; color: #22543d; }
+.badge-initial { background: #faf089; color: #744210; }
+.badge-active { background: #9ae6b4; color: #22543d; }
+
+/* テーブル統一 */
+.table-unified {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 20px;
+}
+
+.table-unified th,
+.table-unified td {
+    padding: 12px;
+    text-align: left;
+    border-bottom: 1px solid #e2e8f0;
+}
+
+.table-unified th {
+    background: #f7fafc;
+    font-weight: 600;
+    color: #2d3748;
+}
+
+.table-unified tr:hover {
+    background: #f7fafc;
+}
