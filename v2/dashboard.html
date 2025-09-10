@@ -1,4 +1,4 @@
-Copy<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
@@ -12,55 +12,19 @@ Copy<!DOCTYPE html>
     <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css">
     
-    <!-- Firebase SDK -->
-    <script defer src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-    <script defer src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
-    <script defer src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+    <!-- 統一テーマ -->
+    <link rel="stylesheet" href="css/theme-unified.css">
     
-    <!-- Firebase設定（最優先読み込み） -->
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+    
+    <!-- Firebase設定 -->
     <script src="js/config/firebase-config.js?v=20241212"></script>
     
     <style>
-        :root {
-            --primary-gradient: linear-gradient(135deg, #E8F5E8 0%, #D4F1D4 100%);
-            --accent-color: #B8E6B8;
-            --text-color: #2C3E50;
-            --shadow: 0 4px 12px rgba(0,0,0,0.1);
-        }
-
-        body {
-            background: var(--primary-gradient);
-            font-family: 'Noto Sans JP', 'Segoe UI', 'Hiragino Sans', sans-serif;
-            color: var(--text-color);
-            min-height: 100vh;
-            overflow-x: hidden;
-            font-size: 14px;
-        }
-
-        .glassmorphism {
-            background: rgba(255,255,255,0.7);
-            backdrop-filter: blur(10px);
-            border: 1px solid rgba(255,255,255,0.3);
-        }
-
-        .btn-primary {
-            background: linear-gradient(135deg, #4CAF50, #45a049);
-            color: white;
-            border: none;
-            padding: 10px 18px;
-            border-radius: 20px;
-            font-weight: 600;
-            box-shadow: var(--shadow);
-            transition: all 0.2s ease;
-            cursor: pointer;
-        }
-
-        .btn-primary:hover { 
-            transform: translateY(-1px); 
-            box-shadow: 0 6px 18px rgba(0,0,0,0.15); 
-        }
-
-        /* CE Item Styles */
+        /* CE管理専用スタイル（theme-unified.cssを補完） */
         .ce-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(90px,1fr));
@@ -115,7 +79,7 @@ Copy<!DOCTYPE html>
             color:#B8860B;
         }
 
-        /* 配置されたCEチップの勤務区分色分け */
+        /* 配置チップ */
         .chip {
             display: inline-flex;
             align-items: center;
@@ -138,11 +102,9 @@ Copy<!DOCTYPE html>
             margin-left: 4px;
             font-weight: bold;
         }
+        .chip .remove:hover { color: #ef4444; }
 
-        .chip .remove:hover {
-            color: #ef4444;
-        }
-
+        /* ステータスバッジ */
         .status-badge {
             position: absolute;
             top: -2px;
@@ -161,15 +123,15 @@ Copy<!DOCTYPE html>
         .status-休 { background: #F44336; }
         .status-出 { background: #2196F3; }
 
-        /* サイドバー固定 */
+        /* サイドバー */
         .sidebar {
             position: fixed;
             top: 0;
             left: 0;
             bottom: 0;
-            background: rgba(255,255,255,0.8);
+            background: var(--glass-bg);
             backdrop-filter: blur(10px);
-            border-right: 1px solid rgba(255,255,255,0.3);
+            border-right: 1px solid var(--glass-border);
             transition: all 0.3s ease;
             width: 60px;
             overflow-x: hidden;
@@ -177,44 +139,21 @@ Copy<!DOCTYPE html>
             z-index: 1000;
         }
 
-        .sidebar.expanded {
-            width: 280px;
-        }
+        .sidebar.expanded { width: 280px; }
+        .sidebar-text { opacity: 0; transition: opacity 0.3s ease; white-space: nowrap; }
+        .sidebar.expanded .sidebar-text { opacity: 1; }
 
-        .sidebar-text {
-            opacity: 0;
-            transition: opacity 0.3s ease;
-            white-space: nowrap;
-        }
-
-        .sidebar.expanded .sidebar-text {
-            opacity: 1;
-        }
-
-        /* メインコンテンツの調整 */
         .main-content {
             margin-left: 60px;
             transition: margin-left 0.3s ease;
             min-height: 100vh;
         }
+        .sidebar.expanded + .main-content { margin-left: 280px; }
 
-        .sidebar.expanded + .main-content {
-            margin-left: 280px;
-        }
-
-        /* ナビゲーションタブ */
-        .nav-tab {
-            transition: all 0.3s ease;
-        }
-
-        .nav-tab:hover {
-            background-color: rgba(76, 175, 80, 0.1);
-        }
-
-        .nav-tab.active {
-            background-color: rgba(76, 175, 80, 0.2);
-            font-weight: bold;
-        }
+        /* ナビゲーション */
+        .nav-tab { transition: all 0.3s ease; }
+        .nav-tab:hover { background-color: rgba(76, 175, 80, 0.1); }
+        .nav-tab.active { background-color: rgba(76, 175, 80, 0.2); font-weight: bold; }
 
         /* 同期インジケータ */
         .sync-indicator {
@@ -226,32 +165,15 @@ Copy<!DOCTYPE html>
             font-size: 12px;
             font-weight: 700;
         }
+        .sync-indicator.connected { background: rgba(76,175,80,0.1); color: #2E7D32; }
+        .sync-dot { width: 8px; height: 8px; border-radius: 50%; background: currentColor; }
+        .sync-dot.pulse { animation: pulse 2s infinite; }
+        @keyframes pulse { 0%, 100% { opacity: 0.8; } 50% { opacity: 1; } }
 
-        .sync-indicator.connected { 
-            background: rgba(76,175,80,0.1); 
-            color: #2E7D32; 
-        }
-
-        .sync-dot {
-            width: 8px;
-            height: 8px;
-            border-radius: 50%;
-            background: currentColor;
-        }
-
-        .sync-dot.pulse {
-            animation: pulse 2s infinite;
-        }
-
-        @keyframes pulse {
-            0%, 100% { opacity: 0.8; }
-            50% { opacity: 1; }
-        }
-
-        /* CE管理4列グリッド */
+        /* CE管理グリッド（ドラッグ対応） */
         .ce-management-grid {
             display: grid;
-            grid-template-columns: repeat(4, 1fr);
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
             gap: 16px;
             padding: 16px 0;
         }
@@ -263,19 +185,21 @@ Copy<!DOCTYPE html>
             background: white;
             transition: all 0.2s ease;
             position: relative;
+            cursor: move;
         }
 
         .ce-management-card:hover {
-            border-color: #3b82f6;
+            border-color: var(--brand-primary);
             box-shadow: 0 2px 8px rgba(0,0,0,0.1);
         }
 
         .ce-management-card.dragging {
             opacity: 0.5;
-            transform: rotate(2deg);
+            transform: rotate(2deg) scale(0.95);
+            z-index: 1000;
         }
 
-        /* 部門別レイアウト */
+        /* 部門セクション */
         .department-section {
             border: 2px solid #e5e7eb;
             border-radius: 12px;
@@ -283,15 +207,8 @@ Copy<!DOCTYPE html>
             min-height: 200px;
             transition: all 0.2s ease;
         }
-
-        .department-section:hover {
-            border-color: #3b82f6;
-        }
-
-        .department-section.drag-over {
-            border-color: #10b981;
-            background: rgba(16, 185, 129, 0.05);
-        }
+        .department-section:hover { border-color: var(--brand-primary); }
+        .department-section.drag-over { border-color: #10b981; background: rgba(16, 185, 129, 0.05); }
 
         .task-item {
             background: rgba(59, 130, 246, 0.1);
@@ -303,10 +220,7 @@ Copy<!DOCTYPE html>
             cursor: pointer;
             transition: all 0.2s ease;
         }
-
-        .task-item:hover {
-            background: rgba(59, 130, 246, 0.2);
-        }
+        .task-item:hover { background: rgba(59, 130, 246, 0.2); }
 
         .assignment-dropzone {
             min-height: 60px;
@@ -317,13 +231,7 @@ Copy<!DOCTYPE html>
             transition: all 0.15s ease;
             margin-top: 8px;
         }
-
-        .assignment-dropzone.dragover {
-            border-color: #2563eb;
-            background: #eff6ff;
-        }
-
-        .hidden { display: none !important; }
+        .assignment-dropzone.dragover { border-color: #2563eb; background: #eff6ff; }
 
         /* ローディング */
         #loading {
@@ -339,20 +247,15 @@ Copy<!DOCTYPE html>
         
         .spinner {
             border: 4px solid #f3f3f3;
-            border-top: 4px solid #2563eb;
+            border-top: 4px solid var(--brand-primary);
             border-radius: 50%;
             width: 50px;
             height: 50px;
             animation: spin 1s linear infinite;
             margin-bottom: 20px;
         }
-        
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
 
-        /* 月予定業務エリア */
         .monthly-plans {
             background: rgba(255, 255, 255, 0.5);
             border: 1px dashed #cbd5e1;
@@ -364,7 +267,7 @@ Copy<!DOCTYPE html>
         }
     </style>
 </head>
-<body>
+<body class="theme-unified">
     <!-- ローディング画面 -->
     <div id="loading">
         <div class="spinner"></div>
@@ -373,7 +276,7 @@ Copy<!DOCTYPE html>
 
     <!-- メインインターフェース -->
     <div id="mainInterface" style="display:none;">
-        <!-- サイドバー（固定） -->
+        <!-- サイドバー -->
         <div id="sidebar" class="sidebar p-4">
             <div class="mb-3 flex justify-between items-center">
                 <button id="toggleSidebar" class="p-2 rounded-lg hover:bg-gray-200" title="サイドバー表示/非表示">
@@ -416,7 +319,7 @@ Copy<!DOCTYPE html>
                 </button>
             </nav>
 
-            <!-- 月予定設定（修正版：機能実装） -->
+            <!-- 月予定設定 -->
             <div class="mb-4 sidebar-text">
                 <h3 class="text-sm font-medium text-gray-700 mb-2">月予定設定</h3>
                 <div class="space-y-2">
@@ -429,7 +332,7 @@ Copy<!DOCTYPE html>
                 </div>
             </div>
 
-            <!-- テンプレート（修正版：縦配置） -->
+            <!-- テンプレート -->
             <div class="sidebar-text">
                 <h3 class="text-sm font-medium text-gray-700 mb-2">テンプレート</h3>
                 <div class="space-y-2">
@@ -440,7 +343,6 @@ Copy<!DOCTYPE html>
                         <i class="fas fa-folder-open mr-1"></i>読込
                     </button>
                 </div>
-                <div id="savedTemplates" class="mt-2 space-y-1 text-sm"></div>
             </div>
 
             <!-- 自動同期ステータス -->
@@ -466,101 +368,84 @@ Copy<!DOCTYPE html>
 
         <!-- メインコンテンツ -->
         <div class="main-content p-4">
-            <!-- 日別スケジュール（3列2行レイアウト） -->
+            <!-- 日別スケジュール -->
             <div id="dailyScheduleContent" class="screen-content">
                 <div class="mb-4 flex justify-between items-center">
                     <h2 id="dailyScheduleTitle" class="text-2xl font-bold">日別スケジュール</h2>
                     <div class="flex items-center gap-3">
-                        <button id="prevDayBtn" class="bg-gray-600 hover:bg-gray-700 text-white px-3 py-2 rounded-lg">
+                        <button id="prevDayBtn" class="btn-unified btn-outline-unified">
                             <i class="fas fa-chevron-left mr-1"></i>前日
                         </button>
-                        <input type="date" id="scheduleDatePicker" class="px-3 py-2 border border-gray-300 rounded-lg">
-                        <button id="nextDayBtn" class="bg-gray-600 hover:bg-gray-700 text-white px-3 py-2 rounded-lg">
+                        <input type="date" id="scheduleDatePicker" class="input-unified" style="width: auto;">
+                        <button id="nextDayBtn" class="btn-unified btn-outline-unified">
                             翌日<i class="fas fa-chevron-right ml-1"></i>
                         </button>
-                        <button id="todayBtn" class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-2 rounded-lg">
+                        <button id="todayBtn" class="btn-unified btn-primary-unified">
                             <i class="fas fa-calendar-day mr-1"></i>今日
                         </button>
-                        <button id="addEventButtonDaily" class="btn-primary">
+                        <button id="addEventButtonDaily" class="btn-unified btn-primary-unified">
                             <i class="fas fa-plus mr-2"></i>業務追加
                         </button>
                     </div>
                 </div>
                 
-                <!-- 部門別レイアウト（3列2行＋追加2部門） -->
-                <div id="departmentGrid" class="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-6">
-                    <!-- 部門別セクションがここに動的生成されます -->
-                </div>
+                <div id="departmentGrid" class="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-6"></div>
                 
-                <!-- CEリスト（ドラッグソース） -->
-                <div class="glassmorphism rounded-2xl p-4">
+                <div class="glass-card p-4">
                     <h3 class="font-bold mb-3"><i class="fas fa-users mr-2"></i>CEリスト（<span id="ceListCount">--</span>名）</h3>
                     <div id="ceListContainer" class="ce-grid"></div>
                 </div>
             </div>
 
-            <!-- CEリスト管理（完全修正版：4列レイアウト、日付前後ボタン） -->
+            <!-- CEリスト管理 -->
             <div id="ceManagementContent" class="screen-content" style="display:none;">
                 <div class="mb-4 flex justify-between items-center">
                     <h2 class="text-2xl font-bold">CEリスト管理</h2>
                     <div class="flex items-center gap-3">
-                        <button id="prevStatusDateBtn" class="bg-gray-600 hover:bg-gray-700 text-white px-3 py-2 rounded-lg">
+                        <button id="prevStatusDateBtn" class="btn-unified btn-outline-unified">
                             <i class="fas fa-chevron-left mr-1"></i>前日
                         </button>
-                        <input type="date" id="ceStatusDate" class="px-3 py-2 border border-gray-300 rounded-lg">
-                        <button id="nextStatusDateBtn" class="bg-gray-600 hover:bg-gray-700 text-white px-3 py-2 rounded-lg">
+                        <input type="date" id="ceStatusDate" class="input-unified" style="width: auto;">
+                        <button id="nextStatusDateBtn" class="btn-unified btn-outline-unified">
                             翌日<i class="fas fa-chevron-right ml-1"></i>
                         </button>
-                        <button id="todayStatusBtn" class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-2 rounded-lg">
+                        <button id="todayStatusBtn" class="btn-unified btn-primary-unified">
                             <i class="fas fa-calendar-day mr-1"></i>今日
                         </button>
                         <span class="text-sm text-gray-600">この日付の勤務状態を設定</span>
                     </div>
                 </div>
                 
-                <!-- CE管理コントロール -->
-                <div class="glassmorphism rounded-2xl p-4 mb-4">
+                <div class="glass-card p-4 mb-4">
                     <div class="flex items-center justify-between mb-4">
                         <h3 class="text-lg font-semibold">CE管理コントロール</h3>
                         <div class="flex items-center gap-3">
                             <div class="flex items-center gap-2">
-                                <input type="text" id="newCEName" placeholder="新しいCE名" 
-                                       class="px-3 py-2 border border-gray-300 rounded-lg">
-                                <select id="newCEWorkType" class="px-3 py-2 border border-gray-300 rounded-lg">
+                                <input type="text" id="newCEName" placeholder="新しいCE名" class="input-unified" style="width: 150px;">
+                                <select id="newCEWorkType" class="input-unified" style="width: 100px;">
                                     <option value="ME">ME</option>
                                     <option value="OPE">OPE</option>
                                     <option value="HD">HD</option>
                                     <option value="FLEX">FLEX</option>
                                 </select>
-                                <button id="addNewCEBtn" class="bg-green-600 hover:bg-green-700 text-white px-3 py-2 rounded-lg">
+                                <button id="addNewCEBtn" class="btn-unified btn-primary-unified">
                                     <i class="fas fa-plus mr-1"></i>追加
                                 </button>
                             </div>
                             <div class="border-l pl-3 ml-3">
                                 <label class="text-sm font-medium mr-2">並び替え:</label>
-                                <button id="sortByNameBtn" class="bg-blue-600 hover:bg-blue-700 text-white px-2 py-1 rounded text-xs mr-1">
-                                    名前順
-                                </button>
-                                <button id="sortByWorkTypeBtn" class="bg-blue-600 hover:bg-blue-700 text-white px-2 py-1 rounded text-xs">
-                                    勤務区分順
-                                </button>
+                                <button id="sortByNameBtn" class="btn-unified btn-outline-unified btn-small">名前順</button>
+                                <button id="sortByWorkTypeBtn" class="btn-unified btn-outline-unified btn-small">勤務区分順</button>
                             </div>
                         </div>
                     </div>
                 </div>
 
-                <!-- CE管理4列グリッド -->
-                <div class="glassmorphism rounded-2xl p-4 mb-4">
-                    <div id="ceManagementGrid" class="ce-management-grid">
-                        <!-- 動的生成 -->
-                    </div>
+                <div class="glass-card p-4 mb-4">
+                    <div id="ceManagementGrid" class="ce-management-grid"></div>
                     <div class="mt-4 text-xs text-gray-500 bg-yellow-50 p-2 rounded">
                         <i class="fas fa-info-circle mr-1"></i>
-                        <strong>操作方法:</strong> 
-                        ドラッグで並び替え | 
-                        編集ボタンで基本情報編集 | 
-                        削除ボタンで削除（確認あり） | 
-                        勤務状態は選択日のみ設定
+                        <strong>操作方法:</strong> ドラッグで並び替え | 編集で基本情報編集 | 削除で削除（確認あり） | 勤務状態は選択日のみ設定
                     </div>
                 </div>
             </div>
@@ -570,15 +455,15 @@ Copy<!DOCTYPE html>
                 <div class="mb-4 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                     <div class="flex items-center gap-2">
                         <h2 id="calendarTitle" class="text-2xl font-bold">月間スケジュール</h2>
-                        <button class="btn-primary text-sm" onclick="window.print()">
+                        <button class="btn-unified btn-primary-unified btn-small" onclick="window.print()">
                             <i class="fas fa-print mr-1"></i>印刷
                         </button>
                     </div>
                     <div class="flex items-center space-x-3">
-                        <button id="addEventButton" class="btn-primary">
+                        <button id="addEventButton" class="btn-unified btn-primary-unified">
                             <i class="fas fa-plus mr-2"></i>業務追加
                         </button>
-                        <div class="glassmorphism rounded-xl p-2">
+                        <div class="glass-card p-2">
                             <div id="monthSummary" class="text-sm font-bold">読み込み中...</div>
                         </div>
                         <button id="clearEventsButton" class="bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600">
@@ -587,60 +472,48 @@ Copy<!DOCTYPE html>
                     </div>
                 </div>
 
-                <!-- 月切り替え -->
-                <div class="flex justify-center items-center mb-6 bg-gray-50 p-4 rounded-lg">
-                    <button id="prevWeekBtn" class="bg-gray-600 hover:bg-gray-700 text-white p-2 rounded-l-md transition-colors">
+                <div class="flex justify-center items-center mb-6 glass-card p-4">
+                    <button id="prevWeekBtn" class="btn-unified btn-outline-unified rounded-l-md">
                         <i class="fas fa-chevron-left"></i>
                     </button>
                     <div id="currentWeek" class="bg-white px-6 py-2 font-semibold text-gray-900 min-w-[200px] text-center border-t border-b">
                         2025年9月
                     </div>
-                    <button id="nextWeekBtn" class="bg-gray-600 hover:bg-gray-700 text-white p-2 rounded-r-md transition-colors">
+                    <button id="nextWeekBtn" class="btn-unified btn-outline-unified rounded-r-md">
                         <i class="fas fa-chevron-right"></i>
                     </button>
                 </div>
 
-                <!-- カレンダーテーブル -->
-                <div class="glassmorphism rounded-2xl p-4 mb-4">
+                <div class="glass-card p-4 mb-4">
                     <div class="overflow-x-auto">
-                        <table id="scheduleTable" class="schedule-table">
+                        <table id="scheduleTable" class="table-unified">
                             <thead>
-                                <tr>
-                                    <th>日</th>
-                                    <th>月</th>
-                                    <th>火</th>
-                                    <th>水</th>
-                                    <th>木</th>
-                                    <th>金</th>
-                                    <th>土</th>
-                                </tr>
+                                <tr><th>日</th><th>月</th><th>火</th><th>水</th><th>木</th><th>金</th><th>土</th></tr>
                             </thead>
-                            <tbody id="scheduleTableBody">
-                                <!-- 月間カレンダーがここに描画されます -->
-                            </tbody>
+                            <tbody id="scheduleTableBody"></tbody>
                         </table>
                     </div>
                 </div>
             </div>
 
-            <!-- その他のコンテンツエリア（将来実装） -->
+            <!-- その他のコンテンツエリア -->
             <div id="departmentTimelineContent" class="screen-content" style="display:none;">
                 <h2 class="text-2xl font-bold mb-6">業務別タイムライン</h2>
-                <div class="glassmorphism rounded-2xl p-6">
+                <div class="glass-card p-6">
                     <p class="text-gray-600">実装準備中...</p>
                 </div>
             </div>
 
             <div id="personalTimelineContent" class="screen-content" style="display:none;">
                 <h2 class="text-2xl font-bold mb-6">個人別タイムライン</h2>
-                <div class="glassmorphism rounded-2xl p-6">
+                <div class="glass-card p-6">
                     <p class="text-gray-600">実装準備中...</p>
                 </div>
             </div>
 
             <div id="analysisContent" class="screen-content" style="display:none;">
                 <h2 class="text-2xl font-bold mb-6">集計・分析</h2>
-                <div class="glassmorphism rounded-2xl p-6">
+                <div class="glass-card p-6">
                     <p class="text-gray-600">実装準備中...</p>
                 </div>
             </div>
@@ -653,7 +526,7 @@ Copy<!DOCTYPE html>
 
     <!-- 業務管理モーダル -->
     <div id="eventModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-        <div class="bg-white rounded-lg p-6 max-w-lg w-full mx-4 max-h-[90vh] overflow-y-auto">
+        <div class="glass-card p-6 max-w-lg w-full mx-4 max-h-[90vh] overflow-y-auto">
             <div class="flex justify-between items-center mb-4">
                 <h3 id="eventModalTitle" class="text-lg font-semibold">業務追加</h3>
                 <button onclick="closeModal('eventModal')" class="text-gray-500 hover:text-gray-700">
@@ -665,59 +538,50 @@ Copy<!DOCTYPE html>
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                         <label class="block text-sm font-medium text-gray-700 mb-2">業務名</label>
-                        <input type="text" id="eventName" required
-                               class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        <input type="text" id="eventName" required class="input-unified">
                     </div>
                     <div>
                         <label class="block text-sm font-medium text-gray-700 mb-2">部門</label>
-                        <select id="eventDepartment" required
-                                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        <select id="eventDepartment" required class="input-unified">
                             <option value="">部門を選択</option>
                         </select>
                     </div>
                     <div>
                         <label class="block text-sm font-medium text-gray-700 mb-2">開始時間</label>
-                        <input type="time" id="eventStartTime" required
-                               class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        <input type="time" id="eventStartTime" required class="input-unified">
                     </div>
                     <div>
                         <label class="block text-sm font-medium text-gray-700 mb-2">終了時間</label>
-                        <input type="time" id="eventEndTime" required
-                               class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        <input type="time" id="eventEndTime" required class="input-unified">
                     </div>
                     <div>
                         <label class="block text-sm font-medium text-gray-700 mb-2">件数</label>
-                        <input type="number" id="eventCount" min="1" value="1" required
-                               class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        <input type="number" id="eventCount" min="1" value="1" required class="input-unified">
                     </div>
                     <div>
                         <label class="block text-sm font-medium text-gray-700 mb-2">必要人数</label>
-                        <input type="number" id="eventRequired" min="1" value="1" required
-                               class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        <input type="number" id="eventRequired" min="1" value="1" required class="input-unified">
                     </div>
                 </div>
                 
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-2">日付</label>
-                    <input type="date" id="eventDate" required
-                           class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    <input type="date" id="eventDate" required class="input-unified">
                 </div>
                 
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-2">備考（任意）</label>
-                    <textarea id="eventMemo" rows="3" 
-                              class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
-                              placeholder="申し送り事項など"></textarea>
+                    <textarea id="eventMemo" rows="3" class="input-unified resize-none" placeholder="申し送り事項など"></textarea>
                 </div>
                 
                 <div class="flex justify-end space-x-3 pt-4">
-                    <button type="button" id="deleteEventBtn" class="hidden bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-md text-sm transition-colors">
+                    <button type="button" id="deleteEventBtn" class="hidden bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-md text-sm">
                         <i class="fas fa-trash mr-1"></i>削除
                     </button>
-                    <button type="button" onclick="closeModal('eventModal')" class="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded-md text-sm transition-colors">
+                    <button type="button" onclick="closeModal('eventModal')" class="btn-unified btn-outline-unified">
                         キャンセル
                     </button>
-                    <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md text-sm transition-colors">
+                    <button type="submit" class="btn-unified btn-primary-unified">
                         <i class="fas fa-save mr-1"></i>保存
                     </button>
                 </div>
@@ -727,7 +591,7 @@ Copy<!DOCTYPE html>
 
     <!-- CE編集モーダル -->
     <div id="ceEditModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-        <div class="bg-white rounded-lg p-6 max-w-lg w-full mx-4 max-h-[90vh] overflow-y-auto">
+        <div class="glass-card p-6 max-w-lg w-full mx-4 max-h-[90vh] overflow-y-auto">
             <div class="flex justify-between items-center mb-4">
                 <h3 class="text-lg font-semibold">CE編集</h3>
                 <button onclick="closeModal('ceEditModal')" class="text-gray-500 hover:text-gray-700">
@@ -738,11 +602,11 @@ Copy<!DOCTYPE html>
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                     <label class="block text-sm font-medium mb-1">名前</label>
-                    <input type="text" id="editCEName" class="w-full p-3 border rounded-lg"/>
+                    <input type="text" id="editCEName" class="input-unified"/>
                 </div>
                 <div>
                     <label class="block text-sm font-medium mb-1">勤務区分</label>
-                    <select id="editCEWorkType" class="w-full p-3 border rounded-lg">
+                    <select id="editCEWorkType" class="input-unified">
                         <option value="OPE">OPE</option>
                         <option value="ME">ME</option>
                         <option value="HD">HD</option>
@@ -754,22 +618,22 @@ Copy<!DOCTYPE html>
             <div class="mt-4">
                 <label class="block text-sm font-bold mb-2">曜日ごとの状態テンプレート</label>
                 <div class="grid grid-cols-2 md:grid-cols-3 gap-3 text-sm">
-                    <div><label class="block">月曜</label><select id="ceStatus_monday" class="w-full p-2 border rounded"><option value="">通常</option><option value="早">早出</option><option value="当">当直</option><option value="非">非番</option><option value="休">休み</option><option value="出">出張</option></select></div>
-                    <div><label class="block">火曜</label><select id="ceStatus_tuesday" class="w-full p-2 border rounded"><option value="">通常</option><option value="早">早出</option><option value="当">当直</option><option value="非">非番</option><option value="休">休み</option><option value="出">出張</option></select></div>
-                    <div><label class="block">水曜</label><select id="ceStatus_wednesday" class="w-full p-2 border rounded"><option value="">通常</option><option value="早">早出</option><option value="当">当直</option><option value="非">非番</option><option value="休">休み</option><option value="出">出張</option></select></div>
-                    <div><label class="block">木曜</label><select id="ceStatus_thursday" class="w-full p-2 border rounded"><option value="">通常</option><option value="早">早出</option><option value="当">当直</option><option value="非">非番</option><option value="休">休み</option><option value="出">出張</option></select></div>
-                    <div><label class="block">金曜</label><select id="ceStatus_friday" class="w-full p-2 border rounded"><option value="">通常</option><option value="早">早出</option><option value="当">当直</option><option value="非">非番</option><option value="休">休み</option><option value="出">出張</option></select></div>
-                    <div><label class="block">土曜</label><select id="ceStatus_saturday" class="w-full p-2 border rounded"><option value="">通常</option><option value="早">早出</option><option value="当">当直</option><option value="非">非番</option><option value="休">休み</option><option value="出">出張</option></select></div>
-                    <div><label class="block">日曜</label><select id="ceStatus_sunday" class="w-full p-2 border rounded"><option value="">通常</option><option value="早">早出</option><option value="当">当直</option><option value="非">非番</option><option value="休">休み</option><option value="出">出張</option></select></div>
+                    <div><label class="block">月曜</label><select id="ceStatus_monday" class="input-unified"><option value="">通常</option><option value="早">早出</option><option value="当">当直</option><option value="非">非番</option><option value="休">休み</option><option value="出">出張</option></select></div>
+                    <div><label class="block">火曜</label><select id="ceStatus_tuesday" class="input-unified"><option value="">通常</option><option value="早">早出</option><option value="当">当直</option><option value="非">非番</option><option value="休">休み</option><option value="出">出張</option></select></div>
+                    <div><label class="block">水曜</label><select id="ceStatus_wednesday" class="input-unified"><option value="">通常</option><option value="早">早出</option><option value="当">当直</option><option value="非">非番</option><option value="休">休み</option><option value="出">出張</option></select></div>
+                    <div><label class="block">木曜</label><select id="ceStatus_thursday" class="input-unified"><option value="">通常</option><option value="早">早出</option><option value="当">当直</option><option value="非">非番</option><option value="休">休み</option><option value="出">出張</option></select></div>
+                    <div><label class="block">金曜</label><select id="ceStatus_friday" class="input-unified"><option value="">通常</option><option value="早">早出</option><option value="当">当直</option><option value="非">非番</option><option value="休">休み</option><option value="出">出張</option></select></div>
+                    <div><label class="block">土曜</label><select id="ceStatus_saturday" class="input-unified"><option value="">通常</option><option value="早">早出</option><option value="当">当直</option><option value="非">非番</option><option value="休">休み</option><option value="出">出張</option></select></div>
+                    <div><label class="block">日曜</label><select id="ceStatus_sunday" class="input-unified"><option value="">通常</option><option value="早">早出</option><option value="当">当直</option><option value="非">非番</option><option value="休">休み</option><option value="出">出張</option></select></div>
                 </div>
                 <p class="text-xs text-gray-500 mt-2">※ 曜日テンプレートは現在の日付のステータス表示に使用されます</p>
             </div>
 
             <div class="flex justify-end gap-3 mt-5">
-                <button id="saveCEButton" class="btn-primary">
+                <button id="saveCEButton" class="btn-unified btn-primary-unified">
                     <i class="fas fa-save mr-1"></i>保存
                 </button>
-                <button class="px-4 py-2 rounded-lg border" onclick="closeModal('ceEditModal')">キャンセル</button>
+                <button class="btn-unified btn-outline-unified" onclick="closeModal('ceEditModal')">キャンセル</button>
             </div>
         </div>
     </div>
@@ -784,8 +648,25 @@ Copy<!DOCTYPE html>
     <script defer src="js/ui/ce-manager.js?v=20241212"></script>
     <script defer src="js/ui/ce-daily-status.js?v=20241212"></script>
 
-    <!-- Dashboard専用JavaScript（完全修正版） -->
+    <!-- Dashboard専用JavaScript（機能拡張版） -->
     <script>
+    // 統一メッセージシステム
+    window.showMessage = window.showMessage || ((msg, type='info') => {
+        let cont = document.getElementById('messageContainer');
+        if (!cont) {
+            cont = document.createElement('div');
+            cont.id = 'messageContainer';
+            cont.style.cssText = 'position:fixed;top:16px;left:50%;transform:translateX(-50%);z-index:9999;width:min(92vw,480px);';
+            document.body.appendChild(cont);
+        }
+        const div = document.createElement('div');
+        div.className = `status-unified ${type}`;
+        div.style.marginBottom = '8px';
+        div.textContent = msg;
+        cont.appendChild(div);
+        setTimeout(() => div.remove(), 5000);
+    });
+
     class DashboardAuth {
         constructor() {
             this.isInitialized = false;
@@ -802,24 +683,21 @@ Copy<!DOCTYPE html>
             console.log('📊 ダッシュボード認証チェック開始');
             
             try {
-        // 【修正】Firebase初期化完了を確実に待機
-        await window.waitForFirebase();
-        await this.checkAuthWithRetry();
-    } catch (error) {
-        console.error('❌ ダッシュボード初期化エラー:', error);
-        this.redirectToLogin();
-    }
-}
+                await window.waitForFirebase();
+                await this.checkAuthWithRetry();
+            } catch (error) {
+                console.error('❌ ダッシュボード初期化エラー:', error);
+                this.redirectToLogin();
+            }
+        }
+
         async checkAuthWithRetry(maxRetries = 3) {
             for (let attempt = 1; attempt <= maxRetries; attempt++) {
                 try {
-                    console.log(`🔍 認証チェック試行 ${attempt}/${maxRetries}`);
-                    
                     const targetUID = sessionStorage.getItem('targetUID');
                     const currentUsername = sessionStorage.getItem('currentUsername');
                     
                     if (!targetUID || !currentUsername) {
-                        console.log('❌ セッション情報なし → ログイン画面へ');
                         this.redirectToLogin();
                         return;
                     }
@@ -830,27 +708,20 @@ Copy<!DOCTYPE html>
                     const userData = userSnapshot.val();
                     
                     if (userData && userData.setupCompleted) {
-                        console.log('✅ ダッシュボード表示許可');
                         window.userRole = userData.role || 'viewer';
                         window.currentUserData = userData;
-                        
                         this.showDashboard();
                         return;
                     } else {
-                        console.log('❌ ユーザー設定未完了 → ログイン画面へ');
                         this.redirectToLogin();
                         return;
                     }
                     
                 } catch (error) {
-                    console.error(`❌ 認証チェック試行 ${attempt} エラー:`, error);
-                    
                     if (attempt === maxRetries) {
-                        console.error('❌ 全ての認証チェック試行が失敗');
                         this.redirectToLogin();
                         return;
                     }
-                    
                     await new Promise(resolve => setTimeout(resolve, 1000 * attempt));
                 }
             }
@@ -858,31 +729,22 @@ Copy<!DOCTYPE html>
 
         async ensureAnonymousAuth() {
             let user = window.auth.currentUser;
-            
             if (!user) {
-                console.log('🔄 匿名認証実行中...');
                 const result = await window.auth.signInAnonymously();
                 user = result.user;
-                console.log('✅ 匿名認証成功:', user.uid);
             }
-            
             return user;
         }
 
         redirectToLogin() {
-            console.log('🔄 ログイン画面にリダイレクト');
             sessionStorage.clear();
             window.location.href = 'index.html';
         }
 
         showDashboard() {
-            const loading = document.getElementById('loading');
-            const mainInterface = document.getElementById('mainInterface');
+            document.getElementById('loading').style.display = 'none';
+            document.getElementById('mainInterface').style.display = 'block';
             
-            if (loading) loading.style.display = 'none';
-            if (mainInterface) mainInterface.style.display = 'block';
-            
-            console.log('📊 ダッシュボード表示開始');
             this.updateUserDisplay();
             this.setupNavigation();
             this.setupSidebar();
@@ -895,8 +757,7 @@ Copy<!DOCTYPE html>
             const userData = window.currentUserData;
             if (!userData) return;
             
-            const userElements = document.querySelectorAll('.user-name, #currentUserDisplay, [data-user="name"]');
-            userElements.forEach(element => {
+            document.querySelectorAll('#currentUserDisplay').forEach(element => {
                 element.textContent = userData.displayName || userData.username || 'ユーザー';
             });
         }
@@ -949,10 +810,7 @@ Copy<!DOCTYPE html>
                 toggleSidebar.onclick = () => sidebar.classList.toggle('expanded');
             }
 
-            // 月予定設定の機能実装
             this.setupMonthSelector();
-            
-            // テンプレート機能
             this.setupTemplateButtons();
         }
 
@@ -961,21 +819,17 @@ Copy<!DOCTYPE html>
             const todayButton = document.getElementById('todayButton');
             
             if (monthSelector) {
-                // 初期値設定
                 const currentYM = `${this.currentMonth.getFullYear()}-${String(this.currentMonth.getMonth() + 1).padStart(2, '0')}`;
                 monthSelector.value = currentYM;
                 
-                // 月選択時の処理
                 monthSelector.onchange = (e) => {
                     const [year, month] = e.target.value.split('-');
                     this.currentMonth = new Date(parseInt(year), parseInt(month) - 1, 1);
                     
-                    // カレンダービューに反映
                     if (window.calendarView) {
                         window.calendarView.setMonth(parseInt(year), parseInt(month) - 1);
                     }
                     
-                    console.log('📅 月予定設定変更:', this.currentMonth);
                     window.showMessage(`${year}年${month}月に設定しました`, 'success');
                 };
             }
@@ -989,13 +843,11 @@ Copy<!DOCTYPE html>
                         monthSelector.value = currentYM;
                     }
                     
-                    // カレンダービューに反映
                     if (window.calendarView) {
                         window.calendarView.goToToday();
                     }
                     
                     window.showMessage('今月に設定しました', 'success');
-                    console.log('📅 今月ボタン実行完了');
                 };
             }
         }
@@ -1006,17 +858,13 @@ Copy<!DOCTYPE html>
             
             if (saveButton) {
                 saveButton.onclick = () => {
-                    // テンプレート保存機能（実装予定）
                     window.showMessage('テンプレート保存機能（実装予定）', 'info');
-                    console.log('💾 テンプレート保存実行');
                 };
             }
             
             if (loadButton) {
                 loadButton.onclick = () => {
-                    // テンプレート読込機能（実装予定）
                     window.showMessage('テンプレート読込機能（実装予定）', 'info');
-                    console.log('📂 テンプレート読込実行');
                 };
             }
         }
@@ -1031,47 +879,31 @@ Copy<!DOCTYPE html>
                 };
             }
 
-            const prevDayBtn = document.getElementById('prevDayBtn');
-            const nextDayBtn = document.getElementById('nextDayBtn');
-            const todayBtn = document.getElementById('todayBtn');
+            document.getElementById('prevDayBtn').onclick = () => {
+                this.selectedDate.setDate(this.selectedDate.getDate() - 1);
+                datePicker.value = this.formatDate(this.selectedDate);
+                this.renderDailySchedule();
+            };
 
-            if (prevDayBtn) {
-                prevDayBtn.onclick = () => {
-                    this.selectedDate.setDate(this.selectedDate.getDate() - 1);
-                    datePicker.value = this.formatDate(this.selectedDate);
-                    this.renderDailySchedule();
-                };
-            }
+            document.getElementById('nextDayBtn').onclick = () => {
+                this.selectedDate.setDate(this.selectedDate.getDate() + 1);
+                datePicker.value = this.formatDate(this.selectedDate);
+                this.renderDailySchedule();
+            };
 
-            if (nextDayBtn) {
-                nextDayBtn.onclick = () => {
-                    this.selectedDate.setDate(this.selectedDate.getDate() + 1);
-                    datePicker.value = this.formatDate(this.selectedDate);
-                    this.renderDailySchedule();
-                };
-            }
+            document.getElementById('todayBtn').onclick = () => {
+                this.selectedDate = new Date();
+                datePicker.value = this.formatDate(this.selectedDate);
+                this.renderDailySchedule();
+            };
 
-            if (todayBtn) {
-                todayBtn.onclick = () => {
-                    this.selectedDate = new Date();
-                    datePicker.value = this.formatDate(this.selectedDate);
-                    this.renderDailySchedule();
-                };
-            }
-
-            const addEventButtonDaily = document.getElementById('addEventButtonDaily');
-            if (addEventButtonDaily) {
-                addEventButtonDaily.onclick = () => this.openQuickAddEvent();
-            }
+            document.getElementById('addEventButtonDaily').onclick = () => this.openQuickAddEvent();
 
             this.renderDailySchedule();
         }
 
         setupCEManagement() {
-            // CE管理日付操作の設定
             this.setupCEManagementDate();
-            
-            // CE管理コントロールの設定
             this.setupCEManagementControls();
         }
 
@@ -1089,60 +921,38 @@ Copy<!DOCTYPE html>
                 };
             }
             
-            if (prevBtn) {
-                prevBtn.onclick = () => {
-                    this.ceStatusDate.setDate(this.ceStatusDate.getDate() - 1);
-                    dateInput.value = this.formatDate(this.ceStatusDate);
-                    this.updateCEStatusDate();
-                };
-            }
+            prevBtn.onclick = () => {
+                this.ceStatusDate.setDate(this.ceStatusDate.getDate() - 1);
+                dateInput.value = this.formatDate(this.ceStatusDate);
+                this.updateCEStatusDate();
+            };
             
-            if (nextBtn) {
-                nextBtn.onclick = () => {
-                    this.ceStatusDate.setDate(this.ceStatusDate.getDate() + 1);
-                    dateInput.value = this.formatDate(this.ceStatusDate);
-                    this.updateCEStatusDate();
-                };
-            }
+            nextBtn.onclick = () => {
+                this.ceStatusDate.setDate(this.ceStatusDate.getDate() + 1);
+                dateInput.value = this.formatDate(this.ceStatusDate);
+                this.updateCEStatusDate();
+            };
             
-            if (todayBtn) {
-                todayBtn.onclick = () => {
-                    this.ceStatusDate = new Date();
-                    dateInput.value = this.formatDate(this.ceStatusDate);
-                    this.updateCEStatusDate();
-                };
-            }
+            todayBtn.onclick = () => {
+                this.ceStatusDate = new Date();
+                dateInput.value = this.formatDate(this.ceStatusDate);
+                this.updateCEStatusDate();
+            };
         }
 
         updateCEStatusDate() {
-            // CE日別勤務状態管理の日付を更新
             if (window.ceDailyStatus) {
                 window.ceDailyStatus.selectedDate = this.ceStatusDate;
                 window.ceDailyStatus.setupRealtimeStatusListener();
             }
             
-            // CE管理グリッドを再描画
             this.renderCEManagementGrid();
-            
-            console.log('📅 CE管理日付更新:', this.formatDate(this.ceStatusDate));
         }
 
         setupCEManagementControls() {
-            const addBtn = document.getElementById('addNewCEBtn');
-            const sortNameBtn = document.getElementById('sortByNameBtn');
-            const sortWorkTypeBtn = document.getElementById('sortByWorkTypeBtn');
-            
-            if (addBtn) {
-                addBtn.onclick = () => this.addNewCE();
-            }
-            
-            if (sortNameBtn) {
-                sortNameBtn.onclick = () => this.sortCEList('name');
-            }
-            
-            if (sortWorkTypeBtn) {
-                sortWorkTypeBtn.onclick = () => this.sortCEList('workType');
-            }
+            document.getElementById('addNewCEBtn').onclick = () => this.addNewCE();
+            document.getElementById('sortByNameBtn').onclick = () => this.sortCEList('name');
+            document.getElementById('sortByWorkTypeBtn').onclick = () => this.sortCEList('workType');
         }
 
         async addNewCE() {
@@ -1167,6 +977,10 @@ Copy<!DOCTYPE html>
                     await window.ceManager.addNewCE(name, workType);
                     nameInput.value = '';
                     window.showMessage(`${name}を追加しました`, 'success');
+                    
+                    // 監査ログ記録
+                    await this.logAudit('ce_add', { name, workType });
+                    
                     setTimeout(() => this.renderCEManagementGrid(), 500);
                 } catch (error) {
                     console.error('❌ CE追加エラー:', error);
@@ -1194,6 +1008,10 @@ Copy<!DOCTYPE html>
             try {
                 await window.ceManager.saveCEList();
                 window.showMessage(`${sortType}順で並び替えました`, 'success');
+                
+                // 監査ログ記録
+                await this.logAudit('ce_sort', { type: sortType, count: ceList.length });
+                
                 setTimeout(() => this.renderCEManagementGrid(), 300);
             } catch (error) {
                 console.error('❌ 並び替えエラー:', error);
@@ -1208,7 +1026,6 @@ Copy<!DOCTYPE html>
             grid.innerHTML = '';
             
             const ceList = window.ceManager.ceList;
-            const dateKey = this.formatDate(this.ceStatusDate);
             
             for (let i = 0; i < ceList.length; i++) {
                 const ce = ceList[i];
@@ -1255,7 +1072,91 @@ Copy<!DOCTYPE html>
                 grid.appendChild(card);
             }
             
-            console.log('🔄 CE管理グリッド更新完了:', ceList.length, '名');
+            // ドラッグ&ドロップ機能を有効化
+            this.enableCEManualReorder();
+        }
+
+        // CE手動並び替え機能
+        enableCEManualReorder() {
+            const grid = document.getElementById('ceManagementGrid');
+            if (!grid || window.userRole === 'viewer') return;
+
+            const cards = Array.from(grid.querySelectorAll('.ce-management-card'));
+            
+            cards.forEach((card, index) => {
+                card.draggable = true;
+                card.dataset.originalIndex = index;
+                
+                card.addEventListener('dragstart', (e) => {
+                    e.dataTransfer.effectAllowed = 'move';
+                    e.dataTransfer.setData('text/plain', card.dataset.ceIndex);
+                    card.classList.add('dragging');
+                });
+                
+                card.addEventListener('dragend', () => {
+                    card.classList.remove('dragging');
+                });
+            });
+
+            grid.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                const dragging = grid.querySelector('.dragging');
+                if (!dragging) return;
+
+                const afterElement = this.getDragAfterElement(grid, e.clientX, e.clientY);
+                if (afterElement == null) {
+                    grid.appendChild(dragging);
+                } else {
+                    grid.insertBefore(dragging, afterElement);
+                }
+            });
+
+            grid.addEventListener('drop', async (e) => {
+                e.preventDefault();
+                await this.saveCEOrder();
+            });
+        }
+
+        getDragAfterElement(container, x, y) {
+            const draggableElements = [...container.querySelectorAll('.ce-management-card:not(.dragging)')];
+            
+            return draggableElements.reduce((closest, child) => {
+                const box = child.getBoundingClientRect();
+                const offsetX = x - (box.left + box.width / 2);
+                const offsetY = y - (box.top + box.height / 2);
+                const offset = Math.sqrt(offsetX * offsetX + offsetY * offsetY);
+                
+                if (offset < closest.offset) {
+                    return { offset: offset, element: child };
+                } else {
+                    return closest;
+                }
+            }, { offset: Number.POSITIVE_INFINITY }).element;
+        }
+
+        async saveCEOrder() {
+            try {
+                const grid = document.getElementById('ceManagementGrid');
+                const newOrder = Array.from(grid.querySelectorAll('.ce-management-card'))
+                    .map(card => parseInt(card.dataset.ceIndex));
+                
+                // CEリストを新しい順序で並び替え
+                const reorderedList = newOrder.map(index => window.ceManager.ceList[index]);
+                window.ceManager.ceList = reorderedList;
+                
+                await window.ceManager.saveCEList();
+                window.showMessage('CEの順序を保存しました', 'success');
+                
+                // 監査ログ記録
+                await this.logAudit('ce_reorder', { count: reorderedList.length });
+                
+                // インデックスを更新して再描画
+                setTimeout(() => this.renderCEManagementGrid(), 300);
+                
+            } catch (error) {
+                console.error('❌ 並び替え保存エラー:', error);
+                window.showMessage('順序の保存に失敗しました', 'error');
+            }
         }
 
         async updateCEStatus(ceId, status) {
@@ -1265,7 +1166,13 @@ Copy<!DOCTYPE html>
                 if (window.ceDailyStatus?.isInitialized) {
                     await window.ceDailyStatus.updateCEStatus(ceId, status);
                     
-                    // メインCEリストに反映
+                    // 監査ログ記録
+                    await this.logAudit('ce_status_update', { 
+                        ceId, 
+                        status, 
+                        date: this.formatDate(this.ceStatusDate) 
+                    });
+                    
                     if (window.ceManager) {
                         window.ceManager.currentDisplayDate = this.ceStatusDate;
                         window.ceManager.displayCEList();
@@ -1290,6 +1197,10 @@ Copy<!DOCTYPE html>
                 try {
                     window.ceManager.ceList.splice(ceIndex, 1);
                     await window.ceManager.saveCEList();
+                    
+                    // 監査ログ記録
+                    await this.logAudit('ce_delete', { name: ceName });
+                    
                     this.renderCEManagementGrid();
                     window.showMessage(`${ceName} を削除しました`, 'success');
                 } catch (error) {
@@ -1298,98 +1209,27 @@ Copy<!DOCTYPE html>
                 }
             }
         }
-// CE管理グリッドの描画後に並び替え機能を有効化
-async renderCEManagementGrid() {
-    // 既存のコード...
-    
-    // 最後に並び替え機能を有効化
-    this.enableCEManualReorder();
-}
 
-// CE手動並び替え機能
-enableCEManualReorder() {
-    const grid = document.getElementById('ceManagementGrid');
-    if (!grid || window.userRole === 'viewer') return;
-
-    const cards = Array.from(grid.querySelectorAll('.ce-management-card'));
-    
-    cards.forEach((card, index) => {
-        card.draggable = true;
-        card.dataset.originalIndex = index;
-        
-        card.addEventListener('dragstart', (e) => {
-            e.dataTransfer.effectAllowed = 'move';
-            e.dataTransfer.setData('text/plain', card.dataset.ceIndex);
-            card.classList.add('dragging');
-            card.style.opacity = '0.5';
-        });
-        
-        card.addEventListener('dragend', () => {
-            card.classList.remove('dragging');
-            card.style.opacity = '1';
-        });
-    });
-
-    grid.addEventListener('dragover', (e) => {
-        e.preventDefault();
-        const dragging = grid.querySelector('.dragging');
-        if (!dragging) return;
-
-        const afterElement = this.getDragAfterElement(grid, e.clientX, e.clientY);
-        if (afterElement == null) {
-            grid.appendChild(dragging);
-        } else {
-            grid.insertBefore(dragging, afterElement);
-        }
-    });
-
-    grid.addEventListener('drop', async (e) => {
-        e.preventDefault();
-        await this.saveCEOrder();
-    });
-}
-
-getDragAfterElement(container, x, y) {
-    const draggableElements = [...container.querySelectorAll('.ce-management-card:not(.dragging)')];
-    
-    return draggableElements.reduce((closest, child) => {
-        const box = child.getBoundingClientRect();
-        const offsetX = x - (box.left + box.width / 2);
-        const offsetY = y - (box.top + box.height / 2);
-        const offset = Math.sqrt(offsetX * offsetX + offsetY * offsetY);
-        
-        if (offset < closest.offset) {
-            return { offset: offset, element: child };
-        } else {
-            return closest;
-        }
-    }, { offset: Number.POSITIVE_INFINITY }).element;
-}
-
-async saveCEOrder() {
-    try {
-        const grid = document.getElementById('ceManagementGrid');
-        const newOrder = Array.from(grid.querySelectorAll('.ce-management-card'))
-            .map(card => parseInt(card.dataset.ceIndex));
-        
-        // CEリストを新しい順序で並び替え
-        const reorderedList = newOrder.map(index => window.ceManager.ceList[index]);
-        window.ceManager.ceList = reorderedList;
-        
-        await window.ceManager.saveCEList();
-        window.showMessage('CEの順序を保存しました', 'success');
-        
         // 監査ログ記録
-        await this.logAudit('ce_reorder', { count: reorderedList.length });
-        
-        // インデックスを更新して再描画
-        setTimeout(() => this.renderCEManagementGrid(), 300);
-        
-    } catch (error) {
-        console.error('❌ 並び替え保存エラー:', error);
-        window.showMessage('順序の保存に失敗しました', 'error');
-    }
-}
+        async logAudit(action, details = {}) {
+            try {
+                const entry = {
+                    action,
+                    details,
+                    uid: window.currentUserData?.uid || null,
+                    username: window.currentUserData?.username || 'unknown',
+                    displayName: window.currentUserData?.displayName || 'unknown',
+                    timestamp: firebase.database.ServerValue.TIMESTAMP,
+                    userAgent: navigator.userAgent.substring(0, 100)
+                };
+                
+                await window.database.ref(`${window.DATA_ROOT}/auditLogs`).push(entry);
+                console.log('📝 監査ログ記録:', action);
+            } catch (error) {
+                console.warn('⚠️ 監査ログ記録失敗:', error);
+            }
+        }
+
         renderDailySchedule() {
             const title = document.getElementById('dailyScheduleTitle');
             const grid = document.getElementById('departmentGrid');
@@ -1406,9 +1246,8 @@ async saveCEOrder() {
                 window.ceManager.displayCEList();
             }
 
-            if (!grid || !window.DEPARTMENTS) return;
+            if (!grid) return;
 
-            // 8部門の3列2行＋追加2部門レイアウト
             const departments = [
                 '機器管理・人工呼吸', '血液浄化', '不整脈',
                 '心・カテーテル', '人工心肺・補助循環', '手術・麻酔',
@@ -1418,7 +1257,6 @@ async saveCEOrder() {
             grid.innerHTML = '';
             grid.className = 'space-y-4 mb-6';
 
-            // 最初の6部門を3列2行で配置
             const mainGrid = document.createElement('div');
             mainGrid.className = 'grid grid-cols-1 lg:grid-cols-3 gap-4';
             
@@ -1428,7 +1266,6 @@ async saveCEOrder() {
             });
             grid.appendChild(mainGrid);
 
-            // 残りの2部門を2列で配置
             if (departments.length > 6) {
                 const additionalGrid = document.createElement('div');
                 additionalGrid.className = 'grid grid-cols-1 lg:grid-cols-2 gap-4';
@@ -1477,7 +1314,7 @@ async saveCEOrder() {
                         <span class="text-sm">${dept}</span>
                     </h3>
                     ${window.userRole !== 'viewer' ? `
-                    <button class="text-sm bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded" onclick="window.dashboardAuth.openQuickAddEvent('${dept}')">
+                    <button class="btn-unified btn-primary-unified btn-small" onclick="window.dashboardAuth.openQuickAddEvent('${dept}')">
                         <i class="fas fa-plus mr-1"></i>業務追加
                     </button>` : ''}
                 </div>
@@ -1532,7 +1369,6 @@ async saveCEOrder() {
                 
                 try {
                     const dragData = JSON.parse(e.dataTransfer.getData('text/plain'));
-                    console.log('🎯 CE配置:', dragData.ceName, '→', department);
                     this.handleDrop(e, dragData);
                 } catch (error) {
                     console.error('❌ ドロップ処理エラー:', error);
@@ -1569,6 +1405,13 @@ async saveCEOrder() {
                         assignments.push({ name: ceName, workType });
                         await window.database.ref(`${window.DATA_ROOT}/events/byDate/${dateKey}/${eventId}`).update({ assignments });
 
+                        // 監査ログ記録
+                        await this.logAudit('event_assign', { 
+                            date: dateKey, 
+                            eventId, 
+                            ceName 
+                        });
+
                         window.showMessage(`${ceName} を割り当てました`, 'success');
                         this.renderDailySchedule();
                     } catch (error) {
@@ -1576,8 +1419,6 @@ async saveCEOrder() {
                         window.showMessage('割り当てに失敗しました', 'error');
                     }
                 }
-            } else {
-                window.showMessage(`${ceName}を${ev.target.closest('.department-section')?.querySelector('h3 span')?.textContent || '部門'}にドロップしました（開発中）`, 'info');
             }
         }
 
@@ -1594,6 +1435,14 @@ async saveCEOrder() {
                 );
                 
                 await window.database.ref(`${window.DATA_ROOT}/events/byDate/${dateKey}/${eventId}`).update({ assignments });
+                
+                // 監査ログ記録
+                await this.logAudit('event_unassign', { 
+                    date: dateKey, 
+                    eventId, 
+                    ceName 
+                });
+                
                 window.showMessage(`${ceName} を外しました`, 'success');
                 this.renderDailySchedule();
             } catch (error) {
@@ -1688,96 +1537,178 @@ async saveCEOrder() {
                 settingsContent.innerHTML = `
                     <h2 class="text-2xl font-bold mb-6">設定</h2>
                     
-                    <div class="glassmorphism rounded-2xl p-6 mb-6">
+                    <div class="glass-card p-6 mb-6">
                         <h3 class="text-lg font-semibold mb-4 text-red-600">
                             <i class="fas fa-shield-alt mr-2"></i>管理者機能
                         </h3>
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <button onclick="window.open('pages/admin-dashboard.html', '_blank')" 
-                                    class="bg-purple-600 hover:bg-purple-700 text-white px-4 py-3 rounded-lg">
+                                    class="btn-unified btn-primary-unified">
                                 <i class="fas fa-users-cog mr-2"></i>ユーザー管理ダッシュボード
-                            </button>
-                            <button id="exportDataBtn" class="bg-green-600 hover:bg-green-700 text-white px-4 py-3 rounded-lg">
-                                <i class="fas fa-download mr-2"></i>データエクスポート
                             </button>
                             <button id="clearMonthBtn" class="bg-red-600 hover:bg-red-700 text-white px-4 py-3 rounded-lg">
                                 <i class="fas fa-trash mr-2"></i>当月データクリア
                             </button>
-                            <button id="backupBtn" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-3 rounded-lg">
-                                <i class="fas fa-save mr-2"></i>データバックアップ
-                            </button>
                         </div>
                     </div>
                     
-                    <div class="glassmorphism rounded-2xl p-6 mb-6">
+                    <div class="glass-card p-6 mb-6">
                         <h3 class="text-lg font-semibold mb-4">
                             <i class="fas fa-cog mr-2"></i>一般設定
                         </h3>
                         <div class="space-y-4">
                             <div>
                                 <label class="block text-sm font-medium mb-2">表示名</label>
-                                <input type="text" id="displayNameSetting" class="w-full px-3 py-2 border rounded-lg" 
+                                <input type="text" id="displayNameSetting" class="input-unified" 
                                        value="${window.currentUserData?.displayName || ''}">
                             </div>
-                            <div>
-                                <label class="block text-sm font-medium mb-2">メールアドレス</label>
-                                <input type="email" id="emailSetting" class="w-full px-3 py-2 border rounded-lg" 
-                                       value="${window.currentUserData?.email || ''}">
-                            </div>
-                            <button id="saveSettingsBtn" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg">
+                            <button id="saveSettingsBtn" class="btn-unified btn-primary-unified">
                                 <i class="fas fa-save mr-2"></i>設定保存
                             </button>
-                        </div>
-                    </div>
-                    
-                    <!-- 変更履歴（実装予定） -->
-                    <div class="glassmorphism rounded-2xl p-6">
-                        <h3 class="text-lg font-semibold mb-4">
-                            <i class="fas fa-history mr-2"></i>変更履歴
-                        </h3>
-                        <div class="p-4 text-center text-gray-500 border border-dashed border-gray-300 rounded">
-                            <i class="fas fa-clock mr-2"></i>変更履歴機能（次回実装予定）
                         </div>
                     </div>
                 `;
                 
+                // 変更履歴セクションを追加
+                const historySection = document.createElement('div');
+                historySection.className = 'glass-card p-6 mt-6';
+                historySection.innerHTML = `
+                    <h3 class="text-lg font-semibold mb-4">
+                        <i class="fas fa-history mr-2"></i>変更履歴
+                    </h3>
+                    <div class="mb-3 flex items-center gap-3">
+                        <select id="historyFilter" class="px-3 py-1 border rounded text-sm">
+                            <option value="all">すべて</option>
+                            <option value="ce_add">CE追加</option>
+                            <option value="ce_delete">CE削除</option>
+                            <option value="ce_reorder">CE並び替え</option>
+                            <option value="ce_status_update">勤務状態更新</option>
+                            <option value="event_assign">業務割当</option>
+                            <option value="event_unassign">業務割当解除</option>
+                        </select>
+                        <button id="refreshHistoryBtn" class="px-3 py-1 bg-blue-500 text-white rounded text-sm">
+                            <i class="fas fa-sync mr-1"></i>更新
+                        </button>
+                    </div>
+                    <div id="changeHistory" class="border border-gray-200 rounded-lg p-3" style="max-height:300px; overflow-y:auto;">
+                        <div class="text-sm text-gray-500 text-center">読み込み中...</div>
+                    </div>
+                `;
+                
+                settingsContent.appendChild(historySection);
+                
                 this.setupAdminEventListeners();
+                this.loadChangeHistory();
+                this.setupHistoryControls();
             } else {
                 settingsContent.innerHTML = `
                     <h2 class="text-2xl font-bold mb-6">設定</h2>
                     
-                    <div class="glassmorphism rounded-2xl p-6 mb-6">
+                    <div class="glass-card p-6 mb-6">
                         <h3 class="text-lg font-semibold mb-4">個人設定</h3>
                         <div class="space-y-4">
                             <div>
                                 <label class="block text-sm font-medium mb-2">表示名</label>
-                                <input type="text" id="displayNameSetting" class="w-full px-3 py-2 border rounded-lg" 
+                                <input type="text" id="displayNameSetting" class="input-unified" 
                                        value="${window.currentUserData?.displayName || ''}">
                             </div>
-                            <div>
-                                <label class="block text-sm font-medium mb-2">メールアドレス</label>
-                                <input type="email" id="emailSetting" class="w-full px-3 py-2 border rounded-lg" 
-                                       value="${window.currentUserData?.email || ''}">
-                            </div>
-                            <button id="saveSettingsBtn" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg">
+                            <button id="saveSettingsBtn" class="btn-unified btn-primary-unified">
                                 <i class="fas fa-save mr-2"></i>設定保存
                             </button>
-                        </div>
-                    </div>
-                    
-                    <!-- 変更履歴（実装予定） -->
-                    <div class="glassmorphism rounded-2xl p-6">
-                        <h3 class="text-lg font-semibold mb-4">
-                            <i class="fas fa-history mr-2"></i>変更履歴
-                        </h3>
-                        <div class="p-4 text-center text-gray-500 border border-dashed border-gray-300 rounded">
-                            <i class="fas fa-clock mr-2"></i>変更履歴機能（次回実装予定）
                         </div>
                     </div>
                 `;
             }
             
             this.setupSettingsEventListeners();
+        }
+
+        loadChangeHistory(filter = 'all') {
+            const historyDiv = document.getElementById('changeHistory');
+            if (!historyDiv) return;
+            
+            let query = window.database.ref(`${window.DATA_ROOT}/auditLogs`)
+                .orderByChild('timestamp')
+                .limitToLast(100);
+            
+            query.on('value', (snapshot) => {
+                const data = snapshot.val() || {};
+                const entries = Object.values(data)
+                    .sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0))
+                    .filter(entry => filter === 'all' || entry.action === filter);
+                
+                if (entries.length === 0) {
+                    historyDiv.innerHTML = '<div class="text-sm text-gray-500 text-center">履歴はありません</div>';
+                    return;
+                }
+                
+                const historyHTML = entries.map(entry => {
+                    const timestamp = entry.timestamp ? new Date(entry.timestamp).toLocaleString('ja-JP') : '不明';
+                    const actionText = this.getActionText(entry.action);
+                    const detailsText = this.formatDetails(entry.details);
+                    
+                    return `
+                        <div class="text-sm py-2 border-b border-gray-100 last:border-b-0">
+                            <div class="flex justify-between items-start">
+                                <div>
+                                    <span class="font-semibold text-blue-700">${entry.displayName || entry.username}</span>
+                                    <span class="text-gray-600 mx-2">•</span>
+                                    <span class="text-gray-800">${actionText}</span>
+                                </div>
+                                <span class="text-xs text-gray-500">${timestamp}</span>
+                            </div>
+                            ${detailsText ? `<div class="text-xs text-gray-600 mt-1">${detailsText}</div>` : ''}
+                        </div>
+                    `;
+                }).join('');
+                
+                historyDiv.innerHTML = historyHTML;
+            });
+        }
+
+        getActionText(action) {
+            const actionMap = {
+                'ce_add': 'CEを追加',
+                'ce_delete': 'CEを削除',
+                'ce_reorder': 'CEを並び替え',
+                'ce_status_update': '勤務状態を更新',
+                'event_assign': '業務にCEを割当',
+                'event_unassign': '業務からCEを解除'
+            };
+            return actionMap[action] || action;
+        }
+
+        formatDetails(details) {
+            if (!details || typeof details !== 'object') return '';
+            
+            const parts = [];
+            if (details.name) parts.push(`名前: ${details.name}`);
+            if (details.workType) parts.push(`区分: ${details.workType}`);
+            if (details.status) parts.push(`状態: ${details.status}`);
+            if (details.date) parts.push(`日付: ${details.date}`);
+            if (details.ceName) parts.push(`CE: ${details.ceName}`);
+            if (details.count) parts.push(`件数: ${details.count}`);
+            
+            return parts.join(' | ');
+        }
+
+        setupHistoryControls() {
+            const filterSelect = document.getElementById('historyFilter');
+            const refreshBtn = document.getElementById('refreshHistoryBtn');
+            
+            if (filterSelect) {
+                filterSelect.addEventListener('change', (e) => {
+                    this.loadChangeHistory(e.target.value);
+                });
+            }
+            
+            if (refreshBtn) {
+                refreshBtn.addEventListener('click', () => {
+                    const currentFilter = filterSelect?.value || 'all';
+                    this.loadChangeHistory(currentFilter);
+                    window.showMessage('履歴を更新しました', 'success');
+                });
+            }
         }
 
         setupAdminEventListeners() {
@@ -1811,7 +1742,6 @@ async saveCEOrder() {
             if (saveBtn) {
                 saveBtn.onclick = async () => {
                     const displayName = document.getElementById('displayNameSetting')?.value.trim();
-                    const email = document.getElementById('emailSetting')?.value.trim();
                     
                     if (!displayName) {
                         window.showMessage('表示名を入力してください', 'warning');
@@ -1822,12 +1752,10 @@ async saveCEOrder() {
                         const targetUID = sessionStorage.getItem('targetUID');
                         await window.database.ref(`${window.DATA_ROOT}/users/${targetUID}`).update({
                             displayName: displayName,
-                            email: email,
                             lastUpdated: Date.now()
                         });
 
                         window.currentUserData.displayName = displayName;
-                        window.currentUserData.email = email;
                         this.updateUserDisplay();
                         
                         window.showMessage('設定を保存しました', 'success');
@@ -1844,10 +1772,7 @@ async saveCEOrder() {
         }
 
         initializeV2System() {
-            // グローバル関数の定義
             window.openDateModal = (dateKey) => {
-                console.log('📅 日付クリック:', dateKey);
-                
                 if (window.userRole === 'viewer') {
                     window.showMessage(`${dateKey}の詳細表示（開発中）`, 'info');
                 } else if (window.eventManager) {
@@ -1865,16 +1790,12 @@ async saveCEOrder() {
                 }
             };
 
-            // V2システム初期化
             setTimeout(async () => {
                 try {
-                    console.log('🔄 V2統合システム初期化開始');
-                    
                     let attempts = 0;
                     while (attempts < 50) {
                         if (window.CalendarView && window.EventManager && window.CEManager && 
                             window.DEPARTMENTS && window.showMessage && window.CEDailyStatusManager) {
-                            console.log('✅ 全依存関係確認完了');
                             break;
                         }
                         await new Promise(resolve => setTimeout(resolve, 100));
@@ -1882,22 +1803,18 @@ async saveCEOrder() {
                     }
 
                     if (!window.calendarView) {
-                        console.log('📅 CalendarViewインスタンス作成中...');
                         window.calendarView = new window.CalendarView();
                     }
                     
                     if (!window.eventManager) {
-                        console.log('📝 EventManagerインスタンス作成中...');
                         window.eventManager = new window.EventManager();
                     }
                     
                     if (!window.ceManager) {
-                        console.log('👥 CEManagerインスタンス作成中...');
                         window.ceManager = new window.CEManager();
                     }
 
                     if (!window.ceDailyStatus) {
-                        console.log('📅 CEDailyStatusManagerインスタンス作成中...');
                         window.ceDailyStatus = new window.CEDailyStatusManager();
                     }
                     
@@ -1912,18 +1829,12 @@ async saveCEOrder() {
     // グローバル関数
     window.handleLogout = async () => {
         try {
-            console.log('🚪 ログアウト処理開始');
-            
             if (window.auth && window.auth.currentUser) {
                 await window.auth.signOut();
             }
-            
             sessionStorage.clear();
             localStorage.clear();
-            
-            console.log('✅ ログアウト完了 → ログイン画面へ');
             window.location.href = 'index.html';
-            
         } catch (error) {
             console.error('❌ ログアウトエラー:', error);
             sessionStorage.clear();
@@ -1938,8 +1849,6 @@ async saveCEOrder() {
             window.dashboardAuth = new DashboardAuth();
         });
     }
-
-    console.log('📊 ダッシュボード認証システム読み込み完了（V2完全統合・フィードバック対応版）');
     </script>
 
 </body>
