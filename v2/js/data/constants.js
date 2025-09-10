@@ -64,6 +64,7 @@ window.AUDIT_ACTION_MAP = {
     'ce_add': 'CE追加',
     'ce_delete': 'CE削除',
     'ce_reorder': 'CE並び替え',
+    'ce_sort': 'CE並び替え（自動）',
     'ce_status_update': '勤務状態更新',
     'event_add': '業務追加',
     'event_edit': '業務編集',
@@ -72,6 +73,18 @@ window.AUDIT_ACTION_MAP = {
     'event_unassign': '業務からCE解除',
     'monthly_task_add': '月次業務追加',
     'monthly_task_edit': '月次業務編集',
+    'monthly_task_delete': '月次業務削除',
     'monthly_task_execute': '月次業務実施',
+    'monthly_task_assign': '月次業務にCE割当',
+    'monthly_task_unassign': '月次業務からCE解除',
     'bulk_event_add': '期間一括業務追加'
 };
+
+// 初期CEリスト（システム初期化用）
+window.CE_LIST_INITIAL = [
+    { name: '田中', workType: 'ME' },
+    { name: '佐藤', workType: 'OPE' },
+    { name: '鈴木', workType: 'HD' },
+    { name: '高橋', workType: 'FLEX' },
+    { name: '渡辺', workType: 'ME' }
+];
