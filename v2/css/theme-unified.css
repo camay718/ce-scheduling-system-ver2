@@ -1,6 +1,6 @@
 /**
  * CEスケジュール管理システム V2 - 統一テーマ
- * ダッシュボードと同一の配色・デザインシステム
+ * ダッシュボードと同一の配色・デザインシステム + 部門強調
  */
 
 :root {
@@ -13,6 +13,17 @@
     --glass-border: rgba(255,255,255,0.3);
     --shadow-main: 0 8px 32px rgba(0,0,0,0.1);
     --shadow-hover: 0 8px 25px rgba(76, 175, 80, 0.3);
+
+    /* 部門カラー定義（強調版） */
+    --dept-equipment: #90EE90;
+    --dept-purification: #FFB6C1;
+    --dept-arrhythmia: #9370DB;
+    --dept-cardiac: #32CD32;
+    --dept-circulation: #4169E1;
+    --dept-surgery: #87CEEB;
+    --dept-meeting: #9E9E9E;
+    --dept-business: #9E9E9E;
+    --dept-other: #9E9E9E;
 }
 
 /* 統一背景 */
@@ -44,6 +55,11 @@ body.theme-unified {
     text-decoration: none;
     display: inline-block;
     text-align: center;
+}
+
+.btn-unified.btn-small {
+    padding: 8px 15px;
+    font-size: 13px;
 }
 
 .btn-primary-unified {
@@ -110,6 +126,12 @@ body.theme-unified {
     border: 1px solid #bee5eb;
 }
 
+.status-unified.warning {
+    background-color: #fff3cd;
+    color: #856404;
+    border: 1px solid #ffeeba;
+}
+
 /* 中央配置レイアウト */
 .center-layout {
     display: flex;
@@ -168,4 +190,75 @@ body.theme-unified {
 
 .table-unified tr:hover {
     background: #f7fafc;
+}
+
+/* 部門セクション強調（太枠線） */
+.dept-equipment { border-color: var(--dept-equipment) !important; }
+.dept-purification { border-color: var(--dept-purification) !important; }
+.dept-arrhythmia { border-color: var(--dept-arrhythmia) !important; }
+.dept-cardiac { border-color: var(--dept-cardiac) !important; }
+.dept-circulation { border-color: var(--dept-circulation) !important; }
+.dept-surgery { border-color: var(--dept-surgery) !important; }
+.dept-meeting { border-color: var(--dept-meeting) !important; }
+.dept-business { border-color: var(--dept-business) !important; }
+.dept-other { border-color: var(--dept-other) !important; }
+
+/* 月次業務専用スタイル */
+.monthly-event-item {
+    background: linear-gradient(135deg, #FFF3E0, #FFE0B2);
+    border: 2px solid #FF9800;
+    border-radius: 12px;
+    padding: 10px;
+    margin: 6px 0;
+    font-size: 12px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    position: relative;
+}
+
+.monthly-event-item:hover { 
+    background: linear-gradient(135deg, #FFE0B2, #FFCC02);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(255, 152, 0, 0.3);
+}
+
+.monthly-task-badge {
+    position: absolute;
+    top: -8px;
+    right: 8px;
+    background: #FF9800;
+    color: white;
+    font-size: 10px;
+    padding: 2px 6px;
+    border-radius: 10px;
+    font-weight: bold;
+}
+
+/* CE並び替えモーダル専用 */
+.ce-reorder-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 16px;
+    padding: 16px 0;
+}
+
+.ce-reorder-card {
+    background: var(--glass-bg);
+    backdrop-filter: blur(5px);
+    border: 2px solid var(--glass-border);
+    border-radius: 12px;
+    padding: 15px;
+    text-align: center;
+    cursor: move;
+    transition: all 0.2s ease;
+}
+
+.ce-reorder-card:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-hover);
+}
+
+.ce-reorder-card.dragging {
+    opacity: 0.6;
+    transform: rotate(3deg) scale(0.95);
 }
