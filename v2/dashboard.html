@@ -243,6 +243,56 @@
             font-size: 11px;
             color: #6b7280;
         }
+
+        /* CE管理グリッド */
+        .ce-management-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 16px;
+            padding: 16px 0;
+        }
+
+        .ce-management-card {
+            border: 1px solid #e5e7eb;
+            border-radius: 8px;
+            padding: 12px;
+            background: white;
+            transition: all 0.2s ease;
+        }
+
+        .ce-management-card:hover {
+            border-color: var(--brand-primary);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        /* CE並び替えモーダル専用 */
+        .ce-reorder-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 16px;
+            padding: 16px 0;
+        }
+
+        .ce-reorder-card {
+            background: var(--glass-bg);
+            backdrop-filter: blur(5px);
+            border: 2px solid var(--glass-border);
+            border-radius: 12px;
+            padding: 15px;
+            text-align: center;
+            cursor: move;
+            transition: all 0.2s ease;
+        }
+
+        .ce-reorder-card:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-hover);
+        }
+
+        .ce-reorder-card.dragging {
+            opacity: 0.6;
+            transform: rotate(3deg) scale(0.95);
+        }
     </style>
 </head>
 <body class="theme-unified">
@@ -488,7 +538,7 @@
         <div class="glass-card p-6 max-w-4xl w-full mx-4 max-h-[90vh] overflow-y-auto">
             <div class="flex justify-between items-center mb-4">
                 <h3 class="text-lg font-semibold">CE手動並び替え</h3>
-                <button onclick="closeModal('ceReorderModal')" class="text-gray-500 hover:text-gray-700">
+                <button onclick="window.closeModal('ceReorderModal')" class="text-gray-500 hover:text-gray-700">
                     <i class="fas fa-times text-xl"></i>
                 </button>
             </div>
@@ -505,7 +555,7 @@
             </div>
             
             <div class="flex justify-end space-x-3">
-                <button onclick="closeModal('ceReorderModal')" class="btn-unified btn-outline-unified">
+                <button onclick="window.closeModal('ceReorderModal')" class="btn-unified btn-outline-unified">
                     <i class="fas fa-times mr-1"></i>キャンセル
                 </button>
                 <button id="saveCEOrderBtn" class="btn-unified btn-primary-unified">
@@ -520,7 +570,7 @@
         <div class="glass-card p-6 max-w-lg w-full mx-4 max-h-[90vh] overflow-y-auto">
             <div class="flex justify-between items-center mb-4">
                 <h3 class="text-lg font-semibold">期間一括業務追加</h3>
-                <button onclick="closeModal('bulkEventModal')" class="text-gray-500 hover:text-gray-700">
+                <button onclick="window.closeModal('bulkEventModal')" class="text-gray-500 hover:text-gray-700">
                     <i class="fas fa-times text-xl"></i>
                 </button>
             </div>
@@ -572,7 +622,7 @@
                 </div>
                 
                 <div class="flex justify-end space-x-3 pt-4">
-                    <button type="button" onclick="closeModal('bulkEventModal')" class="btn-unified btn-outline-unified">
+                    <button type="button" onclick="window.closeModal('bulkEventModal')" class="btn-unified btn-outline-unified">
                         キャンセル
                     </button>
                     <button type="submit" class="btn-unified btn-primary-unified">
@@ -588,7 +638,7 @@
         <div class="glass-card p-6 max-w-lg w-full mx-4 max-h-[90vh] overflow-y-auto">
             <div class="flex justify-between items-center mb-4">
                 <h3 class="text-lg font-semibold">月次業務追加</h3>
-                <button onclick="closeModal('monthlyTaskModal')" class="text-gray-500 hover:text-gray-700">
+                <button onclick="window.closeModal('monthlyTaskModal')" class="text-gray-500 hover:text-gray-700">
                     <i class="fas fa-times text-xl"></i>
                 </button>
             </div>
@@ -627,7 +677,7 @@
                     <button type="button" id="deleteMonthlyTaskBtn" class="hidden bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-md text-sm">
                         <i class="fas fa-trash mr-1"></i>削除
                     </button>
-                    <button type="button" onclick="closeModal('monthlyTaskModal')" class="btn-unified btn-outline-unified">
+                    <button type="button" onclick="window.closeModal('monthlyTaskModal')" class="btn-unified btn-outline-unified">
                         キャンセル
                     </button>
                     <button type="submit" class="btn-unified btn-primary-unified">
@@ -643,7 +693,7 @@
         <div class="glass-card p-6 max-w-md w-full mx-4">
             <div class="flex justify-between items-center mb-4">
                 <h3 class="text-lg font-semibold">月次業務実施記録</h3>
-                <button onclick="closeModal('monthlyTaskExecuteModal')" class="text-gray-500 hover:text-gray-700">
+                <button onclick="window.closeModal('monthlyTaskExecuteModal')" class="text-gray-500 hover:text-gray-700">
                     <i class="fas fa-times text-xl"></i>
                 </button>
             </div>
@@ -664,7 +714,7 @@
                 </div>
                 
                 <div class="flex justify-end space-x-3 pt-4">
-                    <button type="button" onclick="closeModal('monthlyTaskExecuteModal')" class="btn-unified btn-outline-unified">
+                    <button type="button" onclick="window.closeModal('monthlyTaskExecuteModal')" class="btn-unified btn-outline-unified">
                         キャンセル
                     </button>
                     <button type="submit" class="btn-unified btn-primary-unified">
@@ -680,7 +730,7 @@
         <div class="glass-card p-6 max-w-lg w-full mx-4 max-h-[90vh] overflow-y-auto">
             <div class="flex justify-between items-center mb-4">
                 <h3 id="eventModalTitle" class="text-lg font-semibold">業務追加</h3>
-                <button onclick="closeModal('eventModal')" class="text-gray-500 hover:text-gray-700">
+                <button onclick="window.closeModal('eventModal')" class="text-gray-500 hover:text-gray-700">
                     <i class="fas fa-times text-xl"></i>
                 </button>
             </div>
@@ -729,7 +779,7 @@
                     <button type="button" id="deleteEventBtn" class="hidden bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-md text-sm">
                         <i class="fas fa-trash mr-1"></i>削除
                     </button>
-                    <button type="button" onclick="closeModal('eventModal')" class="btn-unified btn-outline-unified">
+                    <button type="button" onclick="window.closeModal('eventModal')" class="btn-unified btn-outline-unified">
                         キャンセル
                     </button>
                     <button type="submit" class="btn-unified btn-primary-unified">
@@ -745,7 +795,7 @@
         <div class="glass-card p-6 max-w-lg w-full mx-4 max-h-[90vh] overflow-y-auto">
             <div class="flex justify-between items-center mb-4">
                 <h3 class="text-lg font-semibold">CE編集</h3>
-                <button onclick="closeModal('ceEditModal')" class="text-gray-500 hover:text-gray-700">
+                <button onclick="window.closeModal('ceEditModal')" class="text-gray-500 hover:text-gray-700">
                     <i class="fas fa-times text-xl"></i>
                 </button>
             </div>
@@ -784,7 +834,7 @@
                 <button id="saveCEButton" class="btn-unified btn-primary-unified">
                     <i class="fas fa-save mr-1"></i>保存
                 </button>
-                <button class="btn-unified btn-outline-unified" onclick="closeModal('ceEditModal')">キャンセル</button>
+                <button class="btn-unified btn-outline-unified" onclick="window.closeModal('ceEditModal')">キャンセル</button>
             </div>
         </div>
     </div>
@@ -799,38 +849,11 @@
     <script defer src="js/ui/ce-manager.js?v=20241212"></script>
     <script defer src="js/ui/ce-daily-status.js?v=20241212"></script>
 
-    <!-- Dashboard専用JavaScript（Phase 2完全実装版） -->
+    <!-- Dashboard専用JavaScript（Phase 2完全実装版・修正版） -->
     <script>
-    // 統一メッセージシステム
-    window.showMessage = window.showMessage || ((msg, type='info') => {
-        let cont = document.getElementById('messageContainer');
-        if (!cont) {
-            cont = document.createElement('div');
-            cont.id = 'messageContainer';
-            cont.style.cssText = 'position:fixed;top:16px;left:50%;transform:translateX(-50%);z-index:9999;width:min(92vw,480px);';
-            document.body.appendChild(cont);
-        }
-        const div = document.createElement('div');
-        div.className = `status-unified ${type}`;
-        div.style.marginBottom = '8px';
-        div.textContent = msg;
-        cont.appendChild(div);
-        setTimeout(() => div.remove(), 5000);
-    });
-
-    // モーダル制御関数
-    window.closeModal = (modalId) => {
-        document.getElementById(modalId).classList.add('hidden');
-    };
-
-    window.openModal = (modalId) => {
-        document.getElementById(modalId).classList.remove('hidden');
-    };
-
     // ログアウト（監査ログ付き）
     window.handleLogout = async () => {
         try {
-            // 監査ログ記録
             try {
                 const entry = {
                     action: 'logout',
@@ -841,18 +864,15 @@
                     timestamp: firebase.database.ServerValue.TIMESTAMP,
                     userAgent: navigator.userAgent.substring(0, 100)
                 };
-                
                 await window.database.ref(`${window.DATA_ROOT}/auditLogs`).push(entry);
-                console.log('📝 ログアウト監査ログ記録完了');
             } catch (logError) {
-                console.warn('⚠️ ログアウト監査ログ記録失敗:', logError);
+                console.warn('監査ログ記録失敗:', logError);
             }
-
             if (window.auth && window.auth.currentUser) {
                 await window.auth.signOut();
             }
         } catch (error) {
-            console.error('❌ ログアウトエラー:', error);
+            console.error('ログアウトエラー:', error);
         } finally {
             sessionStorage.clear();
             localStorage.clear();
@@ -874,13 +894,11 @@
             if (this.isInitialized) return;
             this.isInitialized = true;
 
-            console.log('📊 ダッシュボード認証チェック開始（Phase 2）');
-            
             try {
                 await window.waitForFirebase();
                 await this.checkAuthWithRetry();
             } catch (error) {
-                console.error('❌ ダッシュボード初期化エラー:', error);
+                console.error('初期化エラー:', error);
                 this.redirectToLogin();
             }
         }
@@ -890,12 +908,10 @@
                 try {
                     const targetUID = sessionStorage.getItem('targetUID');
                     const currentUsername = sessionStorage.getItem('currentUsername');
-                    
                     if (!targetUID || !currentUsername) {
                         this.redirectToLogin();
                         return;
                     }
-                    
                     await this.ensureAnonymousAuth();
                     
                     const userSnapshot = await window.database.ref(`${window.DATA_ROOT}/users/${targetUID}`).once('value');
@@ -910,7 +926,6 @@
                         this.redirectToLogin();
                         return;
                     }
-                    
                 } catch (error) {
                     if (attempt === maxRetries) {
                         this.redirectToLogin();
@@ -936,9 +951,13 @@
         }
 
         showDashboard() {
-            document.getElementById('loading').style.display = 'none';
-            document.getElementById('mainInterface').style.display = 'block';
+            // まず画面を出す
+            const loadingEl = document.getElementById('loading');
+            const mainEl = document.getElementById('mainInterface');
+            if (loadingEl) loadingEl.style.display = 'none';
+            if (mainEl) mainEl.style.display = 'block';
             
+            // その後の初期化
             this.updateUserDisplay();
             this.setupNavigation();
             this.setupSidebar();
@@ -952,9 +971,8 @@
         updateUserDisplay() {
             const userData = window.currentUserData;
             if (!userData) return;
-            
-            document.querySelectorAll('#currentUserDisplay').forEach(element => {
-                element.textContent = userData.displayName || userData.username || 'ユーザー';
+            document.querySelectorAll('#currentUserDisplay').forEach(el => {
+                el.textContent = userData.displayName || userData.username || 'ユーザー';
             });
         }
 
@@ -974,49 +992,45 @@
                 if (element) {
                     element.onclick = () => {
                         this.showScreen(tab.content, tab.id);
-                        
                         if (tab.id === 'ceManagementTab') {
                             setTimeout(() => {
                                 this.setupCEManagementDate();
                                 this.renderCEManagementGrid();
                             }, 100);
                         }
-                        
                         if (tab.id === 'settingsTab') {
                             setTimeout(() => this.setupAdminSettings(), 100);
                         }
                     };
                 }
             });
+
+            // サイドバートグル
+            const toggleBtn = document.getElementById('toggleSidebar');
+            const sidebar = document.getElementById('sidebar');
+            if (toggleBtn && sidebar) {
+                toggleBtn.onclick = () => sidebar.classList.toggle('expanded');
+            }
         }
 
         showScreen(contentId, tabId) {
             document.querySelectorAll('.screen-content').forEach(screen => screen.style.display = 'none');
-            document.getElementById(contentId).style.display = 'block';
-            
+            const contentEl = document.getElementById(contentId);
+            if (contentEl) contentEl.style.display = 'block';
             document.querySelectorAll('.nav-tab').forEach(tab => tab.classList.remove('active'));
-            document.getElementById(tabId).classList.add('active');
+            const tabEl = document.getElementById(tabId);
+            if (tabEl) tabEl.classList.add('active');
         }
 
         setupSidebar() {
-            const toggleSidebar = document.getElementById('toggleSidebar');
-            const sidebar = document.getElementById('sidebar');
-            
-            if (toggleSidebar && sidebar) {
-                toggleSidebar.onclick = () => sidebar.classList.toggle('expanded');
-            }
-
             this.setupTemplateButtons();
         }
 
         setupTemplateButtons() {
-            document.getElementById('templateSaveButton').onclick = () => {
-                window.showMessage('テンプレート保存機能（実装予定）', 'info');
-            };
-            
-            document.getElementById('templateLoadButton').onclick = () => {
-                window.showMessage('テンプレート読込機能（実装予定）', 'info');
-            };
+            const saveBtn = document.getElementById('templateSaveButton');
+            const loadBtn = document.getElementById('templateLoadButton');
+            if (saveBtn) saveBtn.onclick = () => window.showMessage('テンプレート保存機能（実装予定）', 'info');
+            if (loadBtn) loadBtn.onclick = () => window.showMessage('テンプレート読込機能（実装予定）', 'info');
         }
 
         setupDailySchedule() {
@@ -1029,25 +1043,15 @@
                 };
             }
 
-            document.getElementById('prevDayBtn').onclick = () => {
-                this.selectedDate.setDate(this.selectedDate.getDate() - 1);
-                datePicker.value = this.formatDate(this.selectedDate);
-                this.renderDailySchedule();
-            };
+            const prev = document.getElementById('prevDayBtn');
+            const next = document.getElementById('nextDayBtn');
+            const today = document.getElementById('todayBtn');
+            if (prev) prev.onclick = () => { this.selectedDate.setDate(this.selectedDate.getDate() - 1); datePicker.value = this.formatDate(this.selectedDate); this.renderDailySchedule(); };
+            if (next) next.onclick = () => { this.selectedDate.setDate(this.selectedDate.getDate() + 1); datePicker.value = this.formatDate(this.selectedDate); this.renderDailySchedule(); };
+            if (today) today.onclick = () => { this.selectedDate = new Date(); datePicker.value = this.formatDate(this.selectedDate); this.renderDailySchedule(); };
 
-            document.getElementById('nextDayBtn').onclick = () => {
-                this.selectedDate.setDate(this.selectedDate.getDate() + 1);
-                datePicker.value = this.formatDate(this.selectedDate);
-                this.renderDailySchedule();
-            };
-
-            document.getElementById('todayBtn').onclick = () => {
-                this.selectedDate = new Date();
-                datePicker.value = this.formatDate(this.selectedDate);
-                this.renderDailySchedule();
-            };
-
-            document.getElementById('addEventButtonDaily').onclick = () => this.openQuickAddEvent();
+            const quickBtn = document.getElementById('addEventButtonDaily');
+            if (quickBtn) quickBtn.onclick = () => this.openQuickAddEvent();
 
             this.renderDailySchedule();
         }
@@ -1070,22 +1074,19 @@
                     this.updateCEStatusDate();
                 };
             }
-            
-            prevBtn.onclick = () => {
+            if (prevBtn) prevBtn.onclick = () => {
                 this.ceStatusDate.setDate(this.ceStatusDate.getDate() - 1);
-                dateInput.value = this.formatDate(this.ceStatusDate);
+                if (dateInput) dateInput.value = this.formatDate(this.ceStatusDate);
                 this.updateCEStatusDate();
             };
-            
-            nextBtn.onclick = () => {
+            if (nextBtn) nextBtn.onclick = () => {
                 this.ceStatusDate.setDate(this.ceStatusDate.getDate() + 1);
-                dateInput.value = this.formatDate(this.ceStatusDate);
+                if (dateInput) dateInput.value = this.formatDate(this.ceStatusDate);
                 this.updateCEStatusDate();
             };
-            
-            todayBtn.onclick = () => {
+            if (todayBtn) todayBtn.onclick = () => {
                 this.ceStatusDate = new Date();
-                dateInput.value = this.formatDate(this.ceStatusDate);
+                if (dateInput) dateInput.value = this.formatDate(this.ceStatusDate);
                 this.updateCEStatusDate();
             };
         }
@@ -1093,17 +1094,193 @@
         updateCEStatusDate() {
             if (window.ceDailyStatus) {
                 window.ceDailyStatus.selectedDate = this.ceStatusDate;
-                window.ceDailyStatus.setupRealtimeStatusListener();
+                if (typeof window.ceDailyStatus.setupRealtimeStatusListener === 'function') {
+                    window.ceDailyStatus.setupRealtimeStatusListener();
+                }
             }
-            
             this.renderCEManagementGrid();
         }
 
         setupCEManagementControls() {
-            document.getElementById('addNewCEBtn').onclick = () => this.addNewCE();
-            document.getElementById('sortByNameBtn').onclick = () => this.sortCEList('name');
-            document.getElementById('sortByWorkTypeBtn').onclick = () => this.sortCEList('workType');
-            document.getElementById('manualReorderBtn').onclick = () => this.openCEReorderModal();
+            const addBtn = document.getElementById('addNewCEBtn');
+            const sortName = document.getElementById('sortByNameBtn');
+            const sortWork = document.getElementById('sortByWorkTypeBtn');
+            const manual = document.getElementById('manualReorderBtn');
+
+            if (addBtn) addBtn.onclick = () => this.addNewCE();
+            if (sortName) sortName.onclick = () => this.sortCEList('name');
+            if (sortWork) sortWork.onclick = () => this.sortCEList('workType');
+            if (manual) manual.onclick = () => this.openCEReorderModal();
+        }
+
+        // モーダル初期化/イベント紐付け
+        setupModals() {
+            // 開くボタン
+            const openBulk = document.getElementById('addBulkEventBtn');
+            const openMonthly = document.getElementById('addMonthlyTaskBtn');
+            if (openBulk) openBulk.onclick = () => { this.populateDepartmentSelect(document.getElementById('bulkEventDepartment')); window.showModal('bulkEventModal'); };
+            if (openMonthly) openMonthly.onclick = () => { this.populateDepartmentSelect(document.getElementById('monthlyTaskDepartment')); document.getElementById('monthlyTaskForm').dataset.mode = 'create'; document.getElementById('deleteMonthlyTaskBtn').classList.add('hidden'); window.showModal('monthlyTaskModal'); };
+
+            // 期間一括業務 送信
+            const bulkForm = document.getElementById('bulkEventForm');
+            if (bulkForm && !bulkForm.dataset.bound) {
+                bulkForm.dataset.bound = 'true';
+                bulkForm.addEventListener('submit', async (e) => {
+                    e.preventDefault();
+                    try {
+                        const name = document.getElementById('bulkEventName').value.trim();
+                        const department = document.getElementById('bulkEventDepartment').value;
+                        const startTime = document.getElementById('bulkEventStartTime').value;
+                        const endTime = document.getElementById('bulkEventEndTime').value;
+                        const count = parseInt(document.getElementById('bulkEventCount').value, 10);
+                        const requiredPeople = parseInt(document.getElementById('bulkEventRequired').value, 10);
+                        const startDate = document.getElementById('bulkEventStartDate').value;
+                        const endDate = document.getElementById('bulkEventEndDate').value;
+                        const memo = document.getElementById('bulkEventMemo').value.trim();
+
+                        if (!name || !department || !startTime || !endTime || !startDate || !endDate || !count || !requiredPeople) {
+                            window.showMessage('必須項目を入力してください', 'error');
+                            return;
+                        }
+                        if (startDate > endDate) {
+                            window.showMessage('終了日は開始日以降を指定してください', 'error');
+                            return;
+                        }
+
+                        const start = new Date(startDate + 'T00:00:00');
+                        const end = new Date(endDate + 'T00:00:00');
+                        let created = 0;
+
+                        for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
+                            const dateKey = this.formatDate(d);
+                            const eventObj = {
+                                name,
+                                department,
+                                startTime,
+                                endTime,
+                                count,
+                                requiredPeople,
+                                memo: memo || '',
+                                createdAt: firebase.database.ServerValue.TIMESTAMP,
+                                createdBy: window.currentUserData?.displayName || window.currentUserData?.username || 'unknown',
+                                assignments: []
+                            };
+                            await window.database.ref(`${window.DATA_ROOT}/events/byDate/${dateKey}`).push(eventObj);
+                            created++;
+                        }
+
+                        await this.logAudit('bulk_event_add', { name, department, startDate, endDate, count: created });
+                        window.showMessage(`期間一括で ${created} 日分の業務を追加しました`, 'success');
+                        window.closeModal('bulkEventModal');
+                        this.renderDailySchedule();
+                    } catch (err) {
+                        console.error('期間一括追加エラー:', err);
+                        window.showMessage('期間一括業務の追加に失敗しました', 'error');
+                    }
+                });
+            }
+
+            // 月次業務 送信
+            const monthlyForm = document.getElementById('monthlyTaskForm');
+            if (monthlyForm && !monthlyForm.dataset.bound) {
+                monthlyForm.dataset.bound = 'true';
+                monthlyForm.addEventListener('submit', async (e) => {
+                    e.preventDefault();
+                    const mode = monthlyForm.dataset.mode || 'create';
+                    const taskId = monthlyForm.dataset.taskId || null;
+                    const name = document.getElementById('monthlyTaskName').value.trim();
+                    const department = document.getElementById('monthlyTaskDepartment').value;
+                    const month = document.getElementById('monthlyTaskMonth').value;
+                    const targetCount = parseInt(document.getElementById('monthlyTaskTargetCount').value, 10);
+                    const requiredPeople = parseInt(document.getElementById('monthlyTaskRequired').value, 10);
+                    const memo = document.getElementById('monthlyTaskMemo').value.trim();
+
+                    if (!name || !department || !month || !targetCount || !requiredPeople) {
+                        window.showMessage('必須項目を入力してください', 'error');
+                        return;
+                    }
+
+                    try {
+                        if (mode === 'edit' && taskId) {
+                            const updates = { name, department, month, targetCount, requiredPeople, memo };
+                            await window.database.ref(`${window.DATA_ROOT}/monthlyTasks/${taskId}`).update(updates);
+                            await this.logAudit('monthly_task_edit', { taskId, name, department, month });
+                            window.showMessage('月次業務を更新しました', 'success');
+                        } else {
+                            const data = {
+                                name, department, month, targetCount, requiredPeople, memo: memo || '',
+                                createdAt: firebase.database.ServerValue.TIMESTAMP,
+                                createdBy: window.currentUserData?.displayName || window.currentUserData?.username || 'unknown',
+                                completedCount: 0,
+                                assignments: []
+                            };
+                            await window.database.ref(`${window.DATA_ROOT}/monthlyTasks`).push(data);
+                            await this.logAudit('monthly_task_add', { name, department, month });
+                            window.showMessage('月次業務を追加しました', 'success');
+                        }
+                        window.closeModal('monthlyTaskModal');
+                        await this.loadMonthlyTasks();
+                        this.renderDailySchedule();
+                    } catch (err) {
+                        console.error('月次業務保存エラー:', err);
+                        window.showMessage('月次業務の保存に失敗しました', 'error');
+                    }
+                });
+            }
+
+            // 月次実施 送信
+            const execForm = document.getElementById('monthlyTaskExecuteForm');
+            if (execForm && !execForm.dataset.bound) {
+                execForm.dataset.bound = 'true';
+                execForm.addEventListener('submit', async (e) => {
+                    e.preventDefault();
+                    const taskId = execForm.dataset.taskId;
+                    if (!taskId) {
+                        window.showMessage('タスク情報が見つかりません', 'error');
+                        return;
+                    }
+                    await this.executeMonthlyTask(taskId);
+                });
+            }
+
+            // フォールバック用の eventForm（任意）
+            const eventForm = document.getElementById('eventForm');
+            if (eventForm && !eventForm.dataset.bound) {
+                eventForm.dataset.bound = 'true';
+                eventForm.addEventListener('submit', async (e) => {
+                    e.preventDefault();
+                    try {
+                        const name = document.getElementById('eventName').value.trim();
+                        const department = document.getElementById('eventDepartment').value;
+                        const startTime = document.getElementById('eventStartTime').value;
+                        const endTime = document.getElementById('eventEndTime').value;
+                        const count = parseInt(document.getElementById('eventCount').value, 10);
+                        const requiredPeople = parseInt(document.getElementById('eventRequired').value, 10);
+                        const dateKey = document.getElementById('eventDate').value;
+                        const memo = document.getElementById('eventMemo').value.trim();
+
+                        if (!name || !department || !startTime || !endTime || !dateKey || !count || !requiredPeople) {
+                            window.showMessage('必須項目を入力してください', 'error');
+                            return;
+                        }
+
+                        const eventObj = {
+                            name, department, startTime, endTime, count, requiredPeople, memo: memo || '',
+                            createdAt: firebase.database.ServerValue.TIMESTAMP,
+                            createdBy: window.currentUserData?.displayName || window.currentUserData?.username || 'unknown',
+                            assignments: []
+                        };
+                        await window.database.ref(`${window.DATA_ROOT}/events/byDate/${dateKey}`).push(eventObj);
+                        await this.logAudit('event_add', { date: dateKey, name, department });
+                        window.showMessage('業務を追加しました', 'success');
+                        window.closeModal('eventModal');
+                        this.renderDailySchedule();
+                    } catch (err) {
+                        console.error('業務保存エラー:', err);
+                        window.showMessage('業務の保存に失敗しました', 'error');
+                    }
+                });
+            }
         }
 
         // CE手動並び替えモーダル
@@ -1112,33 +1289,28 @@
                 window.showMessage('編集権限がありません', 'warning');
                 return;
             }
-            
             if (!window.ceManager?.ceList || window.ceManager.ceList.length === 0) {
                 window.showMessage('並び替えるCEがありません', 'info');
                 return;
             }
-            
             this.renderCEReorderGrid();
-            window.openModal('ceReorderModal');
+            window.showModal('ceReorderModal');
         }
 
         renderCEReorderGrid() {
             const grid = document.getElementById('ceReorderGrid');
             if (!grid || !window.ceManager?.ceList) return;
-            
             grid.innerHTML = '';
-            
             const ceList = window.ceManager.ceList;
-            
+
             ceList.forEach((ce, index) => {
                 const card = document.createElement('div');
                 card.className = 'ce-reorder-card';
                 card.draggable = true;
                 card.dataset.ceIndex = index;
-                
                 card.innerHTML = `
                     <div class="text-center">
-                        <div class="ce-item-mini worktype-${ce.workType.toLowerCase()} mb-2">
+                        <div class="ce-item-mini worktype-${(ce.workType || 'ME').toLowerCase()} mb-2">
                             ${ce.name}
                         </div>
                         <div class="text-xs text-gray-500">${ce.workType}</div>
@@ -1147,27 +1319,19 @@
                         </div>
                     </div>
                 `;
-                
-                // ドラッグイベント
                 card.addEventListener('dragstart', (e) => {
                     e.dataTransfer.effectAllowed = 'move';
                     e.dataTransfer.setData('text/plain', index.toString());
                     card.classList.add('dragging');
                 });
-                
-                card.addEventListener('dragend', () => {
-                    card.classList.remove('dragging');
-                });
-                
+                card.addEventListener('dragend', () => card.classList.remove('dragging'));
                 grid.appendChild(card);
             });
-            
-            // グリッドのドロップイベント
+
             grid.addEventListener('dragover', (e) => {
                 e.preventDefault();
                 const dragging = grid.querySelector('.dragging');
                 if (!dragging) return;
-
                 const afterElement = this.getDragAfterElement(grid, e.clientX, e.clientY);
                 if (afterElement == null) {
                     grid.appendChild(dragging);
@@ -1175,22 +1339,18 @@
                     grid.insertBefore(dragging, afterElement);
                 }
             });
-            
-            // 保存ボタン
-            document.getElementById('saveCEOrderBtn').onclick = async () => {
-                await this.saveCEOrderFromModal();
-            };
+
+            const saveBtn = document.getElementById('saveCEOrderBtn');
+            if (saveBtn) saveBtn.onclick = async () => { await this.saveCEOrderFromModal(); };
         }
 
         getDragAfterElement(container, x, y) {
             const draggableElements = [...container.querySelectorAll('.ce-reorder-card:not(.dragging)')];
-            
             return draggableElements.reduce((closest, child) => {
                 const box = child.getBoundingClientRect();
                 const offsetX = x - (box.left + box.width / 2);
                 const offsetY = y - (box.top + box.height / 2);
                 const offset = Math.sqrt(offsetX * offsetX + offsetY * offsetY);
-                
                 if (offset < closest.offset) {
                     return { offset: offset, element: child };
                 } else {
@@ -1202,26 +1362,16 @@
         async saveCEOrderFromModal() {
             try {
                 const grid = document.getElementById('ceReorderGrid');
-                const newOrder = Array.from(grid.querySelectorAll('.ce-reorder-card'))
-                    .map(card => parseInt(card.dataset.ceIndex));
-                
-                // CEリストを新しい順序で並び替え
+                const newOrder = Array.from(grid.querySelectorAll('.ce-reorder-card')).map(card => parseInt(card.dataset.ceIndex));
                 const reorderedList = newOrder.map(index => window.ceManager.ceList[index]);
                 window.ceManager.ceList = reorderedList;
-                
                 await window.ceManager.saveCEList();
-                
-                // 監査ログ記録
                 await this.logAudit('ce_reorder', { count: reorderedList.length });
-                
                 window.showMessage('CEの順序を保存しました', 'success');
                 window.closeModal('ceReorderModal');
-                
-                // CE管理グリッドを再描画
                 setTimeout(() => this.renderCEManagementGrid(), 300);
-                
             } catch (error) {
-                console.error('❌ 並び替え保存エラー:', error);
+                console.error('並び替え保存エラー:', error);
                 window.showMessage('順序の保存に失敗しました', 'error');
             }
         }
@@ -1231,30 +1381,23 @@
                 window.showMessage('編集権限がありません', 'warning');
                 return;
             }
-            
             const nameInput = document.getElementById('newCEName');
             const workTypeInput = document.getElementById('newCEWorkType');
-            
             const name = nameInput?.value?.trim();
             const workType = workTypeInput?.value || 'ME';
-            
             if (!name) {
                 window.showMessage('CE名を入力してください', 'warning');
                 return;
             }
-            
             if (window.ceManager?.isInitialized) {
                 try {
                     await window.ceManager.addNewCE(name, workType);
                     nameInput.value = '';
                     window.showMessage(`${name}を追加しました`, 'success');
-                    
-                    // 監査ログ記録
                     await this.logAudit('ce_add', { name, workType });
-                    
                     setTimeout(() => this.renderCEManagementGrid(), 500);
                 } catch (error) {
-                    console.error('❌ CE追加エラー:', error);
+                    console.error('CE追加エラー:', error);
                     window.showMessage('CEの追加に失敗しました', 'error');
                 }
             }
@@ -1262,30 +1405,19 @@
 
         async sortCEList(sortType) {
             if (!window.ceManager?.ceList || window.userRole === 'viewer') return;
-            
             const ceList = window.ceManager.ceList;
-            
             switch (sortType) {
-                case 'name':
-                    ceList.sort((a, b) => a.name.localeCompare(b.name, 'ja'));
-                    break;
-                case 'workType':
-                    ceList.sort((a, b) => a.workType.localeCompare(b.workType));
-                    break;
-                default:
-                    return;
+                case 'name': ceList.sort((a, b) => a.name.localeCompare(b.name, 'ja')); break;
+                case 'workType': ceList.sort((a, b) => (a.workType || '').localeCompare(b.workType || '')); break;
+                default: return;
             }
-
             try {
                 await window.ceManager.saveCEList();
                 window.showMessage(`${sortType}順で並び替えました`, 'success');
-                
-                // 監査ログ記録
                 await this.logAudit('ce_sort', { type: sortType, count: ceList.length });
-                
                 setTimeout(() => this.renderCEManagementGrid(), 300);
             } catch (error) {
-                console.error('❌ 並び替えエラー:', error);
+                console.error('並び替えエラー:', error);
                 window.showMessage('並び替えに失敗しました', 'error');
             }
         }
@@ -1293,26 +1425,23 @@
         async renderCEManagementGrid() {
             const grid = document.getElementById('ceManagementGrid');
             if (!grid || !window.ceManager?.ceList) return;
-            
             grid.innerHTML = '';
-            
             const ceList = window.ceManager.ceList;
-            
+
             for (let i = 0; i < ceList.length; i++) {
                 const ce = ceList[i];
                 const card = document.createElement('div');
                 card.className = 'ce-management-card';
                 card.dataset.ceIndex = i;
-                
-                // 日別ステータス取得
+
                 let currentStatus = '';
                 if (window.ceDailyStatus?.statusData) {
                     currentStatus = window.ceDailyStatus.statusData[ce.id] || '';
                 }
-                
+
                 card.innerHTML = `
                     <div class="flex items-center justify-between mb-2">
-                        <div class="ce-item-mini worktype-${ce.workType.toLowerCase()}">
+                        <div class="ce-item-mini worktype-${(ce.workType || 'ME').toLowerCase()}">
                             ${ce.name}
                         </div>
                         <div class="text-xs text-gray-500">${ce.workType}</div>
@@ -1329,73 +1458,54 @@
                         </select>
                     </div>
                     <div class="flex justify-between">
-                        <button onclick="window.ceManager.openCEEditModal(${i})" 
-                                class="text-blue-600 hover:text-blue-800 text-xs">
+                        <button onclick="window.ceManager.openCEEditModal(${i})" class="text-blue-600 hover:text-blue-800 text-xs">
                             <i class="fas fa-edit mr-1"></i>編集
                         </button>
-                        <button onclick="window.dashboardAuth.deleteCE(${i})" 
-                                class="text-red-600 hover:text-red-800 text-xs">
+                        <button onclick="window.dashboardAuth.deleteCE(${i})" class="text-red-600 hover:text-red-800 text-xs">
                             <i class="fas fa-trash mr-1"></i>削除
                         </button>
                     </div>
                 `;
-                
                 grid.appendChild(card);
             }
         }
 
         async updateCEStatus(ceId, status) {
             if (window.userRole === 'viewer') return;
-            
             try {
                 if (window.ceDailyStatus?.isInitialized) {
                     await window.ceDailyStatus.updateCEStatus(ceId, status);
-                    
-                    // 監査ログ記録
-                    await this.logAudit('ce_status_update', { 
-                        ceId, 
-                        status, 
-                        date: this.formatDate(this.ceStatusDate) 
-                    });
-                    
+                    await this.logAudit('ce_status_update', { ceId, status, date: this.formatDate(this.ceStatusDate) });
                     if (window.ceManager) {
                         window.ceManager.currentDisplayDate = this.ceStatusDate;
                         window.ceManager.displayCEList();
                     }
                 }
             } catch (error) {
-                console.error('❌ CE勤務状態更新エラー:', error);
+                console.error('CE勤務状態更新エラー:', error);
                 window.showMessage('勤務状態の更新に失敗しました', 'error');
             }
         }
 
         async deleteCE(ceIndex) {
             if (window.userRole === 'viewer') return;
-            
             if (window.ceManager?.ceList[ceIndex]) {
                 const ceName = window.ceManager.ceList[ceIndex].name;
-                
-                if (!confirm(`${ceName} を削除しますか？\n\nこの操作は元に戻せません。`)) {
-                    return;
-                }
-                
+                if (!confirm(`${ceName} を削除しますか？\n\nこの操作は元に戻せません。`)) return;
                 try {
                     window.ceManager.ceList.splice(ceIndex, 1);
                     await window.ceManager.saveCEList();
-                    
-                    // 監査ログ記録
                     await this.logAudit('ce_delete', { name: ceName });
-                    
                     this.renderCEManagementGrid();
                     window.showMessage(`${ceName} を削除しました`, 'success');
                 } catch (error) {
-                    console.error('❌ CE削除エラー:', error);
+                    console.error('CE削除エラー:', error);
                     window.showMessage('CEの削除に失敗しました', 'error');
                 }
             }
         }
 
-        // 監査ログ記録
+        // 監査ログ
         async logAudit(action, details = {}) {
             try {
                 const entry = {
@@ -1407,36 +1517,28 @@
                     timestamp: firebase.database.ServerValue.TIMESTAMP,
                     userAgent: navigator.userAgent.substring(0, 100)
                 };
-                
                 await window.database.ref(`${window.DATA_ROOT}/auditLogs`).push(entry);
-                console.log('📝 監査ログ記録:', action);
             } catch (error) {
-                console.warn('⚠️ 監査ログ記録失敗:', error);
+                console.warn('監査ログ記録失敗:', error);
             }
         }
 
         renderDailySchedule() {
             const title = document.getElementById('dailyScheduleTitle');
             const grid = document.getElementById('departmentGrid');
-            
             if (title) {
-                const dateStr = this.selectedDate.toLocaleDateString('ja-JP', { 
-                    year: 'numeric', month: 'long', day: 'numeric', weekday: 'short' 
-                });
+                const dateStr = this.selectedDate.toLocaleDateString('ja-JP', { year: 'numeric', month: 'long', day: 'numeric', weekday: 'short' });
                 title.textContent = `日別スケジュール（${dateStr}）`;
             }
-            
             if (window.ceManager) {
                 window.ceManager.currentDisplayDate = this.selectedDate;
                 window.ceManager.displayCEList();
             }
-
             if (!grid) return;
 
             grid.innerHTML = '';
             grid.className = 'grid grid-cols-3 gap-4 mb-6';
 
-            // 9部門の3x3レイアウト
             window.DEPARTMENTS.forEach(dept => {
                 const section = this.createDepartmentSection(dept);
                 grid.appendChild(section);
@@ -1451,7 +1553,6 @@
             const section = document.createElement('div');
             section.className = 'department-section p-4';
             section.style.setProperty('--dept-color', window.DEPARTMENT_COLORS[dept] || '#e5e7eb');
-            
             section.innerHTML = `
                 <div class="flex items-center justify-between mb-3">
                     <h3 class="font-bold text-sm flex items-center">
@@ -1464,13 +1565,10 @@
                     </button>` : ''}
                 </div>
                 <div class="monthly-plans" data-department="${dept}">
-                    <!-- 月次業務がここに表示されます -->
                 </div>
                 <div class="task-list min-h-[120px] space-y-2" data-department="${dept}">
-                    <!-- 業務がここに表示されます -->
                 </div>
             `;
-
             this.setupDropZone(section, dept);
             return section;
         }
@@ -1480,7 +1578,6 @@
                 window.showMessage('編集権限がありません', 'warning');
                 return;
             }
-            
             const dateKey = this.formatDate(this.selectedDate);
             if (window.eventManager?.openEventModal) {
                 window.eventManager.openEventModal('create', dateKey);
@@ -1492,19 +1589,19 @@
                     if (deptSelect) deptSelect.value = department;
                 }, 50);
             } else {
-                // 予備: 直接モーダルを開く
-                window.openModal('eventModal');
+                window.showModal('eventModal');
                 this.populateDepartmentSelect(document.getElementById('eventDepartment'));
-                document.getElementById('eventDate').value = dateKey;
-                document.getElementById('eventDepartment').value = department;
+                const dateEl = document.getElementById('eventDate');
+                const deptEl = document.getElementById('eventDepartment');
+                if (dateEl) dateEl.value = dateKey;
+                if (deptEl) deptEl.value = department;
             }
         }
 
         populateDepartmentSelect(selectElement) {
             if (!selectElement) return;
-            
             selectElement.innerHTML = '<option value="">部門を選択</option>';
-            window.DEPARTMENTS.forEach(dept => {
+            (window.DEPARTMENTS || []).forEach(dept => {
                 const option = document.createElement('option');
                 option.value = dept;
                 option.textContent = dept;
@@ -1514,25 +1611,19 @@
 
         setupDropZone(section, department) {
             const dropZone = section.querySelector('.task-list');
-            
             dropZone.addEventListener('dragover', (e) => {
                 e.preventDefault();
                 section.classList.add('drag-over');
             });
-
-            dropZone.addEventListener('dragleave', () => {
-                section.classList.remove('drag-over');
-            });
-
+            dropZone.addEventListener('dragleave', () => section.classList.remove('drag-over'));
             dropZone.addEventListener('drop', (e) => {
                 e.preventDefault();
                 section.classList.remove('drag-over');
-                
                 try {
                     const dragData = JSON.parse(e.dataTransfer.getData('text/plain'));
                     this.handleDrop(e, dragData);
                 } catch (error) {
-                    console.error('❌ ドロップ処理エラー:', error);
+                    console.error('ドロップ処理エラー:', error);
                 }
             });
         }
@@ -1542,147 +1633,100 @@
                 window.showMessage('編集権限がありません', 'warning');
                 return;
             }
-            
             const ceName = dragData.ceName;
             const workType = dragData.workType || '';
-            
             const target = ev.target.closest('.task-item, .monthly-event-item');
-            if (target) {
-                const eventId = target.dataset.eventId;
-                const isMonthly = target.classList.contains('monthly-event-item');
-                const dateKey = this.formatDate(this.selectedDate);
-                
-                if (eventId) {
-                    try {
-                        let dataPath, event;
-                        
-                        if (isMonthly) {
-                            const snapshot = await window.database.ref(`${window.DATA_ROOT}/monthlyTasks/${eventId}`).once('value');
-                            event = snapshot.val();
-                            dataPath = `${window.DATA_ROOT}/monthlyTasks/${eventId}`;
-                        } else {
-                            const snapshot = await window.database.ref(`${window.DATA_ROOT}/events/byDate/${dateKey}/${eventId}`).once('value');
-                            event = snapshot.val();
-                            dataPath = `${window.DATA_ROOT}/events/byDate/${dateKey}/${eventId}`;
-                        }
-                        
-                        if (!event) return;
+            if (!target) return;
 
-                        const assignments = Array.isArray(event.assignments) ? event.assignments.slice() : [];
-                        if (assignments.some(a => (typeof a === 'string' ? a : a.name) === ceName)) {
-                            window.showMessage('すでに割り当て済みです', 'info');
-                            return;
-                        }
+            const eventId = target.dataset.eventId;
+            const isMonthly = target.classList.contains('monthly-event-item');
+            const dateKey = this.formatDate(this.selectedDate);
+            if (!eventId) return;
 
-                        assignments.push({ name: ceName, workType });
-                        await window.database.ref(dataPath).update({ assignments });
-
-                        // 監査ログ記録
-                        await this.logAudit(isMonthly ? 'monthly_task_assign' : 'event_assign', { 
-                            date: dateKey, 
-                            eventId, 
-                            ceName 
-                        });
-
-                        window.showMessage(`${ceName} を割り当てました`, 'success');
-                        this.renderDailySchedule();
-                    } catch (error) {
-                        console.error('❌ ドロップ処理エラー:', error);
-                        window.showMessage('割り当てに失敗しました', 'error');
-                    }
+            try {
+                let dataPath, event;
+                if (isMonthly) {
+                    const snapshot = await window.database.ref(`${window.DATA_ROOT}/monthlyTasks/${eventId}`).once('value');
+                    event = snapshot.val();
+                    dataPath = `${window.DATA_ROOT}/monthlyTasks/${eventId}`;
+                } else {
+                    const snapshot = await window.database.ref(`${window.DATA_ROOT}/events/byDate/${dateKey}/${eventId}`).once('value');
+                    event = snapshot.val();
+                    dataPath = `${window.DATA_ROOT}/events/byDate/${dateKey}/${eventId}`;
                 }
+                if (!event) return;
+
+                const assignments = Array.isArray(event.assignments) ? event.assignments.slice() : [];
+                if (assignments.some(a => (typeof a === 'string' ? a : a.name) === ceName)) {
+                    window.showMessage('すでに割り当て済みです', 'info');
+                    return;
+                }
+                assignments.push({ name: ceName, workType });
+                await window.database.ref(dataPath).update({ assignments });
+
+                await this.logAudit(isMonthly ? 'monthly_task_assign' : 'event_assign', { date: dateKey, eventId, ceName });
+                window.showMessage(`${ceName} を割り当てました`, 'success');
+                this.renderDailySchedule();
+            } catch (error) {
+                console.error('割当エラー:', error);
+                window.showMessage('割り当てに失敗しました', 'error');
             }
         }
 
         async removeAssignment(dateKey, eventId, ceName, isMonthly = false) {
             if (window.userRole === 'viewer') return;
-            
             try {
-                let dataPath;
-                
-                if (isMonthly) {
-                    dataPath = `${window.DATA_ROOT}/monthlyTasks/${eventId}`;
-                } else {
-                    dataPath = `${window.DATA_ROOT}/events/byDate/${dateKey}/${eventId}`;
-                }
-                
+                const dataPath = isMonthly ? `${window.DATA_ROOT}/monthlyTasks/${eventId}` : `${window.DATA_ROOT}/events/byDate/${dateKey}/${eventId}`;
                 const snapshot = await window.database.ref(dataPath).once('value');
                 const event = snapshot.val();
                 if (!event) return;
-
-                const assignments = (event.assignments || []).filter(a => 
-                    (typeof a === 'string' ? a : a.name) !== ceName
-                );
-                
+                const assignments = (event.assignments || []).filter(a => (typeof a === 'string' ? a : a.name) !== ceName);
                 await window.database.ref(dataPath).update({ assignments });
-                
-                // 監査ログ記録
-                await this.logAudit(isMonthly ? 'monthly_task_unassign' : 'event_unassign', { 
-                    date: dateKey, 
-                    eventId, 
-                    ceName 
-                });
-                
+                await this.logAudit(isMonthly ? 'monthly_task_unassign' : 'event_unassign', { date: dateKey, eventId, ceName });
                 window.showMessage(`${ceName} を外しました`, 'success');
                 this.renderDailySchedule();
             } catch (error) {
-                console.error('❌ 割当解除エラー:', error);
+                console.error('割当解除エラー:', error);
                 window.showMessage('割当解除に失敗しました', 'error');
             }
         }
 
         async loadDailyTasks() {
             const dateKey = this.formatDate(this.selectedDate);
-            
             document.querySelectorAll('.task-list').forEach(list => {
-                // 通常業務のみクリア（月次業務は保持）
-                const normalTasks = list.querySelectorAll('.task-item');
-                normalTasks.forEach(task => task.remove());
+                list.querySelectorAll('.task-item').forEach(task => task.remove());
             });
-
             try {
-                if (window.database && window.DATA_ROOT) {
-                    const snapshot = await window.database.ref(`${window.DATA_ROOT}/events/byDate/${dateKey}`).once('value');
-                    const events = snapshot.val() || {};
-                    
-                    Object.keys(events).forEach(eventId => {
-                        const event = { ...events[eventId], id: eventId };
-                        this.addTaskToSection(event);
-                    });
-                }
+                const snapshot = await window.database.ref(`${window.DATA_ROOT}/events/byDate/${dateKey}`).once('value');
+                const events = snapshot.val() || {};
+                Object.keys(events).forEach(eventId => {
+                    const event = { ...events[eventId], id: eventId };
+                    this.addTaskToSection(event);
+                });
             } catch (error) {
-                console.error('❌ 日別タスク読み込みエラー:', error);
+                console.error('日別タスク読み込みエラー:', error);
             }
         }
 
-        // 月次業務読み込み
         async loadMonthlyTasks() {
             try {
                 const snapshot = await window.database.ref(`${window.DATA_ROOT}/monthlyTasks`).once('value');
-                const tasks = snapshot.val() || {};
-                this.monthlyTasks = tasks;
-                
-                console.log('📅 月次業務読み込み完了:', Object.keys(tasks).length, '件');
+                this.monthlyTasks = snapshot.val() || {};
             } catch (error) {
-                console.error('❌ 月次業務読み込みエラー:', error);
+                console.error('月次業務読み込みエラー:', error);
             }
         }
 
-        // 指定日の月次業務表示
         loadMonthlyTasksForDate() {
             const currentYear = this.selectedDate.getFullYear();
             const currentMonth = this.selectedDate.getMonth() + 1;
             const currentYearMonth = `${currentYear}-${String(currentMonth).padStart(2, '0')}`;
-            
-            // 月次業務エリアをクリア
             document.querySelectorAll('.monthly-plans').forEach(area => {
                 area.innerHTML = '';
                 area.style.display = 'none';
             });
-            
-            Object.keys(this.monthlyTasks).forEach(taskId => {
+            Object.keys(this.monthlyTasks || {}).forEach(taskId => {
                 const task = { ...this.monthlyTasks[taskId], id: taskId };
-                
                 if (task.month === currentYearMonth) {
                     this.addMonthlyTaskToSection(task);
                 }
@@ -1690,17 +1734,17 @@
         }
 
         addTaskToSection(event) {
-            const taskList = document.querySelector(`[data-department="${event.department}"]`);
+            const taskList = document.querySelector(`.task-list[data-department="${event.department}"]`);
             if (!taskList) return;
 
             const taskElement = document.createElement('div');
             taskElement.className = 'task-item';
             taskElement.dataset.eventId = event.id;
-            
+
             const assignments = Array.isArray(event.assignments) ? event.assignments : [];
             const assignmentChips = assignments.map(ce => {
-                const name = typeof ce === 'string' ? ce : ce.name || '';
-                const workType = typeof ce === 'object' ? ce.workType || 'ME' : 'ME';
+                const name = typeof ce === 'string' ? ce : (ce.name || '');
+                const workType = typeof ce === 'object' ? (ce.workType || 'ME') : 'ME';
                 return `<span class="chip worktype-${workType.toLowerCase()}">${name}<span class="remove" onclick="window.dashboardAuth.removeAssignment('${this.formatDate(this.selectedDate)}', '${event.id}', '${name}')">&times;</span></span>`;
             }).join('');
 
@@ -1736,16 +1780,14 @@
                     }
                 };
             }
-
             taskList.appendChild(taskElement);
         }
 
         addMonthlyTaskToSection(task) {
-            const monthlyPlansArea = document.querySelector(`[data-department="${task.department}"] .monthly-plans`);
+            const monthlyPlansArea = document.querySelector(`.monthly-plans[data-department="${task.department}"]`);
             if (!monthlyPlansArea) return;
-
             monthlyPlansArea.style.display = 'block';
-            
+
             if (!monthlyPlansArea.querySelector('.monthly-plans-header')) {
                 const header = document.createElement('div');
                 header.className = 'monthly-plans-header text-xs font-bold text-orange-600 mb-2';
@@ -1756,14 +1798,11 @@
             const taskElement = document.createElement('div');
             taskElement.className = 'monthly-event-item';
             taskElement.dataset.eventId = task.id;
-            
+
             const assignments = Array.isArray(task.assignments) ? task.assignments : [];
             const assignmentChips = assignments.map(ce => {
-                const name = typeof ce === 'string' ? ce : ce.name || '';
-                const workType = typeof ce === 'object' ? ce.workType || 'ME' : 'ME';
-                return `<span class="chip worktype-${workType.toLowerCase()}">${name}<span class="remove" onclick="window.dashboardAuth.removeAssignment('${this
-                            const name = typeof ce === 'string' ? ce : ce.name || '';
-                const workType = typeof ce === 'object' ? ce.workType || 'ME' : 'ME';
+                const name = typeof ce === 'string' ? ce : (ce.name || '');
+                const workType = typeof ce === 'object' ? (ce.workType || 'ME') : 'ME';
                 return `<span class="chip worktype-${workType.toLowerCase()}">${name}<span class="remove" onclick="window.dashboardAuth.removeAssignment('${this.formatDate(this.selectedDate)}', '${task.id}', '${name}', true)">&times;</span></span>`;
             }).join('');
 
@@ -1809,116 +1848,76 @@
                     <div class="assignments">${assignmentChips || '<span class="text-xs text-gray-400">未配置</span>'}</div>
                 </div>
             `;
-
             monthlyPlansArea.appendChild(taskElement);
         }
 
-        // 月次業務実施モーダル
         openMonthlyTaskExecuteModal(taskId) {
             const task = this.monthlyTasks[taskId];
             if (!task) return;
-            
             const infoDiv = document.getElementById('monthlyTaskExecuteInfo');
-            
             const completedCount = task.completedCount || 0;
             const targetCount = task.targetCount || 1;
             const remainingCount = Math.max(0, targetCount - completedCount);
-            
             infoDiv.innerHTML = `
                 <h4 class="font-semibold text-blue-800">${task.name}</h4>
                 <p class="text-blue-700 text-sm">部門: ${task.department}</p>
                 <p class="text-blue-700 text-sm">進捗: ${completedCount}/${targetCount}件 (残り${remainingCount}件)</p>
             `;
-            
-            // フォームリセット
             document.getElementById('monthlyTaskExecuteCount').value = '';
             document.getElementById('monthlyTaskExecuteMemo').value = '';
-            
-            // フォームにタスクIDを保存
             document.getElementById('monthlyTaskExecuteForm').dataset.taskId = taskId;
-            
-            window.openModal('monthlyTaskExecuteModal');
+            window.showModal('monthlyTaskExecuteModal');
         }
 
-        // 月次業務編集モーダル
         openMonthlyTaskEditModal(taskId) {
             const task = this.monthlyTasks[taskId];
             if (!task) return;
-            
-            // 編集モードでモーダルを開く
-            window.openModal('monthlyTaskModal');
-            
-            // フォームにデータを入力
+            window.showModal('monthlyTaskModal');
             document.getElementById('monthlyTaskName').value = task.name || '';
             document.getElementById('monthlyTaskMonth').value = task.month || '';
             document.getElementById('monthlyTaskTargetCount').value = task.targetCount || 1;
             document.getElementById('monthlyTaskRequired').value = task.requiredPeople || 1;
             document.getElementById('monthlyTaskMemo').value = task.memo || '';
-            
-            // 部門選択を更新
             const deptSelect = document.getElementById('monthlyTaskDepartment');
             this.populateDepartmentSelect(deptSelect);
             deptSelect.value = task.department || '';
-            
-            // フォームのsubmitボタンを編集モードに変更
             const submitBtn = document.querySelector('#monthlyTaskForm button[type="submit"]');
             submitBtn.innerHTML = '<i class="fas fa-save mr-1"></i>月次業務更新';
-            
-            // 削除ボタンを表示
             const deleteBtn = document.getElementById('deleteMonthlyTaskBtn');
             deleteBtn.classList.remove('hidden');
             deleteBtn.onclick = () => this.deleteMonthlyTask(taskId);
-            
-            // フォームにタスクIDを保存
-            document.getElementById('monthlyTaskForm').dataset.taskId = taskId;
-            document.getElementById('monthlyTaskForm').dataset.mode = 'edit';
+            const form = document.getElementById('monthlyTaskForm');
+            form.dataset.taskId = taskId;
+            form.dataset.mode = 'edit';
         }
 
         async deleteMonthlyTask(taskId) {
             const task = this.monthlyTasks[taskId];
             if (!task) return;
-            
-            if (!confirm(`月次業務「${task.name}」を削除しますか？\n\nこの操作は元に戻せません。`)) {
-                return;
-            }
-            
+            if (!confirm(`月次業務「${task.name}」を削除しますか？\n\nこの操作は元に戻せません。`)) return;
             try {
                 await window.database.ref(`${window.DATA_ROOT}/monthlyTasks/${taskId}`).remove();
-                
-                // 監査ログ記録
-                await this.logAudit('monthly_task_delete', { 
-                    taskId, 
-                    name: task.name,
-                    department: task.department 
-                });
-                
+                await this.logAudit('monthly_task_delete', { taskId, name: task.name, department: task.department });
                 window.showMessage(`月次業務「${task.name}」を削除しました`, 'success');
                 window.closeModal('monthlyTaskModal');
-                
-                // データを再読み込み
                 await this.loadMonthlyTasks();
                 this.renderDailySchedule();
-                
             } catch (error) {
-                console.error('❌ 月次業務削除エラー:', error);
+                console.error('月次業務削除エラー:', error);
                 window.showMessage('月次業務の削除に失敗しました', 'error');
             }
         }
 
         async executeMonthlyTask(taskId) {
-            const executeCount = parseInt(document.getElementById('monthlyTaskExecuteCount').value);
+            const executeCount = parseInt(document.getElementById('monthlyTaskExecuteCount').value, 10);
             const executeMemo = document.getElementById('monthlyTaskExecuteMemo').value.trim();
-            
             if (!executeCount || executeCount < 1) {
                 window.showMessage('実施件数を入力してください', 'error');
                 return;
             }
-            
             try {
                 const task = this.monthlyTasks[taskId];
                 const newCompletedCount = (task.completedCount || 0) + executeCount;
-                
-                // 実施記録を追加
                 const executionRecord = {
                     count: executeCount,
                     memo: executeMemo,
@@ -1926,35 +1925,20 @@
                     executedBy: window.currentUserData?.displayName || window.currentUserData?.username,
                     timestamp: firebase.database.ServerValue.TIMESTAMP
                 };
-                
                 const updates = {
                     completedCount: newCompletedCount,
                     lastExecuted: firebase.database.ServerValue.TIMESTAMP
                 };
-                
-                // 実施記録をexecutionsオブジェクトに追加
                 const executionKey = Date.now().toString();
                 updates[`executions/${executionKey}`] = executionRecord;
-                
                 await window.database.ref(`${window.DATA_ROOT}/monthlyTasks/${taskId}`).update(updates);
-                
-                // 監査ログ記録
-                await this.logAudit('monthly_task_execute', { 
-                    taskId,
-                    executeCount,
-                    newCompletedCount,
-                    memo: executeMemo
-                });
-                
+                await this.logAudit('monthly_task_execute', { taskId, executeCount, newCompletedCount, memo: executeMemo });
                 window.showMessage(`月次業務を実施しました（${executeCount}件）`, 'success');
                 window.closeModal('monthlyTaskExecuteModal');
-                
-                // データ再読み込み
                 await this.loadMonthlyTasks();
                 this.renderDailySchedule();
-                
             } catch (error) {
-                console.error('❌ 月次業務実施エラー:', error);
+                console.error('月次業務実施エラー:', error);
                 window.showMessage('月次業務の実施記録に失敗しました', 'error');
             }
         }
@@ -1966,14 +1950,12 @@
             if (window.userRole === 'admin') {
                 settingsContent.innerHTML = `
                     <h2 class="text-2xl font-bold mb-6">設定</h2>
-                    
                     <div class="glass-card p-6 mb-6">
                         <h3 class="text-lg font-semibold mb-4 text-red-600">
                             <i class="fas fa-shield-alt mr-2"></i>管理者機能
                         </h3>
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <button onclick="window.open('pages/admin-dashboard.html', '_blank')" 
-                                    class="btn-unified btn-primary-unified">
+                            <button onclick="window.open('pages/admin-dashboard.html', '_blank')" class="btn-unified btn-primary-unified">
                                 <i class="fas fa-users-cog mr-2"></i>ユーザー管理ダッシュボード
                             </button>
                             <button id="clearMonthBtn" class="bg-red-600 hover:bg-red-700 text-white px-4 py-3 rounded-lg">
@@ -1981,7 +1963,6 @@
                             </button>
                         </div>
                     </div>
-                    
                     <div class="glass-card p-6 mb-6">
                         <h3 class="text-lg font-semibold mb-4">
                             <i class="fas fa-cog mr-2"></i>一般設定
@@ -1989,8 +1970,7 @@
                         <div class="space-y-4">
                             <div>
                                 <label class="block text-sm font-medium mb-2">表示名</label>
-                                <input type="text" id="displayNameSetting" class="input-unified" 
-                                       value="${window.currentUserData?.displayName || ''}">
+                                <input type="text" id="displayNameSetting" class="input-unified" value="${window.currentUserData?.displayName || ''}">
                             </div>
                             <button id="saveSettingsBtn" class="btn-unified btn-primary-unified">
                                 <i class="fas fa-save mr-2"></i>設定保存
@@ -1998,54 +1978,16 @@
                         </div>
                     </div>
                 `;
-                
-                // 変更履歴セクションを追加
-                const historySection = document.createElement('div');
-                historySection.className = 'glass-card p-6 mt-6';
-                historySection.innerHTML = `
-                    <h3 class="text-lg font-semibold mb-4">
-                        <i class="fas fa-history mr-2"></i>変更履歴
-                    </h3>
-                    <div class="mb-3 flex items-center gap-3">
-                        <select id="historyFilter" class="px-3 py-1 border rounded text-sm">
-                            <option value="all">すべて</option>
-                            <option value="login">ログイン</option>
-                            <option value="logout">ログアウト</option>
-                            <option value="ce_add">CE追加</option>
-                            <option value="ce_delete">CE削除</option>
-                            <option value="ce_reorder">CE並び替え</option>
-                            <option value="ce_status_update">勤務状態更新</option>
-                            <option value="event_assign">業務割当</option>
-                            <option value="event_unassign">業務割当解除</option>
-                            <option value="monthly_task_add">月次業務追加</option>
-                            <option value="monthly_task_execute">月次業務実施</option>
-                            <option value="bulk_event_add">期間一括業務追加</option>
-                        </select>
-                        <button id="refreshHistoryBtn" class="px-3 py-1 bg-blue-500 text-white rounded text-sm">
-                            <i class="fas fa-sync mr-1"></i>更新
-                        </button>
-                    </div>
-                    <div id="changeHistory" class="border border-gray-200 rounded-lg p-3" style="max-height:300px; overflow-y:auto;">
-                        <div class="text-sm text-gray-500 text-center">読み込み中...</div>
-                    </div>
-                `;
-                
-                settingsContent.appendChild(historySection);
-                
                 this.setupAdminEventListeners();
-                this.loadChangeHistory();
-                this.setupHistoryControls();
             } else {
                 settingsContent.innerHTML = `
                     <h2 class="text-2xl font-bold mb-6">設定</h2>
-                    
                     <div class="glass-card p-6 mb-6">
                         <h3 class="text-lg font-semibold mb-4">個人設定</h3>
                         <div class="space-y-4">
                             <div>
                                 <label class="block text-sm font-medium mb-2">表示名</label>
-                                <input type="text" id="displayNameSetting" class="input-unified" 
-                                       value="${window.currentUserData?.displayName || ''}">
+                                <input type="text" id="displayNameSetting" class="input-unified" value="${window.currentUserData?.displayName || ''}">
                             </div>
                             <button id="saveSettingsBtn" class="btn-unified btn-primary-unified">
                                 <i class="fas fa-save mr-2"></i>設定保存
@@ -2054,86 +1996,7 @@
                     </div>
                 `;
             }
-            
             this.setupSettingsEventListeners();
-        }
-
-        loadChangeHistory(filter = 'all') {
-            const historyDiv = document.getElementById('changeHistory');
-            if (!historyDiv) return;
-            
-            let query = window.database.ref(`${window.DATA_ROOT}/auditLogs`)
-                .orderByChild('timestamp')
-                .limitToLast(100);
-            
-            query.on('value', (snapshot) => {
-                const data = snapshot.val() || {};
-                const entries = Object.values(data)
-                    .sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0))
-                    .filter(entry => filter === 'all' || entry.action === filter);
-                
-                if (entries.length === 0) {
-                    historyDiv.innerHTML = '<div class="text-sm text-gray-500 text-center">履歴はありません</div>';
-                    return;
-                }
-                
-                const historyHTML = entries.map(entry => {
-                    const timestamp = entry.timestamp ? new Date(entry.timestamp).toLocaleString('ja-JP') : '不明';
-                    const actionText = window.AUDIT_ACTION_MAP[entry.action] || entry.action;
-                    const detailsText = this.formatDetails(entry.details);
-                    
-                    return `
-                        <div class="text-sm py-2 border-b border-gray-100 last:border-b-0">
-                            <div class="flex justify-between items-start">
-                                <div>
-                                    <span class="font-semibold text-blue-700">${entry.displayName || entry.username}</span>
-                                    <span class="text-gray-600 mx-2">•</span>
-                                    <span class="text-gray-800">${actionText}</span>
-                                </div>
-                                <span class="text-xs text-gray-500">${timestamp}</span>
-                            </div>
-                            ${detailsText ? `<div class="text-xs text-gray-600 mt-1">${detailsText}</div>` : ''}
-                        </div>
-                    `;
-                }).join('');
-                
-                historyDiv.innerHTML = historyHTML;
-            });
-        }
-
-        formatDetails(details) {
-            if (!details || typeof details !== 'object') return '';
-            
-            const parts = [];
-            if (details.name) parts.push(`名前: ${details.name}`);
-            if (details.workType) parts.push(`区分: ${details.workType}`);
-            if (details.status) parts.push(`状態: ${details.status}`);
-            if (details.date) parts.push(`日付: ${details.date}`);
-            if (details.ceName) parts.push(`CE: ${details.ceName}`);
-            if (details.count) parts.push(`件数: ${details.count}`);
-            if (details.department) parts.push(`部門: ${details.department}`);
-            if (details.executeCount) parts.push(`実施件数: ${details.executeCount}`);
-            
-            return parts.join(' | ');
-        }
-
-        setupHistoryControls() {
-            const filterSelect = document.getElementById('historyFilter');
-            const refreshBtn = document.getElementById('refreshHistoryBtn');
-            
-            if (filterSelect) {
-                filterSelect.addEventListener('change', (e) => {
-                    this.loadChangeHistory(e.target.value);
-                });
-            }
-            
-            if (refreshBtn) {
-                refreshBtn.addEventListener('click', () => {
-                    const currentFilter = filterSelect?.value || 'all';
-                    this.loadChangeHistory(currentFilter);
-                    window.showMessage('履歴を更新しました', 'success');
-                });
-            }
         }
 
         setupAdminEventListeners() {
@@ -2141,21 +2004,18 @@
             if (clearBtn) {
                 clearBtn.onclick = async () => {
                     if (!confirm('当月の業務データをすべてクリアしますか？\nこの操作は元に戻せません。')) return;
-                    
                     try {
                         const today = new Date();
                         const year = today.getFullYear();
                         const month = String(today.getMonth() + 1).padStart(2, '0');
                         const startDate = `${year}-${month}-01`;
                         const endDate = `${year}-${month}-31`;
-                        
                         const ref = window.database.ref(`${window.DATA_ROOT}/events/byDate`);
                         const query = ref.orderByKey().startAt(startDate).endAt(endDate);
                         await query.ref.remove();
-                        
                         window.showMessage('当月の業務データをクリアしました', 'success');
                     } catch (error) {
-                        console.error('❌ データクリアエラー:', error);
+                        console.error('データクリアエラー:', error);
                         window.showMessage('データのクリアに失敗しました', 'error');
                     }
                 };
@@ -2167,25 +2027,21 @@
             if (saveBtn) {
                 saveBtn.onclick = async () => {
                     const displayName = document.getElementById('displayNameSetting')?.value.trim();
-                    
                     if (!displayName) {
                         window.showMessage('表示名を入力してください', 'warning');
                         return;
                     }
-
                     try {
                         const targetUID = sessionStorage.getItem('targetUID');
                         await window.database.ref(`${window.DATA_ROOT}/users/${targetUID}`).update({
                             displayName: displayName,
                             lastUpdated: Date.now()
                         });
-
                         window.currentUserData.displayName = displayName;
                         this.updateUserDisplay();
-                        
                         window.showMessage('設定を保存しました', 'success');
                     } catch (error) {
-                        console.error('❌ 設定保存エラー:', error);
+                        console.error('設定保存エラー:', error);
                         window.showMessage('設定の保存に失敗しました', 'error');
                     }
                 };
@@ -2196,6 +2052,14 @@
             return date.toISOString().slice(0, 10);
         }
 
+        updateCEListCount() {
+            const el = document.getElementById('ceListCount');
+            if (el) {
+                const count = window.ceManager?.ceList?.length || 0;
+                el.textContent = String(count);
+            }
+        }
+
         initializeV2System() {
             window.openDateModal = (dateKey) => {
                 if (window.userRole === 'viewer') {
@@ -2204,7 +2068,6 @@
                     window.eventManager.openEventModal('create', dateKey);
                 }
             };
-
             window.openEventEditModal = (dateKey, eventId) => {
                 if (window.eventManager?.isInitialized) {
                     const events = window.scheduleCore?.getEventsByDate(dateKey) || [];
@@ -2219,33 +2082,18 @@
                 try {
                     let attempts = 0;
                     while (attempts < 50) {
-                        if (window.CalendarView && window.EventManager && window.CEManager && 
-                            window.DEPARTMENTS && window.showMessage && window.CEDailyStatusManager) {
+                        if (window.CalendarView && window.EventManager && window.CEManager && window.DEPARTMENTS && window.showMessage && window.CEDailyStatusManager) {
                             break;
                         }
                         await new Promise(resolve => setTimeout(resolve, 100));
                         attempts++;
                     }
-
-                    if (!window.calendarView) {
-                        window.calendarView = new window.CalendarView();
-                    }
-                    
-                    if (!window.eventManager) {
-                        window.eventManager = new window.EventManager();
-                    }
-                    
-                    if (!window.ceManager) {
-                        window.ceManager = new window.CEManager();
-                    }
-
-                    if (!window.ceDailyStatus) {
-                        window.ceDailyStatus = new window.CEDailyStatusManager();
-                    }
-                    
-                    console.log('🎉 V2統合システム起動完了');
+                    if (!window.calendarView) window.calendarView = new window.CalendarView();
+                    if (!window.eventManager) window.eventManager = new window.EventManager();
+                    if (!window.ceManager) window.ceManager = new window.CEManager();
+                    if (!window.ceDailyStatus) window.ceDailyStatus = new window.CEDailyStatusManager();
                 } catch (error) {
-                    console.error('❌ V2システム初期化エラー:', error);
+                    console.error('V2システム初期化エラー:', error);
                 }
             }, 1500);
         }
@@ -2259,6 +2107,5 @@
         });
     }
     </script>
-
 </body>
 </html>
