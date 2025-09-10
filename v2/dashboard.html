@@ -1762,3 +1762,503 @@
                 const name = typeof ce === 'string' ? ce : ce.name || '';
                 const workType = typeof ce === 'object' ? ce.workType || 'ME' : 'ME';
                 return `<span class="chip worktype-${workType.toLowerCase()}">${name}<span class="remove" onclick="window.dashboardAuth.removeAssignment('${this
+                            const name = typeof ce === 'string' ? ce : ce.name || '';
+                const workType = typeof ce === 'object' ? ce.workType || 'ME' : 'ME';
+                return `<span class="chip worktype-${workType.toLowerCase()}">${name}<span class="remove" onclick="window.dashboardAuth.removeAssignment('${this.formatDate(this.selectedDate)}', '${task.id}', '${name}', true)">&times;</span></span>`;
+            }).join('');
+
+            const completedCount = task.completedCount || 0;
+            const targetCount = task.targetCount || 1;
+            const remainingCount = Math.max(0, targetCount - completedCount);
+            const progressPercent = Math.min(100, (completedCount / targetCount) * 100);
+
+            taskElement.innerHTML = `
+                <div class="monthly-task-badge">月次</div>
+                <div class="flex justify-between items-start mb-2">
+                    <div class="font-semibold text-sm">${task.name}</div>
+                    <div class="text-xs text-orange-700">
+                        ${completedCount}/${targetCount}件 (残り${remainingCount}件)
+                    </div>
+                </div>
+                <div class="text-xs text-orange-600 mb-2">
+                    必要人数: ${task.requiredPeople || 1}名 | 現在: ${assignments.length}名
+                </div>
+                <div class="bg-orange-200 h-2 rounded-full mb-2">
+                    <div class="bg-orange-500 h-2 rounded-full transition-all" style="width: ${progressPercent}%"></div>
+                </div>
+                ${window.userRole !== 'viewer' ? `
+                <div class="flex gap-2 mb-2">
+                    <button onclick="window.dashboardAuth.openMonthlyTaskExecuteModal('${task.id}')" 
+                            class="btn-unified btn-primary-unified btn-small">
+                        <i class="fas fa-play mr-1"></i>実施
+                    </button>
+                    <button onclick="window.dashboardAuth.openMonthlyTaskEditModal('${task.id}')" 
+                            class="btn-unified btn-outline-unified btn-small">
+                        <i class="fas fa-edit mr-1"></i>編集
+                    </button>
+                </div>
+                ` : ''}
+                <div class="assignment-dropzone" 
+                     data-date="${this.formatDate(this.selectedDate)}" 
+                     data-event-id="${task.id}"
+                     ondragover="event.preventDefault();" 
+                     ondragenter="this.classList.add('dragover')" 
+                     ondragleave="this.classList.remove('dragover')" 
+                     ondrop="window.dashboardAuth.handleDrop(event)">
+                    <div class="text-xs text-gray-400 mb-1">CEをドロップして配置</div>
+                    <div class="assignments">${assignmentChips || '<span class="text-xs text-gray-400">未配置</span>'}</div>
+                </div>
+            `;
+
+            monthlyPlansArea.appendChild(taskElement);
+        }
+
+        // 月次業務実施モーダル
+        openMonthlyTaskExecuteModal(taskId) {
+            const task = this.monthlyTasks[taskId];
+            if (!task) return;
+            
+            const infoDiv = document.getElementById('monthlyTaskExecuteInfo');
+            
+            const completedCount = task.completedCount || 0;
+            const targetCount = task.targetCount || 1;
+            const remainingCount = Math.max(0, targetCount - completedCount);
+            
+            infoDiv.innerHTML = `
+                <h4 class="font-semibold text-blue-800">${task.name}</h4>
+                <p class="text-blue-700 text-sm">部門: ${task.department}</p>
+                <p class="text-blue-700 text-sm">進捗: ${completedCount}/${targetCount}件 (残り${remainingCount}件)</p>
+            `;
+            
+            // フォームリセット
+            document.getElementById('monthlyTaskExecuteCount').value = '';
+            document.getElementById('monthlyTaskExecuteMemo').value = '';
+            
+            // フォームにタスクIDを保存
+            document.getElementById('monthlyTaskExecuteForm').dataset.taskId = taskId;
+            
+            window.openModal('monthlyTaskExecuteModal');
+        }
+
+        // 月次業務編集モーダル
+        openMonthlyTaskEditModal(taskId) {
+            const task = this.monthlyTasks[taskId];
+            if (!task) return;
+            
+            // 編集モードでモーダルを開く
+            window.openModal('monthlyTaskModal');
+            
+            // フォームにデータを入力
+            document.getElementById('monthlyTaskName').value = task.name || '';
+            document.getElementById('monthlyTaskMonth').value = task.month || '';
+            document.getElementById('monthlyTaskTargetCount').value = task.targetCount || 1;
+            document.getElementById('monthlyTaskRequired').value = task.requiredPeople || 1;
+            document.getElementById('monthlyTaskMemo').value = task.memo || '';
+            
+            // 部門選択を更新
+            const deptSelect = document.getElementById('monthlyTaskDepartment');
+            this.populateDepartmentSelect(deptSelect);
+            deptSelect.value = task.department || '';
+            
+            // フォームのsubmitボタンを編集モードに変更
+            const submitBtn = document.querySelector('#monthlyTaskForm button[type="submit"]');
+            submitBtn.innerHTML = '<i class="fas fa-save mr-1"></i>月次業務更新';
+            
+            // 削除ボタンを表示
+            const deleteBtn = document.getElementById('deleteMonthlyTaskBtn');
+            deleteBtn.classList.remove('hidden');
+            deleteBtn.onclick = () => this.deleteMonthlyTask(taskId);
+            
+            // フォームにタスクIDを保存
+            document.getElementById('monthlyTaskForm').dataset.taskId = taskId;
+            document.getElementById('monthlyTaskForm').dataset.mode = 'edit';
+        }
+
+        async deleteMonthlyTask(taskId) {
+            const task = this.monthlyTasks[taskId];
+            if (!task) return;
+            
+            if (!confirm(`月次業務「${task.name}」を削除しますか？\n\nこの操作は元に戻せません。`)) {
+                return;
+            }
+            
+            try {
+                await window.database.ref(`${window.DATA_ROOT}/monthlyTasks/${taskId}`).remove();
+                
+                // 監査ログ記録
+                await this.logAudit('monthly_task_delete', { 
+                    taskId, 
+                    name: task.name,
+                    department: task.department 
+                });
+                
+                window.showMessage(`月次業務「${task.name}」を削除しました`, 'success');
+                window.closeModal('monthlyTaskModal');
+                
+                // データを再読み込み
+                await this.loadMonthlyTasks();
+                this.renderDailySchedule();
+                
+            } catch (error) {
+                console.error('❌ 月次業務削除エラー:', error);
+                window.showMessage('月次業務の削除に失敗しました', 'error');
+            }
+        }
+
+        async executeMonthlyTask(taskId) {
+            const executeCount = parseInt(document.getElementById('monthlyTaskExecuteCount').value);
+            const executeMemo = document.getElementById('monthlyTaskExecuteMemo').value.trim();
+            
+            if (!executeCount || executeCount < 1) {
+                window.showMessage('実施件数を入力してください', 'error');
+                return;
+            }
+            
+            try {
+                const task = this.monthlyTasks[taskId];
+                const newCompletedCount = (task.completedCount || 0) + executeCount;
+                
+                // 実施記録を追加
+                const executionRecord = {
+                    count: executeCount,
+                    memo: executeMemo,
+                    date: this.formatDate(new Date()),
+                    executedBy: window.currentUserData?.displayName || window.currentUserData?.username,
+                    timestamp: firebase.database.ServerValue.TIMESTAMP
+                };
+                
+                const updates = {
+                    completedCount: newCompletedCount,
+                    lastExecuted: firebase.database.ServerValue.TIMESTAMP
+                };
+                
+                // 実施記録をexecutionsオブジェクトに追加
+                const executionKey = Date.now().toString();
+                updates[`executions/${executionKey}`] = executionRecord;
+                
+                await window.database.ref(`${window.DATA_ROOT}/monthlyTasks/${taskId}`).update(updates);
+                
+                // 監査ログ記録
+                await this.logAudit('monthly_task_execute', { 
+                    taskId,
+                    executeCount,
+                    newCompletedCount,
+                    memo: executeMemo
+                });
+                
+                window.showMessage(`月次業務を実施しました（${executeCount}件）`, 'success');
+                window.closeModal('monthlyTaskExecuteModal');
+                
+                // データ再読み込み
+                await this.loadMonthlyTasks();
+                this.renderDailySchedule();
+                
+            } catch (error) {
+                console.error('❌ 月次業務実施エラー:', error);
+                window.showMessage('月次業務の実施記録に失敗しました', 'error');
+            }
+        }
+
+        setupAdminSettings() {
+            const settingsContent = document.getElementById('settingsContent');
+            if (!settingsContent) return;
+
+            if (window.userRole === 'admin') {
+                settingsContent.innerHTML = `
+                    <h2 class="text-2xl font-bold mb-6">設定</h2>
+                    
+                    <div class="glass-card p-6 mb-6">
+                        <h3 class="text-lg font-semibold mb-4 text-red-600">
+                            <i class="fas fa-shield-alt mr-2"></i>管理者機能
+                        </h3>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <button onclick="window.open('pages/admin-dashboard.html', '_blank')" 
+                                    class="btn-unified btn-primary-unified">
+                                <i class="fas fa-users-cog mr-2"></i>ユーザー管理ダッシュボード
+                            </button>
+                            <button id="clearMonthBtn" class="bg-red-600 hover:bg-red-700 text-white px-4 py-3 rounded-lg">
+                                <i class="fas fa-trash mr-2"></i>当月データクリア
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div class="glass-card p-6 mb-6">
+                        <h3 class="text-lg font-semibold mb-4">
+                            <i class="fas fa-cog mr-2"></i>一般設定
+                        </h3>
+                        <div class="space-y-4">
+                            <div>
+                                <label class="block text-sm font-medium mb-2">表示名</label>
+                                <input type="text" id="displayNameSetting" class="input-unified" 
+                                       value="${window.currentUserData?.displayName || ''}">
+                            </div>
+                            <button id="saveSettingsBtn" class="btn-unified btn-primary-unified">
+                                <i class="fas fa-save mr-2"></i>設定保存
+                            </button>
+                        </div>
+                    </div>
+                `;
+                
+                // 変更履歴セクションを追加
+                const historySection = document.createElement('div');
+                historySection.className = 'glass-card p-6 mt-6';
+                historySection.innerHTML = `
+                    <h3 class="text-lg font-semibold mb-4">
+                        <i class="fas fa-history mr-2"></i>変更履歴
+                    </h3>
+                    <div class="mb-3 flex items-center gap-3">
+                        <select id="historyFilter" class="px-3 py-1 border rounded text-sm">
+                            <option value="all">すべて</option>
+                            <option value="login">ログイン</option>
+                            <option value="logout">ログアウト</option>
+                            <option value="ce_add">CE追加</option>
+                            <option value="ce_delete">CE削除</option>
+                            <option value="ce_reorder">CE並び替え</option>
+                            <option value="ce_status_update">勤務状態更新</option>
+                            <option value="event_assign">業務割当</option>
+                            <option value="event_unassign">業務割当解除</option>
+                            <option value="monthly_task_add">月次業務追加</option>
+                            <option value="monthly_task_execute">月次業務実施</option>
+                            <option value="bulk_event_add">期間一括業務追加</option>
+                        </select>
+                        <button id="refreshHistoryBtn" class="px-3 py-1 bg-blue-500 text-white rounded text-sm">
+                            <i class="fas fa-sync mr-1"></i>更新
+                        </button>
+                    </div>
+                    <div id="changeHistory" class="border border-gray-200 rounded-lg p-3" style="max-height:300px; overflow-y:auto;">
+                        <div class="text-sm text-gray-500 text-center">読み込み中...</div>
+                    </div>
+                `;
+                
+                settingsContent.appendChild(historySection);
+                
+                this.setupAdminEventListeners();
+                this.loadChangeHistory();
+                this.setupHistoryControls();
+            } else {
+                settingsContent.innerHTML = `
+                    <h2 class="text-2xl font-bold mb-6">設定</h2>
+                    
+                    <div class="glass-card p-6 mb-6">
+                        <h3 class="text-lg font-semibold mb-4">個人設定</h3>
+                        <div class="space-y-4">
+                            <div>
+                                <label class="block text-sm font-medium mb-2">表示名</label>
+                                <input type="text" id="displayNameSetting" class="input-unified" 
+                                       value="${window.currentUserData?.displayName || ''}">
+                            </div>
+                            <button id="saveSettingsBtn" class="btn-unified btn-primary-unified">
+                                <i class="fas fa-save mr-2"></i>設定保存
+                            </button>
+                        </div>
+                    </div>
+                `;
+            }
+            
+            this.setupSettingsEventListeners();
+        }
+
+        loadChangeHistory(filter = 'all') {
+            const historyDiv = document.getElementById('changeHistory');
+            if (!historyDiv) return;
+            
+            let query = window.database.ref(`${window.DATA_ROOT}/auditLogs`)
+                .orderByChild('timestamp')
+                .limitToLast(100);
+            
+            query.on('value', (snapshot) => {
+                const data = snapshot.val() || {};
+                const entries = Object.values(data)
+                    .sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0))
+                    .filter(entry => filter === 'all' || entry.action === filter);
+                
+                if (entries.length === 0) {
+                    historyDiv.innerHTML = '<div class="text-sm text-gray-500 text-center">履歴はありません</div>';
+                    return;
+                }
+                
+                const historyHTML = entries.map(entry => {
+                    const timestamp = entry.timestamp ? new Date(entry.timestamp).toLocaleString('ja-JP') : '不明';
+                    const actionText = window.AUDIT_ACTION_MAP[entry.action] || entry.action;
+                    const detailsText = this.formatDetails(entry.details);
+                    
+                    return `
+                        <div class="text-sm py-2 border-b border-gray-100 last:border-b-0">
+                            <div class="flex justify-between items-start">
+                                <div>
+                                    <span class="font-semibold text-blue-700">${entry.displayName || entry.username}</span>
+                                    <span class="text-gray-600 mx-2">•</span>
+                                    <span class="text-gray-800">${actionText}</span>
+                                </div>
+                                <span class="text-xs text-gray-500">${timestamp}</span>
+                            </div>
+                            ${detailsText ? `<div class="text-xs text-gray-600 mt-1">${detailsText}</div>` : ''}
+                        </div>
+                    `;
+                }).join('');
+                
+                historyDiv.innerHTML = historyHTML;
+            });
+        }
+
+        formatDetails(details) {
+            if (!details || typeof details !== 'object') return '';
+            
+            const parts = [];
+            if (details.name) parts.push(`名前: ${details.name}`);
+            if (details.workType) parts.push(`区分: ${details.workType}`);
+            if (details.status) parts.push(`状態: ${details.status}`);
+            if (details.date) parts.push(`日付: ${details.date}`);
+            if (details.ceName) parts.push(`CE: ${details.ceName}`);
+            if (details.count) parts.push(`件数: ${details.count}`);
+            if (details.department) parts.push(`部門: ${details.department}`);
+            if (details.executeCount) parts.push(`実施件数: ${details.executeCount}`);
+            
+            return parts.join(' | ');
+        }
+
+        setupHistoryControls() {
+            const filterSelect = document.getElementById('historyFilter');
+            const refreshBtn = document.getElementById('refreshHistoryBtn');
+            
+            if (filterSelect) {
+                filterSelect.addEventListener('change', (e) => {
+                    this.loadChangeHistory(e.target.value);
+                });
+            }
+            
+            if (refreshBtn) {
+                refreshBtn.addEventListener('click', () => {
+                    const currentFilter = filterSelect?.value || 'all';
+                    this.loadChangeHistory(currentFilter);
+                    window.showMessage('履歴を更新しました', 'success');
+                });
+            }
+        }
+
+        setupAdminEventListeners() {
+            const clearBtn = document.getElementById('clearMonthBtn');
+            if (clearBtn) {
+                clearBtn.onclick = async () => {
+                    if (!confirm('当月の業務データをすべてクリアしますか？\nこの操作は元に戻せません。')) return;
+                    
+                    try {
+                        const today = new Date();
+                        const year = today.getFullYear();
+                        const month = String(today.getMonth() + 1).padStart(2, '0');
+                        const startDate = `${year}-${month}-01`;
+                        const endDate = `${year}-${month}-31`;
+                        
+                        const ref = window.database.ref(`${window.DATA_ROOT}/events/byDate`);
+                        const query = ref.orderByKey().startAt(startDate).endAt(endDate);
+                        await query.ref.remove();
+                        
+                        window.showMessage('当月の業務データをクリアしました', 'success');
+                    } catch (error) {
+                        console.error('❌ データクリアエラー:', error);
+                        window.showMessage('データのクリアに失敗しました', 'error');
+                    }
+                };
+            }
+        }
+
+        setupSettingsEventListeners() {
+            const saveBtn = document.getElementById('saveSettingsBtn');
+            if (saveBtn) {
+                saveBtn.onclick = async () => {
+                    const displayName = document.getElementById('displayNameSetting')?.value.trim();
+                    
+                    if (!displayName) {
+                        window.showMessage('表示名を入力してください', 'warning');
+                        return;
+                    }
+
+                    try {
+                        const targetUID = sessionStorage.getItem('targetUID');
+                        await window.database.ref(`${window.DATA_ROOT}/users/${targetUID}`).update({
+                            displayName: displayName,
+                            lastUpdated: Date.now()
+                        });
+
+                        window.currentUserData.displayName = displayName;
+                        this.updateUserDisplay();
+                        
+                        window.showMessage('設定を保存しました', 'success');
+                    } catch (error) {
+                        console.error('❌ 設定保存エラー:', error);
+                        window.showMessage('設定の保存に失敗しました', 'error');
+                    }
+                };
+            }
+        }
+
+        formatDate(date) {
+            return date.toISOString().slice(0, 10);
+        }
+
+        initializeV2System() {
+            window.openDateModal = (dateKey) => {
+                if (window.userRole === 'viewer') {
+                    window.showMessage(`${dateKey}の詳細表示（開発中）`, 'info');
+                } else if (window.eventManager) {
+                    window.eventManager.openEventModal('create', dateKey);
+                }
+            };
+
+            window.openEventEditModal = (dateKey, eventId) => {
+                if (window.eventManager?.isInitialized) {
+                    const events = window.scheduleCore?.getEventsByDate(dateKey) || [];
+                    const event = events.find(e => e.id === eventId);
+                    if (event) {
+                        window.eventManager.openEventModal('edit', dateKey, event);
+                    }
+                }
+            };
+
+            setTimeout(async () => {
+                try {
+                    let attempts = 0;
+                    while (attempts < 50) {
+                        if (window.CalendarView && window.EventManager && window.CEManager && 
+                            window.DEPARTMENTS && window.showMessage && window.CEDailyStatusManager) {
+                            break;
+                        }
+                        await new Promise(resolve => setTimeout(resolve, 100));
+                        attempts++;
+                    }
+
+                    if (!window.calendarView) {
+                        window.calendarView = new window.CalendarView();
+                    }
+                    
+                    if (!window.eventManager) {
+                        window.eventManager = new window.EventManager();
+                    }
+                    
+                    if (!window.ceManager) {
+                        window.ceManager = new window.CEManager();
+                    }
+
+                    if (!window.ceDailyStatus) {
+                        window.ceDailyStatus = new window.CEDailyStatusManager();
+                    }
+                    
+                    console.log('🎉 V2統合システム起動完了');
+                } catch (error) {
+                    console.error('❌ V2システム初期化エラー:', error);
+                }
+            }, 1500);
+        }
+    }
+
+    // 初期化
+    if (!window.dashboardAuthInitialized) {
+        window.dashboardAuthInitialized = true;
+        document.addEventListener('DOMContentLoaded', () => {
+            window.dashboardAuth = new DashboardAuth();
+        });
+    }
+    </script>
+
+</body>
+</html>
