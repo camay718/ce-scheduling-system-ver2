@@ -50,7 +50,7 @@
         </div>
     </div>
 
-    <!-- Firebase SDK（defer削除） -->
+    <!-- Firebase SDK -->
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
@@ -77,7 +77,7 @@
     };
     </script>
     
-    <!-- ログイン処理（クリーン版） -->
+    <!-- ログイン処理（監査ログ対応版） -->
     <script>
     // パスワード検証ユーティリティ（PBKDF2-SHA256）
     async function verifyPassword(password, record) {
@@ -106,8 +106,28 @@
         return hashB64 === record.hash;
     }
 
+    // 監査ログ記録関数
+    async function logLogin(username, displayName, uid) {
+        try {
+            const entry = {
+                action: 'login',
+                details: { username },
+                uid: uid || null,
+                username,
+                displayName: displayName || username,
+                timestamp: firebase.database.ServerValue.TIMESTAMP,
+                userAgent: navigator.userAgent.substring(0, 100)
+            };
+            
+            await window.database.ref(`${window.DATA_ROOT}/auditLogs`).push(entry);
+            console.log('📝 ログイン監査ログ記録完了');
+        } catch (error) {
+            console.warn('⚠️ ログイン監査ログ記録失敗:', error);
+        }
+    }
+
     document.addEventListener('DOMContentLoaded', async () => {
-        console.log('🔐 ログイン処理開始（統一版）');
+        console.log('🔐 ログイン処理開始（監査ログ対応版）');
         
         try {
             await window.waitForFirebase();
@@ -185,12 +205,20 @@
                             }
                         }
 
+                        // 匿名認証を確実に実行
+                        if (!window.auth.currentUser) {
+                            await window.auth.signInAnonymously();
+                        }
+
                         sessionStorage.setItem('targetUID', uid);
                         sessionStorage.setItem('currentUsername', username);
                         
                         await window.database.ref(`${window.DATA_ROOT}/users/${uid}`).update({
                             lastLogin: firebase.database.ServerValue.TIMESTAMP
                         });
+
+                        // 監査ログ記録
+                        await logLogin(username, userData.displayName, uid);
                         
                         // 個人設定が必要かチェック
                         if (userData.needsSetup || userData.passwordResetCompleted || !userData.password?.hash) {
@@ -245,6 +273,9 @@
                         sessionStorage.setItem('targetUID', uid);
                         sessionStorage.setItem('currentUsername', username);
                         sessionStorage.setItem('needsSetup', 'true');
+
+                        // 監査ログ記録
+                        await logLogin(username, newUserData.displayName, uid);
 
                         window.showMessage('アカウント有効化完了！個人設定へ移動します...', 'success');
                         setTimeout(() => {
