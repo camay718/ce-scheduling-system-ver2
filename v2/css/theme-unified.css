@@ -676,3 +676,333 @@ body.theme-unified {
     padding: 1px 4px;
     font-size: 9px;
 }
+/* 勤務区分表専用スタイル */
+.work-schedule-container {
+    background: var(--glass-bg);
+    backdrop-filter: blur(10px);
+    border: 1px solid var(--glass-border);
+    border-radius: 16px;
+    padding: 20px;
+    margin: 20px 0;
+}
+
+.work-schedule-header {
+    text-align: center;
+    margin-bottom: 20px;
+}
+
+.work-schedule-title {
+    font-size: 24px;
+    font-weight: bold;
+    color: #2d3748;
+    margin-bottom: 10px;
+}
+
+.work-schedule-period {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.work-schedule-table-wrapper {
+    overflow-x: auto;
+    margin: 20px 0;
+    border-radius: 12px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+
+.work-schedule-table {
+    width: 100%;
+    min-width: 1400px;
+    border-collapse: collapse;
+    font-size: 12px;
+    background: white;
+}
+
+.work-schedule-table th,
+.work-schedule-table td {
+    border: 1px solid #e0e0e0;
+    padding: 6px 4px;
+    text-align: center;
+    vertical-align: middle;
+    height: 32px;
+}
+
+.work-schedule-table th {
+    background: linear-gradient(135deg, #f8f9fa, #e9ecef);
+    font-weight: 600;
+    color: #495057;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+}
+
+.work-schedule-table .name-header {
+    position: sticky;
+    left: 0;
+    background: linear-gradient(135deg, #f8f9fa, #e9ecef);
+    z-index: 15;
+    min-width: 120px;
+    text-align: left;
+    padding-left: 8px;
+}
+
+.work-schedule-table .name-cell {
+    position: sticky;
+    left: 0;
+    background: white;
+    z-index: 5;
+    text-align: left;
+    padding-left: 8px;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+}
+
+.work-schedule-table .name-cell:hover {
+    background: #f8f9fa;
+}
+
+.work-schedule-table .date-header {
+    min-width: 50px;
+    writing-mode: horizontal-tb;
+}
+
+.work-schedule-table .weekend-header {
+    background: linear-gradient(135deg, #fff3cd, #ffeaa7);
+    color: #856404;
+}
+
+.work-schedule-table .summary-header {
+    background: linear-gradient(135deg, #d1ecf1, #bee5eb);
+    color: #0c5460;
+    min-width: 45px;
+}
+
+/* 勤務状態セル */
+.work-cell {
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-weight: 600;
+    position: relative;
+}
+
+.work-cell:hover {
+    transform: scale(1.05);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+}
+
+/* 勤務区分別背景色 */
+.work-cell.type-ope { 
+    background: #87CEEB; 
+    color: #1E3A8A; 
+}
+
+.work-cell.type-ope.status-A1 { 
+    background: #1E3A8A; 
+    color: white; 
+}
+
+.work-cell.type-me { 
+    background: #90EE90; 
+    color: #006400; 
+}
+
+.work-cell.type-hd { 
+    background: #FFB6C1; 
+    color: #8B008B; 
+}
+
+.work-cell.type-flex { 
+    background: #FFFF99; 
+    color: #B8860B; 
+}
+
+/* 希望勤務（アンダーライン） */
+.work-cell.desired {
+    text-decoration: underline;
+    text-decoration-thickness: 2px;
+    text-underline-offset: 3px;
+}
+
+/* 休日セル */
+.work-cell.holiday {
+    background: linear-gradient(135deg, #f0f8ff, #e6f3ff);
+}
+
+.work-cell.holiday.status-B,
+.work-cell.holiday.status-非,
+.work-cell.holiday.status-出,
+.work-cell.holiday.status-研 {
+    background: linear-gradient(135deg, #ffebee, #ffcdd2);
+}
+
+/* サマリーセル */
+.summary-cell {
+    background: #f8f9fa;
+    font-weight: 500;
+}
+
+/* フッターサマリー行 */
+.footer-summary-row th,
+.footer-summary-row td {
+    background: linear-gradient(135deg, #e9ecef, #dee2e6);
+    font-weight: 600;
+    position: sticky;
+    bottom: 0;
+    z-index: 8;
+}
+
+.footer-summary-row .type-label {
+    position: sticky;
+    left: 0;
+    z-index: 15;
+    background: linear-gradient(135deg, #e9ecef, #dee2e6);
+}
+
+/* 警告表示 */
+.warning-count {
+    color: #dc3545;
+    font-weight: bold;
+    background: rgba(220, 53, 69, 0.1);
+    border-radius: 4px;
+    padding: 2px 4px;
+}
+
+/* 勤務時間帯説明 */
+.work-time-definitions {
+    background: #f8f9fa;
+    border-radius: 8px;
+    padding: 16px;
+    margin: 20px 0;
+}
+
+.work-time-definitions table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.work-time-definitions th,
+.work-time-definitions td {
+    padding: 8px 12px;
+    text-align: left;
+    border-bottom: 1px solid #dee2e6;
+}
+
+.work-time-definitions th {
+    background: #e9ecef;
+    font-weight: 600;
+}
+
+/* 勤務区分変更モーダル */
+.work-type-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0,0,0,0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 2000;
+}
+
+.work-type-modal-content {
+    background: white;
+    border-radius: 12px;
+    padding: 24px;
+    max-width: 500px;
+    width: 90%;
+    max-height: 80vh;
+    overflow-y: auto;
+}
+
+.work-type-selector {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+    margin: 16px 0;
+}
+
+.work-type-option {
+    padding: 12px;
+    border: 2px solid #dee2e6;
+    border-radius: 8px;
+    cursor: pointer;
+    text-align: center;
+    transition: all 0.2s ease;
+}
+
+.work-type-option:hover {
+    border-color: #6c757d;
+    background: #f8f9fa;
+}
+
+.work-type-option.selected {
+    border-color: #007bff;
+    background: rgba(0, 123, 255, 0.1);
+}
+
+.work-type-option.type-ope {
+    background: linear-gradient(135deg, #87CEEB, #B0E0E6);
+    color: #1E3A8A;
+}
+
+.work-type-option.type-me {
+    background: linear-gradient(135deg, #90EE90, #98FB98);
+    color: #006400;
+}
+
+.work-type-option.type-hd {
+    background: linear-gradient(135deg, #FFB6C1, #FFC0CB);
+    color: #8B008B;
+}
+
+.work-type-option.type-flex {
+    background: linear-gradient(135deg, #FFFF99, #FFFFE0);
+    color: #B8860B;
+}
+
+/* 月次業務省スペース化 */
+.department-section .monthly-plans {
+    order: 99;
+    margin-top: 8px;
+    padding: 6px;
+    background: rgba(255, 255, 255, 0.4);
+    border: 1px dashed #ffa726;
+    border-radius: 6px;
+    font-size: 10px;
+}
+
+.department-section .monthly-plans .monthly-event-item {
+    padding: 4px 6px;
+    margin: 2px 0;
+    border-width: 1px;
+    font-size: 10px;
+}
+
+.department-section .monthly-plans .monthly-task-badge {
+    top: -4px;
+    right: 4px;
+    font-size: 8px;
+    padding: 1px 4px;
+}
+
+.department-section .monthly-plans .btn-small {
+    padding: 2px 6px;
+    font-size: 9px;
+}
+
+.department-section .monthly-plans .assignment-dropzone {
+    min-height: 20px;
+    padding: 4px;
+    margin-top: 4px;
+}
+
+.department-section .monthly-plans .chip {
+    padding: 1px 4px;
+    font-size: 9px;
+}
