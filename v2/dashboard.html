@@ -244,54 +244,30 @@
             color: #6b7280;
         }
 
-        /* CE管理グリッド */
-        .ce-management-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-            gap: 16px;
-            padding: 16px 0;
-        }
-
-        .ce-management-card {
-            border: 1px solid #e5e7eb;
-            border-radius: 8px;
-            padding: 12px;
-            background: white;
-            transition: all 0.2s ease;
-        }
-
-        .ce-management-card:hover {
-            border-color: var(--brand-primary);
-            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-        }
-
-        /* CE並び替えモーダル専用 */
-        .ce-reorder-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 16px;
-            padding: 16px 0;
-        }
-
-        .ce-reorder-card {
+        /* 勤務区分表表示用スタイル */
+        .schedule-display-container {
             background: var(--glass-bg);
-            backdrop-filter: blur(5px);
-            border: 2px solid var(--glass-border);
-            border-radius: 12px;
-            padding: 15px;
+            backdrop-filter: blur(10px);
+            border: 1px solid var(--glass-border);
+            border-radius: 16px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+
+        .period-navigation {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
+        .period-display {
             text-align: center;
-            cursor: move;
-            transition: all 0.2s ease;
-        }
-
-        .ce-reorder-card:hover {
-            transform: translateY(-2px);
-            box-shadow: var(--shadow-hover);
-        }
-
-        .ce-reorder-card.dragging {
-            opacity: 0.6;
-            transform: rotate(3deg) scale(0.95);
+            padding: 10px 20px;
+            background: rgba(255, 255, 255, 0.8);
+            border-radius: 8px;
+            font-weight: bold;
         }
     </style>
 </head>
@@ -304,7 +280,7 @@
 
     <!-- メインインターフェース -->
     <div id="mainInterface" style="display:none;">
-        <!-- サイドバー（最適化版） -->
+        <!-- サイドバー -->
         <div id="sidebar" class="sidebar p-4">
             <div class="mb-3 flex justify-between items-center">
                 <button id="toggleSidebar" class="p-2 rounded-lg hover:bg-gray-200" title="サイドバー表示/非表示">
@@ -328,7 +304,7 @@
                     <i class="fas fa-calendar-day mr-2"></i><span class="sidebar-text">日別スケジュール</span>
                 </button>
                 <button id="ceManagementTab" class="nav-tab w-full text-left p-3 rounded-lg hover:bg-green-100 font-medium">
-                    <i class="fas fa-users mr-2"></i><span class="sidebar-text">CEリスト管理</span>
+                    <i class="fas fa-table mr-2"></i><span class="sidebar-text">CE勤務区分表</span>
                 </button>
                 <button id="calendarTab" class="nav-tab w-full text-left p-3 rounded-lg hover:bg-green-100 font-medium">
                     <i class="fas fa-calendar-week mr-2"></i><span class="sidebar-text">週間カレンダー</span>
@@ -347,7 +323,7 @@
                 </button>
             </nav>
 
-            <!-- テンプレート（縦配置版） -->
+            <!-- テンプレート -->
             <div class="sidebar-text mb-4">
                 <h3 class="text-sm font-medium text-gray-700 mb-2">テンプレート</h3>
                 <div class="space-y-2">
@@ -383,7 +359,7 @@
 
         <!-- メインコンテンツ -->
         <div class="main-content p-4">
-            <!-- 日別スケジュール（9部門・3x3レイアウト） -->
+            <!-- 日別スケジュール -->
             <div id="dailyScheduleContent" class="screen-content">
                 <div class="mb-4 flex justify-between items-center">
                     <h2 id="dailyScheduleTitle" class="text-2xl font-bold">日別スケジュール</h2>
@@ -421,389 +397,103 @@
                 </div>
             </div>
 
- <!-- CEリスト管理（勤務区分表統合版） -->
-<div id="ceManagementContent" class="screen-content" style="display:none;">
-    <div class="work-schedule-container">
-        <!-- ヘッダー部分 -->
-        <div class="work-schedule-header">
-            <h2 class="work-schedule-title">臨床工学部 勤務区分表</h2>
-            <div class="work-schedule-period">
-                <div class="flex items-center gap-3">
-                    <input type="date" id="scheduleStartDate" class="input-unified" style="width: auto;">
-                    <span class="text-gray-600">～</span>
-                    <input type="date" id="scheduleEndDate" class="input-unified" style="width: auto;">
-                    <button id="updateSchedulePeriod" class="btn-unified btn-outline-unified">
-                        <i class="fas fa-sync mr-1"></i>期間更新
-                    </button>
-                </div>
-                <button id="createWorkSchedule" class="btn-unified btn-primary-unified">
-                    <i class="fas fa-plus mr-2"></i>勤務表作成
-                </button>
-            </div>
-        </div>
-
-        <!-- 勤務時間帯定義 -->
-        <div class="work-time-definitions">
-            <h3 class="text-lg font-semibold mb-3">勤務時間帯</h3>
-            <table>
-                <thead>
-                    <tr>
-                        <th>区分</th>
-                        <th>勤務時間</th>
-                        <th>休憩時間</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr>
-                        <td><strong>A</strong></td>
-                        <td>8:00～16:30</td>
-                        <td>11:45～12:30</td>
-                    </tr>
-                    <tr>
-                        <td><strong>A1</strong></td>
-                        <td>7:00～15:30</td>
-                        <td>11:45～12:30</td>
-                    </tr>
-                    <tr>
-                        <td><strong>B</strong></td>
-                        <td>8:00～翌8:00（当直勤務）</td>
-                        <td>11:45～12:45及び16:45～17:45</td>
-                    </tr>
-                    <tr>
-                        <td><strong>×</strong></td>
-                        <td>休日</td>
-                        <td>-</td>
-                    </tr>
-                </tbody>
-            </table>
-            <p class="text-sm text-gray-600 mt-2">
-                <strong>※</strong> 下線付きは希望勤務、当直は1日1人、非番は当直の翌日、土日祝日の当直・非番・出張・研修は出勤扱い
-            </p>
-        </div>
-
-        <!-- 勤務区分表 -->
-        <div class="work-schedule-table-wrapper">
-            <table id="workScheduleTable" class="work-schedule-table">
-                <thead id="workScheduleTableHead">
-                    <!-- ヘッダーは動的生成 -->
-                </thead>
-                <tbody id="workScheduleTableBody">
-                    <!-- ボディは動的生成 -->
-                </tbody>
-                <tfoot id="workScheduleTableFoot">
-                    <!-- フッターは動的生成 -->
-                </tfoot>
-            </table>
-        </div>
-    </div>
-</div>
-
-<!-- 勤務状態選択メニュー -->
-<div id="workStatusMenu" class="work-status-menu" style="display: none;">
-    <div class="menu-header">
-        <div class="desire-check">
-            <input type="checkbox" id="desireWorkCheck">
-            <label for="desireWorkCheck">希望勤務（下線表示）</label>
-        </div>
-    </div>
-    <div class="status-buttons" id="statusButtons">
-        <!-- ボタンは動的生成 -->
-    </div>
-    <div class="text-right">
-        <button id="closeStatusMenu" class="btn-unified btn-outline-unified btn-small">閉じる</button>
-    </div>
-</div>
-
-<!-- 勤務区分変更モーダル -->
-<div id="workTypeModal" class="work-type-modal" style="display: none;">
-    <div class="work-type-modal-content">
-        <div class="flex justify-between items-center mb-4">
-            <h3 class="text-lg font-semibold">勤務区分変更</h3>
-            <button id="closeWorkTypeModal" class="text-gray-500 hover:text-gray-700">
-                <i class="fas fa-times text-xl"></i>
-            </button>
-        </div>
-        
-        <div class="mb-4">
-            <p>対象CE: <span id="workTypeTargetName" class="font-semibold"></span></p>
-        </div>
-        
-        <div class="work-type-selector" id="workTypeSelector">
-            <!-- 選択肢は動的生成 -->
-        </div>
-        
-        <div class="grid grid-cols-2 gap-4 mb-4">
-            <div>
-                <label class="block text-sm font-medium mb-2">適用開始日</label>
-                <input type="date" id="workTypeStartDate" class="input-unified">
-            </div>
-            <div>
-                <label class="block text-sm font-medium mb-2">適用終了日</label>
-                <input type="date" id="workTypeEndDate" class="input-unified">
-            </div>
-        </div>
-        
-        <div class="flex justify-end space-x-3">
-            <button id="cancelWorkTypeChange" class="btn-unified btn-outline-unified">
-                キャンセル
-            </button>
-            <button id="applyWorkTypeChange" class="btn-unified btn-primary-unified">
-                <i class="fas fa-check mr-2"></i>適用
-            </button>
-        </div>
-    </div>
-</div>
-
-<!-- 勤務表作成モーダル -->
-<div id="createScheduleModal" class="work-type-modal" style="display: none;">
-    <div class="work-type-modal-content">
-        <div class="flex justify-between items-center mb-4">
-            <h3 class="text-lg font-semibold">勤務表作成</h3>
-            <button id="closeCreateScheduleModal" class="text-gray-500 hover:text-gray-700">
-                <i class="fas fa-times text-xl"></i>
-            </button>
-        </div>
-        
-        <form id="createScheduleForm">
-            <div class="grid grid-cols-2 gap-4 mb-4">
-                <div>
-                    <label class="block text-sm font-medium mb-2">開始日</label>
-                    <input type="date" id="createStartDate" class="input-unified" required>
-                </div>
-                <div>
-                    <label class="block text-sm font-medium mb-2">終了日</label>
-                    <input type="date" id="createEndDate" class="input-unified" required>
-                </div>
-            </div>
-            
-            <div class="mb-4">
-                <label class="flex items-center">
-                    <input type="checkbox" id="overwriteExisting" class="mr-2">
-                    <span class="text-sm">既存データを上書きする</span>
-                </label>
-            </div>
-            
-            <div class="mb-4 p-3 bg-blue-50 border-l-4 border-blue-400 rounded">
-                <p class="text-blue-700 text-sm">
-                    <i class="fas fa-info-circle mr-2"></i>
-                    平日は全員「A」、土日祝日は「×」で初期化されます。勤務区分（OPE/ME/HD/FLEX）は現在の設定が引き継がれます。
-                </p>
-            </div>
-            
-            <div class="flex justify-end space-x-3">
-                <button type="button" id="cancelCreateSchedule" class="btn-unified btn-outline-unified">
-                    キャンセル
-                </button>
-                <button type="submit" class="btn-unified btn-primary-unified">
-                    <i class="fas fa-plus mr-2"></i>作成
-                </button>
-            </div>
-        </form>
-    </div>
-</div>
-
-    <!-- 月次業務追加モーダル -->
-    <div id="monthlyTaskModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-        <div class="glass-card p-6 max-w-lg w-full mx-4 max-h-[90vh] overflow-y-auto">
-            <div class="flex justify-between items-center mb-4">
-                <h3 class="text-lg font-semibold">月次業務追加</h3>
-                <button onclick="window.closeModal('monthlyTaskModal')" class="text-gray-500 hover:text-gray-700">
-                    <i class="fas fa-times text-xl"></i>
-                </button>
-            </div>
-            
-            <form id="monthlyTaskForm" class="space-y-4">
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-2">業務内容</label>
-                    <input type="text" id="monthlyTaskName" required class="input-unified">
-                </div>
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-2">部門</label>
-                    <select id="monthlyTaskDepartment" required class="input-unified">
-                        <option value="">部門を選択</option>
-                    </select>
-                </div>
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-2">実施予定月</label>
-                        <input type="month" id="monthlyTaskMonth" required class="input-unified">
+            <!-- CE勤務区分表（表示専用） -->
+            <div id="ceManagementContent" class="screen-content" style="display:none;">
+                <div class="schedule-display-container">
+                    <div class="period-navigation">
+                        <button id="prevPeriodBtn" class="btn-unified btn-outline-unified">
+                            <i class="fas fa-chevron-left mr-1"></i>前の期間
+                        </button>
+                        <div class="period-display">
+                            <div id="currentPeriodDisplay" class="text-lg font-bold">期間を読み込み中...</div>
+                            <div class="text-sm text-gray-500">28日間の勤務表</div>
+                        </div>
+                        <button id="nextPeriodBtn" class="btn-unified btn-outline-unified">
+                            次の期間<i class="fas fa-chevron-right ml-1"></i>
+                        </button>
                     </div>
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-2">目標件数</label>
-                        <input type="number" id="monthlyTaskTargetCount" min="1" value="1" required class="input-unified">
+                    
+                    <div class="text-center mb-4">
+                        <button id="openScheduleEditorBtn" class="btn-unified btn-primary-unified">
+                            <i class="fas fa-edit mr-2"></i>勤務表を作成・編集
+                        </button>
+                    </div>
+
+                    <!-- 勤務時間帯定義 -->
+                    <div class="work-time-definitions mb-6">
+                        <h3 class="text-lg font-semibold mb-3">勤務時間帯</h3>
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>区分</th>
+                                    <th>勤務時間</th>
+                                    <th>休憩時間</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><strong>A</strong></td>
+                                    <td>8:00～16:30</td>
+                                    <td>11:45～12:30</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>A1</strong></td>
+                                    <td>7:00～15:30</td>
+                                    <td>11:45～12:30</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>B</strong></td>
+                                    <td>8:00～翌8:00（当直勤務）</td>
+                                    <td>11:45～12:45及び16:45～17:45</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>×</strong></td>
+                                    <td>休日</td>
+                                    <td>-</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                        <p class="text-sm text-gray-600 mt-2">
+                            <strong>※</strong> 下線付きは希望勤務、当直は1日1人、非番は当直の翌日、土日祝日の当直・非番・出張・研修は出勤扱い
+                        </p>
+                    </div>
+
+                    <!-- 勤務区分表表示エリア -->
+                    <div id="workScheduleDisplayArea" class="text-center py-12 text-gray-500">
+                        <i class="fas fa-table text-4xl mb-4"></i>
+                        <h3 class="text-lg font-semibold mb-2">勤務区分表</h3>
+                        <p class="mb-4">作成済みの勤務表がここに表示されます</p>
+                        <button onclick="document.getElementById('openScheduleEditorBtn').click()" 
+                                class="btn-unified btn-primary-unified">
+                            <i class="fas fa-plus mr-2"></i>勤務表を作成
+                        </button>
                     </div>
                 </div>
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-2">必要人数</label>
-                    <input type="number" id="monthlyTaskRequired" min="1" value="1" required class="input-unified">
-                </div>
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-2">備考</label>
-                    <textarea id="monthlyTaskMemo" rows="3" class="input-unified resize-none" placeholder="月次業務の詳細など"></textarea>
-                </div>
-                
-                <div class="flex justify-end space-x-3 pt-4">
-                    <button type="button" id="deleteMonthlyTaskBtn" class="hidden bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-md text-sm">
-                        <i class="fas fa-trash mr-1"></i>削除
-                    </button>
-                    <button type="button" onclick="window.closeModal('monthlyTaskModal')" class="btn-unified btn-outline-unified">
-                        キャンセル
-                    </button>
-                    <button type="submit" class="btn-unified btn-primary-unified">
-                        <i class="fas fa-calendar-alt mr-1"></i>月次業務追加
-                    </button>
-                </div>
-            </form>
-        </div>
-    </div>
-
-    <!-- 月次業務実施モーダル -->
-    <div id="monthlyTaskExecuteModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-        <div class="glass-card p-6 max-w-md w-full mx-4">
-            <div class="flex justify-between items-center mb-4">
-                <h3 class="text-lg font-semibold">月次業務実施記録</h3>
-                <button onclick="window.closeModal('monthlyTaskExecuteModal')" class="text-gray-500 hover:text-gray-700">
-                    <i class="fas fa-times text-xl"></i>
-                </button>
-            </div>
-            
-            <form id="monthlyTaskExecuteForm" class="space-y-4">
-                <div id="monthlyTaskExecuteInfo" class="p-3 bg-blue-50 border-l-4 border-blue-400 rounded mb-4">
-                    <!-- 業務情報がここに表示されます -->
-                </div>
-                
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-2">実施件数</label>
-                    <input type="number" id="monthlyTaskExecuteCount" min="1" required class="input-unified">
-                </div>
-                
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-2">実施備考</label>
-                    <textarea id="monthlyTaskExecuteMemo" rows="3" class="input-unified resize-none" placeholder="実施内容の詳細など"></textarea>
-                </div>
-                
-                <div class="flex justify-end space-x-3 pt-4">
-                    <button type="button" onclick="window.closeModal('monthlyTaskExecuteModal')" class="btn-unified btn-outline-unified">
-                        キャンセル
-                    </button>
-                    <button type="submit" class="btn-unified btn-primary-unified">
-                        <i class="fas fa-check mr-1"></i>実施記録
-                    </button>
-                </div>
-            </form>
-        </div>
-    </div>
-
-    <!-- 業務管理モーダル -->
-    <div id="eventModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-        <div class="glass-card p-6 max-w-lg w-full mx-4 max-h-[90vh] overflow-y-auto">
-            <div class="flex justify-between items-center mb-4">
-                <h3 id="eventModalTitle" class="text-lg font-semibold">業務追加</h3>
-                <button onclick="window.closeModal('eventModal')" class="text-gray-500 hover:text-gray-700">
-                    <i class="fas fa-times text-xl"></i>
-                </button>
-            </div>
-            
-            <form id="eventForm" class="space-y-4">
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-2">業務名</label>
-                        <input type="text" id="eventName" required class="input-unified">
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-2">部門</label>
-                        <select id="eventDepartment" required class="input-unified">
-                            <option value="">部門を選択</option>
-                        </select>
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-2">開始時間</label>
-                        <input type="time" id="eventStartTime" required class="input-unified">
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-2">終了時間</label>
-                        <input type="time" id="eventEndTime" required class="input-unified">
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-2">件数</label>
-                        <input type="number" id="eventCount" min="1" value="1" required class="input-unified">
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-2">必要人数</label>
-                        <input type="number" id="eventRequired" min="1" value="1" required class="input-unified">
-                    </div>
-                </div>
-                
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-2">日付</label>
-                    <input type="date" id="eventDate" required class="input-unified">
-                </div>
-                
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-2">備考（任意）</label>
-                    <textarea id="eventMemo" rows="3" class="input-unified resize-none" placeholder="申し送り事項など"></textarea>
-                </div>
-                
-                <div class="flex justify-end space-x-3 pt-4">
-                    <button type="button" id="deleteEventBtn" class="hidden bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-md text-sm">
-                        <i class="fas fa-trash mr-1"></i>削除
-                    </button>
-                    <button type="button" onclick="window.closeModal('eventModal')" class="btn-unified btn-outline-unified">
-                        キャンセル
-                    </button>
-                    <button type="submit" class="btn-unified btn-primary-unified">
-                        <i class="fas fa-save mr-1"></i>保存
-                    </button>
-                </div>
-            </form>
-        </div>
-    </div>
-
-    <!-- CE編集モーダル -->
-    <div id="ceEditModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-        <div class="glass-card p-6 max-w-lg w-full mx-4 max-h-[90vh] overflow-y-auto">
-            <div class="flex justify-between items-center mb-4">
-                <h3 class="text-lg font-semibold">CE編集</h3>
-                <button onclick="window.closeModal('ceEditModal')" class="text-gray-500 hover:text-gray-700">
-                    <i class="fas fa-times text-xl"></i>
-                </button>
             </div>
 
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                    <label class="block text-sm font-medium mb-1">名前</label>
-                    <input type="text" id="editCEName" class="input-unified"/>
-                </div>
-                <div>
-                    <label class="block text-sm font-medium mb-1">勤務区分</label>
-                    <select id="editCEWorkType" class="input-unified">
-                        <option value="OPE">OPE</option>
-                        <option value="ME">ME</option>
-                        <option value="HD">HD</option>
-                        <option value="FLEX">FLEX</option>
-                    </select>
-                </div>
+            <!-- その他のタブコンテンツ -->
+            <div id="calendarContent" class="screen-content" style="display:none;">
+                <h2 class="text-2xl font-bold mb-4">週間カレンダー</h2>
+                <p class="text-gray-600">週間カレンダー機能（開発予定）</p>
             </div>
 
-            <div class="mt-4">
-                <label class="block text-sm font-bold mb-2">曜日ごとの状態テンプレート</label>
-                <div class="grid grid-cols-2 md:grid-cols-3 gap-3 text-sm">
-                    <div><label class="block">月曜</label><select id="ceStatus_monday" class="input-unified"><option value="">通常</option><option value="早">早出</option><option value="当">当直</option><option value="非">非番</option><option value="休">休み</option><option value="出">出張</option></select></div>
-                    <div><label class="block">火曜</label><select id="ceStatus_tuesday" class="input-unified"><option value="">通常</option><option value="早">早出</option><option value="当">当直</option><option value="非">非番</option><option value="休">休み</option><option value="出">出張</option></select></div>
-                    <div><label class="block">水曜</label><select id="ceStatus_wednesday" class="input-unified"><option value="">通常</option><option value="早">早出</option><option value="当">当直</option><option value="非">非番</option><option value="休">休み</option><option value="出">出張</option></select></div>
-                    <div><label class="block">木曜</label><select id="ceStatus_thursday" class="input-unified"><option value="">通常</option><option value="早">早出</option><option value="当">当直</option><option value="非">非番</option><option value="休">休み</option><option value="出">出張</option></select></div>
-                    <div><label class="block">金曜</label><select id="ceStatus_friday" class="input-unified"><option value="">通常</option><option value="早">早出</option><option value="当">当直</option><option value="非">非番</option><option value="休">休み</option><option value="出">出張</option></select></div>
-                    <div><label class="block">土曜</label><select id="ceStatus_saturday" class="input-unified"><option value="">通常</option><option value="早">早出</option><option value="当">当直</option><option value="非">非番</option><option value="休">休み</option><option value="出">出張</option></select></div>
-                    <div><label class="block">日曜</label><select id="ceStatus_sunday" class="input-unified"><option value="">通常</option><option value="早">早出</option><option value="当">当直</option><option value="非">非番</option><option value="休">休み</option><option value="出">出張</option></select></div>
-                </div>
-                <p class="text-xs text-gray-500 mt-2">※ 曜日テンプレートは現在の日付のステータス表示に使用されます</p>
+            <div id="departmentTimelineContent" class="screen-content" style="display:none;">
+                <h2 class="text-2xl font-bold mb-4">業務別タイムライン</h2>
+                <p class="text-gray-600">業務別タイムライン機能（開発予定）</p>
             </div>
 
-            <div class="flex justify-end gap-3 mt-5">
-                <button id="saveCEButton" class="btn-unified btn-primary-unified">
-                    <i class="fas fa-save mr-1"></i>保存
-                </button>
-                <button class="btn-unified btn-outline-unified" onclick="window.closeModal('ceEditModal')">キャンセル</button>
+            <div id="personalTimelineContent" class="screen-content" style="display:none;">
+                <h2 class="text-2xl font-bold mb-4">個人別タイムライン</h2>
+                <p class="text-gray-600">個人別タイムライン機能（開発予定）</p>
+            </div>
+
+            <div id="analysisContent" class="screen-content" style="display:none;">
+                <h2 class="text-2xl font-bold mb-4">集計・分析</h2>
+                <p class="text-gray-600">集計・分析機能（開発予定）</p>
+            </div>
+
+            <div id="settingsContent" class="screen-content" style="display:none;">
+                <!-- 設定コンテンツは動的生成 -->
             </div>
         </div>
     </div>
@@ -818,7 +508,7 @@
     <script defer src="js/ui/ce-manager.js?v=20241212"></script>
     <script defer src="js/ui/ce-daily-status.js?v=20241212"></script>
 
-    <!-- Dashboard専用JavaScript（Phase 2完全実装版・修正版） -->
+    <!-- Dashboard専用JavaScript（完全修正版） -->
     <script>
     // ログアウト（監査ログ付き）
     window.handleLogout = async () => {
@@ -849,12 +539,236 @@
         }
     };
 
+    class WorkScheduleViewer {
+        constructor() {
+            this.currentPeriodIndex = 0;
+            this.availablePeriods = [];
+            this.init();
+        }
+
+        async init() {
+            try {
+                await window.waitForFirebase();
+                await this.loadAvailablePeriods();
+                this.setupEventListeners();
+                console.log('✅ 勤務区分表ビューアー初期化完了');
+            } catch (error) {
+                console.error('❌ 勤務区分表ビューアー初期化エラー:', error);
+            }
+        }
+
+        async loadAvailablePeriods() {
+            try {
+                const snapshot = await window.database.ref(`${window.DATA_ROOT}/workSchedules`).once('value');
+                const data = snapshot.val() || {};
+                
+                this.availablePeriods = Object.keys(data).map(periodKey => ({
+                    key: periodKey,
+                    ...data[periodKey].metadata
+                })).sort((a, b) => b.createdAt - a.createdAt);
+                
+                if (this.availablePeriods.length > 0) {
+                    this.currentPeriodIndex = 0;
+                    this.displayCurrentPeriod();
+                }
+            } catch (error) {
+                console.error('❌ 期間データ読み込みエラー:', error);
+            }
+        }
+
+        setupEventListeners() {
+            const prevBtn = document.getElementById('prevPeriodBtn');
+            const nextBtn = document.getElementById('nextPeriodBtn');
+            const editorBtn = document.getElementById('openScheduleEditorBtn');
+
+            if (prevBtn) prevBtn.onclick = () => this.navigatePeriod(-1);
+            if (nextBtn) nextBtn.onclick = () => this.navigatePeriod(1);
+            if (editorBtn) editorBtn.onclick = () => this.openScheduleEditor();
+        }
+
+        navigatePeriod(direction) {
+            const newIndex = this.currentPeriodIndex + direction;
+            
+            if (newIndex < 0 || newIndex >= this.availablePeriods.length) {
+                window.showMessage('これ以上の期間はありません', 'info');
+                return;
+            }
+            
+            this.currentPeriodIndex = newIndex;
+            this.displayCurrentPeriod();
+        }
+
+        async displayCurrentPeriod() {
+            const displayEl = document.getElementById('currentPeriodDisplay');
+            const areaEl = document.getElementById('workScheduleDisplayArea');
+            
+            if (this.availablePeriods.length === 0) {
+                if (displayEl) displayEl.textContent = '作成済みの期間なし';
+                if (areaEl) {
+                    areaEl.innerHTML = `
+                        <div class="text-center py-12">
+                            <i class="fas fa-calendar-plus text-4xl text-gray-400 mb-4"></i>
+                            <h3 class="text-lg font-semibold text-gray-600 mb-2">勤務区分表</h3>
+                            <p class="text-gray-500 mb-4">まだ勤務表が作成されていません</p>
+                            <button onclick="document.getElementById('openScheduleEditorBtn').click()" 
+                                    class="btn-unified btn-primary-unified">
+                                <i class="fas fa-plus mr-2"></i>最初の勤務表を作成
+                            </button>
+                        </div>
+                    `;
+                }
+                return;
+            }
+
+            const currentPeriod = this.availablePeriods[this.currentPeriodIndex];
+            if (displayEl) {
+                displayEl.innerHTML = `
+                    <div>${currentPeriod.startDate} ～ ${currentPeriod.endDate}</div>
+                    <div class="text-sm text-gray-500">(${this.currentPeriodIndex + 1}/${this.availablePeriods.length})</div>
+                `;
+            }
+
+            // 勤務表データを読み込んで表示
+            await this.renderWorkScheduleTable(currentPeriod.key);
+        }
+
+        async renderWorkScheduleTable(periodKey) {
+            const areaEl = document.getElementById('workScheduleDisplayArea');
+            if (!areaEl) return;
+
+            try {
+                const snapshot = await window.database.ref(`${window.DATA_ROOT}/workSchedules/${periodKey}`).once('value');
+                const periodData = snapshot.val();
+                
+                if (!periodData || !window.ceManager?.ceList) {
+                    areaEl.innerHTML = `
+                        <div class="text-center py-8">
+                            <i class="fas fa-exclamation-triangle text-4xl text-yellow-500 mb-4"></i>
+                            <p class="text-gray-600">勤務表データを読み込めませんでした</p>
+                        </div>
+                    `;
+                    return;
+                }
+
+                const scheduleData = periodData.scheduleData || {};
+                const metadata = periodData.metadata || {};
+                const dates = this.generateDateRange(new Date(metadata.startDate), new Date(metadata.endDate));
+
+                areaEl.innerHTML = `
+                    <div class="work-schedule-table-wrapper">
+                        <table class="work-schedule-table">
+                            ${this.generateTableHTML(dates, scheduleData)}
+                        </table>
+                    </div>
+                `;
+
+            } catch (error) {
+                console.error('❌ 勤務表表示エラー:', error);
+                areaEl.innerHTML = `
+                    <div class="text-center py-8">
+                        <i class="fas fa-exclamation-triangle text-4xl text-red-500 mb-4"></i>
+                        <p class="text-gray-600">勤務表の読み込みでエラーが発生しました</p>
+                    </div>
+                `;
+            }
+        }
+
+        generateDateRange(startDate, endDate) {
+            const dates = [];
+            const current = new Date(startDate);
+            
+            while (current <= endDate) {
+                dates.push(new Date(current));
+                current.setDate(current.getDate() + 1);
+            }
+            
+            return dates;
+        }
+
+        generateTableHTML(dates, scheduleData) {
+            // ヘッダー生成
+            let html = '<thead><tr><th class="name-header">氏名</th>';
+            
+            dates.forEach(date => {
+                const dayOfWeek = ['日', '月', '火', '水', '木', '金', '土'][date.getDay()];
+                const isWeekend = date.getDay() === 0 || date.getDay() === 6;
+                const headerClass = isWeekend ? 'date-header weekend-header' : 'date-header';
+                
+                html += `
+                    <th class="${headerClass}">
+                        <div>${date.getDate()}</div>
+                        <div class="text-xs">${dayOfWeek}</div>
+                    </th>
+                `;
+            });
+            
+            // サマリー列
+            const summaryHeaders = ['A', 'A1', 'B', '非', '×', '年', '出', '研', '休日数', '実勤務', '当直回数'];
+            summaryHeaders.forEach(header => {
+                html += `<th class="summary-header">${header}</th>`;
+            });
+            html += '</tr></thead>';
+            
+            // ボディ生成
+            html += '<tbody>';
+            window.ceManager.ceList.forEach(ce => {
+                html += `<tr><td class="name-cell">
+                    <div class="font-medium">${ce.name}</div>
+                    <div class="text-xs text-gray-500">${ce.workType}</div>
+                </td>`;
+                
+                const summary = { A: 0, A1: 0, B: 0, non: 0, off: 0, year: 0, trip: 0, training: 0, holidays: 0, actual: 0, night: 0 };
+                
+                dates.forEach(date => {
+                    const dateKey = this.formatDate(date);
+                    const workData = scheduleData[ce.id]?.[dateKey] || {};
+                    const isWeekend = date.getDay() === 0 || date.getDay() === 6;
+                    const status = workData.status || (isWeekend ? '×' : 'A');
+                    const desired = workData.desired || false;
+                    
+                    // サマリー計算
+                    if (isWeekend) summary.holidays++;
+                    switch (status) {
+                        case 'A': summary.A++; summary.actual++; break;
+                        case 'A1': summary.A1++; summary.actual++; break;
+                        case 'B': summary.B++; summary.actual++; summary.night++; break;
+                        case '非': summary.non++; summary.actual++; break;
+                        case '×': summary.off++; break;
+                        case '年': summary.year++; summary.actual++; break;
+                        case '出': summary.trip++; summary.actual++; break;
+                        case '研': summary.training++; summary.actual++; break;
+                    }
+                    
+                    const cellClass = `work-cell type-${ce.workType.toLowerCase()}${desired ? ' desired' : ''}${isWeekend ? ' holiday' : ''}`;
+                    html += `<td class="${cellClass}">${status}</td>`;
+                });
+                
+                // サマリーセル
+                const summaryValues = [summary.A, summary.A1, summary.B, summary.non, summary.off, summary.year, summary.trip, summary.training, summary.holidays, summary.actual, summary.night];
+                summaryValues.forEach(value => {
+                    html += `<td class="summary-cell">${value}</td>`;
+                });
+                
+                html += '</tr>';
+            });
+            html += '</tbody>';
+            
+            return html;
+        }
+
+        openScheduleEditor() {
+            window.open('pages/work-schedule-editor.html', '_blank', 'width=1400,height=900');
+        }
+
+        formatDate(date) {
+            return date.toISOString().slice(0, 10);
+        }
+    }
+
     class DashboardAuth {
         constructor() {
             this.isInitialized = false;
             this.selectedDate = new Date();
-            this.ceStatusDate = new Date();
-            this.currentMonth = new Date();
             this.monthlyTasks = {};
             this.init();
         }
@@ -920,20 +834,15 @@
         }
 
         showDashboard() {
-            // まず画面を出す
             const loadingEl = document.getElementById('loading');
             const mainEl = document.getElementById('mainInterface');
             if (loadingEl) loadingEl.style.display = 'none';
             if (mainEl) mainEl.style.display = 'block';
             
-            // その後の初期化
             this.updateUserDisplay();
             this.setupNavigation();
             this.setupSidebar();
             this.setupDailySchedule();
-            this.setupCEManagement();
-            this.setupModals();
-            this.loadMonthlyTasks();
             this.initializeV2System();
         }
 
@@ -963,8 +872,9 @@
                         this.showScreen(tab.content, tab.id);
                         if (tab.id === 'ceManagementTab') {
                             setTimeout(() => {
-                                this.setupCEManagementDate();
-                                this.renderCEManagementGrid();
+                                if (window.workScheduleViewer) {
+                                    window.workScheduleViewer.displayCurrentPeriod();
+                                }
                             }, 100);
                         }
                         if (tab.id === 'settingsTab') {
@@ -992,10 +902,6 @@
         }
 
         setupSidebar() {
-            this.setupTemplateButtons();
-        }
-
-        setupTemplateButtons() {
             const saveBtn = document.getElementById('templateSaveButton');
             const loadBtn = document.getElementById('templateLoadButton');
             if (saveBtn) saveBtn.onclick = () => window.showMessage('テンプレート保存機能（実装予定）', 'info');
@@ -1025,473 +931,6 @@
             this.renderDailySchedule();
         }
 
-        setupCEManagement() {
-            this.setupCEManagementDate();
-            this.setupCEManagementControls();
-        }
-
-        setupCEManagementDate() {
-            const dateInput = document.getElementById('ceStatusDate');
-            const prevBtn = document.getElementById('prevStatusDateBtn');
-            const nextBtn = document.getElementById('nextStatusDateBtn');
-            const todayBtn = document.getElementById('todayStatusBtn');
-            
-            if (dateInput) {
-                dateInput.value = this.formatDate(this.ceStatusDate);
-                dateInput.onchange = (e) => {
-                    this.ceStatusDate = new Date(e.target.value + 'T00:00:00');
-                    this.updateCEStatusDate();
-                };
-            }
-            if (prevBtn) prevBtn.onclick = () => {
-                this.ceStatusDate.setDate(this.ceStatusDate.getDate() - 1);
-                if (dateInput) dateInput.value = this.formatDate(this.ceStatusDate);
-                this.updateCEStatusDate();
-            };
-            if (nextBtn) nextBtn.onclick = () => {
-                this.ceStatusDate.setDate(this.ceStatusDate.getDate() + 1);
-                if (dateInput) dateInput.value = this.formatDate(this.ceStatusDate);
-                this.updateCEStatusDate();
-            };
-            if (todayBtn) todayBtn.onclick = () => {
-                this.ceStatusDate = new Date();
-                if (dateInput) dateInput.value = this.formatDate(this.ceStatusDate);
-                this.updateCEStatusDate();
-            };
-        }
-
-        updateCEStatusDate() {
-            if (window.ceDailyStatus) {
-                window.ceDailyStatus.selectedDate = this.ceStatusDate;
-                if (typeof window.ceDailyStatus.setupRealtimeStatusListener === 'function') {
-                    window.ceDailyStatus.setupRealtimeStatusListener();
-                }
-            }
-            this.renderCEManagementGrid();
-        }
-
-        setupCEManagementControls() {
-            const addBtn = document.getElementById('addNewCEBtn');
-            const sortName = document.getElementById('sortByNameBtn');
-            const sortWork = document.getElementById('sortByWorkTypeBtn');
-            const manual = document.getElementById('manualReorderBtn');
-
-            if (addBtn) addBtn.onclick = () => this.addNewCE();
-            if (sortName) sortName.onclick = () => this.sortCEList('name');
-            if (sortWork) sortWork.onclick = () => this.sortCEList('workType');
-            if (manual) manual.onclick = () => this.openCEReorderModal();
-        }
-
-        // モーダル初期化/イベント紐付け
-        setupModals() {
-            // 開くボタン
-            const openBulk = document.getElementById('addBulkEventBtn');
-            const openMonthly = document.getElementById('addMonthlyTaskBtn');
-            if (openBulk) openBulk.onclick = () => { this.populateDepartmentSelect(document.getElementById('bulkEventDepartment')); window.showModal('bulkEventModal'); };
-            if (openMonthly) openMonthly.onclick = () => { this.populateDepartmentSelect(document.getElementById('monthlyTaskDepartment')); document.getElementById('monthlyTaskForm').dataset.mode = 'create'; document.getElementById('deleteMonthlyTaskBtn').classList.add('hidden'); window.showModal('monthlyTaskModal'); };
-
-            // 期間一括業務 送信
-            const bulkForm = document.getElementById('bulkEventForm');
-            if (bulkForm && !bulkForm.dataset.bound) {
-                bulkForm.dataset.bound = 'true';
-                bulkForm.addEventListener('submit', async (e) => {
-                    e.preventDefault();
-                    try {
-                        const name = document.getElementById('bulkEventName').value.trim();
-                        const department = document.getElementById('bulkEventDepartment').value;
-                        const startTime = document.getElementById('bulkEventStartTime').value;
-                        const endTime = document.getElementById('bulkEventEndTime').value;
-                        const count = parseInt(document.getElementById('bulkEventCount').value, 10);
-                        const requiredPeople = parseInt(document.getElementById('bulkEventRequired').value, 10);
-                        const startDate = document.getElementById('bulkEventStartDate').value;
-                        const endDate = document.getElementById('bulkEventEndDate').value;
-                        const memo = document.getElementById('bulkEventMemo').value.trim();
-
-                        if (!name || !department || !startTime || !endTime || !startDate || !endDate || !count || !requiredPeople) {
-                            window.showMessage('必須項目を入力してください', 'error');
-                            return;
-                        }
-                        if (startDate > endDate) {
-                            window.showMessage('終了日は開始日以降を指定してください', 'error');
-                            return;
-                        }
-
-                        const start = new Date(startDate + 'T00:00:00');
-                        const end = new Date(endDate + 'T00:00:00');
-                        let created = 0;
-
-                        for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
-                            const dateKey = this.formatDate(d);
-                            const eventObj = {
-                                name,
-                                department,
-                                startTime,
-                                endTime,
-                                count,
-                                requiredPeople,
-                                memo: memo || '',
-                                createdAt: firebase.database.ServerValue.TIMESTAMP,
-                                createdBy: window.currentUserData?.displayName || window.currentUserData?.username || 'unknown',
-                                assignments: []
-                            };
-                            await window.database.ref(`${window.DATA_ROOT}/events/byDate/${dateKey}`).push(eventObj);
-                            created++;
-                        }
-
-                        await this.logAudit('bulk_event_add', { name, department, startDate, endDate, count: created });
-                        window.showMessage(`期間一括で ${created} 日分の業務を追加しました`, 'success');
-                        window.closeModal('bulkEventModal');
-                        this.renderDailySchedule();
-                    } catch (err) {
-                        console.error('期間一括追加エラー:', err);
-                        window.showMessage('期間一括業務の追加に失敗しました', 'error');
-                    }
-                });
-            }
-
-            // 月次業務 送信
-            const monthlyForm = document.getElementById('monthlyTaskForm');
-            if (monthlyForm && !monthlyForm.dataset.bound) {
-                monthlyForm.dataset.bound = 'true';
-                monthlyForm.addEventListener('submit', async (e) => {
-                    e.preventDefault();
-                    const mode = monthlyForm.dataset.mode || 'create';
-                    const taskId = monthlyForm.dataset.taskId || null;
-                    const name = document.getElementById('monthlyTaskName').value.trim();
-                    const department = document.getElementById('monthlyTaskDepartment').value;
-                    const month = document.getElementById('monthlyTaskMonth').value;
-                    const targetCount = parseInt(document.getElementById('monthlyTaskTargetCount').value, 10);
-                    const requiredPeople = parseInt(document.getElementById('monthlyTaskRequired').value, 10);
-                    const memo = document.getElementById('monthlyTaskMemo').value.trim();
-
-                    if (!name || !department || !month || !targetCount || !requiredPeople) {
-                        window.showMessage('必須項目を入力してください', 'error');
-                        return;
-                    }
-
-                    try {
-                        if (mode === 'edit' && taskId) {
-                            const updates = { name, department, month, targetCount, requiredPeople, memo };
-                            await window.database.ref(`${window.DATA_ROOT}/monthlyTasks/${taskId}`).update(updates);
-                            await this.logAudit('monthly_task_edit', { taskId, name, department, month });
-                            window.showMessage('月次業務を更新しました', 'success');
-                        } else {
-                            const data = {
-                                name, department, month, targetCount, requiredPeople, memo: memo || '',
-                                createdAt: firebase.database.ServerValue.TIMESTAMP,
-                                createdBy: window.currentUserData?.displayName || window.currentUserData?.username || 'unknown',
-                                completedCount: 0,
-                                assignments: []
-                            };
-                            await window.database.ref(`${window.DATA_ROOT}/monthlyTasks`).push(data);
-                            await this.logAudit('monthly_task_add', { name, department, month });
-                            window.showMessage('月次業務を追加しました', 'success');
-                        }
-                        window.closeModal('monthlyTaskModal');
-                        await this.loadMonthlyTasks();
-                        this.renderDailySchedule();
-                    } catch (err) {
-                        console.error('月次業務保存エラー:', err);
-                        window.showMessage('月次業務の保存に失敗しました', 'error');
-                    }
-                });
-            }
-
-            // 月次実施 送信
-            const execForm = document.getElementById('monthlyTaskExecuteForm');
-            if (execForm && !execForm.dataset.bound) {
-                execForm.dataset.bound = 'true';
-                execForm.addEventListener('submit', async (e) => {
-                    e.preventDefault();
-                    const taskId = execForm.dataset.taskId;
-                    if (!taskId) {
-                        window.showMessage('タスク情報が見つかりません', 'error');
-                        return;
-                    }
-                    await this.executeMonthlyTask(taskId);
-                });
-            }
-
-            // フォールバック用の eventForm（任意）
-            const eventForm = document.getElementById('eventForm');
-            if (eventForm && !eventForm.dataset.bound) {
-                eventForm.dataset.bound = 'true';
-                eventForm.addEventListener('submit', async (e) => {
-                    e.preventDefault();
-                    try {
-                        const name = document.getElementById('eventName').value.trim();
-                        const department = document.getElementById('eventDepartment').value;
-                        const startTime = document.getElementById('eventStartTime').value;
-                        const endTime = document.getElementById('eventEndTime').value;
-                        const count = parseInt(document.getElementById('eventCount').value, 10);
-                        const requiredPeople = parseInt(document.getElementById('eventRequired').value, 10);
-                        const dateKey = document.getElementById('eventDate').value;
-                        const memo = document.getElementById('eventMemo').value.trim();
-
-                        if (!name || !department || !startTime || !endTime || !dateKey || !count || !requiredPeople) {
-                            window.showMessage('必須項目を入力してください', 'error');
-                            return;
-                        }
-
-                        const eventObj = {
-                            name, department, startTime, endTime, count, requiredPeople, memo: memo || '',
-                            createdAt: firebase.database.ServerValue.TIMESTAMP,
-                            createdBy: window.currentUserData?.displayName || window.currentUserData?.username || 'unknown',
-                            assignments: []
-                        };
-                        await window.database.ref(`${window.DATA_ROOT}/events/byDate/${dateKey}`).push(eventObj);
-                        await this.logAudit('event_add', { date: dateKey, name, department });
-                        window.showMessage('業務を追加しました', 'success');
-                        window.closeModal('eventModal');
-                        this.renderDailySchedule();
-                    } catch (err) {
-                        console.error('業務保存エラー:', err);
-                        window.showMessage('業務の保存に失敗しました', 'error');
-                    }
-                });
-            }
-        }
-
-        // CE手動並び替えモーダル
-        openCEReorderModal() {
-            if (window.userRole === 'viewer') {
-                window.showMessage('編集権限がありません', 'warning');
-                return;
-            }
-            if (!window.ceManager?.ceList || window.ceManager.ceList.length === 0) {
-                window.showMessage('並び替えるCEがありません', 'info');
-                return;
-            }
-            this.renderCEReorderGrid();
-            window.showModal('ceReorderModal');
-        }
-
-        renderCEReorderGrid() {
-            const grid = document.getElementById('ceReorderGrid');
-            if (!grid || !window.ceManager?.ceList) return;
-            grid.innerHTML = '';
-            const ceList = window.ceManager.ceList;
-
-            ceList.forEach((ce, index) => {
-                const card = document.createElement('div');
-                card.className = 'ce-reorder-card';
-                card.draggable = true;
-                card.dataset.ceIndex = index;
-                card.innerHTML = `
-                    <div class="text-center">
-                        <div class="ce-item-mini worktype-${(ce.workType || 'ME').toLowerCase()} mb-2">
-                            ${ce.name}
-                        </div>
-                        <div class="text-xs text-gray-500">${ce.workType}</div>
-                        <div class="text-xs text-gray-400 mt-2">
-                            <i class="fas fa-arrows-alt"></i> ドラッグして移動
-                        </div>
-                    </div>
-                `;
-                card.addEventListener('dragstart', (e) => {
-                    e.dataTransfer.effectAllowed = 'move';
-                    e.dataTransfer.setData('text/plain', index.toString());
-                    card.classList.add('dragging');
-                });
-                card.addEventListener('dragend', () => card.classList.remove('dragging'));
-                grid.appendChild(card);
-            });
-
-            grid.addEventListener('dragover', (e) => {
-                e.preventDefault();
-                const dragging = grid.querySelector('.dragging');
-                if (!dragging) return;
-                const afterElement = this.getDragAfterElement(grid, e.clientX, e.clientY);
-                if (afterElement == null) {
-                    grid.appendChild(dragging);
-                } else {
-                    grid.insertBefore(dragging, afterElement);
-                }
-            });
-
-            const saveBtn = document.getElementById('saveCEOrderBtn');
-            if (saveBtn) saveBtn.onclick = async () => { await this.saveCEOrderFromModal(); };
-        }
-
-        getDragAfterElement(container, x, y) {
-            const draggableElements = [...container.querySelectorAll('.ce-reorder-card:not(.dragging)')];
-            return draggableElements.reduce((closest, child) => {
-                const box = child.getBoundingClientRect();
-                const offsetX = x - (box.left + box.width / 2);
-                const offsetY = y - (box.top + box.height / 2);
-                const offset = Math.sqrt(offsetX * offsetX + offsetY * offsetY);
-                if (offset < closest.offset) {
-                    return { offset: offset, element: child };
-                } else {
-                    return closest;
-                }
-            }, { offset: Number.POSITIVE_INFINITY }).element;
-        }
-
-        async saveCEOrderFromModal() {
-            try {
-                const grid = document.getElementById('ceReorderGrid');
-                const newOrder = Array.from(grid.querySelectorAll('.ce-reorder-card')).map(card => parseInt(card.dataset.ceIndex));
-                const reorderedList = newOrder.map(index => window.ceManager.ceList[index]);
-                window.ceManager.ceList = reorderedList;
-                await window.ceManager.saveCEList();
-                await this.logAudit('ce_reorder', { count: reorderedList.length });
-                window.showMessage('CEの順序を保存しました', 'success');
-                window.closeModal('ceReorderModal');
-                setTimeout(() => this.renderCEManagementGrid(), 300);
-            } catch (error) {
-                console.error('並び替え保存エラー:', error);
-                window.showMessage('順序の保存に失敗しました', 'error');
-            }
-        }
-
-        async addNewCE() {
-            if (window.userRole === 'viewer') {
-                window.showMessage('編集権限がありません', 'warning');
-                return;
-            }
-            const nameInput = document.getElementById('newCEName');
-            const workTypeInput = document.getElementById('newCEWorkType');
-            const name = nameInput?.value?.trim();
-            const workType = workTypeInput?.value || 'ME';
-            if (!name) {
-                window.showMessage('CE名を入力してください', 'warning');
-                return;
-            }
-            if (window.ceManager?.isInitialized) {
-                try {
-                    await window.ceManager.addNewCE(name, workType);
-                    nameInput.value = '';
-                    window.showMessage(`${name}を追加しました`, 'success');
-                    await this.logAudit('ce_add', { name, workType });
-                    setTimeout(() => this.renderCEManagementGrid(), 500);
-                } catch (error) {
-                    console.error('CE追加エラー:', error);
-                    window.showMessage('CEの追加に失敗しました', 'error');
-                }
-            }
-        }
-
-        async sortCEList(sortType) {
-            if (!window.ceManager?.ceList || window.userRole === 'viewer') return;
-            const ceList = window.ceManager.ceList;
-            switch (sortType) {
-                case 'name': ceList.sort((a, b) => a.name.localeCompare(b.name, 'ja')); break;
-                case 'workType': ceList.sort((a, b) => (a.workType || '').localeCompare(b.workType || '')); break;
-                default: return;
-            }
-            try {
-                await window.ceManager.saveCEList();
-                window.showMessage(`${sortType}順で並び替えました`, 'success');
-                await this.logAudit('ce_sort', { type: sortType, count: ceList.length });
-                setTimeout(() => this.renderCEManagementGrid(), 300);
-            } catch (error) {
-                console.error('並び替えエラー:', error);
-                window.showMessage('並び替えに失敗しました', 'error');
-            }
-        }
-
-        async renderCEManagementGrid() {
-            const grid = document.getElementById('ceManagementGrid');
-            if (!grid || !window.ceManager?.ceList) return;
-            grid.innerHTML = '';
-            const ceList = window.ceManager.ceList;
-
-            for (let i = 0; i < ceList.length; i++) {
-                const ce = ceList[i];
-                const card = document.createElement('div');
-                card.className = 'ce-management-card';
-                card.dataset.ceIndex = i;
-
-                let currentStatus = '';
-                if (window.ceDailyStatus?.statusData) {
-                    currentStatus = window.ceDailyStatus.statusData[ce.id] || '';
-                }
-
-                card.innerHTML = `
-                    <div class="flex items-center justify-between mb-2">
-                        <div class="ce-item-mini worktype-${(ce.workType || 'ME').toLowerCase()}">
-                            ${ce.name}
-                        </div>
-                        <div class="text-xs text-gray-500">${ce.workType}</div>
-                    </div>
-                    <div class="mb-3">
-                        <label class="block text-xs font-medium mb-1">勤務状態 (${this.formatDate(this.ceStatusDate)})</label>
-                        <select class="w-full p-1 border rounded text-xs" onchange="window.dashboardAuth.updateCEStatus('${ce.id}', this.value)">
-                            <option value="" ${currentStatus === '' ? 'selected' : ''}>通常</option>
-                            <option value="早" ${currentStatus === '早' ? 'selected' : ''}>早出</option>
-                            <option value="当" ${currentStatus === '当' ? 'selected' : ''}>当直</option>
-                            <option value="非" ${currentStatus === '非' ? 'selected' : ''}>非番</option>
-                            <option value="休" ${currentStatus === '休' ? 'selected' : ''}>休み</option>
-                            <option value="出" ${currentStatus === '出' ? 'selected' : ''}>出張</option>
-                        </select>
-                    </div>
-                    <div class="flex justify-between">
-                        <button onclick="window.ceManager.openCEEditModal(${i})" class="text-blue-600 hover:text-blue-800 text-xs">
-                            <i class="fas fa-edit mr-1"></i>編集
-                        </button>
-                        <button onclick="window.dashboardAuth.deleteCE(${i})" class="text-red-600 hover:text-red-800 text-xs">
-                            <i class="fas fa-trash mr-1"></i>削除
-                        </button>
-                    </div>
-                `;
-                grid.appendChild(card);
-            }
-        }
-
-        async updateCEStatus(ceId, status) {
-            if (window.userRole === 'viewer') return;
-            try {
-                if (window.ceDailyStatus?.isInitialized) {
-                    await window.ceDailyStatus.updateCEStatus(ceId, status);
-                    await this.logAudit('ce_status_update', { ceId, status, date: this.formatDate(this.ceStatusDate) });
-                    if (window.ceManager) {
-                        window.ceManager.currentDisplayDate = this.ceStatusDate;
-                        window.ceManager.displayCEList();
-                    }
-                }
-            } catch (error) {
-                console.error('CE勤務状態更新エラー:', error);
-                window.showMessage('勤務状態の更新に失敗しました', 'error');
-            }
-        }
-
-        async deleteCE(ceIndex) {
-            if (window.userRole === 'viewer') return;
-            if (window.ceManager?.ceList[ceIndex]) {
-                const ceName = window.ceManager.ceList[ceIndex].name;
-                if (!confirm(`${ceName} を削除しますか？\n\nこの操作は元に戻せません。`)) return;
-                try {
-                    window.ceManager.ceList.splice(ceIndex, 1);
-                    await window.ceManager.saveCEList();
-                    await this.logAudit('ce_delete', { name: ceName });
-                    this.renderCEManagementGrid();
-                    window.showMessage(`${ceName} を削除しました`, 'success');
-                } catch (error) {
-                    console.error('CE削除エラー:', error);
-                    window.showMessage('CEの削除に失敗しました', 'error');
-                }
-            }
-        }
-
-        // 監査ログ
-        async logAudit(action, details = {}) {
-            try {
-                const entry = {
-                    action,
-                    details,
-                    uid: window.currentUserData?.uid || null,
-                    username: window.currentUserData?.username || 'unknown',
-                    displayName: window.currentUserData?.displayName || 'unknown',
-                    timestamp: firebase.database.ServerValue.TIMESTAMP,
-                    userAgent: navigator.userAgent.substring(0, 100)
-                };
-                await window.database.ref(`${window.DATA_ROOT}/auditLogs`).push(entry);
-            } catch (error) {
-                console.warn('監査ログ記録失敗:', error);
-            }
-        }
-
         renderDailySchedule() {
             const title = document.getElementById('dailyScheduleTitle');
             const grid = document.getElementById('departmentGrid');
@@ -1508,412 +947,49 @@
             grid.innerHTML = '';
             grid.className = 'grid grid-cols-3 gap-4 mb-6';
 
-            window.DEPARTMENTS.forEach(dept => {
-                const section = this.createDepartmentSection(dept);
-                grid.appendChild(section);
-            });
+            if (window.DEPARTMENTS) {
+                window.DEPARTMENTS.forEach(dept => {
+                    const section = this.createDepartmentSection(dept);
+                    grid.appendChild(section);
+                });
+            }
 
-            this.loadDailyTasks();
-            this.loadMonthlyTasksForDate();
             this.updateCEListCount();
         }
 
         createDepartmentSection(dept) {
-    const section = document.createElement('div');
-    section.className = 'department-section p-4';
-    section.style.setProperty('--dept-color', window.DEPARTMENT_COLORS[dept] || '#e5e7eb');
-    
-    section.innerHTML = `
-        <div class="flex items-center justify-between mb-3">
-            <h3 class="font-bold text-sm flex items-center">
-                <i class="fas fa-${window.DEPARTMENT_ICONS[dept] || 'cog'} mr-2" style="color: ${window.DEPARTMENT_COLORS[dept] || '#2563eb'}"></i>
-                <span>${dept}</span>
-            </h3>
-            ${window.userRole !== 'viewer' ? `
-            <button class="btn-unified btn-primary-unified btn-small" onclick="window.dashboardAuth.openQuickAddEvent('${dept}')">
-                <i class="fas fa-plus mr-1"></i>業務追加
-            </button>` : ''}
-        </div>
-        <div class="task-list min-h-[120px] space-y-2" data-department="${dept}">
-            <!-- 通常業務がここに表示されます -->
-        </div>
-        <div class="monthly-plans" data-department="${dept}">
-            <!-- 月次業務がここに省スペース表示されます -->
-        </div>
-    `;
+            const section = document.createElement('div');
+            section.className = 'department-section p-4';
+            section.style.setProperty('--dept-color', window.DEPARTMENT_COLORS?.[dept] || '#e5e7eb');
+            
+            section.innerHTML = `
+                <div class="flex items-center justify-between mb-3">
+                    <h3 class="font-bold text-sm flex items-center">
+                        <i class="fas fa-${window.DEPARTMENT_ICONS?.[dept] || 'cog'} mr-2" style="color: ${window.DEPARTMENT_COLORS?.[dept] || '#2563eb'}"></i>
+                        <span>${dept}</span>
+                    </h3>
+                    ${window.userRole !== 'viewer' ? `
+                    <button class="btn-unified btn-primary-unified btn-small" onclick="window.dashboardAuth.openQuickAddEvent('${dept}')">
+                        <i class="fas fa-plus mr-1"></i>業務追加
+                    </button>` : ''}
+                </div>
+                <div class="task-list min-h-[120px] space-y-2" data-department="${dept}">
+                    <!-- 通常業務がここに表示されます -->
+                </div>
+                <div class="monthly-plans" data-department="${dept}">
+                    <!-- 月次業務がここに省スペース表示されます -->
+                </div>
+            `;
 
-    this.setupDropZone(section, dept);
-    return section;
-}
+            return section;
+        }
 
         openQuickAddEvent(department) {
             if (window.userRole === 'viewer') {
                 window.showMessage('編集権限がありません', 'warning');
                 return;
             }
-            const dateKey = this.formatDate(this.selectedDate);
-            if (window.eventManager?.openEventModal) {
-                window.eventManager.openEventModal('create', dateKey);
-                setTimeout(() => {
-                    this.populateDepartmentSelect(document.getElementById('eventDepartment'));
-                    const dateInput = document.getElementById('eventDate');
-                    if (dateInput) dateInput.value = dateKey;
-                    const deptSelect = document.getElementById('eventDepartment');
-                    if (deptSelect) deptSelect.value = department;
-                }, 50);
-            } else {
-                window.showModal('eventModal');
-                this.populateDepartmentSelect(document.getElementById('eventDepartment'));
-                const dateEl = document.getElementById('eventDate');
-                const deptEl = document.getElementById('eventDepartment');
-                if (dateEl) dateEl.value = dateKey;
-                if (deptEl) deptEl.value = department;
-            }
-        }
-
-        populateDepartmentSelect(selectElement) {
-            if (!selectElement) return;
-            selectElement.innerHTML = '<option value="">部門を選択</option>';
-            (window.DEPARTMENTS || []).forEach(dept => {
-                const option = document.createElement('option');
-                option.value = dept;
-                option.textContent = dept;
-                selectElement.appendChild(option);
-            });
-        }
-
-        setupDropZone(section, department) {
-            const dropZone = section.querySelector('.task-list');
-            dropZone.addEventListener('dragover', (e) => {
-                e.preventDefault();
-                section.classList.add('drag-over');
-            });
-            dropZone.addEventListener('dragleave', () => section.classList.remove('drag-over'));
-            dropZone.addEventListener('drop', (e) => {
-                e.preventDefault();
-                section.classList.remove('drag-over');
-                try {
-                    const dragData = JSON.parse(e.dataTransfer.getData('text/plain'));
-                    this.handleDrop(e, dragData);
-                } catch (error) {
-                    console.error('ドロップ処理エラー:', error);
-                }
-            });
-        }
-
-        async handleDrop(ev, dragData) {
-            if (window.userRole === 'viewer') {
-                window.showMessage('編集権限がありません', 'warning');
-                return;
-            }
-            const ceName = dragData.ceName;
-            const workType = dragData.workType || '';
-            const target = ev.target.closest('.task-item, .monthly-event-item');
-            if (!target) return;
-
-            const eventId = target.dataset.eventId;
-            const isMonthly = target.classList.contains('monthly-event-item');
-            const dateKey = this.formatDate(this.selectedDate);
-            if (!eventId) return;
-
-            try {
-                let dataPath, event;
-                if (isMonthly) {
-                    const snapshot = await window.database.ref(`${window.DATA_ROOT}/monthlyTasks/${eventId}`).once('value');
-                    event = snapshot.val();
-                    dataPath = `${window.DATA_ROOT}/monthlyTasks/${eventId}`;
-                } else {
-                    const snapshot = await window.database.ref(`${window.DATA_ROOT}/events/byDate/${dateKey}/${eventId}`).once('value');
-                    event = snapshot.val();
-                    dataPath = `${window.DATA_ROOT}/events/byDate/${dateKey}/${eventId}`;
-                }
-                if (!event) return;
-
-                const assignments = Array.isArray(event.assignments) ? event.assignments.slice() : [];
-                if (assignments.some(a => (typeof a === 'string' ? a : a.name) === ceName)) {
-                    window.showMessage('すでに割り当て済みです', 'info');
-                    return;
-                }
-                assignments.push({ name: ceName, workType });
-                await window.database.ref(dataPath).update({ assignments });
-
-                await this.logAudit(isMonthly ? 'monthly_task_assign' : 'event_assign', { date: dateKey, eventId, ceName });
-                window.showMessage(`${ceName} を割り当てました`, 'success');
-                this.renderDailySchedule();
-            } catch (error) {
-                console.error('割当エラー:', error);
-                window.showMessage('割り当てに失敗しました', 'error');
-            }
-        }
-
-        async removeAssignment(dateKey, eventId, ceName, isMonthly = false) {
-            if (window.userRole === 'viewer') return;
-            try {
-                const dataPath = isMonthly ? `${window.DATA_ROOT}/monthlyTasks/${eventId}` : `${window.DATA_ROOT}/events/byDate/${dateKey}/${eventId}`;
-                const snapshot = await window.database.ref(dataPath).once('value');
-                const event = snapshot.val();
-                if (!event) return;
-                const assignments = (event.assignments || []).filter(a => (typeof a === 'string' ? a : a.name) !== ceName);
-                await window.database.ref(dataPath).update({ assignments });
-                await this.logAudit(isMonthly ? 'monthly_task_unassign' : 'event_unassign', { date: dateKey, eventId, ceName });
-                window.showMessage(`${ceName} を外しました`, 'success');
-                this.renderDailySchedule();
-            } catch (error) {
-                console.error('割当解除エラー:', error);
-                window.showMessage('割当解除に失敗しました', 'error');
-            }
-        }
-
-        async loadDailyTasks() {
-            const dateKey = this.formatDate(this.selectedDate);
-            document.querySelectorAll('.task-list').forEach(list => {
-                list.querySelectorAll('.task-item').forEach(task => task.remove());
-            });
-            try {
-                const snapshot = await window.database.ref(`${window.DATA_ROOT}/events/byDate/${dateKey}`).once('value');
-                const events = snapshot.val() || {};
-                Object.keys(events).forEach(eventId => {
-                    const event = { ...events[eventId], id: eventId };
-                    this.addTaskToSection(event);
-                });
-            } catch (error) {
-                console.error('日別タスク読み込みエラー:', error);
-            }
-        }
-
-        async loadMonthlyTasks() {
-            try {
-                const snapshot = await window.database.ref(`${window.DATA_ROOT}/monthlyTasks`).once('value');
-                this.monthlyTasks = snapshot.val() || {};
-            } catch (error) {
-                console.error('月次業務読み込みエラー:', error);
-            }
-        }
-
-        loadMonthlyTasksForDate() {
-            const currentYear = this.selectedDate.getFullYear();
-            const currentMonth = this.selectedDate.getMonth() + 1;
-            const currentYearMonth = `${currentYear}-${String(currentMonth).padStart(2, '0')}`;
-            document.querySelectorAll('.monthly-plans').forEach(area => {
-                area.innerHTML = '';
-                area.style.display = 'none';
-            });
-            Object.keys(this.monthlyTasks || {}).forEach(taskId => {
-                const task = { ...this.monthlyTasks[taskId], id: taskId };
-                if (task.month === currentYearMonth) {
-                    this.addMonthlyTaskToSection(task);
-                }
-            });
-        }
-
-        addTaskToSection(event) {
-            const taskList = document.querySelector(`.task-list[data-department="${event.department}"]`);
-            if (!taskList) return;
-
-            const taskElement = document.createElement('div');
-            taskElement.className = 'task-item';
-            taskElement.dataset.eventId = event.id;
-
-            const assignments = Array.isArray(event.assignments) ? event.assignments : [];
-            const assignmentChips = assignments.map(ce => {
-                const name = typeof ce === 'string' ? ce : (ce.name || '');
-                const workType = typeof ce === 'object' ? (ce.workType || 'ME') : 'ME';
-                return `<span class="chip worktype-${workType.toLowerCase()}">${name}<span class="remove" onclick="window.dashboardAuth.removeAssignment('${this.formatDate(this.selectedDate)}', '${event.id}', '${name}')">&times;</span></span>`;
-            }).join('');
-
-            const memoDisplay = event.memo ? `<div class="text-xs text-blue-600 mt-1 bg-blue-50 p-1 rounded"><i class="fas fa-sticky-note mr-1"></i>${event.memo}</div>` : '';
-
-            taskElement.innerHTML = `
-                <div class="flex justify-between items-start mb-2">
-                    <div class="font-semibold text-sm">${event.name}</div>
-                    <div class="text-xs text-gray-500">${event.startTime || '--'}-${event.endTime || '--'}</div>
-                </div>
-                <div class="text-xs text-gray-600 mb-2">
-                    件数: ${event.count || 1} | 必要人数: ${event.requiredPeople || 1}名 | 現在: ${assignments.length}名
-                </div>
-                ${memoDisplay}
-                <div class="assignment-dropzone" 
-                     data-date="${this.formatDate(this.selectedDate)}" 
-                     data-event-id="${event.id}"
-                     ondragover="event.preventDefault();" 
-                     ondragenter="this.classList.add('dragover')" 
-                     ondragleave="this.classList.remove('dragover')" 
-                     ondrop="window.dashboardAuth.handleDrop(event)">
-                    <div class="text-xs text-gray-400 mb-1">CEをドロップして配置</div>
-                    <div class="assignments">${assignmentChips || '<span class="text-xs text-gray-400">未配置</span>'}</div>
-                </div>
-            `;
-
-            if (window.userRole !== 'viewer') {
-                taskElement.onclick = (e) => {
-                    if (!e.target.classList.contains('remove') && !e.target.closest('.assignment-dropzone')) {
-                        if (window.eventManager) {
-                            window.eventManager.openEventModal('edit', this.formatDate(this.selectedDate), event);
-                        }
-                    }
-                };
-            }
-            taskList.appendChild(taskElement);
-        }
-
-        addMonthlyTaskToSection(task) {
-            const monthlyPlansArea = document.querySelector(`.monthly-plans[data-department="${task.department}"]`);
-            if (!monthlyPlansArea) return;
-            monthlyPlansArea.style.display = 'block';
-
-            if (!monthlyPlansArea.querySelector('.monthly-plans-header')) {
-                const header = document.createElement('div');
-                header.className = 'monthly-plans-header text-xs font-bold text-orange-600 mb-2';
-                header.innerHTML = '<i class="fas fa-calendar-alt mr-1"></i>月次業務';
-                monthlyPlansArea.appendChild(header);
-            }
-
-            const taskElement = document.createElement('div');
-            taskElement.className = 'monthly-event-item';
-            taskElement.dataset.eventId = task.id;
-
-            const assignments = Array.isArray(task.assignments) ? task.assignments : [];
-            const assignmentChips = assignments.map(ce => {
-                const name = typeof ce === 'string' ? ce : (ce.name || '');
-                const workType = typeof ce === 'object' ? (ce.workType || 'ME') : 'ME';
-                return `<span class="chip worktype-${workType.toLowerCase()}">${name}<span class="remove" onclick="window.dashboardAuth.removeAssignment('${this.formatDate(this.selectedDate)}', '${task.id}', '${name}', true)">&times;</span></span>`;
-            }).join('');
-
-            const completedCount = task.completedCount || 0;
-            const targetCount = task.targetCount || 1;
-            const remainingCount = Math.max(0, targetCount - completedCount);
-            const progressPercent = Math.min(100, (completedCount / targetCount) * 100);
-
-            taskElement.innerHTML = `
-                <div class="monthly-task-badge">月次</div>
-                <div class="flex justify-between items-start mb-2">
-                    <div class="font-semibold text-sm">${task.name}</div>
-                    <div class="text-xs text-orange-700">
-                        ${completedCount}/${targetCount}件 (残り${remainingCount}件)
-                    </div>
-                </div>
-                <div class="text-xs text-orange-600 mb-2">
-                    必要人数: ${task.requiredPeople || 1}名 | 現在: ${assignments.length}名
-                </div>
-                <div class="bg-orange-200 h-2 rounded-full mb-2">
-                    <div class="bg-orange-500 h-2 rounded-full transition-all" style="width: ${progressPercent}%"></div>
-                </div>
-                ${window.userRole !== 'viewer' ? `
-                <div class="flex gap-2 mb-2">
-                    <button onclick="window.dashboardAuth.openMonthlyTaskExecuteModal('${task.id}')" 
-                            class="btn-unified btn-primary-unified btn-small">
-                        <i class="fas fa-play mr-1"></i>実施
-                    </button>
-                    <button onclick="window.dashboardAuth.openMonthlyTaskEditModal('${task.id}')" 
-                            class="btn-unified btn-outline-unified btn-small">
-                        <i class="fas fa-edit mr-1"></i>編集
-                    </button>
-                </div>
-                ` : ''}
-                <div class="assignment-dropzone" 
-                     data-date="${this.formatDate(this.selectedDate)}" 
-                     data-event-id="${task.id}"
-                     ondragover="event.preventDefault();" 
-                     ondragenter="this.classList.add('dragover')" 
-                     ondragleave="this.classList.remove('dragover')" 
-                     ondrop="window.dashboardAuth.handleDrop(event)">
-                    <div class="text-xs text-gray-400 mb-1">CEをドロップして配置</div>
-                    <div class="assignments">${assignmentChips || '<span class="text-xs text-gray-400">未配置</span>'}</div>
-                </div>
-            `;
-            monthlyPlansArea.appendChild(taskElement);
-        }
-
-        openMonthlyTaskExecuteModal(taskId) {
-            const task = this.monthlyTasks[taskId];
-            if (!task) return;
-            const infoDiv = document.getElementById('monthlyTaskExecuteInfo');
-            const completedCount = task.completedCount || 0;
-            const targetCount = task.targetCount || 1;
-            const remainingCount = Math.max(0, targetCount - completedCount);
-            infoDiv.innerHTML = `
-                <h4 class="font-semibold text-blue-800">${task.name}</h4>
-                <p class="text-blue-700 text-sm">部門: ${task.department}</p>
-                <p class="text-blue-700 text-sm">進捗: ${completedCount}/${targetCount}件 (残り${remainingCount}件)</p>
-            `;
-            document.getElementById('monthlyTaskExecuteCount').value = '';
-            document.getElementById('monthlyTaskExecuteMemo').value = '';
-            document.getElementById('monthlyTaskExecuteForm').dataset.taskId = taskId;
-            window.showModal('monthlyTaskExecuteModal');
-        }
-
-        openMonthlyTaskEditModal(taskId) {
-            const task = this.monthlyTasks[taskId];
-            if (!task) return;
-            window.showModal('monthlyTaskModal');
-            document.getElementById('monthlyTaskName').value = task.name || '';
-            document.getElementById('monthlyTaskMonth').value = task.month || '';
-            document.getElementById('monthlyTaskTargetCount').value = task.targetCount || 1;
-            document.getElementById('monthlyTaskRequired').value = task.requiredPeople || 1;
-            document.getElementById('monthlyTaskMemo').value = task.memo || '';
-            const deptSelect = document.getElementById('monthlyTaskDepartment');
-            this.populateDepartmentSelect(deptSelect);
-            deptSelect.value = task.department || '';
-            const submitBtn = document.querySelector('#monthlyTaskForm button[type="submit"]');
-            submitBtn.innerHTML = '<i class="fas fa-save mr-1"></i>月次業務更新';
-            const deleteBtn = document.getElementById('deleteMonthlyTaskBtn');
-            deleteBtn.classList.remove('hidden');
-            deleteBtn.onclick = () => this.deleteMonthlyTask(taskId);
-            const form = document.getElementById('monthlyTaskForm');
-            form.dataset.taskId = taskId;
-            form.dataset.mode = 'edit';
-        }
-
-        async deleteMonthlyTask(taskId) {
-            const task = this.monthlyTasks[taskId];
-            if (!task) return;
-            if (!confirm(`月次業務「${task.name}」を削除しますか？\n\nこの操作は元に戻せません。`)) return;
-            try {
-                await window.database.ref(`${window.DATA_ROOT}/monthlyTasks/${taskId}`).remove();
-                await this.logAudit('monthly_task_delete', { taskId, name: task.name, department: task.department });
-                window.showMessage(`月次業務「${task.name}」を削除しました`, 'success');
-                window.closeModal('monthlyTaskModal');
-                await this.loadMonthlyTasks();
-                this.renderDailySchedule();
-            } catch (error) {
-                console.error('月次業務削除エラー:', error);
-                window.showMessage('月次業務の削除に失敗しました', 'error');
-            }
-        }
-
-        async executeMonthlyTask(taskId) {
-            const executeCount = parseInt(document.getElementById('monthlyTaskExecuteCount').value, 10);
-            const executeMemo = document.getElementById('monthlyTaskExecuteMemo').value.trim();
-            if (!executeCount || executeCount < 1) {
-                window.showMessage('実施件数を入力してください', 'error');
-                return;
-            }
-            try {
-                const task = this.monthlyTasks[taskId];
-                const newCompletedCount = (task.completedCount || 0) + executeCount;
-                const executionRecord = {
-                    count: executeCount,
-                    memo: executeMemo,
-                    date: this.formatDate(new Date()),
-                    executedBy: window.currentUserData?.displayName || window.currentUserData?.username,
-                    timestamp: firebase.database.ServerValue.TIMESTAMP
-                };
-                const updates = {
-                    completedCount: newCompletedCount,
-                    lastExecuted: firebase.database.ServerValue.TIMESTAMP
-                };
-                const executionKey = Date.now().toString();
-                updates[`executions/${executionKey}`] = executionRecord;
-                await window.database.ref(`${window.DATA_ROOT}/monthlyTasks/${taskId}`).update(updates);
-                await this.logAudit('monthly_task_execute', { taskId, executeCount, newCompletedCount, memo: executeMemo });
-                window.showMessage(`月次業務を実施しました（${executeCount}件）`, 'success');
-                window.closeModal('monthlyTaskExecuteModal');
-                await this.loadMonthlyTasks();
-                this.renderDailySchedule();
-            } catch (error) {
-                console.error('月次業務実施エラー:', error);
-                window.showMessage('月次業務の実施記録に失敗しました', 'error');
-            }
+            window.showMessage('業務追加機能（実装中）', 'info');
         }
 
         setupAdminSettings() {
@@ -1930,9 +1006,6 @@
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <button onclick="window.open('pages/admin-dashboard.html', '_blank')" class="btn-unified btn-primary-unified">
                                 <i class="fas fa-users-cog mr-2"></i>ユーザー管理ダッシュボード
-                            </button>
-                            <button id="clearMonthBtn" class="bg-red-600 hover:bg-red-700 text-white px-4 py-3 rounded-lg">
-                                <i class="fas fa-trash mr-2"></i>当月データクリア
                             </button>
                         </div>
                     </div>
@@ -1951,7 +1024,6 @@
                         </div>
                     </div>
                 `;
-                this.setupAdminEventListeners();
             } else {
                 settingsContent.innerHTML = `
                     <h2 class="text-2xl font-bold mb-6">設定</h2>
@@ -1969,33 +1041,7 @@
                     </div>
                 `;
             }
-            this.setupSettingsEventListeners();
-        }
-
-        setupAdminEventListeners() {
-            const clearBtn = document.getElementById('clearMonthBtn');
-            if (clearBtn) {
-                clearBtn.onclick = async () => {
-                    if (!confirm('当月の業務データをすべてクリアしますか？\nこの操作は元に戻せません。')) return;
-                    try {
-                        const today = new Date();
-                        const year = today.getFullYear();
-                        const month = String(today.getMonth() + 1).padStart(2, '0');
-                        const startDate = `${year}-${month}-01`;
-                        const endDate = `${year}-${month}-31`;
-                        const ref = window.database.ref(`${window.DATA_ROOT}/events/byDate`);
-                        const query = ref.orderByKey().startAt(startDate).endAt(endDate);
-                        await query.ref.remove();
-                        window.showMessage('当月の業務データをクリアしました', 'success');
-                    } catch (error) {
-                        console.error('データクリアエラー:', error);
-                        window.showMessage('データのクリアに失敗しました', 'error');
-                    }
-                };
-            }
-        }
-
-        setupSettingsEventListeners() {
+            
             const saveBtn = document.getElementById('saveSettingsBtn');
             if (saveBtn) {
                 saveBtn.onclick = async () => {
@@ -2034,23 +1080,6 @@
         }
 
         initializeV2System() {
-            window.openDateModal = (dateKey) => {
-                if (window.userRole === 'viewer') {
-                    window.showMessage(`${dateKey}の詳細表示（開発中）`, 'info');
-                } else if (window.eventManager) {
-                    window.eventManager.openEventModal('create', dateKey);
-                }
-            };
-            window.openEventEditModal = (dateKey, eventId) => {
-                if (window.eventManager?.isInitialized) {
-                    const events = window.scheduleCore?.getEventsByDate(dateKey) || [];
-                    const event = events.find(e => e.id === eventId);
-                    if (event) {
-                        window.eventManager.openEventModal('edit', dateKey, event);
-                    }
-                }
-            };
-
             setTimeout(async () => {
                 try {
                     let attempts = 0;
@@ -2065,6 +1094,7 @@
                     if (!window.eventManager) window.eventManager = new window.EventManager();
                     if (!window.ceManager) window.ceManager = new window.CEManager();
                     if (!window.ceDailyStatus) window.ceDailyStatus = new window.CEDailyStatusManager();
+                    if (!window.workScheduleViewer) window.workScheduleViewer = new WorkScheduleViewer();
                 } catch (error) {
                     console.error('V2システム初期化エラー:', error);
                 }
@@ -2079,751 +1109,6 @@
             window.dashboardAuth = new DashboardAuth();
         });
     }
-    // 勤務区分表管理クラス
-class WorkScheduleManager {
-    constructor() {
-        this.scheduleData = {}; // 勤務スケジュールデータ
-        this.currentPeriod = {
-            startDate: new Date(),
-            endDate: new Date()
-        };
-        this.currentMenuTarget = null;
-        this.init();
-    }
-
-    async init() {
-        try {
-            await this.initializePeriod();
-            await this.loadScheduleData();
-            this.setupEventListeners();
-            console.log('✅ 勤務区分表管理システム初期化完了');
-        } catch (error) {
-            console.error('❌ 勤務区分表初期化エラー:', error);
-        }
-    }
-
-    initializePeriod() {
-        // デフォルト期間: 今日から28日間
-        const today = new Date();
-        const endDate = new Date(today);
-        endDate.setDate(today.getDate() + 27);
-        
-        this.currentPeriod.startDate = today;
-        this.currentPeriod.endDate = endDate;
-        
-        const startInput = document.getElementById('scheduleStartDate');
-        const endInput = document.getElementById('scheduleEndDate');
-        
-        if (startInput) startInput.value = this.formatDateForInput(today);
-        if (endInput) endInput.value = this.formatDateForInput(endDate);
-    }
-
-    async loadScheduleData() {
-        try {
-            const snapshot = await window.database.ref(`${window.DATA_ROOT}/workSchedule`).once('value');
-            this.scheduleData = snapshot.val() || {};
-        } catch (error) {
-            console.error('❌ 勤務スケジュール読み込みエラー:', error);
-            this.scheduleData = {};
-        }
-    }
-
-    setupEventListeners() {
-        // 期間更新
-        const updateBtn = document.getElementById('updateSchedulePeriod');
-        if (updateBtn) {
-            updateBtn.onclick = () => this.updatePeriod();
-        }
-
-        // 勤務表作成
-        const createBtn = document.getElementById('createWorkSchedule');
-        if (createBtn) {
-            createBtn.onclick = () => this.openCreateScheduleModal();
-        }
-
-        // メニュー関連
-        const closeMenuBtn = document.getElementById('closeStatusMenu');
-        if (closeMenuBtn) {
-            closeMenuBtn.onclick = () => this.closeStatusMenu();
-        }
-
-        // モーダル関連
-        this.setupModalEventListeners();
-
-        // 外部クリックでメニューを閉じる
-        document.addEventListener('click', (e) => {
-            const menu = document.getElementById('workStatusMenu');
-            if (menu && !menu.contains(e.target) && !e.target.closest('.work-cell')) {
-                this.closeStatusMenu();
-            }
-        });
-    }
-
-    setupModalEventListeners() {
-        // 勤務区分変更モーダル
-        const closeWorkTypeModal = document.getElementById('closeWorkTypeModal');
-        if (closeWorkTypeModal) {
-            closeWorkTypeModal.onclick = () => this.closeWorkTypeModal();
-        }
-
-        const cancelWorkTypeBtn = document.getElementById('cancelWorkTypeChange');
-        if (cancelWorkTypeBtn) {
-            cancelWorkTypeBtn.onclick = () => this.closeWorkTypeModal();
-        }
-
-        const applyWorkTypeBtn = document.getElementById('applyWorkTypeChange');
-        if (applyWorkTypeBtn) {
-            applyWorkTypeBtn.onclick = () => this.applyWorkTypeChange();
-        }
-
-        // 勤務表作成モーダル
-        const closeCreateModal = document.getElementById('closeCreateScheduleModal');
-        if (closeCreateModal) {
-            closeCreateModal.onclick = () => this.closeCreateScheduleModal();
-        }
-
-        const cancelCreateBtn = document.getElementById('cancelCreateSchedule');
-        if (cancelCreateBtn) {
-            cancelCreateBtn.onclick = () => this.closeCreateScheduleModal();
-        }
-
-        const createForm = document.getElementById('createScheduleForm');
-        if (createForm) {
-            createForm.onsubmit = (e) => {
-                e.preventDefault();
-                this.createWorkSchedule();
-            };
-        }
-    }
-
-    updatePeriod() {
-        const startInput = document.getElementById('scheduleStartDate');
-        const endInput = document.getElementById('scheduleEndDate');
-        
-        if (startInput && endInput) {
-            const startDate = new Date(startInput.value);
-            const endDate = new Date(endInput.value);
-            
-            if (startDate <= endDate) {
-                this.currentPeriod.startDate = startDate;
-                this.currentPeriod.endDate = endDate;
-                this.renderWorkScheduleTable();
-            } else {
-                window.showMessage('終了日は開始日以降を指定してください', 'error');
-            }
-        }
-    }
-
-    async renderWorkScheduleTable() {
-        if (!window.ceManager || !window.ceManager.ceList) {
-            window.showMessage('CEリストが読み込まれていません', 'error');
-            return;
-        }
-
-        const dates = this.generateDateRange(this.currentPeriod.startDate, this.currentPeriod.endDate);
-        
-        this.renderTableHeader(dates);
-        this.renderTableBody(dates);
-        this.renderTableFooter(dates);
-    }
-
-    generateDateRange(startDate, endDate) {
-        const dates = [];
-        const current = new Date(startDate);
-        
-        while (current <= endDate) {
-            dates.push(new Date(current));
-            current.setDate(current.getDate() + 1);
-        }
-        
-        return dates;
-    }
-
-    renderTableHeader(dates) {
-        const thead = document.getElementById('workScheduleTableHead');
-        if (!thead) return;
-
-        const headerRow = document.createElement('tr');
-        
-        // 氏名列
-        headerRow.innerHTML = '<th class="name-header">氏名</th>';
-        
-        // 日付列
-        dates.forEach(date => {
-            const dayOfWeek = ['日', '月', '火', '水', '木', '金', '土'][date.getDay()];
-            const isWeekend = date.getDay() === 0 || date.getDay() === 6;
-            const headerClass = isWeekend ? 'date-header weekend-header' : 'date-header';
-            const dayClass = date.getDay() === 0 ? 'weekday-sun' : (date.getDay() === 6 ? 'weekday-sat' : '');
-            
-            headerRow.innerHTML += `
-                <th class="${headerClass}">
-                    <div>${date.getDate()}</div>
-                    <div class="text-xs ${dayClass}">${dayOfWeek}</div>
-                </th>
-            `;
-        });
-        
-        // サマリー列
-        const summaryHeaders = ['A', 'A1', 'B', '非', '×', '休日数', '必要日数', '実勤務', '当直回数'];
-        summaryHeaders.forEach(header => {
-            headerRow.innerHTML += `<th class="summary-header">${header}</th>`;
-        });
-        
-        thead.innerHTML = '';
-        thead.appendChild(headerRow);
-    }
-
-    renderTableBody(dates) {
-        const tbody = document.getElementById('workScheduleTableBody');
-        if (!tbody || !window.ceManager) return;
-
-        tbody.innerHTML = '';
-        
-        window.ceManager.ceList.forEach((ce, ceIndex) => {
-            const row = document.createElement('tr');
-            
-            // 氏名セル（ダブルクリックで勤務区分変更）
-            const nameCell = document.createElement('td');
-            nameCell.className = 'name-cell';
-            nameCell.innerHTML = `
-                <div class="font-medium">${ce.name}</div>
-                <div class="text-xs text-gray-500">${ce.workType}</div>
-            `;
-            nameCell.ondblclick = () => this.openWorkTypeModal(ce, ceIndex);
-            row.appendChild(nameCell);
-            
-            // 日付セル
-            dates.forEach(date => {
-                const dateKey = this.formatDateKey(date);
-                const workData = this.getWorkData(ce.id, dateKey);
-                const cell = this.createWorkCell(ce, date, dateKey, workData);
-                row.appendChild(cell);
-            });
-            
-            // サマリーセル
-            const summary = this.calculateCESummary(ce, dates);
-            this.appendSummaryCells(row, summary, ce.id);
-            
-            tbody.appendChild(row);
-        });
-    }
-
-    createWorkCell(ce, date, dateKey, workData) {
-        const cell = document.createElement('td');
-        const isWeekend = date.getDay() === 0 || date.getDay() === 6;
-        const isHoliday = this.isHoliday(date);
-        
-        let cellClass = `work-cell type-${ce.workType.toLowerCase()}`;
-        if (workData.status) {
-            cellClass += ` status-${workData.status}`;
-        }
-        if (workData.desired) {
-            cellClass += ' desired';
-        }
-        if (isWeekend || isHoliday) {
-            cellClass += ' holiday';
-        }
-        
-        cell.className = cellClass;
-        cell.textContent = workData.status || (isWeekend || isHoliday ? '×' : 'A');
-        cell.onclick = (e) => this.openStatusMenu(e, ce, dateKey);
-        
-        return cell;
-    }
-
-    appendSummaryCells(row, summary, ceId) {
-        const summaryData = [
-            summary.A, summary.A1, summary.B, summary.non, summary.off,
-            summary.holidays, summary.required, summary.actual, summary.nightShift
-        ];
-        
-        summaryData.forEach((value, index) => {
-            const cell = document.createElement('td');
-            cell.className = 'summary-cell';
-            
-            if (index === 6) { // 必要日数（編集可能）
-                cell.className += ' editable';
-                cell.ondblclick = () => this.editRequiredDays(ceId, cell);
-            }
-            
-            cell.textContent = value;
-            row.appendChild(cell);
-        });
-    }
-
-    renderTableFooter(dates) {
-        const tfoot = document.getElementById('workScheduleTableFoot');
-        if (!tfoot) return;
-
-        tfoot.innerHTML = '';
-        
-        // 勤務区分別集計行
-        window.WORK_TYPE_CLASSIFICATIONS.forEach(workType => {
-            const row = document.createElement('tr');
-            row.className = 'footer-summary-row';
-            
-            row.innerHTML = `<th class="type-label">${workType}</th>`;
-            
-            dates.forEach(date => {
-                const count = this.countWorkTypeForDate(workType, date);
-                row.innerHTML += `<td>${count}</td>`;
-            });
-            
-            // 空のサマリーセル
-            for (let i = 0; i < 9; i++) {
-                row.innerHTML += '<td></td>';
-            }
-            
-            tfoot.appendChild(row);
-        });
-        
-        // 当直・非番集計行
-        ['当直', '非番'].forEach(statusType => {
-            const row = document.createElement('tr');
-            row.className = 'footer-summary-row';
-            
-            row.innerHTML = `<th class="type-label">${statusType}</th>`;
-            
-            dates.forEach(date => {
-                const status = statusType === '当直' ? 'B' : '非';
-                const count = this.countStatusForDate(status, date);
-                const cellClass = (count === 0 || count >= 2) ? 'warning-count' : '';
-                row.innerHTML += `<td class="${cellClass}">${count}</td>`;
-            });
-            
-            // 空のサマリーセル
-            for (let i = 0; i < 9; i++) {
-                row.innerHTML += '<td></td>';
-            }
-            
-            tfoot.appendChild(row);
-        });
-    }
-
-    openStatusMenu(event, ce, dateKey) {
-        if (window.userRole === 'viewer') {
-            window.showMessage('編集権限がありません', 'warning');
-            return;
-        }
-
-        const menu = document.getElementById('workStatusMenu');
-        const buttonsContainer = document.getElementById('statusButtons');
-        const desireCheck = document.getElementById('desireWorkCheck');
-        
-        if (!menu || !buttonsContainer || !desireCheck) return;
-
-        // 現在の値を取得
-        const workData = this.getWorkData(ce.id, dateKey);
-        
-        // 希望勤務チェックボックス
-        desireCheck.checked = workData.desired || false;
-        
-        // ステータスボタンを生成
-        buttonsContainer.innerHTML = '';
-        window.DAILY_WORK_STATUSES.forEach(status => {
-            const button = document.createElement('button');
-            button.className = `status-btn ${workData.status === status ? 'active' : ''}`;
-            button.textContent = status;
-            button.onclick = () => this.selectWorkStatus(ce.id, dateKey, status);
-            buttonsContainer.appendChild(button);
-        });
-        
-        // メニュー位置調整
-        const rect = event.target.getBoundingClientRect();
-        menu.style.display = 'block';
-        menu.style.left = `${rect.left + window.scrollX}px`;
-        menu.style.top = `${rect.bottom + window.scrollY + 5}px`;
-        
-        this.currentMenuTarget = { ceId: ce.id, dateKey: dateKey };
-    }
-
-    async selectWorkStatus(ceId, dateKey, status) {
-        try {
-            const desireCheck = document.getElementById('desireWorkCheck');
-            const desired = desireCheck ? desireCheck.checked : false;
-            
-            const workData = {
-                status: status,
-                desired: desired,
-                updatedAt: firebase.database.ServerValue.TIMESTAMP,
-                updatedBy: window.currentUserData?.displayName || 'unknown'
-            };
-            
-            // データベースに保存
-            await window.database.ref(`${window.DATA_ROOT}/workSchedule/${ceId}/${dateKey}`).set(workData);
-            
-            // ローカルデータ更新
-            if (!this.scheduleData[ceId]) {
-                this.scheduleData[ceId] = {};
-            }
-            this.scheduleData[ceId][dateKey] = workData;
-            
-            // 監査ログ
-            await this.logAudit('work_schedule_update', {
-                ceId, dateKey, status, desired
-            });
-            
-            // スケジュール画面への反映
-            await this.updateScheduleDisplay(ceId, dateKey, status);
-            
-            // 表示更新
-            this.renderWorkScheduleTable();
-            this.closeStatusMenu();
-            
-            window.showMessage('勤務状態を更新しました', 'success');
-            
-        } catch (error) {
-            console.error('❌ 勤務状態更新エラー:', error);
-            window.showMessage('勤務状態の更新に失敗しました', 'error');
-        }
-    }
-
-    async updateScheduleDisplay(ceId, dateKey, status) {
-        try {
-            // 既存のCEDailyStatusManagerとの連携
-            const badge = window.STATUS_TO_BADGE_MAP[status] || '';
-            
-            if (window.ceDailyStatus && window.ceDailyStatus.updateCEStatus) {
-                const originalDate = window.ceDailyStatus.selectedDate;
-                window.ceDailyStatus.selectedDate = new Date(dateKey + 'T00:00:00');
-                await window.ceDailyStatus.updateCEStatus(ceId, badge);
-                window.ceDailyStatus.selectedDate = originalDate;
-            }
-        } catch (error) {
-            console.warn('⚠️ スケジュール画面への反映エラー:', error);
-        }
-    }
-
-    closeStatusMenu() {
-        const menu = document.getElementById('workStatusMenu');
-        if (menu) {
-            menu.style.display = 'none';
-        }
-        this.currentMenuTarget = null;
-    }
-
-    openWorkTypeModal(ce, ceIndex) {
-        if (window.userRole === 'viewer') {
-            window.showMessage('編集権限がありません', 'warning');
-            return;
-        }
-
-        const modal = document.getElementById('workTypeModal');
-        const targetName = document.getElementById('workTypeTargetName');
-        const selector = document.getElementById('workTypeSelector');
-        const startDate = document.getElementById('workTypeStartDate');
-        const endDate = document.getElementById('workTypeEndDate');
-        
-        if (!modal || !targetName || !selector) return;
-
-        targetName.textContent = ce.name;
-        
-        // 勤務区分選択肢を生成
-        selector.innerHTML = '';
-        window.WORK_TYPE_CLASSIFICATIONS.forEach(workType => {
-            const option = document.createElement('div');
-            option.className = `work-type-option type-${workType.toLowerCase()} ${ce.workType === workType ? 'selected' : ''}`;
-            option.innerHTML = `
-                <div class="font-semibold">${workType}</div>
-                <div class="text-xs mt-1">${this.getWorkTypeLabel(workType)}</div>
-            `;
-            option.onclick = () => {
-                selector.querySelectorAll('.work-type-option').forEach(opt => opt.classList.remove('selected'));
-                option.classList.add('selected');
-            };
-            selector.appendChild(option);
-        });
-        
-        // 期間設定
-        if (startDate) startDate.value = this.formatDateForInput(this.currentPeriod.startDate);
-        if (endDate) endDate.value = this.formatDateForInput(this.currentPeriod.endDate);
-        
-        modal.style.display = 'flex';
-        this.currentWorkTypeTarget = { ce, ceIndex };
-    }
-
-    closeWorkTypeModal() {
-        const modal = document.getElementById('workTypeModal');
-        if (modal) {
-            modal.style.display = 'none';
-        }
-        this.currentWorkTypeTarget = null;
-    }
-
-    async applyWorkTypeChange() {
-        try {
-            const selector = document.getElementById('workTypeSelector');
-            const startDate = document.getElementById('workTypeStartDate');
-            const endDate = document.getElementById('workTypeEndDate');
-            
-            if (!this.currentWorkTypeTarget || !selector || !startDate || !endDate) return;
-
-            const selectedOption = selector.querySelector('.work-type-option.selected');
-            if (!selectedOption) {
-                window.showMessage('勤務区分を選択してください', 'error');
-                return;
-            }
-
-            const newWorkType = selectedOption.className.match(/type-(\w+)/)[1].toUpperCase();
-            const { ce, ceIndex } = this.currentWorkTypeTarget;
-            
-            // CEリストの勤務区分を更新
-            window.ceManager.ceList[ceIndex].workType = newWorkType;
-            await window.ceManager.saveCEList();
-            
-            // 監査ログ
-            await this.logAudit('work_type_change', {
-                ceId: ce.id,
-                ceName: ce.name,
-                oldWorkType: ce.workType,
-                newWorkType: newWorkType,
-                startDate: startDate.value,
-                endDate: endDate.value
-            });
-            
-            window.showMessage(`${ce.name}の勤務区分を${newWorkType}に変更しました`, 'success');
-            this.closeWorkTypeModal();
-            this.renderWorkScheduleTable();
-            
-        } catch (error) {
-            console.error('❌ 勤務区分変更エラー:', error);
-            window.showMessage('勤務区分の変更に失敗しました', 'error');
-        }
-    }
-
-    openCreateScheduleModal() {
-        if (window.userRole === 'viewer') {
-            window.showMessage('編集権限がありません', 'warning');
-            return;
-        }
-
-        const modal = document.getElementById('createScheduleModal');
-        const startInput = document.getElementById('createStartDate');
-        const endInput = document.getElementById('createEndDate');
-        
-        if (modal) {
-            modal.style.display = 'flex';
-        }
-        
-        if (startInput) startInput.value = this.formatDateForInput(this.currentPeriod.startDate);
-        if (endInput) endInput.value = this.formatDateForInput(this.currentPeriod.endDate);
-    }
-
-    closeCreateScheduleModal() {
-        const modal = document.getElementById('createScheduleModal');
-        if (modal) {
-            modal.style.display = 'none';
-        }
-    }
-
-    async createWorkSchedule() {
-        try {
-            const startInput = document.getElementById('createStartDate');
-            const endInput = document.getElementById('createEndDate');
-            const overwriteCheck = document.getElementById('overwriteExisting');
-            
-            if (!startInput || !endInput) return;
-
-            const startDate = new Date(startInput.value);
-            const endDate = new Date(endInput.value);
-            const overwrite = overwriteCheck ? overwriteCheck.checked : false;
-            
-            if (startDate > endDate) {
-                window.showMessage('終了日は開始日以降を指定してください', 'error');
-                return;
-            }
-
-            const dates = this.generateDateRange(startDate, endDate);
-            let createdCount = 0;
-            
-            for (const ce of window.ceManager.ceList) {
-                if (!this.scheduleData[ce.id]) {
-                    this.scheduleData[ce.id] = {};
-                }
-                
-                for (const date of dates) {
-                    const dateKey = this.formatDateKey(date);
-                    const isWeekend = date.getDay() === 0 || date.getDay() === 6;
-                    const isHoliday = this.isHoliday(date);
-                    
-                    if (!this.scheduleData[ce.id][dateKey] || overwrite) {
-                        this.scheduleData[ce.id][dateKey] = {
-                            status: (isWeekend || isHoliday) ? '×' : 'A',
-                            desired: false,
-                            createdAt: firebase.database.ServerValue.TIMESTAMP,
-                            createdBy: window.currentUserData?.displayName || 'unknown'
-                        };
-                        createdCount++;
-                    }
-                }
-            }
-            
-            // データベースに保存
-            await window.database.ref(`${window.DATA_ROOT}/workSchedule`).set(this.scheduleData);
-            
-            // 期間を更新
-            this.currentPeriod.startDate = startDate;
-            this.currentPeriod.endDate = endDate;
-            
-            const startDateInput = document.getElementById('scheduleStartDate');
-            const endDateInput = document.getElementById('scheduleEndDate');
-            if (startDateInput) startDateInput.value = this.formatDateForInput(startDate);
-            if (endDateInput) endDateInput.value = this.formatDateForInput(endDate);
-            
-            // 監査ログ
-            await this.logAudit('work_schedule_create', {
-                startDate: this.formatDateKey(startDate),
-                endDate: this.formatDateKey(endDate),
-                createdCount,
-                overwrite
-            });
-            
-            window.showMessage(`勤務表を作成しました（${createdCount}件）`, 'success');
-            this.closeCreateScheduleModal();
-            this.renderWorkScheduleTable();
-            
-        } catch (error) {
-            console.error('❌ 勤務表作成エラー:', error);
-            window.showMessage('勤務表の作成に失敗しました', 'error');
-        }
-    }
-
-    // ユーティリティメソッド
-    getWorkData(ceId, dateKey) {
-        return this.scheduleData[ceId]?.[dateKey] || { status: '', desired: false };
-    }
-
-    calculateCESummary(ce, dates) {
-        const summary = {
-            A: 0, A1: 0, B: 0, non: 0, off: 0,
-            holidays: 0, required: 20, actual: 0, nightShift: 0
-        };
-
-        dates.forEach(date => {
-            const dateKey = this.formatDateKey(date);
-            const workData = this.getWorkData(ce.id, dateKey);
-            const isWeekend = date.getDay() === 0 || date.getDay() === 6;
-            const isHoliday = this.isHoliday(date);
-            
-            if (isWeekend || isHoliday) {
-                summary.holidays++;
-            }
-
-            const status = workData.status || (isWeekend || isHoliday ? '×' : 'A');
-            
-            switch (status) {
-                case 'A': summary.A++; summary.actual++; break;
-                case 'A1': summary.A1++; summary.actual++; break;
-                case 'B': summary.B++; summary.actual++; summary.nightShift++; break;
-                case '非': summary.non++; summary.actual++; break;
-                case '×': summary.off++; break;
-                case '年': summary.actual++; break;
-                case '出': summary.actual++; break;
-                case '研': summary.actual++; break;
-            }
-        });
-
-        return summary;
-    }
-
-    countWorkTypeForDate(workType, date) {
-        if (!window.ceManager) return 0;
-        
-        const dateKey = this.formatDateKey(date);
-        return window.ceManager.ceList.filter(ce => {
-            if (ce.workType !== workType) return false;
-            const workData = this.getWorkData(ce.id, dateKey);
-            const status = workData.status || (this.isHoliday(date) ? '×' : 'A');
-            return ['A', 'A1', 'B', '非', '年', '出', '研'].includes(status);
-        }).length;
-    }
-
-    countStatusForDate(status, date) {
-        if (!window.ceManager) return 0;
-        
-        const dateKey = this.formatDateKey(date);
-        return window.ceManager.ceList.filter(ce => {
-            const workData = this.getWorkData(ce.id, dateKey);
-            return workData.status === status;
-        }).length;
-    }
-
-    isHoliday(date) {
-        // 土日祝日判定（簡易版）
-        const dayOfWeek = date.getDay();
-        return dayOfWeek === 0 || dayOfWeek === 6;
-    }
-
-    getWorkTypeLabel(workType) {
-        const labels = {
-            'OPE': '手術・麻酔',
-            'ME': '機器管理',
-            'HD': '血液浄化',
-            'FLEX': 'フレックス'
-        };
-        return labels[workType] || workType;
-    }
-
-    formatDateForInput(date) {
-        return date.toISOString().slice(0, 10);
-    }
-
-    formatDateKey(date) {
-        return date.toISOString().slice(0, 10);
-    }
-
-    async editRequiredDays(ceId, cell) {
-        // 必要勤務日数の編集機能（実装可能）
-        const current = parseInt(cell.textContent) || 20;
-        const newValue = prompt('必要勤務日数を入力してください:', current);
-        
-        if (newValue !== null && !isNaN(newValue)) {
-            const days = parseInt(newValue);
-            if (days >= 0 && days <= 31) {
-                cell.textContent = days;
-                // データベースに保存する場合はここに実装
-            }
-        }
-    }
-
-    async logAudit(action, details = {}) {
-        try {
-            const entry = {
-                action,
-                details,
-                uid: window.currentUserData?.uid || null,
-                username: window.currentUserData?.username || 'unknown',
-                displayName: window.currentUserData?.displayName || 'unknown',
-                timestamp: firebase.database.ServerValue.TIMESTAMP,
-                userAgent: navigator.userAgent.substring(0, 100)
-            };
-            
-            await window.database.ref(`${window.DATA_ROOT}/auditLogs`).push(entry);
-        } catch (error) {
-            console.warn('⚠️ 監査ログ記録失敗:', error);
-        }
-    }
-}
-
-// 既存のDashboardAuthクラスに統合
-// setupCEManagement メソッドを以下に置き換え
-setupCEManagement() {
-    // 勤務区分表管理システムを初期化
-    if (!window.workScheduleManager) {
-        window.workScheduleManager = new WorkScheduleManager();
-    }
-}
-
-// CEリスト管理タブがアクティブになった時の処理を更新
-// showScreen メソッドの ceManagementTab 部分を以下に置き換え
-if (tab.id === 'ceManagementTab') {
-    setTimeout(async () => {
-        if (!window.workScheduleManager) {
-            window.workScheduleManager = new WorkScheduleManager();
-        }
-        await window.workScheduleManager.renderWorkScheduleTable();
-    }, 100);
-}
     </script>
 </body>
 </html>
