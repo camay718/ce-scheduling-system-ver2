@@ -1,5 +1,6 @@
 /**
  * CEスケジュール管理システム V2 - 定数定義
+ * 勤務区分表統合対応版
  */
 
 // Firebaseのデータルート
@@ -44,18 +45,68 @@ window.DEPARTMENT_COLORS = {
     'その他・連絡': '#9E9E9E'
 };
 
-// CE勤務区分
-window.WORK_TYPES = ['ME', 'OPE', 'HD', 'FLEX'];
+// 勤務区分（CEタイプ）
+window.WORK_TYPE_CLASSIFICATIONS = ['OPE', 'ME', 'HD', 'FLEX'];
 
-// CEステータス
-window.CE_STATUS_OPTIONS = [
-    { value: '', label: '通常' },
-    { value: '早', label: '早出' },
-    { value: '当', label: '当直' },
-    { value: '非', label: '非番' },
-    { value: '休', label: '休み' },
-    { value: '出', label: '出張' }
-];
+// 日々の勤務状態
+window.DAILY_WORK_STATUSES = ['A', 'A1', 'B', '非', '×', '年', '出', '研'];
+
+// 勤務区分色定義（エクセルデータに準拠）
+window.WORK_TYPE_COLORS = {
+    'OPE': { 
+        base: '#87CEEB',    // 水色
+        A1: '#1E3A8A',      // 紺（A1の場合）
+        textColor: '#1E3A8A'
+    },
+    'ME': { 
+        base: '#90EE90',    // 黄緑
+        textColor: '#006400'
+    },
+    'HD': { 
+        base: '#FFB6C1',    // ピンク
+        textColor: '#8B008B'
+    },
+    'FLEX': { 
+        base: '#FFFF99',    // 黄色
+        textColor: '#B8860B'
+    }
+};
+
+// 勤務時間帯定義（エクセルデータから）
+window.WORK_TIME_DEFINITIONS = {
+    'A': { 
+        time: '8:00～16:30', 
+        break: '11:45～12:30',
+        label: '日勤'
+    },
+    'A1': { 
+        time: '7:00～15:30', 
+        break: '11:45～12:30',
+        label: '早出'
+    },
+    'B': { 
+        time: '8:00～翌8:00', 
+        break: '11:45～12:45及び16:45～17:45',
+        label: '当直'
+    },
+    '非': { label: '非番' },
+    '×': { label: '休日' },
+    '年': { label: '有給休暇' },
+    '出': { label: '出張' },
+    '研': { label: '研修' }
+};
+
+// CE勤務状態からバッジへの変換（既存互換性）
+window.STATUS_TO_BADGE_MAP = {
+    'A': '',
+    'A1': '早',
+    'B': '当',
+    '非': '非',
+    '×': '休',
+    '年': '年',
+    '出': '出',
+    '研': '研'
+};
 
 // 監査ログアクションの表示名
 window.AUDIT_ACTION_MAP = {
@@ -65,7 +116,9 @@ window.AUDIT_ACTION_MAP = {
     'ce_delete': 'CE削除',
     'ce_reorder': 'CE並び替え',
     'ce_sort': 'CE並び替え（自動）',
-    'ce_status_update': '勤務状態更新',
+    'work_schedule_update': '勤務区分表更新',
+    'work_schedule_create': '勤務表作成',
+    'work_type_change': '勤務区分変更',
     'event_add': '業務追加',
     'event_edit': '業務編集',
     'event_delete': '業務削除',
