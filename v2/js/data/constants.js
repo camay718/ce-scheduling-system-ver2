@@ -1,6 +1,6 @@
 /**
  * CEスケジュール管理システム V2 - 定数定義
- * 勤務区分表統合対応版
+ * 勤務区分表統合対応版（名前管理改善）
  */
 
 // Firebaseのデータルート
@@ -134,10 +134,11 @@ window.AUDIT_ACTION_MAP = {
 };
 
 // 初期CEリスト（システム初期化用）
+// name: アイコン表示名（短縮名）, fullName: フルネーム
 window.CE_LIST_INITIAL = [
-    { name: '田中', workType: 'ME' },
-    { name: '佐藤', workType: 'OPE' },
-    { name: '鈴木', workType: 'HD' },
-    { name: '高橋', workType: 'FLEX' },
-    { name: '渡辺', workType: 'ME' }
+    { name: '田中', fullName: '田中 太郎', workType: 'ME' },
+    { name: '佐藤', fullName: '佐藤 花子', workType: 'OPE' },
+    { name: '鈴木', fullName: '鈴木 一郎', workType: 'HD' },
+    { name: '高橋', fullName: '高橋 恵子', workType: 'FLEX' },
+    { name: '渡辺', fullName: '渡辺 健太', workType: 'ME' }
 ];
