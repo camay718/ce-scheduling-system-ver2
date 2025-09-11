@@ -952,3 +952,27 @@ body.theme-unified {
 .hidden {
     display: none !important;
 }
+/* 勤務表エディタ専用拡張 */
+.weekend-header {
+    background: linear-gradient(135deg, #fff3cd, #ffeaa7) !important;
+    color: #856404 !important;
+}
+
+.summary-header {
+    background: linear-gradient(135deg, #d1ecf1, #bee5eb) !important;
+    color: #0c5460 !important;
+}
+
+/* 曜日色分け */
+.text-red-600 { color: #dc2626; }
+.text-blue-600 { color: #2563eb; }
+
+/* アニメーション */
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+.animate-spin {
+    animation: spin 1s linear infinite;
+}
