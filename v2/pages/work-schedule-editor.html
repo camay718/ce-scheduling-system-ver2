@@ -1404,50 +1404,49 @@ Copy<!DOCTYPE html>
             thead.appendChild(headerRow);
         }
 
-        renderTableBody(dates) {
-            const tbody = document.getElementById('scheduleTableBody');
-            if (!tbody) return;
+  renderTableBody(dates) {
+    const tbody = document.getElementById('scheduleTableBody');
+    if (!tbody) return;
 
-            tbody.innerHTML = '';
-            
-            this.ceList.forEach((ce, ceIndex) => {
-                const row = document.createElement('tr');
-                
-                // No列（ダブルクリックで勤務区分設定）
-                const noCell = document.createElement('td');
-                noCell.className = 'no-cell';
-                noCell.innerHTML = `<div class="ce-number" title="勤務区分設定">${ceIndex + 1}</div>`;
-                
-                const ceNumber = noCell.querySelector('.ce-number');
-                if (ceNumber) {
-                    ceNumber.ondblclick = () => this.openWorkTypeSetModal(ceIndex);
-                }
-                
-                row.appendChild(noCell);
-                
-                // 氏名セル（ダブルクリックで情報編集）
-                const nameCell = document.createElement('td');
-                nameCell.className = 'name-cell';
-                nameCell.innerHTML = `<div class="font-medium text-xs" title="情報編集">${ce.fullName || ce.name}</div>`;
-                nameCell.ondblclick = () => this.openCEInfoEditModal(ceIndex);
-                row.appendChild(nameCell);
-                
-                // 日付セル
-                dates.forEach(date => {
-                    const dateKey = this.formatDateKey(date);
-                    const workData = this.getWorkData(ce.id, dateKey);
-                    const effectiveWorkType = this.getEffectiveWorkType(ce, dateKey);
-                    const cell = this.createWorkCell(ce, effectiveWorkType, date, dateKey, workData);
-                    row.appendChild(cell);
-                });
-                
-                // サマリーセル
-                const summary = this.calculateCESummary(ce, dates);
-                this.appendSummaryCells(row, summary);
-                
-                tbody.appendChild(row);
-            });
+    tbody.innerHTML = '';
+    
+    this.ceList.forEach((ce, ceIndex) => {
+        const row = document.createElement('tr');
+        
+        // No列（ダブルクリックで勤務区分設定）
+        const noCell = document.createElement('td');
+        noCell.className = 'no-cell';
+        noCell.innerHTML = `<div class="ce-number" title="勤務区分設定">${ceIndex + 1}</div>`;
+        
+        const ceNumber = noCell.querySelector('.ce-number');
+        if (ceNumber) {
+            ceNumber.ondblclick = () => this.openWorkTypeSetModal(ceIndex);
         }
+        row.appendChild(noCell);
+        
+        // 氏名セル（ダブルクリックでCE管理メニュー）
+        const nameCell = document.createElement('td');
+        nameCell.className = 'name-cell';
+        nameCell.innerHTML = `<div class="font-medium text-xs" title="CE管理">${ce.fullName || ce.name}</div>`;
+        nameCell.ondblclick = (e) => this.showCEQuickMenu(e, ceIndex);
+        row.appendChild(nameCell);
+        
+        // 日付セル
+        dates.forEach(date => {
+            const dateKey = this.formatDateKey(date);
+            const workData = this.getWorkData(ce.id, dateKey);
+            const effectiveWorkType = this.getEffectiveWorkType(ce, dateKey);
+            const cell = this.createWorkCell(ce, effectiveWorkType, date, dateKey, workData);
+            row.appendChild(cell);
+        });
+        
+        // サマリーセル
+        const summary = this.calculateCESummary(ce, dates);
+        this.appendSummaryCells(row, summary);
+        
+        tbody.appendChild(row);
+    });
+}
 
         getEffectiveWorkType(ce, dateKey) {
             // 期間指定オーバーライドがあれば優先
@@ -2342,6 +2341,87 @@ Copy<!DOCTYPE html>
             window.print();
         }
 
+
+        // CE管理クイックメニューの実装
+showCEQuickMenu(event, ceIndex) {
+    const menu = document.createElement('div');
+    menu.className = 'ce-quick-menu';
+    menu.style.cssText = `
+        position: fixed;
+        background: white;
+        border: 1px solid #ddd;
+        border-radius: 8px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        padding: 8px;
+        z-index: 2000;
+        min-width: 180px;
+    `;
+    
+    menu.innerHTML = `
+        <button onclick="workScheduleEditor.openCEInfoEditModal(${ceIndex}); this.parentElement.remove();" 
+                class="w-full text-left p-2 hover:bg-gray-100 rounded text-sm">
+            <i class="fas fa-edit mr-2"></i>情報編集
+        </button>
+        <button onclick="workScheduleEditor.moveCEUp(${ceIndex}); this.parentElement.remove();"
+                class="w-full text-left p-2 hover:bg-gray-100 rounded text-sm">
+            <i class="fas fa-arrow-up mr-2"></i>上に移動
+        </button>
+        <button onclick="workScheduleEditor.moveCEDown(${ceIndex}); this.parentElement.remove();"
+                class="w-full text-left p-2 hover:bg-gray-100 rounded text-sm">
+            <i class="fas fa-arrow-down mr-2"></i>下に移動
+        </button>
+        <button onclick="workScheduleEditor.openAddCEModal(); this.parentElement.remove();" 
+                class="w-full text-left p-2 hover:bg-gray-100 rounded text-sm">
+            <i class="fas fa-plus mr-2"></i>CE追加
+        </button>
+        <button onclick="workScheduleEditor.deleteCE(${ceIndex}); this.parentElement.remove();" 
+                class="w-full text-left p-2 hover:bg-gray-100 rounded text-sm text-red-600">
+            <i class="fas fa-trash mr-2"></i>削除
+        </button>
+    `;
+    
+    const rect = event.target.getBoundingClientRect();
+    menu.style.left = `${rect.left + window.scrollX}px`;
+    menu.style.top = `${rect.bottom + window.scrollY + 5}px`;
+    
+    document.body.appendChild(menu);
+    
+    setTimeout(() => {
+        document.addEventListener('click', function closeMenu(e) {
+            if (!menu.contains(e.target)) {
+                menu.remove();
+                document.removeEventListener('click', closeMenu);
+            }
+        });
+    }, 100);
+}
+
+async moveCEUp(index) {
+    if (index <= 0) return;
+    [this.ceList[index], this.ceList[index - 1]] = [this.ceList[index - 1], this.ceList[index]];
+    await this.saveCEListAndNotify();
+    this.renderScheduleTable();
+    window.showMessage('CEを上に移動しました', 'success');
+}
+
+async moveCEDown(index) {
+    if (index >= this.ceList.length - 1) return;
+    [this.ceList[index], this.ceList[index + 1]] = [this.ceList[index + 1], this.ceList[index]];
+    await this.saveCEListAndNotify();
+    this.renderScheduleTable();
+    window.showMessage('CEを下に移動しました', 'success');
+}
+
+async deleteCE(index) {
+    const ce = this.ceList[index];
+    if (!confirm(`${ce.fullName || ce.name}を削除しますか？`)) return;
+    
+    this.ceList.splice(index, 1);
+    await this.saveCEListAndNotify();
+    this.renderScheduleTable();
+    window.showMessage('CEを削除しました', 'success');
+}
+        
         // ユーティリティメソッド
         getWorkData(ceId, dateKey) {
             return this.scheduleData[ceId]?.[dateKey] || { status: '', desired: false };
