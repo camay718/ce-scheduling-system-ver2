@@ -1132,20 +1132,22 @@ Copy<!DOCTYPE html>
         }
 
         setupEventListeners() {
-            // サイドバートグル
-            const toggle = document.getElementById('sidebarToggle');
-            const container = document.getElementById('editorContainer');
-            if (toggle && container) {
-                toggle.onclick = () => {
-                    container.classList.toggle('sidebar-collapsed');
-                    const icon = toggle.querySelector('i');
-                    if (container.classList.contains('sidebar-collapsed')) {
-                        icon.className = 'fas fa-chevron-right';
-                    } else {
-                        icon.className = 'fas fa-chevron-left';
-                    }
-                };
+    // サイドバートグル（ダッシュボードと同仕様）
+    const toggle = document.getElementById('sidebarToggle');
+    const sidebar = document.getElementById('editorSidebar');
+    
+    if (toggle && sidebar) {
+        toggle.onclick = () => {
+            const isCollapsed = sidebar.classList.contains('collapsed');
+            if (isCollapsed) {
+                sidebar.classList.remove('collapsed');
+                toggle.querySelector('i').className = 'fas fa-chevron-left';
+            } else {
+                sidebar.classList.add('collapsed');
+                toggle.querySelector('i').className = 'fas fa-chevron-right';
             }
+        };
+    }
 
             // 期間設定
             const updatePeriodBtn = document.getElementById('updatePeriodBtn');
@@ -2127,32 +2129,51 @@ Copy<!DOCTYPE html>
 
         // 勤務表操作
         async createNewSchedule() {
-            if (!confirm('新しい勤務表を作成しますか？\n平日は「A」、土日祝日は「×」で初期化されます。')) {
-                return;
-            }
+    // 期間設定の値を確実に取得
+    const startInput = document.getElementById('periodStartDate');
+    const endInput = document.getElementById('periodEndDate');
+    
+    if (startInput?.value && endInput?.value) {
+        this.currentPeriod.startDate = new Date(startInput.value + 'T00:00:00');
+        this.currentPeriod.endDate = new Date(endInput.value + 'T00:00:00');
+    }
 
-            try {
-                const dates = this.generateDateRange(this.currentPeriod.startDate, this.currentPeriod.endDate);
+    if (!confirm('新しい勤務表を作成しますか？\n現在のCEリストで平日は「A」、土日祝日は「×」で初期化されます。')) {
+        return;
+    }
+
+    try {
+        const dates = this.generateDateRange(this.currentPeriod.startDate, this.currentPeriod.endDate);
+        
+        // 現在のCEリストを使用
+        this.ceList.forEach(ce => {
+            if (!this.scheduleData[ce.id]) {
+                this.scheduleData[ce.id] = {};
+            }
+            
+            dates.forEach(date => {
+                const dateKey = this.formatDateKey(date);
+                const isWeekend = date.getDay() === 0 || date.getDay() === 6;
+                const isHoliday = this.isHoliday(date);
                 
-                this.ceList.forEach(ce => {
-                    if (!this.scheduleData[ce.id]) {
-                        this.scheduleData[ce.id] = {};
-                    }
-                    
-                    dates.forEach(date => {
-                        const dateKey = this.formatDateKey(date);
-                        const isWeekend = date.getDay() === 0 || date.getDay() === 6;
-                        const isHoliday = this.isHoliday(date);
-                        
-                        if (!this.scheduleData[ce.id][dateKey]) {
-                            this.scheduleData[ce.id][dateKey] = {
-                                status: (isWeekend || isHoliday) ? '×' : 'A',
-                                desired: false,
-                                createdAt: firebase.database.ServerValue.TIMESTAMP
-                            };
-                        }
-                    });
-                });
+                if (!this.scheduleData[ce.id][dateKey]) {
+                    this.scheduleData[ce.id][dateKey] = {
+                        status: (isWeekend || isHoliday) ? '×' : 'A',
+                        desired: false,
+                        createdAt: firebase.database.ServerValue.TIMESTAMP
+                    };
+                }
+            });
+        });
+
+        this.renderScheduleTable();
+        window.showMessage('新しい勤務表を作成しました', 'success');
+        
+    } catch (error) {
+        console.error('❌ 勤務表作成エラー:', error);
+        window.showMessage('勤務表の作成に失敗しました', 'error');
+    }
+}
                 
                 await window.database.ref(`${window.DATA_ROOT}/workSchedule`).set(this.scheduleData);
                 
