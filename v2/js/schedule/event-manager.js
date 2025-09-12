@@ -226,20 +226,21 @@
                     const eventElement = document.createElement('div');
                     eventElement.className = 'event-item p-2 border rounded mb-2 bg-white shadow-sm';
                     eventElement.innerHTML = `
-                        <div class="flex justify-between items-start">
-                            <div class="flex-1">
-                                <h4 class="font-medium text-sm">${event.title}</h4>
-                                <p class="text-xs text-gray-600">${event.startTime} - ${event.endTime}</p>
-                                ${event.description ? `<p class="text-xs text-gray-500 mt-1">${event.description}</p>` : ''}
-                            </div>
-                            ${window.userRole !== 'viewer' ? `
-                                <button onclick="window.eventManager.deleteEvent('${event.id}')" 
-                                        class="text-red-600 hover:text-red-800 text-xs">
-                                    <i class="fas fa-trash"></i>
-                                </button>
-                            ` : ''}
-                        </div>
-                    `;
+                       <div class="flex justify-between items-start">
+        <div class="flex-1">
+            <h4 class="font-medium text-sm">${event.title}</h4>
+            <p class="text-xs text-gray-600">${event.startTime} - ${event.endTime}</p>
+            <p class="text-xs text-gray-600">件数: ${event.count || 1} / 必要人数: ${event.requiredPeople || 1}</p>
+            ${event.description ? `<p class="text-xs text-gray-500 mt-1">${event.description}</p>` : ''}
+        </div>
+        ${window.userRole !== 'viewer' ? `
+            <button onclick="window.eventManager.deleteEvent('${event.id}')" 
+                    class="text-red-600 hover:text-red-800 text-xs">
+                <i class="fas fa-trash"></i>
+            </button>
+        ` : ''}
+    </div>
+`;
                     
                     taskList.appendChild(eventElement);
                 });
