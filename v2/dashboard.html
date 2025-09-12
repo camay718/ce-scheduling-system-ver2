@@ -149,8 +149,8 @@ Copy<!DOCTYPE html>
                 </div>
             </div>
 
-            <!-- CE勤務区分表（表示専用・改善版） -->
-    <div id="ceManagementContent" class="screen-content" style="display:none; position: relative;">
+<!-- CE勤務区分表（表示専用・改善版） -->
+<div id="ceManagementContent" class="screen-content" style="display:none; position: relative;">
     <!-- 勤務時間帯説明（右上極小配置） -->
     <div class="work-time-compact" style="position: absolute; top: 15px; right: 15px; background: rgba(248, 249, 250, 0.95); border: 1px dashed #e0e0e0; border-radius: 4px; padding: 3px 5px; font-size: 7px; z-index: 100; max-width: 180px; line-height: 1.1;">
         <table style="width: 100%; border-collapse: collapse;">
@@ -167,22 +167,37 @@ Copy<!DOCTYPE html>
     </div>
 
     <div class="schedule-display-container">
-        <!-- 既存のコンテンツ -->
+        <div class="period-navigation">
+            <button id="prevPeriodBtn" class="btn-unified btn-outline-unified">
+                <i class="fas fa-chevron-left mr-1"></i>前の期間
+            </button>
+            <div class="period-display">
+                <div id="currentPeriodDisplay" class="text-lg font-bold">期間を読み込み中...</div>
+                <div class="text-sm text-gray-500">28日間の勤務表</div>
+            </div>
+            <button id="nextPeriodBtn" class="btn-unified btn-outline-unified">
+                次の期間<i class="fas fa-chevron-right ml-1"></i>
+            </button>
+        </div>
+        
+        <div class="text-center mb-4">
+            <button id="openScheduleEditorBtn" class="btn-unified btn-primary-unified">
+                <i class="fas fa-edit mr-2"></i>勤務表を作成・編集
+            </button>
+        </div>
+
+        <!-- 勤務区分表表示エリア -->
+        <div id="workScheduleDisplayArea" class="text-center py-8 text-gray-500">
+            <i class="fas fa-table text-4xl mb-4"></i>
+            <h3 class="text-lg font-semibold mb-2">勤務区分表</h3>
+            <p class="mb-4">作成済みの勤務表がここに表示されます</p>
+            <button onclick="document.getElementById('openScheduleEditorBtn').click()" 
+                    class="btn-unified btn-primary-unified">
+                <i class="fas fa-plus mr-2"></i>勤務表を作成
+            </button>
+        </div>
     </div>
 </div>
-
-                    <!-- 勤務区分表表示エリア -->
-                    <div id="workScheduleDisplayArea" class="text-center py-8 text-gray-500">
-                        <i class="fas fa-table text-4xl mb-4"></i>
-                        <h3 class="text-lg font-semibold mb-2">勤務区分表</h3>
-                        <p class="mb-4">作成済みの勤務表がここに表示されます</p>
-                        <button onclick="document.getElementById('openScheduleEditorBtn').click()" 
-                                class="btn-unified btn-primary-unified">
-                            <i class="fas fa-plus mr-2"></i>勤務表を作成
-                        </button>
-                    </div>
-                </div>
-            </div>
 
             <!-- その他のタブコンテンツ -->
             <div id="calendarContent" class="screen-content" style="display:none;">
