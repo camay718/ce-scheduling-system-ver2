@@ -456,84 +456,90 @@ Copy<!DOCTYPE html>
         }
 
         /* 印刷スタイル（A4横1枚完全対応） */
-        @media print {
-            body { 
-                overflow: visible !important; 
-                background: white !important;
-            }
-            .editor-sidebar,
-            .sidebar-toggle,
-            .work-time-compact,
-            .no-print,
-            button { 
-                display: none !important; 
-            }
-            .editor-container { 
-                display: block !important; 
-                grid-template-columns: none !important;
-            }
-            .editor-main { 
-                padding: 0 !important; 
-                margin: 0 !important;
-            }
-            .schedule-table-container {
-                margin-top: 0 !important;
-                border-radius: 0 !important;
-                box-shadow: none !important;
-                overflow: visible !important;
-            }
-            .schedule-table { 
-                font-size: 6px !important; 
-                min-width: auto !important;
-                page-break-inside: avoid;
-                width: 100% !important;
-                table-layout: fixed !important;
-            }
-            .schedule-table th,
-            .schedule-table td { 
-                padding: 1px !important; 
-                height: auto !important; 
-                border: 0.5px solid #000 !important;
-                overflow: hidden !important;
-            }
-            .no-header,
-            .no-cell {
-                position: static !important;
-                width: 20px !important;
-                min-width: 20px !important;
-                max-width: 20px !important;
-            }
-            .name-header,
-            .name-cell {
-                position: static !important;
-                width: 60px !important;
-                min-width: 60px !important;
-                max-width: 60px !important;
-            }
-            .date-col {
-                width: 22px !important;
-                min-width: 22px !important;
-                max-width: 22px !important;
-            }
-            .summary-cell {
-                width: 25px !important;
-                min-width: 25px !important;
-                max-width: 25px !important;
-            }
-            .ce-number {
-                width: 12px !important;
-                height: 12px !important;
-                font-size: 5px !important;
-            }
-            .work-cell.has-custom-text {
-                font-size: 4px !important;
-                line-height: 1 !important;
-            }
-            @page { 
-                size: A4 landscape; 
-                margin: 3mm !important; 
-            }
-        }
+ @media print {
+    body { 
+        overflow: visible !important; 
+        background: white !important;
+        -webkit-print-color-adjust: exact !important;
+        color-adjust: exact !important;
+    }
+    
+    /* 印刷時に非表示にする要素 */
+    .editor-sidebar,
+    .sidebar-toggle,
+    .work-time-compact,
+    .no-print,
+    button,
+    .btn-unified { 
+        display: none !important; 
+    }
+    
+    /* レイアウト調整 */
+    .editor-container { 
+        display: block !important; 
+    }
+    
+    .editor-main { 
+        padding: 0 !important; 
+        margin: 0 !important;
+    }
+    
+    /* テーブルの印刷最適化 */
+    .schedule-table-container {
+        margin-top: 0 !important;
+        border-radius: 0 !important;
+        box-shadow: none !important;
+        overflow: visible !important;
+    }
+    
+    .schedule-table { 
+        font-size: 6px !important; 
+        min-width: auto !important;
+        page-break-inside: avoid;
+        width: 100% !important;
+        table-layout: fixed !important;
+    }
+    
+    .schedule-table th,
+    .schedule-table td { 
+        padding: 1px !important; 
+        height: auto !important; 
+        border: 0.5px solid #000 !important;
+        overflow: hidden !important;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+    
+    /* 列幅の最適化 */
+    .no-header, .no-cell {
+        width: 20px !important;
+        min-width: 20px !important;
+        max-width: 20px !important;
+    }
+    
+    .name-header, .name-cell {
+        width: 60px !important;
+        min-width: 60px !important;
+        max-width: 60px !important;
+    }
+    
+    .date-col {
+        width: 22px !important;
+        min-width: 22px !important;
+        max-width: 22px !important;
+    }
+    
+    .summary-cell {
+        width: 25px !important;
+        min-width: 25px !important;
+        max-width: 25px !important;
+    }
+    
+    @page { 
+        size: A4 landscape; 
+        margin: 3mm !important; 
+    }
+}
     </style>
 </head>
 <body class="theme-unified">
