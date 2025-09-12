@@ -150,63 +150,26 @@ Copy<!DOCTYPE html>
             </div>
 
             <!-- CE勤務区分表（表示専用・改善版） -->
-            <div id="ceManagementContent" class="screen-content" style="display:none;">
-                <div class="schedule-display-container">
-                    <div class="period-navigation">
-                        <button id="prevPeriodBtn" class="btn-unified btn-outline-unified">
-                            <i class="fas fa-chevron-left mr-1"></i>前の期間
-                        </button>
-                        <div class="period-display">
-                            <div id="currentPeriodDisplay" class="text-lg font-bold">期間を読み込み中...</div>
-                            <div class="text-sm text-gray-500">28日間の勤務表</div>
-                        </div>
-                        <button id="nextPeriodBtn" class="btn-unified btn-outline-unified">
-                            次の期間<i class="fas fa-chevron-right ml-1"></i>
-                        </button>
-                    </div>
-                    
-                    <div class="text-center mb-4">
-                        <button id="openScheduleEditorBtn" class="btn-unified btn-primary-unified">
-                            <i class="fas fa-edit mr-2"></i>勤務表を作成・編集
-                        </button>
-                    </div>
+    <div id="ceManagementContent" class="screen-content" style="display:none; position: relative;">
+    <!-- 勤務時間帯説明（右上極小配置） -->
+    <div class="work-time-compact" style="position: absolute; top: 15px; right: 15px; background: rgba(248, 249, 250, 0.95); border: 1px dashed #e0e0e0; border-radius: 4px; padding: 3px 5px; font-size: 7px; z-index: 100; max-width: 180px; line-height: 1.1;">
+        <table style="width: 100%; border-collapse: collapse;">
+            <thead>
+                <tr><th style="padding: 1px 2px; font-size: 7px; background: #f2f5f7; font-weight: 600;">区分</th><th style="padding: 1px 2px; font-size: 7px; background: #f2f5f7; font-weight: 600;">時間</th></tr>
+            </thead>
+            <tbody>
+                <tr><td style="padding: 1px 2px; font-size: 7px;">A</td><td style="padding: 1px 2px; font-size: 7px;">8:00-16:30</td></tr>
+                <tr><td style="padding: 1px 2px; font-size: 7px;">A1</td><td style="padding: 1px 2px; font-size: 7px;">7:00-15:30</td></tr>
+                <tr><td style="padding: 1px 2px; font-size: 7px;">B</td><td style="padding: 1px 2px; font-size: 7px;">8:00-翌8:00</td></tr>
+                <tr><td style="padding: 1px 2px; font-size: 7px;">×</td><td style="padding: 1px 2px; font-size: 7px;">休日</td></tr>
+            </tbody>
+        </table>
+    </div>
 
-                    <!-- 勤務時間帯定義（コンパクト版） -->
-                    <div class="work-time-definitions small mb-4">
-                        <h3 class="font-semibold mb-2">勤務時間帯</h3>
-                        <table>
-                            <thead>
-                                <tr>
-                                    <th>区分</th>
-                                    <th>勤務時間</th>
-                                    <th>休憩時間</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <tr>
-                                    <td><strong>A</strong></td>
-                                    <td>8:00～16:30</td>
-                                    <td>11:45～12:30</td>
-                                </tr>
-                                <tr>
-                                    <td><strong>A1</strong></td>
-                                    <td>7:00～15:30</td>
-                                    <td>11:45～12:30</td>
-                                </tr>
-                                <tr>
-                                    <td><strong>B</strong></td>
-                                    <td>8:00～翌8:00</td>
-                                    <td>11:45～12:45及び16:45～17:45</td>
-                                </tr>
-                                <tr>
-                                    <td><strong>×</strong></td>
-                                    <td>休日</td>
-                                    <td>-</td>
-                                </tr>
-                            </tbody>
-                        </table>
-                        <p class="text-xs text-gray-600 mt-1">※ OPEのA1は紺色表示。非・×・年・出・研は白背景表示。</p>
-                    </div>
+    <div class="schedule-display-container">
+        <!-- 既存のコンテンツ -->
+    </div>
+</div>
 
                     <!-- 勤務区分表表示エリア -->
                     <div id="workScheduleDisplayArea" class="text-center py-8 text-gray-500">
@@ -786,13 +749,16 @@ Copy<!DOCTYPE html>
         }
 
         openQuickAddEvent(department) {
-            if (window.userRole === 'viewer') {
-                window.showMessage('編集権限がありません', 'warning');
-                return;
-            }
-            window.showMessage('業務追加機能（実装中）', 'info');
-        }
-
+    if (window.userRole === 'viewer') {
+        window.showMessage('編集権限がありません', 'warning');
+        return;
+    }
+    if (!window.eventManager) {
+        window.showMessage('イベント管理の初期化を待機中です', 'info');
+        return;
+    }
+    window.eventManager.openAddEventModal(department);
+}
         setupAdminSettings() {
             const settingsContent = document.getElementById('settingsContent');
             if (!settingsContent) return;
