@@ -82,55 +82,69 @@
             const modal = document.createElement('div');
             modal.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50';
             modal.innerHTML = `
-                <div class="bg-white p-6 rounded-lg max-w-md w-full mx-4">
-                    <h3 class="text-lg font-semibold mb-4">業務追加</h3>
-                    <form id="addEventForm">
-                        <div class="mb-4">
-                            <label class="block text-sm font-medium text-gray-700 mb-2">部門</label>
-                            <select id="eventDepartment" class="w-full px-3 py-2 border border-gray-300 rounded-md" required>
-                                <option value="">部門を選択</option>
-                                ${window.DEPARTMENTS.map(dept => 
-                                    `<option value="${dept}" ${defaultDepartment === dept ? 'selected' : ''}>${dept}</option>`
-                                ).join('')}
-                            </select>
-                        </div>
-                        <div class="mb-4">
-                            <label class="block text-sm font-medium text-gray-700 mb-2">業務名</label>
-                            <input type="text" id="eventTitle" required 
-                                   class="w-full px-3 py-2 border border-gray-300 rounded-md"
-                                   placeholder="例: 機器点検">
-                        </div>
-                        <div class="mb-4">
-                            <label class="block text-sm font-medium text-gray-700 mb-2">開始時間</label>
-                            <input type="time" id="eventStartTime" required 
-                                   class="w-full px-3 py-2 border border-gray-300 rounded-md"
-                                   value="08:00">
-                        </div>
-                        <div class="mb-4">
-                            <label class="block text-sm font-medium text-gray-700 mb-2">終了時間</label>
-                            <input type="time" id="eventEndTime" required 
-                                   class="w-full px-3 py-2 border border-gray-300 rounded-md"
-                                   value="17:00">
-                        </div>
-                        <div class="mb-4">
-                            <label class="block text-sm font-medium text-gray-700 mb-2">説明（任意）</label>
-                            <textarea id="eventDescription" 
-                                      class="w-full px-3 py-2 border border-gray-300 rounded-md" 
-                                      rows="3" placeholder="業務の詳細説明"></textarea>
-                        </div>
-                        <div class="flex space-x-4">
-                            <button type="button" onclick="this.closest('.fixed').remove()" 
-                                    class="flex-1 bg-gray-500 text-white py-2 px-4 rounded hover:bg-gray-600">
-                                キャンセル
-                            </button>
-                            <button type="submit" 
-                                    class="flex-1 bg-blue-600 text-white py-2 px-4 rounded hover:bg-blue-700">
-                                追加
-                            </button>
-                        </div>
-                    </form>
+               <div class="bg-white p-6 rounded-lg max-w-md w-full mx-4">
+        <h3 class="text-lg font-semibold mb-4">業務追加</h3>
+        <form id="addEventForm">
+            <div class="mb-4">
+                <label class="block text-sm font-medium text-gray-700 mb-2">部門</label>
+                <select id="eventDepartment" class="w-full px-3 py-2 border border-gray-300 rounded-md" required>
+                    <option value="">部門を選択</option>
+                    ${window.DEPARTMENTS.map(dept => 
+                        `<option value="${dept}" ${defaultDepartment === dept ? 'selected' : ''}>${dept}</option>`
+                    ).join('')}
+                </select>
+            </div>
+            <div class="mb-4">
+                <label class="block text-sm font-medium text-gray-700 mb-2">業務名</label>
+                <input type="text" id="eventTitle" required 
+                       class="w-full px-3 py-2 border border-gray-300 rounded-md"
+                       placeholder="例: 機器点検">
+            </div>
+            <div class="grid grid-cols-2 gap-3 mb-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">開始時間</label>
+                    <input type="time" id="eventStartTime" required 
+                           class="w-full px-3 py-2 border border-gray-300 rounded-md"
+                           value="08:00">
                 </div>
-            `;
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">終了時間</label>
+                    <input type="time" id="eventEndTime" required 
+                           class="w-full px-3 py-2 border border-gray-300 rounded-md"
+                           value="17:00">
+                </div>
+            </div>
+            <div class="grid grid-cols-2 gap-3 mb-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">件数</label>
+                    <input type="number" id="eventCount" min="1" value="1" required
+                           class="w-full px-3 py-2 border border-gray-300 rounded-md">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">必要人数</label>
+                    <input type="number" id="eventRequiredPeople" min="1" value="1" required
+                           class="w-full px-3 py-2 border border-gray-300 rounded-md">
+                </div>
+            </div>
+            <div class="mb-4">
+                <label class="block text-sm font-medium text-gray-700 mb-2">説明（任意）</label>
+                <textarea id="eventDescription" 
+                          class="w-full px-3 py-2 border border-gray-300 rounded-md" 
+                          rows="3" placeholder="業務の詳細説明"></textarea>
+            </div>
+            <div class="flex space-x-4">
+                <button type="button" onclick="this.closest('.fixed').remove()" 
+                        class="flex-1 bg-gray-500 text-white py-2 px-4 rounded hover:bg-gray-600">
+                    キャンセル
+                </button>
+                <button type="submit" 
+                        class="flex-1 bg-blue-600 text-white py-2 px-4 rounded hover:bg-blue-700">
+                    追加
+                </button>
+            </div>
+        </form>
+    </div>
+`;
 
             const form = modal.querySelector('#addEventForm');
             if (form) {
@@ -143,45 +157,49 @@
             return modal;
         }
 
-        async handleAddEvent(modal) {
-            try {
-                const department = document.getElementById('eventDepartment').value;
-                const title = document.getElementById('eventTitle').value.trim();
-                const startTime = document.getElementById('eventStartTime').value;
-                const endTime = document.getElementById('eventEndTime').value;
-                const description = document.getElementById('eventDescription').value.trim();
+   async handleAddEvent(modal) {
+    try {
+        const department = document.getElementById('eventDepartment').value;
+        const title = document.getElementById('eventTitle').value.trim();
+        const startTime = document.getElementById('eventStartTime').value;
+        const endTime = document.getElementById('eventEndTime').value;
+        const count = parseInt(document.getElementById('eventCount').value) || 1;
+        const requiredPeople = parseInt(document.getElementById('eventRequiredPeople').value) || 1;
+        const description = document.getElementById('eventDescription').value.trim();
 
-                if (!department || !title || !startTime || !endTime) {
-                    window.showMessage('必須項目を入力してください', 'error');
-                    return;
-                }
-
-                const currentDate = window.dashboardAuth?.selectedDate || new Date();
-                const dateKey = this.formatDateKey(currentDate);
-
-                const eventData = {
-                    id: `event_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-                    title: title,
-                    department: department,
-                    date: dateKey,
-                    startTime: startTime,
-                    endTime: endTime,
-                    description: description,
-                    assignedCEs: [],
-                    createdAt: firebase.database.ServerValue.TIMESTAMP,
-                    createdBy: window.currentUserData?.displayName || 'unknown'
-                };
-
-                await window.database.ref(`${window.DATA_ROOT}/events/${eventData.id}`).set(eventData);
-
-                modal.remove();
-                window.showMessage('業務を追加しました', 'success');
-
-            } catch (error) {
-                console.error('❌ 業務追加エラー:', error);
-                window.showMessage('業務の追加に失敗しました', 'error');
-            }
+        if (!department || !title || !startTime || !endTime) {
+            window.showMessage('必須項目を入力してください', 'error');
+            return;
         }
+
+        const currentDate = window.dashboardAuth?.selectedDate || new Date();
+        const dateKey = this.formatDateKey(currentDate);
+
+        const eventData = {
+            id: `event_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+            title: title,
+            department: department,
+            date: dateKey,
+            startTime: startTime,
+            endTime: endTime,
+            count: count,
+            requiredPeople: requiredPeople,
+            description: description,
+            assignedCEs: [],
+            createdAt: firebase.database.ServerValue.TIMESTAMP,
+            createdBy: window.currentUserData?.displayName || 'unknown'
+        };
+
+        await window.database.ref(`${window.DATA_ROOT}/events/${eventData.id}`).set(eventData);
+
+        modal.remove();
+        window.showMessage('業務を追加しました', 'success');
+
+    } catch (error) {
+        console.error('❌ 業務追加エラー:', error);
+        window.showMessage('業務の追加に失敗しました', 'error');
+    }
+}
 
         renderEvents() {
             if (!window.dashboardAuth?.selectedDate) return;
