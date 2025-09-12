@@ -39,33 +39,86 @@
             throw new Error('CEManager: 依存関係の初期化タイムアウト');
         }
 
-        async setupRealtimeListener() {
-            this.dbRef = window.database.ref(`${window.DATA_ROOT}/ceList`);
-            
-            this.dbRef.on('value', snapshot => {
-                if (snapshot.exists()) {
-                    this.ceList = snapshot.val();
-                    this.normalizeCEData();
-                    console.log('✅ CEリストリアルタイム更新:', this.ceList.length, '名');
-                } else {
-                    this.ceList = JSON.parse(JSON.stringify(window.CE_LIST_INITIAL)).map((ce, index) => ({
-                        ...ce,
-                        id: `initial_ce_${index}_${Date.now()}`,
-                        status: {
-                            monday: '', tuesday: '', wednesday: '', thursday: '',
-                            friday: '', saturday: '', sunday: ''
-                        },
-                        createdAt: Date.now()
-                    }));
-                    this.saveCEList();
-                    console.log('✅ 初期CEリスト作成:', this.ceList.length, '名');
-                }
-                
-                this.displayCEList();
-            }, error => {
-                console.error('❌ CEリストリアルタイム監視エラー:', error);
-            });
+// setupRealtimeListener() の置換
+async setupRealtimeListener() {
+    this.dbRef = window.database.ref(`${window.DATA_ROOT}/ceList`);
+
+    this.dbRef.on('value', snapshot => {
+        const raw = snapshot.val();
+        let list = [];
+        
+        // データ形式の統一処理
+        if (Array.isArray(raw)) {
+            // 旧形式（配列直置き）
+            list = raw;
+        } else if (raw?.list && Array.isArray(raw.list)) {
+            // 新形式 {list: [...]}
+            list = raw.list;
+        } else if (raw && typeof raw === 'object') {
+            // フォールバック
+            list = Array.isArray(raw) ? raw : Object.values(raw);
         }
+
+        if (list.length > 0) {
+            this.ceList = list;
+            this.normalizeCEData();
+        } else {
+            // 27名で初期化
+            this.ceList = this.create27CEList();
+            this.saveCEList();
+        }
+
+        this.displayCEList();
+    }, error => {
+        console.error('❌ CEリストリアルタイム監視エラー:', error);
+    });
+}
+
+// saveCEList() の置換
+async saveCEList() {
+    try {
+        const ceListData = {
+            list: this.ceList,
+            updatedAt: firebase.database.ServerValue.TIMESTAMP
+        };
+        await window.database.ref(`${window.DATA_ROOT}/ceList`).set(ceListData);
+        console.log('✅ CEリスト保存完了');
+    } catch (error) {
+        console.error('❌ CEリスト保存エラー:', error);
+        window.showMessage('CEリストの保存に失敗しました', 'error');
+    }
+}
+
+// 27名初期化メソッドの追加
+create27CEList() {
+    const normalOrder = [
+        '安孫子明博', '八鍬純', '杉山陽子', '中村圭佑', '石山智之', 
+        '亀井祐哉', '丸藤健', '三春摩弥', '斎藤大樹', '田中隆昭', 
+        '宇井勇気', '宇野沢徹', '佐藤将志', '庄司由紀', '小沼和樹', 
+        '武田優斗', '設樂佑介', '伊藤大晟', '上松野聖', '笹生貴之', 
+        '和田彩花', '伊藤大稀', '佐藤千優', '桑島亜依', '村田七星', 
+        '小林将己', '寒河江悠輝'
+    ];
+    
+    return normalOrder.map((name, index) => ({
+        id: `ce_${index + 1}_${Date.now()}`,
+        name: this.getLastName(name),
+        fullName: name,
+        displayName: this.getLastName(name),
+        iconName: this.getLastName(name),
+        workType: ['OPE', 'ME', 'HD', 'FLEX'][index % 4],
+        status: {
+            monday: '', tuesday: '', wednesday: '', thursday: '',
+            friday: '', saturday: '', sunday: ''
+        },
+        createdAt: Date.now()
+    }));
+}
+
+getLastName(fullName) {
+    if (fullName.length <= 2) return fullName;
+    return fullName.substring(0, Math.min(3, Math.floor(fullName.length / 2)));
+}
 
         normalizeCEData() {
             this.ceList = this.ceList.map((ce, index) => {
