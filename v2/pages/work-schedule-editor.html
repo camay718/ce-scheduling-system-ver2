@@ -25,71 +25,68 @@ Copy<!DOCTYPE html>
             background: var(--primary-gradient);
         }
         
-        .editor-container {
-            display: grid;
-            grid-template-columns: 300px 1fr;
-            height: 100vh;
-            transition: grid-template-columns 0.3s ease;
-        }
-        
-        .editor-container.sidebar-collapsed {
-            grid-template-columns: 50px 1fr;
-        }
+ .editor-container {
+    display: flex;
+    height: 100vh;
+}
 
-        /* サイドバー（完全収納修正版） */
-        .editor-sidebar {
-            background: var(--glass-bg);
-            backdrop-filter: blur(10px);
-            border-right: 1px solid var(--glass-border);
-            overflow: hidden;
-            transition: all 0.3s ease;
-            position: relative;
-        }
+.editor-sidebar {
+    width: 280px;
+    background: var(--glass-bg);
+    backdrop-filter: blur(10px);
+    border-right: 1px solid var(--glass-border);
+    overflow-x: hidden;
+    overflow-y: auto;
+    transition: width 0.3s ease;
+    position: relative;
+    flex-shrink: 0;
+}
 
-        .sidebar-toggle {
-            position: absolute;
-            top: 15px;
-            right: -15px;
-            background: var(--brand-primary);
-            color: white;
-            border: none;
-            border-radius: 50%;
-            width: 30px;
-            height: 30px;
-            cursor: pointer;
-            z-index: 101;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.2);
-        }
+.editor-sidebar.collapsed {
+    width: 60px;
+}
 
-        .sidebar-content {
-            padding: 20px;
-            width: 280px;
-            height: 100vh;
-            overflow-y: auto;
-            transition: all 0.3s ease;
-            position: absolute;
-            top: 0;
-            left: 0;
-            background: inherit;
-        }
+.sidebar-content {
+    padding: 20px;
+    width: 280px;
+    height: 100%;
+    position: absolute;
+    top: 0;
+    left: 0;
+    transition: opacity 0.3s ease;
+}
 
-        .editor-container.sidebar-collapsed .sidebar-content {
-            opacity: 0;
-            pointer-events: none;
-            transform: translateX(-100%);
-        }
+.editor-sidebar.collapsed .sidebar-content {
+    opacity: 0;
+    pointer-events: none;
+}
 
-        /* メインエリア */
-        .editor-main {
-            padding: 20px;
-            overflow: hidden;
-            display: flex;
-            flex-direction: column;
-            position: relative;
-        }
+.sidebar-toggle {
+    position: absolute;
+    top: 15px;
+    right: -15px;
+    background: var(--brand-primary);
+    color: white;
+    border: none;
+    border-radius: 50%;
+    width: 30px;
+    height: 30px;
+    cursor: pointer;
+    z-index: 101;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+}
+
+.editor-main {
+    flex-grow: 1;
+    padding: 20px;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    position: relative;
+}
 
         /* 勤務時間帯説明（右上極小配置） */
         .work-time-compact {
