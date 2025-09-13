@@ -1,0 +1,2518 @@
+Copy<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>勤務表作成・編集 - CEスケジュール管理システム V2</title>
+    
+    <!-- 外部ライブラリ -->
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="../css/theme-unified.css">
+    
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+    <script src="../js/config/firebase-config.js"></script>
+
+    <style>
+        /* 勤務表エディタ専用スタイル */
+        body { 
+            overflow: hidden; 
+            font-family: 'Noto Sans JP', sans-serif;
+            background: var(--primary-gradient);
+        }
+        
+ .editor-container {
+    display: flex;
+    height: 100vh;
+}
+
+.editor-sidebar {
+    width: 280px;
+    background: var(--glass-bg);
+    backdrop-filter: blur(10px);
+    border-right: 1px solid var(--glass-border);
+    overflow-x: hidden;
+    overflow-y: auto;
+    transition: width 0.3s ease;
+    position: relative;
+    flex-shrink: 0;
+}
+
+.editor-sidebar.collapsed {
+    width: 60px;
+}
+
+.sidebar-content {
+    padding: 20px;
+    width: 280px;
+    height: 100%;
+    position: absolute;
+    top: 0;
+    left: 0;
+    transition: opacity 0.3s ease;
+}
+
+.editor-sidebar.collapsed .sidebar-content {
+    opacity: 0;
+    pointer-events: none;
+}
+
+.sidebar-toggle {
+    position: absolute;
+    top: 15px;
+    right: -15px;
+    background: var(--brand-primary);
+    color: white;
+    border: none;
+    border-radius: 50%;
+    width: 30px;
+    height: 30px;
+    cursor: pointer;
+    z-index: 101;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+}
+
+.editor-main {
+    flex-grow: 1;
+    padding: 20px;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    position: relative;
+}
+
+        /* 勤務時間帯説明（右上極小配置） */
+        .work-time-compact {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            background: rgba(248, 249, 250, 0.95);
+            border: 1px dashed #e0e0e0;
+            border-radius: 4px;
+            padding: 3px 5px;
+            font-size: 7px;
+            z-index: 100;
+            max-width: 180px;
+            line-height: 1.1;
+        }
+
+        .work-time-compact table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .work-time-compact th,
+        .work-time-compact td {
+            padding: 1px 2px;
+            border: none;
+            font-size: 7px;
+            text-align: left;
+        }
+
+        .work-time-compact th {
+            background: #f2f5f7;
+            font-weight: 600;
+        }
+
+        /* 勤務表テーブル（幅制御強化） */
+        .schedule-table-container {
+            flex: 1;
+            overflow: auto;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            margin-top: 40px;
+        }
+
+        .schedule-table {
+            width: 100%;
+            min-width: 1500px;
+            border-collapse: collapse;
+            font-size: 11px;
+            table-layout: fixed;
+        }
+
+        .schedule-table th,
+        .schedule-table td {
+            border: 1px solid #e0e0e0;
+            padding: 3px;
+            text-align: center;
+            vertical-align: middle;
+            height: 28px;
+            overflow: hidden;
+        }
+
+        .schedule-table th {
+            background: linear-gradient(135deg, #f8f9fa, #e9ecef);
+            font-weight: 600;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+
+        /* No列と名前列（固定幅） */
+        .no-header,
+        .no-cell {
+            position: sticky;
+            left: 0;
+            background: white;
+            z-index: 15;
+            width: 35px;
+            min-width: 35px;
+            max-width: 35px;
+        }
+
+        .no-header {
+            background: linear-gradient(135deg, #f8f9fa, #e9ecef);
+            z-index: 20;
+        }
+
+        .name-header,
+        .name-cell {
+            position: sticky;
+            left: 35px;
+            background: white;
+            z-index: 15;
+            width: 120px;
+            min-width: 120px;
+            max-width: 120px;
+            text-align: left;
+            padding-left: 8px;
+        }
+
+        .name-header {
+            background: linear-gradient(135deg, #f8f9fa, #e9ecef);
+            z-index: 20;
+        }
+
+        .name-cell {
+            cursor: pointer;
+            transition: background-color 0.2s ease;
+        }
+
+        .name-cell:hover {
+            background: #f0f8ff;
+        }
+
+        /* 日付列（固定幅） */
+        .date-col {
+            width: 38px;
+            min-width: 38px;
+            max-width: 38px;
+        }
+
+        /* No部分（ダブルクリック対応） */
+        .ce-number {
+            background: var(--brand-primary);
+            color: white;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 10px;
+            font-weight: bold;
+            cursor: pointer;
+            margin: 0 auto;
+        }
+
+        .ce-number:hover {
+            background: var(--brand-secondary);
+        }
+
+        /* 勤務セル */
+        .work-cell {
+            cursor: pointer;
+            transition: all 0.2s ease;
+            font-weight: 600;
+            position: relative;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .work-cell:hover {
+            transform: scale(1.05);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+        }
+
+        /* 勤務区分別背景色 */
+        .work-cell.type-ope { 
+            background: #87CEEB; 
+            color: #1E3A8A; 
+        }
+
+        /* OPE + A1 → 紺色（要求仕様） */
+        .work-cell.type-ope.status-A1 { 
+            background: #1E3A8A !important; 
+            color: white !important; 
+        }
+
+        .work-cell.type-me { 
+            background: #90EE90; 
+            color: #006400; 
+        }
+
+        .work-cell.type-hd { 
+            background: #FFB6C1; 
+            color: #8B008B; 
+        }
+
+        .work-cell.type-flex { 
+            background: #FFFF99; 
+            color: #B8860B; 
+        }
+
+        /* 非勤務状態（白背景）+ テキスト入力 */
+        .work-cell.status-非,
+        .work-cell.status-×,
+        .work-cell.status-年,
+        .work-cell.status-出,
+        .work-cell.status-研,
+        .work-cell.status-text {
+            background: white !important;
+            color: #333 !important;
+            border: 2px solid #ddd !important;
+        }
+
+        /* テキスト入力セル（極小フォント・幅固定強化） */
+        .work-cell.has-custom-text {
+            font-size: 6px !important;
+            line-height: 1.1 !important;
+            padding: 1px !important;
+            word-wrap: break-word;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        /* 希望勤務（下線） */
+        .work-cell.desired {
+            text-decoration: underline;
+            text-decoration-thickness: 2px;
+            text-underline-offset: 3px;
+        }
+
+        /* 休日セル */
+        .work-cell.holiday {
+            background: linear-gradient(135deg, #f0f8ff, #e6f3ff);
+        }
+
+        /* サマリーセル */
+        .summary-cell {
+            background: #f8f9fa;
+            font-weight: 500;
+            width: 45px;
+            min-width: 45px;
+            max-width: 45px;
+        }
+
+        /* フッターサマリー */
+        .footer-summary-row th,
+        .footer-summary-row td {
+            background: linear-gradient(135deg, #e9ecef, #dee2e6);
+            font-weight: 600;
+            position: sticky;
+            bottom: 0;
+            z-index: 8;
+        }
+
+        .footer-summary-row .type-label {
+            position: sticky;
+            left: 0;
+            z-index: 15;
+            background: linear-gradient(135deg, #e9ecef, #dee2e6);
+        }
+
+        /* 警告表示 */
+        .warning-count {
+            color: #dc3545;
+            font-weight: bold;
+            background: rgba(220, 53, 69, 0.1);
+            border-radius: 4px;
+            padding: 2px 4px;
+        }
+
+        /* 勤務状態選択メニュー（画面枠内表示完全対応） */
+        .work-status-menu {
+            position: fixed;
+            background: white;
+            border: 1px solid #dee2e6;
+            border-radius: 8px;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.15);
+            padding: 12px;
+            z-index: 1000;
+            min-width: 280px;
+            max-width: 320px;
+        }
+
+        .work-status-menu .status-buttons {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 4px;
+            margin: 8px 0;
+        }
+
+        .work-status-menu .status-btn {
+            padding: 6px 4px;
+            border: 1px solid #dee2e6;
+            border-radius: 4px;
+            background: white;
+            cursor: pointer;
+            font-size: 10px;
+            font-weight: 600;
+            transition: all 0.2s ease;
+        }
+
+        .work-status-menu .status-btn:hover {
+            background: #f8f9fa;
+            border-color: #6c757d;
+        }
+
+        .work-status-menu .status-btn.active {
+            background: #007bff;
+            color: white;
+            border-color: #007bff;
+        }
+
+        /* テキスト入力エリア */
+        .text-input-area {
+            margin-top: 8px;
+            padding-top: 8px;
+            border-top: 1px solid #dee2e6;
+        }
+
+        .text-input-area textarea {
+            width: 100%;
+            height: 50px;
+            font-size: 11px;
+            padding: 6px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            resize: none;
+        }
+
+        /* モーダル */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 2000;
+        }
+
+        .modal-content {
+            background: white;
+            border-radius: 12px;
+            padding: 24px;
+            max-width: 90vw;
+            max-height: 85vh;
+            overflow-y: auto;
+        }
+
+        /* ドラッグ並び替え */
+        .sortable-list {
+            max-height: 300px;
+            overflow-y: auto;
+        }
+
+        .sortable-item {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 6px;
+            padding: 8px 12px;
+            margin: 4px 0;
+            cursor: move;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: all 0.2s ease;
+        }
+
+        .sortable-item:hover {
+            background: #e9ecef;
+            transform: translateX(4px);
+        }
+
+        .sortable-item.dragging {
+            opacity: 0.5;
+            transform: rotate(2deg);
+        }
+
+        /* 印刷スタイル（A4横1枚完全対応） */
+ @media print {
+    body { 
+        overflow: visible !important; 
+        background: white !important;
+        -webkit-print-color-adjust: exact !important;
+        color-adjust: exact !important;
+    }
+    
+    /* 印刷時に非表示にする要素 */
+    .editor-sidebar,
+    .sidebar-toggle,
+    .work-time-compact,
+    .no-print,
+    button,
+    .btn-unified { 
+        display: none !important; 
+    }
+    
+    /* レイアウト調整 */
+    .editor-container { 
+        display: block !important; 
+    }
+    
+    .editor-main { 
+        padding: 0 !important; 
+        margin: 0 !important;
+    }
+    
+    /* テーブルの印刷最適化 */
+    .schedule-table-container {
+        margin-top: 0 !important;
+        border-radius: 0 !important;
+        box-shadow: none !important;
+        overflow: visible !important;
+    }
+    
+    .schedule-table { 
+        font-size: 6px !important; 
+        min-width: auto !important;
+        page-break-inside: avoid;
+        width: 100% !important;
+        table-layout: fixed !important;
+    }
+    
+    .schedule-table th,
+    .schedule-table td { 
+        padding: 1px !important; 
+        height: auto !important; 
+        border: 0.5px solid #000 !important;
+        overflow: hidden !important;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+    
+    /* 列幅の最適化 */
+    .no-header, .no-cell {
+        width: 20px !important;
+        min-width: 20px !important;
+        max-width: 20px !important;
+    }
+    
+    .name-header, .name-cell {
+        width: 60px !important;
+        min-width: 60px !important;
+        max-width: 60px !important;
+    }
+    
+    .date-col {
+        width: 22px !important;
+        min-width: 22px !important;
+        max-width: 22px !important;
+    }
+    
+    .summary-cell {
+        width: 25px !important;
+        min-width: 25px !important;
+        max-width: 25px !important;
+    }
+    
+    @page { 
+        size: A4 landscape; 
+        margin: 3mm !important; 
+    }
+}
+    </style>
+</head>
+<body class="theme-unified">
+    <!-- ローディング -->
+    <div id="loading" class="fixed inset-0 bg-white bg-opacity-95 flex items-center justify-center z-50">
+        <div class="text-center">
+            <div class="spinner border-4 border-gray-200 border-t-green-500 rounded-full w-12 h-12 animate-spin mx-auto mb-4"></div>
+            <p class="text-gray-600">勤務表エディタを読み込み中...</p>
+        </div>
+    </div>
+
+    <!-- メインコンテナ -->
+    <div id="editorContainer" class="editor-container" style="display: none;">
+        <!-- サイドバー -->
+        <div class="editor-sidebar">
+            <button id="sidebarToggle" class="sidebar-toggle">
+                <i class="fas fa-chevron-left"></i>
+            </button>
+
+            <div class="sidebar-content">
+                <!-- ヘッダー -->
+                <div class="mb-6 text-center">
+                    <h1 class="text-lg font-bold text-gray-800 mb-2">
+                        <i class="fas fa-table mr-2 text-green-600"></i>
+                        勤務表作成・編集
+                    </h1>
+                    <p class="text-xs text-gray-600">CEスケジュール管理システム V2</p>
+                </div>
+
+                <!-- 期間設定 -->
+                <div class="mb-6">
+                    <h3 class="text-sm font-semibold mb-3">
+                        <i class="fas fa-calendar mr-2"></i>期間設定
+                    </h3>
+                    <div class="space-y-3">
+                        <div>
+                            <label class="block text-xs font-medium mb-1">開始日</label>
+                            <input type="date" id="periodStartDate" class="input-unified text-xs">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium mb-1">終了日</label>
+                            <input type="date" id="periodEndDate" class="input-unified text-xs">
+                        </div>
+                        <div class="grid grid-cols-3 gap-2">
+                            <button id="prevPeriodBtn" class="btn-unified btn-outline-unified btn-small">
+                                <i class="fas fa-chevron-left"></i>
+                            </button>
+                            <button id="todayPeriodBtn" class="btn-unified btn-primary-unified btn-small">
+                                今日
+                            </button>
+                            <button id="nextPeriodBtn" class="btn-unified btn-outline-unified btn-small">
+                                <i class="fas fa-chevron-right"></i>
+                            </button>
+                        </div>
+                        <button id="updatePeriodBtn" class="btn-unified btn-primary-unified btn-small w-full">
+                            <i class="fas fa-sync mr-1"></i>期間更新
+                        </button>
+                    </div>
+                </div>
+
+                <!-- CE管理 -->
+                <div class="mb-6">
+                    <h3 class="text-sm font-semibold mb-3">
+                        <i class="fas fa-users mr-2"></i>CE管理
+                    </h3>
+                    <div class="space-y-2">
+                        <div class="grid grid-cols-2 gap-2">
+                            <button id="addCEBtn" class="btn-unified btn-primary-unified btn-small">
+                                <i class="fas fa-plus mr-1"></i>追加
+                            </button>
+                            <button id="deleteCEBtn" class="btn-unified btn-outline-unified btn-small text-red-600 border-red-600">
+                                <i class="fas fa-trash mr-1"></i>削除
+                            </button>
+                        </div>
+                        <button id="sortCENormalBtn" class="btn-unified btn-outline-unified btn-small w-full">
+                            <i class="fas fa-list-ol mr-1"></i>通常順
+                        </button>
+                        <button id="sortCEWorkTypeBtn" class="btn-unified btn-outline-unified btn-small w-full">
+                            <i class="fas fa-briefcase mr-1"></i>勤務順
+                        </button>
+                        <button id="sortCENameBtn" class="btn-unified btn-outline-unified btn-small w-full">
+                            <i class="fas fa-sort-alpha-down mr-1"></i>名前順
+                        </button>
+                        <button id="manualSortCEBtn" class="btn-unified btn-outline-unified btn-small w-full">
+                            <i class="fas fa-arrows-alt mr-1"></i>手動並び替え
+                        </button>
+                    </div>
+                </div>
+
+                <!-- 勤務表操作 -->
+                <div class="mb-6">
+                    <h3 class="text-sm font-semibold mb-3">
+                        <i class="fas fa-table mr-2"></i>勤務表操作
+                    </h3>
+                    <div class="space-y-2">
+                        <button id="createNewScheduleBtn" class="btn-unified btn-primary-unified btn-small w-full">
+                            <i class="fas fa-plus mr-1"></i>新規作成
+                        </button>
+                        <button id="clearAllBtn" class="btn-unified btn-outline-unified btn-small w-full">
+                            <i class="fas fa-eraser mr-1"></i>全クリア
+                        </button>
+                    </div>
+                </div>
+
+                <!-- 保存・読み込み -->
+                <div class="mb-6">
+                    <h3 class="text-sm font-semibold mb-3">
+                        <i class="fas fa-database mr-2"></i>保存・読み込み
+                    </h3>
+                    <div class="space-y-2">
+                        <div class="flex gap-2">
+                            <input type="text" id="snapshotTitle" class="input-unified text-xs" placeholder="タイトル">
+                            <button id="saveSnapshotBtn" class="btn-unified btn-primary-unified btn-small">
+                                <i class="fas fa-save"></i>
+                            </button>
+                        </div>
+                        <select id="snapshotSelect" class="input-unified text-xs">
+                            <option value="">保存データを選択</option>
+                        </select>
+                        <div class="flex gap-2">
+                            <button id="loadSnapshotBtn" class="btn-unified btn-outline-unified btn-small flex-1">
+                                <i class="fas fa-folder-open mr-1"></i>読込
+                            </button>
+                            <button id="deleteSnapshotBtn" class="btn-unified btn-outline-unified btn-small flex-1 text-red-600 border-red-600">
+                                <i class="fas fa-trash mr-1"></i>削除
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 公開・印刷 -->
+                <div class="mb-6">
+                    <h3 class="text-sm font-semibold mb-3">
+                        <i class="fas fa-share mr-2"></i>公開・印刷
+                    </h3>
+                    <div class="space-y-2">
+                        <button id="publishScheduleBtn" class="btn-unified btn-primary-unified btn-small w-full">
+                            <i class="fas fa-bullhorn mr-1"></i>勤務表を公開
+                        </button>
+                        <button id="printScheduleBtn" class="btn-unified btn-outline-unified btn-small w-full">
+                            <i class="fas fa-print mr-1"></i>印刷（A4横）
+                        </button>
+                    </div>
+                </div>
+
+                <!-- ナビゲーション -->
+                <div class="mt-auto pt-4 border-t border-gray-200">
+                    <div class="space-y-2">
+                        <a href="../dashboard.html" class="btn-unified btn-outline-unified btn-small w-full">
+                            <i class="fas fa-arrow-left mr-1"></i>ダッシュボードに戻る
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- メインエリア -->
+        <div class="editor-main">
+            <!-- 勤務時間帯説明（右上極小配置） -->
+            <div class="work-time-compact no-print">
+                <table>
+                    <thead>
+                        <tr><th>区分</th><th>時間</th></tr>
+                    </thead>
+                    <tbody>
+                        <tr><td>A</td><td>8:00-16:30</td></tr>
+                        <tr><td>A1</td><td>7:00-15:30</td></tr>
+                        <tr><td>B</td><td>8:00-翌8:00</td></tr>
+                        <tr><td>×</td><td>休日</td></tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- ヘッダー -->
+            <div class="mb-4">
+                <h2 id="scheduleTitle" class="text-xl font-bold text-gray-800">
+                    勤務表作成・編集
+                </h2>
+            </div>
+
+            <!-- 勤務表テーブル -->
+            <div class="schedule-table-container">
+                <table id="scheduleTable" class="schedule-table">
+                    <thead id="scheduleTableHead">
+                        <!-- ヘッダーは動的生成 -->
+                    </thead>
+                    <tbody id="scheduleTableBody">
+                        <!-- ボディは動的生成 -->
+                    </tbody>
+                    <tfoot id="scheduleTableFoot">
+                        <!-- フッターは動的生成 -->
+                    </tfoot>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- 勤務状態選択メニュー -->
+    <div id="workStatusMenu" class="work-status-menu" style="display: none;">
+        <div class="flex items-center justify-between mb-2">
+            <span class="text-xs font-semibold">勤務状態選択</span>
+            <button id="closeStatusMenu" class="text-gray-500 hover:text-gray-700">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <div class="flex items-center gap-2 mb-2">
+            <input type="checkbox" id="desireWorkCheck" class="text-xs">
+            <label for="desireWorkCheck" class="text-xs">希望勤務（下線表示）</label>
+        </div>
+        <div class="status-buttons" id="statusButtons">
+            <!-- ボタンは動的生成 -->
+        </div>
+        <div class="text-input-area" id="textInputArea" style="display: none;">
+            <label class="block text-xs font-medium mb-1">テキスト入力</label>
+            <textarea id="customTextInput" placeholder="自由入力（極小表示）"></textarea>
+        </div>
+    </div>
+
+     <!-- 勤務区分設定モーダル（Noダブルクリック・期間指定修正版） -->
+    <div id="workTypeSetModal" class="modal-overlay" style="display: none;">
+        <div class="modal-content" style="width: 480px;">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-lg font-semibold">勤務区分設定</h3>
+                <button id="closeWorkTypeSetModal" class="text-gray-500 hover:text-gray-700">
+                    <i class="fas fa-times text-xl"></i>
+                </button>
+            </div>
+            
+            <div class="mb-4">
+                <p class="text-sm text-gray-600">対象CE: <span id="workTypeTargetCE" class="font-semibold"></span></p>
+            </div>
+            
+            <div class="mb-4 p-3 bg-yellow-50 border-l-4 border-yellow-400 rounded">
+                <h4 class="font-semibold text-yellow-800 mb-1">
+                    <i class="fas fa-exclamation-triangle mr-2"></i>期間指定について
+                </h4>
+                <p class="text-yellow-700 text-sm">
+                    指定した期間内のみ勤務区分が変更されます。期間外は変更されません。
+                </p>
+            </div>
+            
+            <form id="workTypeSetForm" class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium mb-2">勤務区分</label>
+                    <select id="newWorkType" class="input-unified">
+                        <option value="OPE">OPE</option>
+                        <option value="ME">ME</option>
+                        <option value="HD">HD</option>
+                        <option value="FLEX">FLEX</option>
+                    </select>
+                </div>
+                
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium mb-2">適用開始日</label>
+                        <input type="date" id="workTypeStartDate" class="input-unified" required>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium mb-2">適用終了日</label>
+                        <input type="date" id="workTypeEndDate" class="input-unified" required>
+                    </div>
+                </div>
+                
+                <div class="flex justify-end space-x-3">
+                    <button type="button" id="cancelWorkTypeSet" class="btn-unified btn-outline-unified">
+                        キャンセル
+                    </button>
+                    <button type="submit" class="btn-unified btn-primary-unified">
+                        <i class="fas fa-check mr-2"></i>適用
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- CE情報編集モーダル（名前ダブルクリック） -->
+    <div id="ceInfoEditModal" class="modal-overlay" style="display: none;">
+        <div class="modal-content" style="width: 480px;">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-lg font-semibold">CE情報編集</h3>
+                <button id="closeCEInfoEditModal" class="text-gray-500 hover:text-gray-700">
+                    <i class="fas fa-times text-xl"></i>
+                </button>
+            </div>
+            
+            <div class="mb-4 p-3 bg-blue-50 border-l-4 border-blue-400 rounded">
+                <h4 class="font-semibold text-blue-800 mb-1">
+                    <i class="fas fa-info-circle mr-2"></i>名前設定について
+                </h4>
+                <ul class="text-blue-700 text-sm space-y-1">
+                    <li><strong>フルネーム:</strong> 勤務表での表示名</li>
+                    <li><strong>アイコン名:</strong> スケジュール画面・集計・ログでの表示名</li>
+                </ul>
+            </div>
+            
+            <form id="ceInfoEditForm" class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium mb-2">フルネーム（勤務表表示）</label>
+                    <input type="text" id="editCEFullName" class="input-unified" placeholder="安孫子明博" required>
+                </div>
+                
+                <div>
+                    <label class="block text-sm font-medium mb-2">アイコン名（他画面表示）</label>
+                    <input type="text" id="editCEIconName" class="input-unified" placeholder="安孫子" required>
+                </div>
+                
+                <div>
+                    <label class="block text-sm font-medium mb-2">勤務区分</label>
+                    <select id="editCEWorkType" class="input-unified">
+                        <option value="OPE">OPE</option>
+                        <option value="ME">ME</option>
+                        <option value="HD">HD</option>
+                        <option value="FLEX">FLEX</option>
+                    </select>
+                </div>
+                
+                <div class="flex justify-end space-x-3">
+                    <button type="button" id="cancelCEInfoEdit" class="btn-unified btn-outline-unified">
+                        キャンセル
+                    </button>
+                    <button type="submit" class="btn-unified btn-primary-unified">
+                        <i class="fas fa-save mr-2"></i>保存
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- CE追加モーダル -->
+    <div id="addCEModal" class="modal-overlay" style="display: none;">
+        <div class="modal-content" style="width: 450px;">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-lg font-semibold">CE追加</h3>
+                <button id="closeAddCEModal" class="text-gray-500 hover:text-gray-700">
+                    <i class="fas fa-times text-xl"></i>
+                </button>
+            </div>
+            
+            <form id="addCEForm" class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium mb-2">フルネーム（勤務表表示）</label>
+                    <input type="text" id="newCEFullName" class="input-unified" placeholder="田中太郎" required>
+                </div>
+                
+                <div>
+                    <label class="block text-sm font-medium mb-2">アイコン名（他画面表示）</label>
+                    <input type="text" id="newCEIconName" class="input-unified" placeholder="田中" required>
+                </div>
+                
+                <div>
+                    <label class="block text-sm font-medium mb-2">勤務区分</label>
+                    <select id="newCEWorkType" class="input-unified">
+                        <option value="OPE">OPE</option>
+                        <option value="ME">ME</option>
+                        <option value="HD">HD</option>
+                        <option value="FLEX">FLEX</option>
+                    </select>
+                </div>
+                
+                <div class="flex justify-end space-x-3">
+                    <button type="button" id="cancelAddCE" class="btn-unified btn-outline-unified">
+                        キャンセル
+                    </button>
+                    <button type="submit" class="btn-unified btn-primary-unified">
+                        <i class="fas fa-plus mr-2"></i>追加
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- CE削除モーダル -->
+    <div id="deleteCEModal" class="modal-overlay" style="display: none;">
+        <div class="modal-content" style="width: 450px;">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-lg font-semibold">CE削除</h3>
+                <button id="closeDeleteCEModal" class="text-gray-500 hover:text-gray-700">
+                    <i class="fas fa-times text-xl"></i>
+                </button>
+            </div>
+            
+            <div class="mb-4">
+                <p class="text-sm text-gray-600">削除するCEを選択してください</p>
+            </div>
+            
+            <div id="deleteCEList" class="space-y-2 max-h-60 overflow-y-auto">
+                <!-- CE一覧は動的生成 -->
+            </div>
+            
+            <div class="flex justify-end space-x-3 mt-4">
+                <button id="cancelDeleteCE" class="btn-unified btn-outline-unified">
+                    キャンセル
+                </button>
+                <button id="confirmDeleteCE" class="btn-unified btn-primary-unified text-red-600 border-red-600" disabled>
+                    <i class="fas fa-trash mr-2"></i>削除
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- CE並び替えモーダル -->
+    <div id="ceSortModal" class="modal-overlay" style="display: none;">
+        <div class="modal-content" style="width: 500px;">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-lg font-semibold">CE並び替え</h3>
+                <button id="closeCESortModal" class="text-gray-500 hover:text-gray-700">
+                    <i class="fas fa-times text-xl"></i>
+                </button>
+            </div>
+            
+            <div class="mb-4">
+                <p class="text-sm text-gray-600">ドラッグ&ドロップで順序を変更できます</p>
+            </div>
+            
+            <div id="sortableCEList" class="sortable-list">
+                <!-- CE一覧は動的生成 -->
+            </div>
+            
+            <div class="flex justify-end space-x-3 mt-4">
+                <button id="cancelCESort" class="btn-unified btn-outline-unified">
+                    キャンセル
+                </button>
+                <button id="applyCESort" class="btn-unified btn-primary-unified">
+                    <i class="fas fa-save mr-2"></i>順序を保存
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 統一メッセージシステム -->
+    <script src="../js/utils/ui-utils.js"></script>
+
+    <!-- メインスクリプト -->
+    <script>
+    class WorkScheduleEditor {
+        constructor() {
+            this.scheduleData = {};
+            this.ceList = [];
+            this.workTypeOverrides = {}; // 期間指定勤務区分オーバーライド
+            this.currentPeriod = {
+                startDate: new Date(),
+                endDate: new Date()
+            };
+            this.currentMenuTarget = null;
+            this.currentWorkTypeSetTarget = null;
+            this.currentCEInfoEditTarget = null;
+            this.savedSchedules = {};
+            this.isReady = false;
+            
+            // 通常順の定義（要求仕様・正確な27名）
+            this.normalOrder = [
+                '安孫子明博', '八鍬純', '杉山陽子', '中村圭佑', '石山智之', 
+                '亀井祐哉', '丸藤健', '三春摩弥', '斎藤大樹', '田中隆昭', 
+                '宇井勇気', '宇野沢徹', '佐藤将志', '庄司由紀', '小沼和樹', 
+                '武田優斗', '設樂佑介', '伊藤大晟', '上松野聖', '笹生貴之', 
+                '和田彩花', '伊藤大稀', '佐藤千優', '桑島亜依', '村田七星', 
+                '小林将己', '寒河江悠輝'
+            ];
+            
+            this.init();
+        }
+
+        async init() {
+            try {
+                console.log('🔄 勤務表エディタ初期化開始');
+                
+                await window.waitForFirebase();
+                await this.ensureAnonymousAuth();
+                await this.loadExistingCEList();
+                await this.loadWorkTypeOverrides();
+                await this.loadScheduleData();
+                await this.loadSavedSchedules();
+                
+                this.initializePeriod();
+                this.setupEventListeners();
+                this.renderScheduleTable();
+                
+                this.isReady = true;
+                
+                document.getElementById('loading').style.display = 'none';
+                document.getElementById('editorContainer').style.display = 'grid';
+                
+                console.log('✅ 勤務表エディタ初期化完了');
+                window.showMessage('勤務表エディタが初期化されました', 'success');
+                
+            } catch (error) {
+                console.error('❌ 勤務表エディタ初期化エラー:', error);
+                window.showMessage('初期化に失敗しました: ' + error.message, 'error');
+            }
+        }
+
+        async ensureAnonymousAuth() {
+            try {
+                let user = window.auth.currentUser;
+                if (!user) {
+                    const result = await window.auth.signInAnonymously();
+                    user = result.user;
+                }
+                return user;
+            } catch (error) {
+                console.error('❌ 匿名認証失敗:', error);
+                throw new Error('認証に失敗しました');
+            }
+        }
+
+        async loadExistingCEList() {
+            try {
+                const snapshot = await window.database.ref(`${window.DATA_ROOT}/ceList`).once('value');
+                const data = snapshot.val();
+                
+                if (data && data.list && Array.isArray(data.list) && data.list.length > 0) {
+                    this.ceList = data.list.map((ce, index) => ({
+                        id: ce.id || `ce${index + 1}`,
+                        name: ce.name || ce.displayName || `CE${index + 1}`,
+                        fullName: ce.fullName || ce.name || ce.displayName || `CE${index + 1}`,
+                        displayName: ce.displayName || ce.name || `CE${index + 1}`,
+                        iconName: ce.iconName || ce.displayName || ce.name || `CE${index + 1}`,
+                        workType: ce.workType || 'ME'
+                    }));
+                } else {
+                    // 通常順27名で初期化（要求仕様）
+                    this.ceList = this.normalOrder.map((name, index) => ({
+                        id: `ce${index + 1}`,
+                        name: this.getLastName(name),
+                        fullName: name,
+                        displayName: this.getLastName(name),
+                        iconName: this.getLastName(name),
+                        workType: ['OPE', 'ME', 'HD', 'FLEX'][index % 4]
+                    }));
+                    
+                    // 初期CEリストをFirebaseに保存
+                    await this.saveCEListAndNotify();
+                    window.showMessage('CEリストを通常順で初期化しました', 'info');
+                }
+                
+                console.log('✅ CEリスト読み込み完了:', this.ceList.length + '名');
+            } catch (error) {
+                console.error('❌ CEリスト読み込みエラー:', error);
+                this.ceList = [];
+            }
+        }
+
+        getLastName(fullName) {
+            // 日本語の姓を取得（漢字対応）
+            if (fullName.length <= 2) return fullName;
+            // 一般的に日本語の姓は2-3文字
+            return fullName.substring(0, Math.min(3, Math.floor(fullName.length / 2)));
+        }
+
+        async loadWorkTypeOverrides() {
+            try {
+                const snapshot = await window.database.ref(`${window.DATA_ROOT}/workTypeOverrides`).once('value');
+                this.workTypeOverrides = snapshot.val() || {};
+            } catch (error) {
+                console.error('❌ 勤務区分オーバーライド読み込みエラー:', error);
+                this.workTypeOverrides = {};
+            }
+        }
+
+        async loadScheduleData() {
+            try {
+                const snapshot = await window.database.ref(`${window.DATA_ROOT}/workSchedule`).once('value');
+                this.scheduleData = snapshot.val() || {};
+                console.log('✅ 勤務スケジュール読み込み完了');
+            } catch (error) {
+                console.error('❌ 勤務スケジュール読み込みエラー:', error);
+                this.scheduleData = {};
+            }
+        }
+
+        async loadSavedSchedules() {
+            try {
+                const snapshot = await window.database.ref(`${window.DATA_ROOT}/savedSchedules`).once('value');
+                this.savedSchedules = snapshot.val() || {};
+                this.updateSnapshotSelect();
+                console.log('✅ 保存済み勤務表読み込み完了');
+            } catch (error) {
+                console.error('❌ 保存済み勤務表読み込みエラー:', error);
+                this.savedSchedules = {};
+            }
+        }
+
+        initializePeriod() {
+            const today = new Date();
+            const endDate = new Date(today);
+            endDate.setDate(today.getDate() + 27);
+            
+            this.currentPeriod.startDate = today;
+            this.currentPeriod.endDate = endDate;
+            
+            const startInput = document.getElementById('periodStartDate');
+            const endInput = document.getElementById('periodEndDate');
+            
+            if (startInput) startInput.value = this.formatDateForInput(today);
+            if (endInput) endInput.value = this.formatDateForInput(endDate);
+        }
+
+        setupEventListeners() {
+    // サイドバートグル（ダッシュボードと同仕様）
+    const toggle = document.getElementById('sidebarToggle');
+    const sidebar = document.getElementById('editorSidebar');
+    
+    if (toggle && sidebar) {
+        toggle.onclick = () => {
+            const isCollapsed = sidebar.classList.contains('collapsed');
+            if (isCollapsed) {
+                sidebar.classList.remove('collapsed');
+                toggle.querySelector('i').className = 'fas fa-chevron-left';
+            } else {
+                sidebar.classList.add('collapsed');
+                toggle.querySelector('i').className = 'fas fa-chevron-right';
+            }
+        };
+    }
+
+            // 期間設定
+            const updatePeriodBtn = document.getElementById('updatePeriodBtn');
+            if (updatePeriodBtn) {
+                updatePeriodBtn.onclick = () => this.updatePeriod();
+            }
+
+            // 期間ナビゲーション
+            const prevBtn = document.getElementById('prevPeriodBtn');
+            const nextBtn = document.getElementById('nextPeriodBtn');
+            const todayBtn = document.getElementById('todayPeriodBtn');
+            
+            if (prevBtn) prevBtn.onclick = () => this.navigatePeriod(-28);
+            if (nextBtn) nextBtn.onclick = () => this.navigatePeriod(28);
+            if (todayBtn) todayBtn.onclick = () => this.goToTodayPeriod();
+
+            // CE管理
+            const addCEBtn = document.getElementById('addCEBtn');
+            const deleteCEBtn = document.getElementById('deleteCEBtn');
+            const sortNameBtn = document.getElementById('sortCENameBtn');
+            const sortWorkTypeBtn = document.getElementById('sortCEWorkTypeBtn');
+            const sortNormalBtn = document.getElementById('sortCENormalBtn');
+            const manualSortBtn = document.getElementById('manualSortCEBtn');
+            
+            if (addCEBtn) addCEBtn.onclick = () => this.openAddCEModal();
+            if (deleteCEBtn) deleteCEBtn.onclick = () => this.openDeleteCEModal();
+            if (sortNameBtn) sortNameBtn.onclick = () => this.sortCEByName();
+            if (sortWorkTypeBtn) sortWorkTypeBtn.onclick = () => this.sortCEByWorkType();
+            if (sortNormalBtn) sortNormalBtn.onclick = () => this.sortCEByNormal();
+            if (manualSortBtn) manualSortBtn.onclick = () => this.openCESortModal();
+
+            // 勤務表操作
+            const createBtn = document.getElementById('createNewScheduleBtn');
+            const clearBtn = document.getElementById('clearAllBtn');
+            
+            if (createBtn) createBtn.onclick = () => this.createNewSchedule();
+            if (clearBtn) clearBtn.onclick = () => this.clearAllSchedule();
+
+            // 保存・読み込み・公開・印刷
+            const saveBtn = document.getElementById('saveSnapshotBtn');
+            const loadBtn = document.getElementById('loadSnapshotBtn');
+            const deleteBtn = document.getElementById('deleteSnapshotBtn');
+            const publishBtn = document.getElementById('publishScheduleBtn');
+            const printBtn = document.getElementById('printScheduleBtn');
+            
+            if (saveBtn) saveBtn.onclick = () => this.saveSnapshot();
+            if (loadBtn) loadBtn.onclick = () => this.loadSnapshot();
+            if (deleteBtn) deleteBtn.onclick = () => this.deleteSnapshot();
+            if (publishBtn) publishBtn.onclick = () => this.publishSchedule();
+            if (printBtn) printBtn.onclick = () => this.printSchedule();
+
+            this.setupModalEventListeners();
+
+            // 外部クリックでメニューを閉じる
+            document.addEventListener('click', (e) => {
+                const menu = document.getElementById('workStatusMenu');
+                if (menu && menu.style.display === 'block' && 
+                    !menu.contains(e.target) && 
+                    !e.target.closest('.work-cell') && 
+                    !e.target.closest('.ce-number')) {
+                    this.closeStatusMenu();
+                }
+            });
+        }
+
+        setupModalEventListeners() {
+            // 勤務状態メニュー
+            const closeMenuBtn = document.getElementById('closeStatusMenu');
+            if (closeMenuBtn) {
+                closeMenuBtn.onclick = () => this.closeStatusMenu();
+            }
+
+            // 勤務区分設定モーダル（Noダブルクリック）
+            const closeWorkTypeSetBtn = document.getElementById('closeWorkTypeSetModal');
+            const cancelWorkTypeSetBtn = document.getElementById('cancelWorkTypeSet');
+            const workTypeSetForm = document.getElementById('workTypeSetForm');
+            
+            if (closeWorkTypeSetBtn) closeWorkTypeSetBtn.onclick = () => this.closeWorkTypeSetModal();
+            if (cancelWorkTypeSetBtn) cancelWorkTypeSetBtn.onclick = () => this.closeWorkTypeSetModal();
+            if (workTypeSetForm) {
+                workTypeSetForm.onsubmit = (e) => {
+                    e.preventDefault();
+                    this.applyWorkTypeSet();
+                };
+            }
+
+            // CE情報編集モーダル（名前ダブルクリック）
+            const closeCEInfoEditBtn = document.getElementById('closeCEInfoEditModal');
+            const cancelCEInfoEditBtn = document.getElementById('cancelCEInfoEdit');
+            const ceInfoEditForm = document.getElementById('ceInfoEditForm');
+            
+            if (closeCEInfoEditBtn) closeCEInfoEditBtn.onclick = () => this.closeCEInfoEditModal();
+            if (cancelCEInfoEditBtn) cancelCEInfoEditBtn.onclick = () => this.closeCEInfoEditModal();
+            if (ceInfoEditForm) {
+                ceInfoEditForm.onsubmit = (e) => {
+                    e.preventDefault();
+                    this.saveCEInfoEdit();
+                };
+            }
+
+            // CE追加モーダル
+            const closeAddCEBtn = document.getElementById('closeAddCEModal');
+            const cancelAddCEBtn = document.getElementById('cancelAddCE');
+            const addCEForm = document.getElementById('addCEForm');
+            
+            if (closeAddCEBtn) closeAddCEBtn.onclick = () => this.closeAddCEModal();
+            if (cancelAddCEBtn) cancelAddCEBtn.onclick = () => this.closeAddCEModal();
+            if (addCEForm) {
+                addCEForm.onsubmit = (e) => {
+                    e.preventDefault();
+                    this.addNewCE();
+                };
+            }
+
+            // CE削除モーダル
+            const closeDeleteCEBtn = document.getElementById('closeDeleteCEModal');
+            const cancelDeleteCEBtn = document.getElementById('cancelDeleteCE');
+            const confirmDeleteCEBtn = document.getElementById('confirmDeleteCE');
+            
+            if (closeDeleteCEBtn) closeDeleteCEBtn.onclick = () => this.closeDeleteCEModal();
+            if (cancelDeleteCEBtn) cancelDeleteCEBtn.onclick = () => this.closeDeleteCEModal();
+            if (confirmDeleteCEBtn) confirmDeleteCEBtn.onclick = () => this.confirmDeleteCE();
+
+            // CE並び替えモーダル
+            const closeSortBtn = document.getElementById('closeCESortModal');
+            const cancelSortBtn = document.getElementById('cancelCESort');
+            const applySortBtn = document.getElementById('applyCESort');
+            
+            if (closeSortBtn) closeSortBtn.onclick = () => this.closeCESortModal();
+            if (cancelSortBtn) cancelSortBtn.onclick = () => this.closeCESortModal();
+            if (applySortBtn) applySortBtn.onclick = () => this.applyCESort();
+        }
+
+        // 期間管理
+        updatePeriod() {
+            const startInput = document.getElementById('periodStartDate');
+            const endInput = document.getElementById('periodEndDate');
+            
+            if (startInput && endInput) {
+                const startDate = new Date(startInput.value + 'T00:00:00');
+                const endDate = new Date(endInput.value + 'T00:00:00');
+                
+                if (startDate <= endDate) {
+                    this.currentPeriod.startDate = startDate;
+                    this.currentPeriod.endDate = endDate;
+                    this.renderScheduleTable();
+                    window.showMessage('期間を更新しました', 'success');
+                } else {
+                    window.showMessage('終了日は開始日以降を指定してください', 'error');
+                }
+            }
+        }
+
+        navigatePeriod(days) {
+            this.currentPeriod.startDate.setDate(this.currentPeriod.startDate.getDate() + days);
+            this.currentPeriod.endDate.setDate(this.currentPeriod.endDate.getDate() + days);
+            
+            const startInput = document.getElementById('periodStartDate');
+            const endInput = document.getElementById('periodEndDate');
+            
+            if (startInput) startInput.value = this.formatDateForInput(this.currentPeriod.startDate);
+            if (endInput) endInput.value = this.formatDateForInput(this.currentPeriod.endDate);
+            
+            this.renderScheduleTable();
+        }
+
+        goToTodayPeriod() {
+            const today = new Date();
+            const endDate = new Date(today);
+            endDate.setDate(today.getDate() + 27);
+            
+            this.currentPeriod.startDate = today;
+            this.currentPeriod.endDate = endDate;
+            
+            const startInput = document.getElementById('periodStartDate');
+            const endInput = document.getElementById('periodEndDate');
+            
+            if (startInput) startInput.value = this.formatDateForInput(today);
+            if (endInput) endInput.value = this.formatDateForInput(endDate);
+            
+            this.renderScheduleTable();
+        }
+
+        // テーブル描画
+        renderScheduleTable() {
+            if (this.ceList.length === 0) {
+                window.showMessage('CEリストが読み込まれていません', 'error');
+                return;
+            }
+
+            const dates = this.generateDateRange(this.currentPeriod.startDate, this.currentPeriod.endDate);
+            
+            this.renderTableHeader(dates);
+            this.renderTableBody(dates);
+            this.renderTableFooter(dates);
+            this.updateTitle();
+        }
+
+        updateTitle() {
+            const title = document.getElementById('scheduleTitle');
+            if (title) {
+                const startStr = this.formatDateDisplay(this.currentPeriod.startDate);
+                const endStr = this.formatDateDisplay(this.currentPeriod.endDate);
+                title.textContent = `勤務表作成・編集（${startStr} ～ ${endStr}）`;
+            }
+        }
+
+        generateDateRange(startDate, endDate) {
+            const dates = [];
+            const current = new Date(startDate);
+            
+            while (current <= endDate) {
+                dates.push(new Date(current));
+                current.setDate(current.getDate() + 1);
+            }
+            
+            return dates;
+        }
+
+        renderTableHeader(dates) {
+            const thead = document.getElementById('scheduleTableHead');
+            if (!thead) return;
+
+            const headerRow = document.createElement('tr');
+            
+            // No列 + 氏名列
+            headerRow.innerHTML = '<th class="no-header">No</th><th class="name-header">氏名</th>';
+            
+            // 日付列
+            dates.forEach(date => {
+                const dayOfWeek = ['日', '月', '火', '水', '木', '金', '土'][date.getDay()];
+                const isWeekend = date.getDay() === 0 || date.getDay() === 6;
+                const headerClass = `date-col ${isWeekend ? 'weekend-header' : ''}`;
+                const dayClass = date.getDay() === 0 ? 'text-red-600' : (date.getDay() === 6 ? 'text-blue-600' : '');
+                
+                headerRow.innerHTML += `
+                    <th class="${headerClass}">
+                        <div>${date.getDate()}</div>
+                        <div class="text-xs ${dayClass}">${dayOfWeek}</div>
+                    </th>
+                `;
+            });
+            
+            // サマリー列
+            const summaryHeaders = ['A', 'A1', 'B', '非', '×', '休日数', '必要日数', '実勤務', '当直回数'];
+            summaryHeaders.forEach(header => {
+                headerRow.innerHTML += `<th class="summary-header text-xs">${header}</th>`;
+            });
+            
+            thead.innerHTML = '';
+            thead.appendChild(headerRow);
+        }
+
+  renderTableBody(dates) {
+    const tbody = document.getElementById('scheduleTableBody');
+    if (!tbody) return;
+
+    tbody.innerHTML = '';
+    
+    this.ceList.forEach((ce, ceIndex) => {
+        const row = document.createElement('tr');
+        
+        // No列（ダブルクリックで勤務区分設定）
+        const noCell = document.createElement('td');
+        noCell.className = 'no-cell';
+        noCell.innerHTML = `<div class="ce-number" title="勤務区分設定">${ceIndex + 1}</div>`;
+        
+        const ceNumber = noCell.querySelector('.ce-number');
+        if (ceNumber) {
+            ceNumber.ondblclick = () => this.openWorkTypeSetModal(ceIndex);
+        }
+        row.appendChild(noCell);
+        
+        // 氏名セル（ダブルクリックでCE管理メニュー）
+        const nameCell = document.createElement('td');
+        nameCell.className = 'name-cell';
+        nameCell.innerHTML = `<div class="font-medium text-xs" title="CE管理">${ce.fullName || ce.name}</div>`;
+        nameCell.ondblclick = (e) => this.showCEQuickMenu(e, ceIndex);
+        row.appendChild(nameCell);
+        
+        // 日付セル
+        dates.forEach(date => {
+            const dateKey = this.formatDateKey(date);
+            const workData = this.getWorkData(ce.id, dateKey);
+            const effectiveWorkType = this.getEffectiveWorkType(ce, dateKey);
+            const cell = this.createWorkCell(ce, effectiveWorkType, date, dateKey, workData);
+            row.appendChild(cell);
+        });
+        
+        // サマリーセル
+        const summary = this.calculateCESummary(ce, dates);
+        this.appendSummaryCells(row, summary);
+        
+        tbody.appendChild(row);
+    });
+}
+
+        getEffectiveWorkType(ce, dateKey) {
+            // 期間指定オーバーライドがあれば優先
+            return this.workTypeOverrides[ce.id]?.[dateKey] || ce.workType || 'ME';
+        }
+
+        createWorkCell(ce, workType, date, dateKey, workData) {
+            const cell = document.createElement('td');
+            const isWeekend = date.getDay() === 0 || date.getDay() === 6;
+            const isHoliday = this.isHoliday(date);
+            
+            let cellClass = `work-cell date-col type-${(workType || 'ME').toLowerCase()}`;
+            const status = workData.status || (isWeekend || isHoliday ? '×' : 'A');
+            
+            if (status) {
+                cellClass += ` status-${status}`;
+            }
+            if (workData.desired) {
+                cellClass += ' desired';
+            }
+            if (isWeekend || isHoliday) {
+                cellClass += ' holiday';
+            }
+            
+            // テキスト入力がある場合（極小フォント表示）
+            if (workData.customText) {
+                cellClass += ' has-custom-text';
+                cell.textContent = workData.customText;
+                cell.title = workData.customText; // ツールチップ
+            } else {
+                cell.textContent = status;
+            }
+            
+            cell.className = cellClass;
+            cell.onclick = (e) => this.openStatusMenu(e, ce, dateKey);
+            
+            return cell;
+        }
+
+        appendSummaryCells(row, summary) {
+            const summaryData = [
+                summary.A, summary.A1, summary.B, summary.non, summary.off,
+                summary.holidays, summary.required, summary.actual, summary.nightShift
+            ];
+            
+            summaryData.forEach((value) => {
+                const cell = document.createElement('td');
+                cell.className = 'summary-cell text-xs';
+                cell.textContent = value;
+                row.appendChild(cell);
+            });
+        }
+
+        renderTableFooter(dates) {
+            const tfoot = document.getElementById('scheduleTableFoot');
+            if (!tfoot) return;
+
+            tfoot.innerHTML = '';
+            
+            // 勤務区分別集計行（要求仕様対応）
+            const footerRows = [
+                { label: 'OPE(A)', type: 'OPE', status: 'A' },
+                { label: 'OPE(A1)', type: 'OPE', status: 'A1' },
+                { label: 'ME', type: 'ME', status: null },
+                { label: 'HD', type: 'HD', status: null },
+                { label: 'FLEX', type: 'FLEX', status: null }
+            ];
+
+            footerRows.forEach(rowConfig => {
+                const row = document.createElement('tr');
+                row.className = 'footer-summary-row';
+                
+                row.innerHTML = `<th class="type-label text-xs" colspan="2">${rowConfig.label}</th>`;
+                
+                dates.forEach(date => {
+                    const count = this.countWorkTypeForDate(rowConfig.type, date, rowConfig.status);
+                    row.innerHTML += `<td class="text-xs">${count}</td>`;
+                });
+                
+                // 空のサマリーセル
+                for (let i = 0; i < 9; i++) {
+                    row.innerHTML += '<td class="text-xs"></td>';
+                }
+                
+                tfoot.appendChild(row);
+            });
+            
+            // 当直・非番集計行
+            ['当直', '非番'].forEach(statusType => {
+                const row = document.createElement('tr');
+                row.className = 'footer-summary-row';
+                
+                row.innerHTML = `<th class="type-label text-xs" colspan="2">${statusType}</th>`;
+                
+                dates.forEach(date => {
+                    const status = statusType === '当直' ? 'B' : '非';
+                    const count = this.countStatusForDate(status, date);
+                    const cellClass = (statusType === '当直' && (count === 0 || count >= 2)) ? 'warning-count' : '';
+                    row.innerHTML += `<td class="text-xs ${cellClass}">${count}</td>`;
+                });
+                
+                // 空のサマリーセル
+                for (let i = 0; i < 9; i++) {
+                    row.innerHTML += '<td class="text-xs"></td>';
+                }
+                
+                tfoot.appendChild(row);
+            });
+        }
+
+        // 勤務状態選択メニュー
+        openStatusMenu(event, ce, dateKey) {
+            const menu = document.getElementById('workStatusMenu');
+            const buttonsContainer = document.getElementById('statusButtons');
+            const desireCheck = document.getElementById('desireWorkCheck');
+            const textInputArea = document.getElementById('textInputArea');
+            const customTextInput = document.getElementById('customTextInput');
+            
+            if (!menu || !buttonsContainer || !desireCheck) return;
+
+            const workData = this.getWorkData(ce.id, dateKey);
+            
+            // 希望勤務チェックボックス
+            desireCheck.checked = workData.desired || false;
+            
+            // カスタムテキスト
+            if (customTextInput) {
+                customTextInput.value = workData.customText || '';
+            }
+            
+            // ステータスボタンを生成（テキスト入力を追加）
+            buttonsContainer.innerHTML = '';
+            const statuses = ['A', 'A1', 'B', '非', '×', '年', '出', '研', 'テキスト'];
+            statuses.forEach(status => {
+                const button = document.createElement('button');
+                button.className = `status-btn ${workData.status === status || (status === 'テキスト' && workData.customText) ? 'active' : ''}`;
+                button.textContent = status;
+                button.onclick = () => {
+                    if (status === 'テキスト') {
+                        this.showTextInput();
+                    } else {
+                        this.selectWorkStatus(ce.id, dateKey, status);
+                    }
+                };
+                buttonsContainer.appendChild(button);
+            });
+            
+            // テキスト入力エリアの表示制御
+            if (textInputArea) {
+                textInputArea.style.display = (workData.status === 'text' || workData.customText) ? 'block' : 'none';
+            }
+            
+            // メニュー位置調整（画面枠内表示完全対応）
+            const rect = event.target.getBoundingClientRect();
+            menu.style.display = 'block';
+            
+            let left = rect.left + window.scrollX;
+            let top = rect.bottom + window.scrollY + 5;
+            
+            // 画面枠内調整（改良版）
+            setTimeout(() => {
+                const menuRect = menu.getBoundingClientRect();
+                
+                // 右端チェック
+                if (left + menuRect.width > window.innerWidth) {
+                    left = Math.max(10, window.innerWidth - menuRect.width - 10);
+                }
+                
+                // 左端チェック
+                if (left < 10) {
+                    left = 10;
+                }
+                
+                // 下端チェック
+                if (top + menuRect.height > window.innerHeight + window.scrollY) {
+                    top = Math.max(10, rect.top + window.scrollY - menuRect.height - 5);
+                }
+                
+                // 上端チェック
+                if (top < window.scrollY + 10) {
+                    top = window.scrollY + 10;
+                }
+                
+                menu.style.left = `${left}px`;
+                menu.style.top = `${top}px`;
+            }, 10);
+            
+            this.currentMenuTarget = { ceId: ce.id, dateKey: dateKey };
+        }
+
+        showTextInput() {
+            const textInputArea = document.getElementById('textInputArea');
+            const customTextInput = document.getElementById('customTextInput');
+            
+            if (textInputArea && customTextInput) {
+                textInputArea.style.display = 'block';
+                customTextInput.focus();
+                
+                // Enterキーで確定
+                customTextInput.onkeydown = (e) => {
+                    if (e.key === 'Enter' && !e.shiftKey) {
+                        e.preventDefault();
+                        this.selectWorkStatus(this.currentMenuTarget.ceId, this.currentMenuTarget.dateKey, 'text', customTextInput.value.trim());
+                    }
+                };
+            }
+        }
+
+        async selectWorkStatus(ceId, dateKey, status, customText = '') {
+            try {
+                const desireCheck = document.getElementById('desireWorkCheck');
+                const customTextInput = document.getElementById('customTextInput');
+                const desired = desireCheck ? desireCheck.checked : false;
+                
+                const workData = {
+                    status: status,
+                    desired: desired,
+                    customText: status === 'text' ? (customText || (customTextInput ? customTextInput.value.trim() : '')) : '',
+                    updatedAt: firebase.database.ServerValue.TIMESTAMP,
+                    updatedBy: 'editor'
+                };
+                
+                // データベースに保存
+                await window.database.ref(`${window.DATA_ROOT}/workSchedule/${ceId}/${dateKey}`).set(workData);
+                
+                // ローカルデータ更新
+                if (!this.scheduleData[ceId]) {
+                    this.scheduleData[ceId] = {};
+                }
+                this.scheduleData[ceId][dateKey] = workData;
+                
+                // 表示更新
+                this.renderScheduleTable();
+                this.closeStatusMenu();
+                
+            } catch (error) {
+                console.error('❌ 勤務状態更新エラー:', error);
+                window.showMessage('勤務状態の更新に失敗しました', 'error');
+            }
+        }
+
+        closeStatusMenu() {
+            const menu = document.getElementById('workStatusMenu');
+            if (menu) {
+                menu.style.display = 'none';
+            }
+            this.currentMenuTarget = null;
+        }
+
+        // 勤務区分設定（Noダブルクリック・期間指定修正版）
+        openWorkTypeSetModal(ceIndex) {
+            const ce = this.ceList[ceIndex];
+            if (!ce) return;
+
+            const modal = document.getElementById('workTypeSetModal');
+            const targetSpan = document.getElementById('workTypeTargetCE');
+            const workTypeSelect = document.getElementById('newWorkType');
+            const startDateInput = document.getElementById('workTypeStartDate');
+            const endDateInput = document.getElementById('workTypeEndDate');
+            
+            if (modal && targetSpan && workTypeSelect) {
+                targetSpan.textContent = ce.fullName || ce.name;
+                workTypeSelect.value = ce.workType || 'ME';
+                
+                if (startDateInput) startDateInput.value = this.formatDateForInput(this.currentPeriod.startDate);
+                if (endDateInput) endDateInput.value = this.formatDateForInput(this.currentPeriod.endDate);
+                
+                modal.style.display = 'flex';
+                this.currentWorkTypeSetTarget = ceIndex;
+            }
+        }
+
+        closeWorkTypeSetModal() {
+            const modal = document.getElementById('workTypeSetModal');
+            if (modal) {
+                modal.style.display = 'none';
+            }
+            this.currentWorkTypeSetTarget = null;
+        }
+
+        async applyWorkTypeSet() {
+            if (this.currentWorkTypeSetTarget === null) return;
+
+            const newWorkType = document.getElementById('newWorkType').value;
+            const startDateStr = document.getElementById('workTypeStartDate').value;
+            const endDateStr = document.getElementById('workTypeEndDate').value;
+
+            if (!newWorkType || !startDateStr || !endDateStr) {
+                window.showMessage('すべての項目を入力してください', 'error');
+                return;
+            }
+
+            const startDate = new Date(startDateStr + 'T00:00:00');
+            const endDate = new Date(endDateStr + 'T00:00:00');
+
+            if (startDate > endDate) {
+                window.showMessage('適用終了日は開始日以降を指定してください', 'error');
+                return;
+            }
+
+            try {
+                const ce = this.ceList[this.currentWorkTypeSetTarget];
+                
+                // 期間指定オーバーライドを保存（指定期間のみ）
+                if (!this.workTypeOverrides[ce.id]) {
+                    this.workTypeOverrides[ce.id] = {};
+                }
+                
+                const targetDates = this.generateDateRange(startDate, endDate);
+                let updatedCount = 0;
+                
+                for (const date of targetDates) {
+                    const dateKey = this.formatDateKey(date);
+                    this.workTypeOverrides[ce.id][dateKey] = newWorkType;
+                    updatedCount++;
+                }
+                
+                // データベースに保存
+                await window.database.ref(`${window.DATA_ROOT}/workTypeOverrides/${ce.id}`).set(this.workTypeOverrides[ce.id]);
+                
+                this.renderScheduleTable();
+                this.closeWorkTypeSetModal();
+                
+                window.showMessage(`${updatedCount}日分の勤務区分を${newWorkType}に設定しました`, 'success');
+                
+            } catch (error) {
+                console.error('❌ 勤務区分設定エラー:', error);
+                window.showMessage('勤務区分の設定に失敗しました', 'error');
+            }
+        }
+
+        // CE情報編集（名前ダブルクリック）
+        openCEInfoEditModal(ceIndex) {
+            const ce = this.ceList[ceIndex];
+            if (!ce) return;
+
+            const modal = document.getElementById('ceInfoEditModal');
+            const fullNameInput = document.getElementById('editCEFullName');
+            const iconNameInput = document.getElementById('editCEIconName');
+            const workTypeSelect = document.getElementById('editCEWorkType');
+            
+            if (modal && fullNameInput && iconNameInput && workTypeSelect) {
+                fullNameInput.value = ce.fullName || '';
+                iconNameInput.value = ce.iconName || ce.displayName || '';
+                workTypeSelect.value = ce.workType || 'ME';
+                
+                modal.style.display = 'flex';
+                this.currentCEInfoEditTarget = ceIndex;
+            }
+        }
+
+        closeCEInfoEditModal() {
+            const modal = document.getElementById('ceInfoEditModal');
+            if (modal) {
+                modal.style.display = 'none';
+            }
+            this.currentCEInfoEditTarget = null;
+        }
+
+        async saveCEInfoEdit() {
+            if (this.currentCEInfoEditTarget === null) return;
+
+            const fullName = document.getElementById('editCEFullName').value.trim();
+            const iconName = document.getElementById('editCEIconName').value.trim();
+            const workType = document.getElementById('editCEWorkType').value;
+
+            if (!fullName || !iconName) {
+                window.showMessage('フルネームとアイコン名を入力してください', 'error');
+                return;
+            }
+
+            try {
+                // CEリスト更新
+                this.ceList[this.currentCEInfoEditTarget] = {
+                    ...this.ceList[this.currentCEInfoEditTarget],
+                    name: iconName, // スケジュール画面用
+                    fullName: fullName, // 勤務表表示用
+                    displayName: iconName, // 他画面表示用
+                    iconName: iconName, // 明示的なアイコン名
+                    workType: workType
+                };
+
+                await this.saveCEListAndNotify();
+
+                this.renderScheduleTable();
+                this.closeCEInfoEditModal();
+                
+                window.showMessage('CE情報を更新しました', 'success');
+                
+            } catch (error) {
+                console.error('❌ CE情報更新エラー:', error);
+                window.showMessage('CE情報の更新に失敗しました', 'error');
+            }
+        }
+
+        // CE追加・削除・並び替え
+        openAddCEModal() {
+            const modal = document.getElementById('addCEModal');
+            if (modal) {
+                document.getElementById('addCEForm').reset();
+                modal.style.display = 'flex';
+            }
+        }
+
+        closeAddCEModal() {
+            const modal = document.getElementById('addCEModal');
+            if (modal) {
+                modal.style.display = 'none';
+            }
+        }
+
+        async addNewCE() {
+            const fullName = document.getElementById('newCEFullName').value.trim();
+            const iconName = document.getElementById('newCEIconName').value.trim();
+            const workType = document.getElementById('newCEWorkType').value;
+
+            if (!fullName || !iconName) {
+                window.showMessage('フルネームとアイコン名を入力してください', 'error');
+                return;
+            }
+
+            try {
+                const newCE = {
+                    id: `ce${Date.now()}`,
+                    name: iconName,
+                    fullName: fullName,
+                    displayName: iconName,
+                    iconName: iconName,
+                    workType: workType
+                };
+
+                this.ceList.push(newCE);
+                await this.saveCEListAndNotify();
+
+                this.renderScheduleTable();
+                this.closeAddCEModal();
+                
+                window.showMessage(`${fullName}を追加しました`, 'success');
+                
+            } catch (error) {
+                console.error('❌ CE追加エラー:', error);
+                window.showMessage('CEの追加に失敗しました', 'error');
+            }
+        }
+
+        openDeleteCEModal() {
+            const modal = document.getElementById('deleteCEModal');
+            const listContainer = document.getElementById('deleteCEList');
+            
+            if (!modal || !listContainer) return;
+
+            listContainer.innerHTML = '';
+            
+            if (this.ceList.length === 0) {
+                listContainer.innerHTML = '<p class="text-gray-500 text-center">削除できるCEがいません</p>';
+                return;
+            }
+
+            this.ceList.forEach((ce, index) => {
+                const item = document.createElement('div');
+                item.className = 'flex items-center p-2 border rounded hover:bg-gray-50';
+                item.innerHTML = `
+                    <input type="checkbox" class="delete-ce-checkbox mr-3" data-index="${index}">
+                    <div class="flex-1">
+                        <div class="font-medium">${ce.fullName || ce.name}</div>
+                        <div class="text-xs text-gray-500">${ce.workType} | アイコン: ${ce.iconName || ce.displayName}</div>
+                    </div>
+                `;
+                listContainer.appendChild(item);
+            });
+
+            // チェックボックス監視
+            const checkboxes = listContainer.querySelectorAll('.delete-ce-checkbox');
+            const confirmBtn = document.getElementById('confirmDeleteCE');
+            
+            checkboxes.forEach(checkbox => {
+                checkbox.onchange = () => {
+                    const checkedCount = listContainer.querySelectorAll('.delete-ce-checkbox:checked').length;
+                    if (confirmBtn) {
+                        confirmBtn.disabled = checkedCount === 0;
+                    }
+                };
+            });
+
+            modal.style.display = 'flex';
+        }
+
+        closeDeleteCEModal() {
+            const modal = document.getElementById('deleteCEModal');
+            if (modal) {
+                modal.style.display = 'none';
+            }
+        }
+
+        async confirmDeleteCE() {
+            const checkedBoxes = document.querySelectorAll('.delete-ce-checkbox:checked');
+            
+            if (checkedBoxes.length === 0) return;
+
+            const deleteIndices = Array.from(checkedBoxes).map(cb => parseInt(cb.dataset.index));
+            const deleteNames = deleteIndices.map(i => this.ceList[i].fullName || this.ceList[i].name);
+
+            if (!confirm(`以下のCEを削除しますか？\n\n${deleteNames.join('\n')}\n\nこの操作は元に戻せません。`)) {
+                return;
+            }
+
+            try {
+                // 逆順で削除（インデックスずれ防止）
+                deleteIndices.sort((a, b) => b - a).forEach(index => {
+                    this.ceList.splice(index, 1);
+                });
+
+                await this.saveCEListAndNotify();
+
+                this.renderScheduleTable();
+                this.closeDeleteCEModal();
+                
+                window.showMessage(`${deleteNames.length}名のCEを削除しました`, 'success');
+                
+            } catch (error) {
+                console.error('❌ CE削除エラー:', error);
+                window.showMessage('CEの削除に失敗しました', 'error');
+            }
+        }
+
+        // CE並び替え機能
+        sortCEByName() {
+            this.ceList.sort((a, b) => (a.fullName || a.name).localeCompare(b.fullName || b.name, 'ja'));
+            this.saveCEListAndNotify();
+            this.renderScheduleTable();
+            window.showMessage('名前順で並び替えました', 'success');
+        }
+
+        sortCEByWorkType() {
+            const workTypeOrder = { 'OPE': 1, 'ME': 2, 'HD': 3, 'FLEX': 4 };
+            const normalOrderMap = new Map(this.normalOrder.map((name, index) => [name, index]));
+            
+            this.ceList.sort((a, b) => {
+                const aOrder = workTypeOrder[a.workType] || 999;
+                const bOrder = workTypeOrder[b.workType] || 999;
+                if (aOrder !== bOrder) return aOrder - bOrder;
+                
+                // 同一勤務区分内は通常順
+                const aIndex = normalOrderMap.get(a.fullName) ?? 999;
+                const bIndex = normalOrderMap.get(b.fullName) ?? 999;
+                return aIndex - bIndex;
+            });
+            
+            this.saveCEListAndNotify();
+            this.renderScheduleTable();
+            window.showMessage('勤務順で並び替えました', 'success');
+        }
+
+        sortCEByNormal() {
+            const normalOrderMap = new Map(this.normalOrder.map((name, index) => [name, index]));
+            
+            this.ceList.sort((a, b) => {
+                const aIndex = normalOrderMap.get(a.fullName) ?? 999;
+                const bIndex = normalOrderMap.get(b.fullName) ?? 999;
+                
+                if (aIndex !== bIndex) return aIndex - bIndex;
+                return (a.fullName || a.name).localeCompare(b.fullName || b.name, 'ja');
+            });
+            
+            this.saveCEListAndNotify();
+            this.renderScheduleTable();
+            window.showMessage('通常順で並び替えました', 'success');
+        }
+
+        openCESortModal() {
+            const modal = document.getElementById('ceSortModal');
+            const listContainer = document.getElementById('sortableCEList');
+            
+            if (!modal || !listContainer) return;
+
+            listContainer.innerHTML = '';
+            this.ceList.forEach((ce, index) => {
+                const item = document.createElement('div');
+                item.className = 'sortable-item';
+                item.draggable = true;
+                item.dataset.index = index;
+                
+                item.innerHTML = `
+                    <div>
+                        <div class="font-medium">${ce.fullName || ce.name}</div>
+                        <div class="text-xs text-gray-500">${ce.workType} | アイコン: ${ce.iconName || ce.displayName}</div>
+                    </div>
+                    <div class="text-gray-400">
+                        <i class="fas fa-grip-vertical"></i>
+                    </div>
+                `;
+                
+                item.addEventListener('dragstart', (e) => {
+                    e.dataTransfer.effectAllowed = 'move';
+                    e.dataTransfer.setData('text/plain', index.toString());
+                    item.classList.add('dragging');
+                });
+                
+                item.addEventListener('dragend', () => {
+                    item.classList.remove('dragging');
+                });
+                
+                listContainer.appendChild(item);
+            });
+
+            listContainer.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                const dragging = listContainer.querySelector('.dragging');
+                if (!dragging) return;
+                
+                const afterElement = this.getDragAfterElement(listContainer, e.clientY);
+                if (afterElement == null) {
+                    listContainer.appendChild(dragging);
+                } else {
+                    listContainer.insertBefore(dragging, afterElement);
+                }
+            });
+
+            modal.style.display = 'flex';
+        }
+
+        getDragAfterElement(container, y) {
+            const draggableElements = [...container.querySelectorAll('.sortable-item:not(.dragging)')];
+            
+            return draggableElements.reduce((closest, child) => {
+                const box = child.getBoundingClientRect();
+                const offset = y - box.top - box.height / 2;
+                
+                if (offset < 0 && offset > closest.offset) {
+                    return { offset: offset, element: child };
+                } else {
+                    return closest;
+                }
+            }, { offset: Number.NEGATIVE_INFINITY }).element;
+        }
+
+        closeCESortModal() {
+            const modal = document.getElementById('ceSortModal');
+            if (modal) {
+                modal.style.display = 'none';
+            }
+        }
+
+        async applyCESort() {
+            const listContainer = document.getElementById('sortableCEList');
+            const items = listContainer.querySelectorAll('.sortable-item');
+            
+            const newOrder = Array.from(items).map(item => {
+                const index = parseInt(item.dataset.index);
+                return this.ceList[index];
+            });
+            
+            try {
+                this.ceList = newOrder;
+                await this.saveCEListAndNotify();
+                
+                this.renderScheduleTable();
+                this.closeCESortModal();
+                
+                window.showMessage('CE順序を変更しました', 'success');
+            } catch (error) {
+                console.error('❌ CE順序保存エラー:', error);
+                window.showMessage('順序の保存に失敗しました', 'error');
+            }
+        }
+
+        // CEリスト保存とダッシュボード通知
+        async saveCEListAndNotify() {
+            const ceListData = {
+                list: this.ceList,
+                updatedAt: firebase.database.ServerValue.TIMESTAMP
+            };
+            await window.database.ref(`${window.DATA_ROOT}/ceList`).set(ceListData);
+            
+            // ダッシュボードへの変更通知
+            try {
+                localStorage.setItem('ceListUpdated', Date.now().toString());
+            } catch (e) {
+                console.warn('localStorage通知失敗:', e);
+            }
+        }
+
+        // 勤務表操作
+        async createNewSchedule() {
+    // 期間設定の値を確実に取得
+    const startInput = document.getElementById('periodStartDate');
+    const endInput = document.getElementById('periodEndDate');
+    
+    if (startInput?.value && endInput?.value) {
+        this.currentPeriod.startDate = new Date(startInput.value + 'T00:00:00');
+        this.currentPeriod.endDate = new Date(endInput.value + 'T00:00:00');
+    }
+
+    if (!confirm('新しい勤務表を作成しますか？\n現在のCEリストで平日は「A」、土日祝日は「×」で初期化されます。')) {
+        return;
+    }
+
+    try {
+        const dates = this.generateDateRange(this.currentPeriod.startDate, this.currentPeriod.endDate);
+        
+        // 現在のCEリストを使用
+        this.ceList.forEach(ce => {
+            if (!this.scheduleData[ce.id]) {
+                this.scheduleData[ce.id] = {};
+            }
+            
+            dates.forEach(date => {
+                const dateKey = this.formatDateKey(date);
+                const isWeekend = date.getDay() === 0 || date.getDay() === 6;
+                const isHoliday = this.isHoliday(date);
+                
+                if (!this.scheduleData[ce.id][dateKey]) {
+                    this.scheduleData[ce.id][dateKey] = {
+                        status: (isWeekend || isHoliday) ? '×' : 'A',
+                        desired: false,
+                        createdAt: firebase.database.ServerValue.TIMESTAMP
+                    };
+                }
+            });
+        });
+
+        this.renderScheduleTable();
+        window.showMessage('新しい勤務表を作成しました', 'success');
+        
+    } catch (error) {
+        console.error('❌ 勤務表作成エラー:', error);
+        window.showMessage('勤務表の作成に失敗しました', 'error');
+    }
+}
+                
+                await window.database.ref(`${window.DATA_ROOT}/workSchedule`).set(this.scheduleData);
+                
+                this.renderScheduleTable();
+                window.showMessage('新しい勤務表を作成しました', 'success');
+                
+            } catch (error) {
+                console.error('❌ 勤務表作成エラー:', error);
+                window.showMessage('勤務表の作成に失敗しました', 'error');
+            }
+        }
+
+        clearAllSchedule() {
+            if (!confirm('すべての勤務データをクリアしますか？\nこの操作は元に戻せません。')) {
+                return;
+            }
+
+            this.scheduleData = {};
+            this.renderScheduleTable();
+            window.showMessage('勤務表をクリアしました', 'info');
+        }
+
+        // 保存・読み込み・公開・印刷
+        async saveSnapshot() {
+            const titleInput = document.getElementById('snapshotTitle');
+            const title = titleInput.value.trim();
+            
+            if (!title) {
+                window.showMessage('タイトルを入力してください', 'error');
+                return;
+            }
+
+            try {
+                const saveId = Date.now().toString();
+                const startStr = this.formatDateDisplay(this.currentPeriod.startDate);
+                const endStr = this.formatDateDisplay(this.currentPeriod.endDate);
+                
+                const saveData = {
+                    title: title,
+                    period: `${startStr} ～ ${endStr}`,
+                    startDate: this.formatDateKey(this.currentPeriod.startDate),
+                    endDate: this.formatDateKey(this.currentPeriod.endDate),
+                    scheduleData: this.scheduleData,
+                    ceList: this.ceList,
+                    workTypeOverrides: this.workTypeOverrides,
+                    savedAt: firebase.database.ServerValue.TIMESTAMP
+                };
+                
+                await window.database.ref(`${window.DATA_ROOT}/savedSchedules/${saveId}`).set(saveData);
+                this.savedSchedules[saveId] = saveData;
+                
+                titleInput.value = '';
+                this.updateSnapshotSelect();
+                window.showMessage('勤務表を保存しました', 'success');
+                
+            } catch (error) {
+                console.error('❌ 勤務表保存エラー:', error);
+                window.showMessage('勤務表の保存に失敗しました', 'error');
+            }
+        }
+
+        async loadSnapshot() {
+            const select = document.getElementById('snapshotSelect');
+            const scheduleId = select.value;
+            
+            if (!scheduleId) {
+                window.showMessage('読み込む保存データを選択してください', 'error');
+                return;
+            }
+
+            const schedule = this.savedSchedules[scheduleId];
+            if (!schedule) return;
+
+            if (!confirm(`勤務表「${schedule.title}」を読み込みますか？\n現在の編集内容は失われます。`)) {
+                return;
+            }
+
+            try {
+                this.scheduleData = schedule.scheduleData || {};
+                this.ceList = schedule.ceList || this.ceList;
+                this.workTypeOverrides = schedule.workTypeOverrides || {};
+                this.currentPeriod.startDate = new Date(schedule.startDate + 'T00:00:00');
+                this.currentPeriod.endDate = new Date(schedule.endDate + 'T00:00:00');
+                
+                const startInput = document.getElementById('periodStartDate');
+                const endInput = document.getElementById('periodEndDate');
+                
+                if (startInput) startInput.value = schedule.startDate;
+                if (endInput) endInput.value = schedule.endDate;
+                
+                await this.saveCEListAndNotify();
+                this.renderScheduleTable();
+                window.showMessage('勤務表を読み込みました', 'success');
+                
+            } catch (error) {
+                console.error('❌ 勤務表読み込みエラー:', error);
+                window.showMessage('勤務表の読み込みに失敗しました', 'error');
+            }
+        }
+
+        async deleteSnapshot() {
+            const select = document.getElementById('snapshotSelect');
+            const scheduleId = select.value;
+            
+            if (!scheduleId) {
+                window.showMessage('削除する保存データを選択してください', 'error');
+                return;
+            }
+
+            const schedule = this.savedSchedules[scheduleId];
+            if (!schedule) return;
+
+            if (!confirm(`勤務表「${schedule.title}」を削除しますか？\nこの操作は元に戻せません。`)) {
+                return;
+            }
+
+            try {
+                await window.database.ref(`${window.DATA_ROOT}/savedSchedules/${scheduleId}`).remove();
+                delete this.savedSchedules[scheduleId];
+                
+                this.updateSnapshotSelect();
+                window.showMessage('勤務表を削除しました', 'success');
+                
+            } catch (error) {
+                console.error('❌ 勤務表削除エラー:', error);
+                window.showMessage('勤務表の削除に失敗しました', 'error');
+            }
+        }
+
+        updateSnapshotSelect() {
+            const select = document.getElementById('snapshotSelect');
+            if (!select) return;
+
+            select.innerHTML = '<option value="">保存データを選択</option>';
+            
+            Object.entries(this.savedSchedules).forEach(([id, schedule]) => {
+                const option = document.createElement('option');
+                option.value = id;
+                option.textContent = `${schedule.title}（${schedule.period}）`;
+                select.appendChild(option);
+            });
+        }
+
+        async publishSchedule() {
+            if (!confirm('現在の勤務表を公開しますか？\nダッシュボードから閲覧できるようになります。')) {
+                return;
+            }
+
+            try {
+                await window.database.ref(`${window.DATA_ROOT}/workSchedule`).set(this.scheduleData);
+                await window.database.ref(`${window.DATA_ROOT}/workTypeOverrides`).set(this.workTypeOverrides);
+                await this.saveCEListAndNotify();
+                
+                window.showMessage('勤務表を公開しました', 'success');
+                
+            } catch (error) {
+                console.error('❌ 勤務表公開エラー:', error);
+                window.showMessage('勤務表の公開に失敗しました', 'error');
+            }
+        }
+
+        printSchedule() {
+            window.print();
+        }
+
+
+        // CE管理クイックメニューの実装
+showCEQuickMenu(event, ceIndex) {
+    const menu = document.createElement('div');
+    menu.className = 'ce-quick-menu';
+    menu.style.cssText = `
+        position: fixed;
+        background: white;
+        border: 1px solid #ddd;
+        border-radius: 8px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        padding: 8px;
+        z-index: 2000;
+        min-width: 180px;
+    `;
+    
+    menu.innerHTML = `
+        <button onclick="workScheduleEditor.openCEInfoEditModal(${ceIndex}); this.parentElement.remove();" 
+                class="w-full text-left p-2 hover:bg-gray-100 rounded text-sm">
+            <i class="fas fa-edit mr-2"></i>情報編集
+        </button>
+        <button onclick="workScheduleEditor.moveCEUp(${ceIndex}); this.parentElement.remove();"
+                class="w-full text-left p-2 hover:bg-gray-100 rounded text-sm">
+            <i class="fas fa-arrow-up mr-2"></i>上に移動
+        </button>
+        <button onclick="workScheduleEditor.moveCEDown(${ceIndex}); this.parentElement.remove();"
+                class="w-full text-left p-2 hover:bg-gray-100 rounded text-sm">
+            <i class="fas fa-arrow-down mr-2"></i>下に移動
+        </button>
+        <button onclick="workScheduleEditor.openAddCEModal(); this.parentElement.remove();" 
+                class="w-full text-left p-2 hover:bg-gray-100 rounded text-sm">
+            <i class="fas fa-plus mr-2"></i>CE追加
+        </button>
+        <button onclick="workScheduleEditor.deleteCE(${ceIndex}); this.parentElement.remove();" 
+                class="w-full text-left p-2 hover:bg-gray-100 rounded text-sm text-red-600">
+            <i class="fas fa-trash mr-2"></i>削除
+        </button>
+    `;
+    
+    const rect = event.target.getBoundingClientRect();
+    menu.style.left = `${rect.left + window.scrollX}px`;
+    menu.style.top = `${rect.bottom + window.scrollY + 5}px`;
+    
+    document.body.appendChild(menu);
+    
+    setTimeout(() => {
+        document.addEventListener('click', function closeMenu(e) {
+            if (!menu.contains(e.target)) {
+                menu.remove();
+                document.removeEventListener('click', closeMenu);
+            }
+        });
+    }, 100);
+}
+
+async moveCEUp(index) {
+    if (index <= 0) return;
+    [this.ceList[index], this.ceList[index - 1]] = [this.ceList[index - 1], this.ceList[index]];
+    await this.saveCEListAndNotify();
+    this.renderScheduleTable();
+    window.showMessage('CEを上に移動しました', 'success');
+}
+
+async moveCEDown(index) {
+    if (index >= this.ceList.length - 1) return;
+    [this.ceList[index], this.ceList[index + 1]] = [this.ceList[index + 1], this.ceList[index]];
+    await this.saveCEListAndNotify();
+    this.renderScheduleTable();
+    window.showMessage('CEを下に移動しました', 'success');
+}
+
+async deleteCE(index) {
+    const ce = this.ceList[index];
+    if (!confirm(`${ce.fullName || ce.name}を削除しますか？`)) return;
+    
+    this.ceList.splice(index, 1);
+    await this.saveCEListAndNotify();
+    this.renderScheduleTable();
+    window.showMessage('CEを削除しました', 'success');
+}
+        
+        // ユーティリティメソッド
+        getWorkData(ceId, dateKey) {
+            return this.scheduleData[ceId]?.[dateKey] || { status: '', desired: false };
+        }
+
+        calculateCESummary(ce, dates) {
+            const summary = {
+                A: 0, A1: 0, B: 0, non: 0, off: 0,
+                holidays: 0, required: 20, actual: 0, nightShift: 0
+            };
+
+            dates.forEach(date => {
+                const dateKey = this.formatDateKey(date);
+                const workData = this.getWorkData(ce.id, dateKey);
+                const isWeekend = date.getDay() === 0 || date.getDay() === 6;
+                const isHoliday = this.isHoliday(date);
+                
+                if (isWeekend || isHoliday) {
+                    summary.holidays++;
+                }
+
+                const status = workData.status || (isWeekend || isHoliday ? '×' : 'A');
+                
+                switch (status) {
+                    case 'A': summary.A++; summary.actual++; break;
+                    case 'A1': summary.A1++; summary.actual++; break;
+                    case 'B': summary.B++; summary.actual++; summary.nightShift++; break;
+                    case '非': summary.non++; summary.actual++; break;
+                    case '×': summary.off++; break;
+                    case '年': summary.actual++; break;
+                    case '出': summary.actual++; break;
+                    case '研': summary.actual++; break;
+                    case 'text': summary.actual++; break;
+                }
+            });
+
+            return summary;
+        }
+
+        countWorkTypeForDate(workType, date, statusFilter = null) {
+            const dateKey = this.formatDateKey(date);
+            return this.ceList.filter(ce => {
+                const effectiveWorkType = this.getEffectiveWorkType(ce, dateKey);
+                if (effectiveWorkType !== workType) return false;
+                
+                const workData = this.getWorkData(ce.id, dateKey);
+                const status = workData.status || (this.isHoliday(date) ? '×' : 'A');
+                
+                if (statusFilter) {
+                    return status === statusFilter;
+                }
+                
+                return ['A', 'A1', 'B', '非', '年', '出', '研', 'text'].includes(status);
+            }).length;
+        }
+
+        countStatusForDate(status, date) {
+            const dateKey = this.formatDateKey(date);
+            return this.ceList.filter(ce => {
+                const workData = this.getWorkData(ce.id, dateKey);
+                return workData.status === status;
+            }).length;
+        }
+
+        isHoliday(date) {
+            const dayOfWeek = date.getDay();
+            return dayOfWeek === 0 || dayOfWeek === 6;
+        }
+
+        formatDateForInput(date) {
+            return date.toISOString().slice(0, 10);
+        }
+
+        formatDateKey(date) {
+            return date.toISOString().slice(0, 10);
+        }
+
+        formatDateDisplay(date) {
+            return date.toLocaleDateString('ja-JP', {
+                year: 'numeric',
+                month: 'numeric',
+                day: 'numeric'
+            });
+        }
+    }
+
+    // 初期化
+    let workScheduleEditor = null;
+    document.addEventListener('DOMContentLoaded', () => {
+        workScheduleEditor = new WorkScheduleEditor();
+    });
+    </script>
+</body>
+</html>
