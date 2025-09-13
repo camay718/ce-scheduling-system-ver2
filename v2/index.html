@@ -325,11 +325,11 @@
     </script>
 
     <script>
-    // 最適化されたLoginSystem
+    // LoginSystem（元の動作版）
     class LoginSystem {
         constructor() {
             this.maxLoginAttempts = 5;
-            this.lockoutDuration = 15 * 60 * 1000; // 15分
+            this.lockoutDuration = 15 * 60 * 1000;
             this.init();
         }
 
@@ -347,23 +347,20 @@
         }
 
         setupEventListeners() {
-            // フォーム送信
             document.getElementById('loginForm').addEventListener('submit', (e) => {
                 e.preventDefault();
                 this.handleLogin();
             });
 
-            // パスワード表示切り替え
             document.getElementById('togglePassword').addEventListener('click', () => {
                 this.togglePasswordVisibility();
             });
 
-            // 管理者ダッシュボードアクセス
             document.getElementById('adminAccessBtn').addEventListener('click', () => {
-                this.accessAdminDashboard();
+                // 管理者ダッシュボードへ直接移動
+                window.location.href = 'pages/admin-dashboard.html';
             });
 
-            // モーダル制御
             document.getElementById('forgotPassword').addEventListener('click', () => {
                 this.showPasswordResetModal();
             });
@@ -378,7 +375,6 @@
                 this.hideSystemInfoModal();
             });
 
-            // フィールドバリデーション
             document.getElementById('username').addEventListener('input', () => {
                 this.validateField('username');
             });
@@ -386,7 +382,6 @@
                 this.validateField('password');
             });
 
-            // Enterキーでのフォーカス移動
             document.getElementById('username').addEventListener('keydown', (e) => {
                 if (e.key === 'Enter') {
                     e.preventDefault();
@@ -414,23 +409,20 @@
             };
 
             updateTime();
-            setInterval(updateTime, 60000); // 1分毎に更新
+            setInterval(updateTime, 60000);
         }
 
-        // セッション確認（修正版）
         async checkExistingSession() {
             try {
                 const targetUID = sessionStorage.getItem('targetUID');
                 const currentUsername = sessionStorage.getItem('currentUsername');
                 
                 if (targetUID && currentUsername) {
-                    // dataManagerを使用してユーザーデータ確認
                     if (window.dataManager) {
                         const users = await window.dataManager.getUsersByRole(null, true);
                         const userData = users[targetUID];
                         
                         if (userData) {
-                            // 既存セッションが有効
                             if (userData.setupCompleted) {
                                 window.location.href = 'dashboard.html';
                             } else {
@@ -441,7 +433,6 @@
                     }
                 }
                 
-                // セッションクリア
                 sessionStorage.clear();
             } catch (error) {
                 console.error('❌ セッション確認エラー:', error);
@@ -493,42 +484,35 @@
             }
         }
 
-        // 修正されたログイン処理
         async handleLogin() {
             try {
-                // バリデーション
                 const usernameValid = this.validateField('username');
-                const passwordValid = this.validateField('password');
+                const passwordIsValid = this.validateField('password');
                 
-                if (!usernameValid || !passwordValid) {
+                if (!usernameValid || !passwordIsValid) {
                     return;
                 }
 
                 const username = document.getElementById('username').value.trim();
                 const password = document.getElementById('password').value;
 
-                // ログイン試行回数チェック
                 if (this.isAccountLocked(username)) {
                     this.showLoginError('アカウントが一時的にロックされています。しばらく待ってから再試行してください。');
                     return;
                 }
 
-                // ローディング状態開始
                 this.setLoginLoading(true);
 
-                // 匿名認証を確保
                 if (!window.auth.currentUser) {
                     await window.auth.signInAnonymously();
                 }
 
-                // ✅ 修正：ユーザー検索ロジック
                 let userData = null;
                 let userUID = null;
 
                 if (window.dataManager) {
                     const users = await window.dataManager.getUsersByRole(null, true);
                     
-                    // ユーザー名でユーザー検索
                     for (const [uid, user] of Object.entries(users)) {
                         if (user.username === username) {
                             userData = user;
@@ -537,7 +521,6 @@
                         }
                     }
                 } else {
-                    // フォールバック：直接Firebase検索
                     const usersSnapshot = await window.database.ref(`${window.DATA_ROOT}/users`)
                         .orderByChild('username')
                         .equalTo(username)
@@ -556,25 +539,21 @@
                     return;
                 }
 
-                // ✅ 修正：パスワード検証ロジック
-                let passwordValid = false;
+                // パスワード検証
+                let loginSuccess = false;
                 
-                // 1. 初回ログイン用の一時パスワードチェック
                 if (userData.tempPassword && userData.tempPassword === password && !userData.setupCompleted) {
-                    passwordValid = true;
-                }
-                // 2. 設定完了済みユーザーのパスワードチェック
-                else if (userData.password && userData.password === password && userData.setupCompleted) {
-                    passwordValid = true;
+                    loginSuccess = true;
+                } else if (userData.password && userData.password === password && userData.setupCompleted) {
+                    loginSuccess = true;
                 }
 
-                if (!passwordValid) {
+                if (!loginSuccess) {
                     this.recordFailedAttempt(username);
                     this.showLoginError('ユーザー名またはパスワードが正しくありません');
                     return;
                 }
 
-                // ログイン成功処理
                 await this.handleSuccessfulLogin(userUID, username, userData);
 
             } catch (error) {
@@ -585,24 +564,19 @@
             }
         }
 
-        // ログイン成功処理（修正版）
         async handleSuccessfulLogin(userUID, username, userData) {
             try {
-                // セッション情報保存
                 sessionStorage.setItem('targetUID', userUID);
                 sessionStorage.setItem('currentUsername', username);
                 
-                // Remember me 処理
                 if (document.getElementById('rememberMe').checked) {
                     localStorage.setItem('rememberedUsername', username);
                 } else {
                     localStorage.removeItem('rememberedUsername');
                 }
 
-                // ログイン試行回数リセット
                 this.clearFailedAttempts(username);
 
-                // 監査ログ記録
                 const auditEntry = {
                     action: 'login',
                     details: { 
@@ -625,12 +599,10 @@
                     await window.dataManager.batchUpdate(updates);
                 }
 
-                // 成功メッセージ
                 if (window.Utils) {
                     window.Utils.showMessage('ログインしました', 'success');
                 }
 
-                // リダイレクト
                 setTimeout(() => {
                     if (userData.setupCompleted) {
                         window.location.href = 'dashboard.html';
@@ -645,75 +617,6 @@
             }
         }
 
-        // 管理者ダッシュボードアクセス
-        async accessAdminDashboard() {
-            const username = prompt('管理者ユーザー名を入力してください:');
-            if (!username) return;
-
-            const password = prompt('管理者パスワードを入力してください:');
-            if (!password) return;
-
-            try {
-                if (window.Utils) {
-                    window.Utils.showLoading(true, '管理者認証中...');
-                }
-
-                // 匿名認証確保
-                if (!window.auth.currentUser) {
-                    await window.auth.signInAnonymously();
-                }
-
-                // 管理者ユーザー検索
-                let adminData = null;
-                let adminUID = null;
-
-                if (window.dataManager) {
-                    const admins = await window.dataManager.getUsersByRole('admin', true);
-                    
-                    for (const [uid, admin] of Object.entries(admins)) {
-                        if (admin.username === username && 
-                            ((admin.password && admin.password === password) || 
-                             (admin.tempPassword && admin.tempPassword === password))) {
-                            adminData = admin;
-                            adminUID = uid;
-                            break;
-                        }
-                    }
-                }
-
-                if (!adminData) {
-                    if (window.Utils) {
-                        window.Utils.showMessage('管理者認証に失敗しました', 'error');
-                    }
-                    return;
-                }
-
-                // 管理者セッション設定
-                sessionStorage.setItem('targetUID', adminUID);
-                sessionStorage.setItem('currentUsername', username);
-                sessionStorage.setItem('isAdminAccess', 'true');
-
-                if (window.Utils) {
-                    window.Utils.showMessage('管理者認証成功。管理者ダッシュボードに移動します...', 'success');
-                }
-
-                setTimeout(() => {
-                    window.location.href = 'admin-dashboard.html';
-                }, 1000);
-
-            } catch (error) {
-                console.error('❌ 管理者認証エラー:', error);
-                if (window.Utils) {
-                    window.Utils.showMessage('管理者認証でエラーが発生しました', 'error');
-                }
-            } finally {
-                if (window.Utils) {
-                    window.Utils.showLoading(false);
-                }
-            }
-        }
-
-        // ログイン試行回数管理
         isAccountLocked(username) {
             const attempts = JSON.parse(localStorage.getItem('loginAttempts') || '{}');
             const userAttempts = attempts[username];
@@ -725,7 +628,6 @@
                 if (now - userAttempts.lastAttempt < this.lockoutDuration) {
                     return true;
                 } else {
-                    // ロックアウト期間終了、リセット
                     delete attempts[username];
                     localStorage.setItem('loginAttempts', JSON.stringify(attempts));
                     return false;
