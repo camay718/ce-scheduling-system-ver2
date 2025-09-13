@@ -15,6 +15,48 @@ Copy<!DOCTYPE html>
     <!-- 統一テーマ -->
     <link rel="stylesheet" href="css/theme-unified.css">
     
+    <!-- 月次業務専用スタイル -->
+<style>
+/* 月次業務（ダッシュボード強化スタイル） */
+.monthly-task-badge {
+    position: absolute;
+    top: -4px;
+    right: 4px;
+    background: #f97316;
+    color: white;
+    font-size: 8px;
+    padding: 1px 4px;
+    border-radius: 3px;
+    font-weight: bold;
+}
+
+.assignment-dropzone {
+    min-height: 20px;
+    padding: 4px;
+    margin-top: 4px;
+}
+
+.assignment-dropzone.drag-over {
+    background: #fef3c7 !important;
+    border-color: #f59e0b !important;
+}
+
+.btn-small {
+    font-size: 10px;
+    padding: 2px 6px;
+    border-radius: 3px;
+    border: none;
+    cursor: pointer;
+}
+
+.monthly-event-item {
+    font-size: 11px;
+    line-height: 1.2;
+}
+</style>
+
+<!-- Firebase SDK -->
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
     <!-- Firebase SDK -->
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
