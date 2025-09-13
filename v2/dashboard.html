@@ -672,14 +672,37 @@ Copy<!DOCTYPE html>
         }
 
         showScreen(contentId, tabId) {
-            document.querySelectorAll('.screen-content').forEach(screen => screen.style.display = 'none');
-            const contentEl = document.getElementById(contentId);
-            if (contentEl) contentEl.style.display = 'block';
-            document.querySelectorAll('.nav-tab').forEach(tab => tab.classList.remove('active'));
-            const tabEl = document.getElementById(tabId);
-            if (tabEl) tabEl.classList.add('active');
-        }
-
+    // すべてのコンテンツを非表示
+    document.querySelectorAll('.screen-content').forEach(screen => {
+        screen.style.display = 'none';
+    });
+    
+    // 指定されたコンテンツを表示
+    const contentEl = document.getElementById(contentId);
+    if (contentEl) {
+        contentEl.style.display = 'block';
+    }
+    
+    // すべてのタブのactiveクラスを削除
+    document.querySelectorAll('.nav-tab').forEach(tab => {
+        tab.classList.remove('active');
+    });
+    
+    // 指定されたタブにactiveクラスを追加
+    const tabEl = document.getElementById(tabId);
+    if (tabEl) {
+        tabEl.classList.add('active');
+    }
+    
+    // 特定画面での初期化処理
+    if (contentId === 'ceManagementContent' && window.workScheduleViewer) {
+        setTimeout(() => {
+            window.workScheduleViewer.displayCurrentPeriod();
+        }, 100);
+    } else if (contentId === 'settingsContent') {
+        setTimeout(() => this.setupAdminSettings(), 100);
+    }
+}
         setupSidebar() {
             const saveBtn = document.getElementById('templateSaveButton');
             const loadBtn = document.getElementById('templateLoadButton');
