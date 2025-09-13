@@ -926,28 +926,115 @@ Copy<!DOCTYPE html>
             }
         }
 
-        initializeV2System() {
-            setTimeout(async () => {
-                try {
-                    let attempts = 0;
-                    while (attempts < 50) {
-                        if (window.CalendarView && window.EventManager && window.CEManager && window.DEPARTMENTS && window.showMessage && window.CEDailyStatusManager) {
-                            break;
-                        }
-                        await new Promise(resolve => setTimeout(resolve, 100));
-                        attempts++;
-                    }
-                    if (!window.calendarView) window.calendarView = new window.CalendarView();
-                    if (!window.eventManager) window.eventManager = new window.EventManager();
-                    if (!window.ceManager) window.ceManager = new window.CEManager();
-                    if (!window.ceDailyStatus) window.ceDailyStatus = new window.CEDailyStatusManager();
-                    if (!window.workScheduleViewer) window.workScheduleViewer = new WorkScheduleViewer();
-                } catch (error) {
-                    console.error('V2システム初期化エラー:', error);
-                }
-            }, 1500);
+// V2システム初期化（堅牢化版）
+initializeV2System() {
+    const boot = async () => {
+        try {
+            // 依存スクリプトのロード待ち（最大 ~10秒）
+            let attempts = 0;
+            while (attempts < 100) {
+                const ready =
+                    typeof window.CalendarView !== 'undefined' &&
+                    typeof window.CEManager !== 'undefined' &&
+                    typeof window.CEDailyStatusManager !== 'undefined' &&
+                    typeof window.showMessage !== 'undefined';
+                if (ready) break;
+                await new Promise(r => setTimeout(r, 100));
+                attempts++;
+            }
+
+            // クラスのインスタンス化（エラー耐性あり）
+            if (window.CalendarView && !window.calendarView) {
+                window.calendarView = new window.CalendarView();
+            }
+            if (window.CEManager && !window.ceManager) {
+                window.ceManager = new window.CEManager();
+            }
+            if (window.CEDailyStatusManager && !window.ceDailyStatus) {
+                window.ceDailyStatus = new window.CEDailyStatusManager();
+            }
+            // EventManager の遅延初期化
+            if (window.EventManager && !window.eventManager) {
+                window.eventManager = new window.EventManager();
+            }
+
+            if (!window.workScheduleViewer) {
+                window.workScheduleViewer = new WorkScheduleViewer();
+            }
+        } catch (error) {
+            console.error('V2システム初期化エラー:', error);
         }
+    };
+
+    if (document.readyState === 'complete') {
+        boot();
+    } else {
+        window.addEventListener('load', boot, { once: true });
+        setTimeout(boot, 1500);
     }
+}
+
+// setupDailySchedule メソッドに追加
+setupDailySchedule() {
+    // 既存のコード...
+    
+    // 期間一括業務追加ボタン
+    const bulkBtn = document.getElementById('addBulkEventBtn');
+    if (bulkBtn) {
+        bulkBtn.onclick = () => {
+            if (window.userRole === 'viewer') return window.showMessage('編集権限がありません', 'warning');
+            // Lazy init
+            if (!window.eventManager && window.EventManager) window.eventManager = new window.EventManager();
+            if (!window.eventManager) return window.showMessage('イベント管理の初期化を待機中です', 'info');
+            if (typeof window.eventManager.openBulkAddModal === 'function') {
+                window.eventManager.openBulkAddModal();
+            } else {
+                window.showMessage('期間一括業務追加のUIが見つかりません', 'error');
+            }
+        };
+    }
+
+    // 月次業務追加ボタン
+    const monthlyBtn = document.getElementById('addMonthlyTaskBtn');
+    if (monthlyBtn) {
+        monthlyBtn.onclick = () => {
+            if (window.userRole === 'viewer') return window.showMessage('編集権限がありません', 'warning');
+            // Lazy init
+            if (!window.eventManager && window.EventManager) window.eventManager = new window.EventManager();
+            if (!window.eventManager) return window.showMessage('イベント管理の初期化を待機中です', 'info');
+            if (typeof window.eventManager.openMonthlyTaskModal === 'function') {
+                window.eventManager.openMonthlyTaskModal();
+            } else {
+                window.showMessage('月次業務追加のUIが見つかりません', 'error');
+            }
+        };
+    }
+
+    // 既存の業務追加ボタンも強化
+    const quickBtn = document.getElementById('addEventButtonDaily');
+    if (quickBtn) quickBtn.onclick = () => this.openQuickAddEvent();
+}
+
+// openQuickAddEvent の修正
+openQuickAddEvent(department) {
+    if (window.userRole === 'viewer') {
+        window.showMessage('編集権限がありません', 'warning');
+        return;
+    }
+    // EventManager を遅延生成
+    if (!window.eventManager && window.EventManager) {
+        try { window.eventManager = new window.EventManager(); } catch {}
+    }
+    if (!window.eventManager) {
+        window.showMessage('イベント管理の初期化を待機中です', 'info');
+        return;
+    }
+    if (typeof window.eventManager.openAddEventModal === 'function') {
+        window.eventManager.openAddEventModal(department);
+    } else {
+        window.showMessage('業務追加のUIが見つかりません', 'error');
+    }
+}
 
     // 初期化
     if (!window.dashboardAuthInitialized) {
