@@ -3,17 +3,52 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CEスケジュール管理システム V2 - ログイン</title>
-    
-    <!-- Google Fonts -->
-    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <title>ログイン - CEスケジュール管理システム V2</title>
     
     <!-- 外部ライブラリ -->
     <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css">
     
-    <!-- 統合CSS -->
-    <link rel="stylesheet" href="styles/main.css">
+    <!-- 統一テーマ -->
+    <link rel="stylesheet" href="css/theme-unified.css">
+</head>
+<body class="theme-unified">
+    <div class="center-layout">
+        <div class="glass-card center-card">
+            <h2 class="text-3xl font-bold text-center text-gray-800 mb-8">
+                <i class="fas fa-calendar-check text-green-600 mr-2"></i>
+                CEスケジュール管理システム V2
+            </h2>
+            
+            <form id="loginForm" class="space-y-6">
+                <div>
+                    <label for="username" class="block text-gray-700 text-sm font-bold mb-2">
+                        <i class="fas fa-user mr-2"></i>ユーザー名
+                    </label>
+                    <input type="text" id="username" class="input-unified" 
+                           placeholder="ユーザー名を入力" required autocomplete="username">
+                </div>
+                
+                <div>
+                    <label for="password" class="block text-gray-700 text-sm font-bold mb-2">
+                        <i class="fas fa-lock mr-2"></i>パスワード
+                    </label>
+                    <input type="password" id="password" class="input-unified" 
+                           placeholder="パスワードを入力" required autocomplete="current-password">
+                </div>
+                
+                <button type="submit" id="loginBtn" class="btn-unified btn-primary-unified w-full">
+                    <i class="fas fa-sign-in-alt mr-2"></i>ログイン
+                </button>
+                
+                <div id="statusMessage" class="status-unified" style="display: none;"></div>
+            </form>
+            
+            <button type="button" id="forgotPasswordBtn" class="w-full text-center mt-4 p-2 text-green-600 hover:text-green-700 underline">
+                <i class="fas fa-question-circle mr-1"></i>パスワードがわからなくなったら？
+            </button>
+        </div>
+    </div>
 
     <!-- Firebase SDK -->
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
@@ -21,707 +56,245 @@
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
     
     <!-- Firebase設定 -->
-    <script src="js/config/firebase-config.js?v=20241212"></script>
-</head>
-<body class="theme-unified bg-gradient-to-br from-blue-50 via-white to-indigo-50 min-h-screen">
-    <!-- ローディング画面 -->
-    <div id="globalLoading" class="fixed inset-0 bg-white flex items-center justify-center z-50" style="display:none;">
-        <div class="text-center">
-            <div class="spinner mx-auto mb-4"></div>
-            <p class="text-gray-600" id="loadingMessage">システムを初期化しています...</p>
-        </div>
-    </div>
-
-    <!-- メインインターフェース -->
-    <div id="mainInterface" class="min-h-screen flex">
-        <!-- 左側：ブランディング -->
-        <div class="hidden lg:flex lg:w-1/2 bg-gradient-to-br from-blue-600 via-blue-700 to-indigo-800 relative overflow-hidden">
-            <!-- 背景パターン -->
-            <div class="absolute inset-0 opacity-10">
-                <svg class="w-full h-full" viewBox="0 0 100 100" preserveAspectRatio="none">
-                    <defs>
-                        <pattern id="grid" width="10" height="10" patternUnits="userSpaceOnUse">
-                            <path d="M 10 0 L 0 0 0 10" fill="none" stroke="white" stroke-width="0.5"/>
-                        </pattern>
-                    </defs>
-                    <rect width="100" height="100" fill="url(#grid)"/>
-                </svg>
-            </div>
-            
-            <!-- コンテンツ -->
-            <div class="relative z-10 flex flex-col justify-center px-12 text-white">
-                <div class="mb-8">
-                    <div class="inline-flex items-center justify-center w-20 h-20 bg-white bg-opacity-20 rounded-full mb-6">
-                        <i class="fas fa-calendar-alt text-3xl"></i>
-                    </div>
-                    <h1 class="text-4xl font-bold mb-4">
-                        CEスケジュール管理システム
-                    </h1>
-                    <p class="text-xl text-blue-100 mb-8">
-                        効率的で直感的な医療現場のスケジュール管理
-                    </p>
-                </div>
-                
-                <!-- 特徴一覧 -->
-                <div class="space-y-4">
-                    <div class="flex items-center">
-                        <i class="fas fa-check-circle text-green-400 mr-3"></i>
-                        <span>リアルタイム同期による最新情報の共有</span>
-                    </div>
-                    <div class="flex items-center">
-                        <i class="fas fa-check-circle text-green-400 mr-3"></i>
-                        <span>直感的な操作で簡単スケジュール作成</span>
-                    </div>
-                    <div class="flex items-center">
-                        <i class="fas fa-check-circle text-green-400 mr-3"></i>
-                        <span>部門別・個人別の詳細な勤務管理</span>
-                    </div>
-                    <div class="flex items-center">
-                        <i class="fas fa-check-circle text-green-400 mr-3"></i>
-                        <span>セキュアなクラウドベースシステム</span>
-                    </div>
-                </div>
-
-                <!-- バージョン情報 -->
-                <div class="mt-12 pt-8 border-t border-blue-500 border-opacity-30">
-                    <div class="text-sm text-blue-200">
-                        <div class="flex items-center justify-between">
-                            <span>Version 2.0</span>
-                            <span id="currentTime"></span>
-                        </div>
-                        <div class="mt-2 text-xs">
-                            &copy; 2024 Hospital Systems. All rights reserved.
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- 右側：ログインフォーム -->
-        <div class="w-full lg:w-1/2 flex items-center justify-center p-8">
-            <div class="w-full max-w-md">
-                <!-- ヘッダー -->
-                <div class="text-center mb-8">
-                    <div class="lg:hidden mb-4">
-                        <div class="inline-flex items-center justify-center w-16 h-16 bg-blue-600 rounded-full mb-4">
-                            <i class="fas fa-calendar-alt text-2xl text-white"></i>
-                        </div>
-                        <h2 class="text-2xl font-bold text-gray-900">CEスケジュール管理</h2>
-                    </div>
-                    <h3 class="text-2xl lg:text-3xl font-bold text-gray-900 mb-2">ログイン</h3>
-                    <p class="text-gray-600">アカウント情報を入力してください</p>
-                </div>
-
-                <!-- ログインフォーム -->
-                <div class="glass-card p-8">
-                    <form id="loginForm" class="space-y-6">
-                        <!-- ユーザー名入力 -->
-                        <div>
-                            <label for="username" class="block text-sm font-medium text-gray-700 mb-2">
-                                <i class="fas fa-user mr-2 text-blue-600"></i>ユーザー名
-                            </label>
-                            <input type="text" id="username" name="username" 
-                                   class="input-unified" 
-                                   placeholder="ユーザー名を入力"
-                                   autocomplete="username"
-                                   required>
-                            <div id="usernameError" class="mt-1 text-xs text-red-600" style="display: none;"></div>
-                        </div>
-
-                        <!-- パスワード入力 -->
-                        <div>
-                            <label for="password" class="block text-sm font-medium text-gray-700 mb-2">
-                                <i class="fas fa-lock mr-2 text-green-600"></i>パスワード
-                            </label>
-                            <div class="relative">
-                                <input type="password" id="password" name="password" 
-                                       class="input-unified pr-10" 
-                                       placeholder="パスワードを入力"
-                                       autocomplete="current-password"
-                                       required>
-                                <button type="button" id="togglePassword" 
-                                        class="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-400 hover:text-gray-600">
-                                    <i class="fas fa-eye" id="togglePasswordIcon"></i>
-                                </button>
-                            </div>
-                            <div id="passwordError" class="mt-1 text-xs text-red-600" style="display: none;"></div>
-                        </div>
-
-                        <!-- オプション -->
-                        <div class="flex items-center justify-between">
-                            <label class="flex items-center">
-                                <input type="checkbox" id="rememberMe" 
-                                       class="rounded border-gray-300 text-blue-600 focus:ring-blue-500">
-                                <span class="ml-2 text-sm text-gray-700">ログイン状態を保持</span>
-                            </label>
-                            
-                            <button type="button" id="forgotPassword" 
-                                    class="text-sm text-blue-600 hover:text-blue-800">
-                                パスワードを忘れた方
-                            </button>
-                        </div>
-
-                        <!-- エラーメッセージ表示エリア -->
-                        <div id="loginErrorContainer" style="display: none;" 
-                             class="bg-red-50 border border-red-200 rounded-lg p-4">
-                            <div class="flex items-center">
-                                <i class="fas fa-exclamation-triangle text-red-500 mr-2"></i>
-                                <span id="loginErrorMessage" class="text-red-700 text-sm"></span>
-                            </div>
-                        </div>
-
-                        <!-- ログインボタン -->
-                        <div>
-                            <button type="submit" id="loginSubmitBtn" 
-                                    class="w-full btn-unified btn-primary-unified">
-                                <span id="loginBtnText">
-                                    <i class="fas fa-sign-in-alt mr-2"></i>ログイン
-                                </span>
-                                <span id="loginBtnLoading" style="display: none;">
-                                    <i class="fas fa-spinner fa-spin mr-2"></i>認証中...
-                                </span>
-                            </button>
-                        </div>
-                    </form>
-
-                    <!-- 管理者ダッシュボードアクセス -->
-                    <div class="mt-6 pt-6 border-t border-gray-200">
-                        <div class="text-center">
-                            <p class="text-sm text-gray-600 mb-3">管理者の方</p>
-                            <button id="adminAccessBtn" class="btn-unified btn-outline-unified w-full">
-                                <i class="fas fa-shield-alt mr-2"></i>管理者ダッシュボード
-                            </button>
-                        </div>
-                    </div>
-
-                    <!-- システム情報 -->
-                    <div class="mt-6 pt-4 border-t border-gray-100">
-                        <div class="flex items-center justify-between text-xs text-gray-500">
-                            <span id="connectionStatus">
-                                <i class="fas fa-circle text-green-500 mr-1"></i>
-                                接続良好
-                            </span>
-                            <span>最終更新: <span id="lastUpdate">--</span></span>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- ヘルプ・サポート -->
-                <div class="mt-6 text-center space-y-2">
-                    <button id="systemInfoBtn" class="text-sm text-gray-500 hover:text-gray-700">
-                        <i class="fas fa-info-circle mr-1"></i>
-                        システム情報
-                    </button>
-                    <div class="text-xs text-gray-400">
-                        お困りの際は管理者にお問い合わせください
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- パスワードリセットモーダル -->
-    <div id="passwordResetModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" style="display:none;">
-        <div class="bg-white rounded-lg shadow-xl max-w-md w-full mx-4">
-            <div class="flex justify-between items-center p-6 border-b">
-                <h3 class="text-lg font-bold text-gray-900">
-                    <i class="fas fa-key mr-2 text-blue-600"></i>
-                    パスワードリセット
-                </h3>
-                <button id="closePasswordResetModal" class="text-gray-400 hover:text-gray-600">
-                    <i class="fas fa-times text-xl"></i>
-                </button>
-            </div>
-            
-            <div class="p-6">
-                <p class="text-sm text-gray-700 mb-4">
-                    パスワードをリセットするには、管理者に連絡してください。
-                    セキュリティ上の理由により、パスワードリセットは管理者が手動で行います。
-                </p>
-                
-                <div class="bg-blue-50 p-4 rounded-lg mb-4">
-                    <h4 class="text-sm font-semibold text-blue-900 mb-2">連絡先情報</h4>
-                    <div class="text-sm text-blue-800 space-y-1">
-                        <div><i class="fas fa-envelope mr-2"></i>admin@hospital.com</div>
-                        <div><i class="fas fa-phone mr-2"></i>内線: 1234</div>
-                        <div><i class="fas fa-clock mr-2"></i>受付時間: 平日 9:00-17:00</div>
-                    </div>
-                </div>
-
-                <div class="text-xs text-gray-500">
-                    ユーザー名とリセット理由を明記の上、ご連絡ください。
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- システム情報モーダル -->
-    <div id="systemInfoModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" style="display:none;">
-        <div class="bg-white rounded-lg shadow-xl max-w-lg w-full mx-4 max-h-96 overflow-y-auto">
-            <div class="flex justify-between items-center p-6 border-b">
-                <h3 class="text-lg font-bold text-gray-900">
-                    <i class="fas fa-info-circle mr-2 text-blue-600"></i>
-                    システム情報
-                </h3>
-                <button id="closeSystemInfoModal" class="text-gray-400 hover:text-gray-600">
-                    <i class="fas fa-times text-xl"></i>
-                </button>
-            </div>
-            
-            <div class="p-6 space-y-4">
-                <div>
-                    <h4 class="font-semibold text-gray-900 mb-2">システム概要</h4>
-                    <div class="text-sm text-gray-700 space-y-1">
-                        <div>システム名: CEスケジュール管理システム</div>
-                        <div>バージョン: 2.0</div>
-                        <div>リリース日: 2024年12月</div>
-                        <div>開発: Hospital Systems Team</div>
-                    </div>
-                </div>
-                
-                <div>
-                    <h4 class="font-semibold text-gray-900 mb-2">サポートブラウザ</h4>
-                    <div class="text-sm text-gray-700 space-y-1">
-                        <div><i class="fab fa-chrome mr-2"></i>Google Chrome (推奨)</div>
-                        <div><i class="fab fa-firefox mr-2"></i>Mozilla Firefox</div>
-                        <div><i class="fab fa-safari mr-2"></i>Safari (macOS/iOS)</div>
-                        <div><i class="fab fa-edge mr-2"></i>Microsoft Edge</div>
-                    </div>
-                </div>
-                
-                <div>
-                    <h4 class="font-semibold text-gray-900 mb-2">セキュリティ</h4>
-                    <div class="text-sm text-gray-700">
-                        <div class="flex items-center mb-1">
-                            <i class="fas fa-shield-alt text-green-600 mr-2"></i>
-                            <span>SSL/TLS 暗号化通信</span>
-                        </div>
-                        <div class="flex items-center mb-1">
-                            <i class="fas fa-database text-blue-600 mr-2"></i>
-                            <span>リアルタイムデータ同期</span>
-                        </div>
-                        <div class="flex items-center">
-                            <i class="fas fa-user-shield text-purple-600 mr-2"></i>
-                            <span>役割ベースアクセス制御</span>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- 最適化されたJavaScript -->
-    <script type="module">
-        // 統合ユーティリティをインポート
-        import { Utils } from './js/utils.js';
-        import { DataManager } from './js/data-manager.js';
-        
-        // グローバルに公開
-        window.Utils = Utils;
-        window.DataManager = DataManager;
-        window.dataManager = new DataManager();
-        
-        console.log('✅ ログイン画面：モジュール読み込み完了');
-    </script>
-
+    <script src="js/config/firebase-config.js"></script>
+    
+    <!-- 統一メッセージシステム -->
     <script>
-    // LoginSystem（元の動作版）
-    class LoginSystem {
-        constructor() {
-            this.maxLoginAttempts = 5;
-            this.lockoutDuration = 15 * 60 * 1000;
-            this.init();
+    window.showMessage = (msg, type='info') => {
+        let cont = document.getElementById('messageContainer');
+        if (!cont) {
+            cont = document.createElement('div');
+            cont.id = 'messageContainer';
+            cont.style.cssText = 'position:fixed;top:16px;left:50%;transform:translateX(-50%);z-index:9999;width:min(92vw,480px);';
+            document.body.appendChild(cont);
         }
+        const div = document.createElement('div');
+        div.className = `status-unified ${type}`;
+        div.style.marginBottom = '8px';
+        div.textContent = msg;
+        cont.appendChild(div);
+        setTimeout(() => div.remove(), 5000);
+    };
+    </script>
+    
+    <!-- ログイン処理（監査ログ対応版） -->
+    <script>
+    // パスワード検証ユーティリティ（PBKDF2-SHA256）
+    async function verifyPassword(password, record) {
+        if (!record?.hash || !record?.salt || !record?.iterations) return false;
+        
+        const enc = new TextEncoder();
+        const salt = Uint8Array.from(atob(record.salt), c => c.charCodeAt(0));
+        
+        const keyMaterial = await crypto.subtle.importKey(
+            'raw', 
+            enc.encode(password), 
+            'PBKDF2', 
+            false, 
+            ['deriveBits']
+        );
+        
+        const bits = await crypto.subtle.deriveBits(
+            { name: 'PBKDF2', salt, iterations: record.iterations, hash: 'SHA-256' }, 
+            keyMaterial, 
+            256
+        );
+        
+        const hashBytes = new Uint8Array(bits);
+        const hashB64 = btoa(String.fromCharCode(...hashBytes));
+        
+        return hashB64 === record.hash;
+    }
 
-        async init() {
-            try {
-                await window.waitForFirebase();
-                this.setupEventListeners();
-                this.updateCurrentTime();
-                this.checkExistingSession();
-                console.log('✅ ログインシステム初期化完了');
-            } catch (error) {
-                console.error('❌ ログインシステム初期化エラー:', error);
-                this.showConnectionError();
-            }
-        }
-
-        setupEventListeners() {
-            document.getElementById('loginForm').addEventListener('submit', (e) => {
-                e.preventDefault();
-                this.handleLogin();
-            });
-
-            document.getElementById('togglePassword').addEventListener('click', () => {
-                this.togglePasswordVisibility();
-            });
-
-            document.getElementById('adminAccessBtn').addEventListener('click', () => {
-                // 管理者ダッシュボードへ直接移動
-                window.location.href = 'pages/admin-dashboard.html';
-            });
-
-            document.getElementById('forgotPassword').addEventListener('click', () => {
-                this.showPasswordResetModal();
-            });
-            document.getElementById('closePasswordResetModal').addEventListener('click', () => {
-                this.hidePasswordResetModal();
-            });
-
-            document.getElementById('systemInfoBtn').addEventListener('click', () => {
-                this.showSystemInfoModal();
-            });
-            document.getElementById('closeSystemInfoModal').addEventListener('click', () => {
-                this.hideSystemInfoModal();
-            });
-
-            document.getElementById('username').addEventListener('input', () => {
-                this.validateField('username');
-            });
-            document.getElementById('password').addEventListener('input', () => {
-                this.validateField('password');
-            });
-
-            document.getElementById('username').addEventListener('keydown', (e) => {
-                if (e.key === 'Enter') {
-                    e.preventDefault();
-                    document.getElementById('password').focus();
-                }
-            });
-        }
-
-        updateCurrentTime() {
-            const updateTime = () => {
-                const now = new Date();
-                const timeString = now.toLocaleString('ja-JP', {
-                    year: 'numeric',
-                    month: '2-digit',
-                    day: '2-digit',
-                    hour: '2-digit',
-                    minute: '2-digit'
-                });
-                
-                const currentTimeEl = document.getElementById('currentTime');
-                const lastUpdateEl = document.getElementById('lastUpdate');
-                
-                if (currentTimeEl) currentTimeEl.textContent = timeString;
-                if (lastUpdateEl) lastUpdateEl.textContent = now.toLocaleTimeString('ja-JP');
+    // 監査ログ記録関数
+    async function logLogin(username, displayName, uid) {
+        try {
+            const entry = {
+                action: 'login',
+                details: { username },
+                uid: uid || null,
+                username,
+                displayName: displayName || username,
+                timestamp: firebase.database.ServerValue.TIMESTAMP,
+                userAgent: navigator.userAgent.substring(0, 100)
             };
-
-            updateTime();
-            setInterval(updateTime, 60000);
-        }
-
-        async checkExistingSession() {
-            try {
-                const targetUID = sessionStorage.getItem('targetUID');
-                const currentUsername = sessionStorage.getItem('currentUsername');
-                
-                if (targetUID && currentUsername) {
-                    if (window.dataManager) {
-                        const users = await window.dataManager.getUsersByRole(null, true);
-                        const userData = users[targetUID];
-                        
-                        if (userData) {
-                            if (userData.setupCompleted) {
-                                window.location.href = 'dashboard.html';
-                            } else {
-                                window.location.href = 'user-setup-fixed.html';
-                            }
-                            return;
-                        }
-                    }
-                }
-                
-                sessionStorage.clear();
-            } catch (error) {
-                console.error('❌ セッション確認エラー:', error);
-                sessionStorage.clear();
-            }
-        }
-
-        validateField(fieldName) {
-            const field = document.getElementById(fieldName);
-            const errorEl = document.getElementById(fieldName + 'Error');
-            let isValid = true;
-            let errorMessage = '';
-
-            if (!field.value.trim()) {
-                isValid = false;
-                errorMessage = `${fieldName === 'username' ? 'ユーザー名' : 'パスワード'}を入力してください`;
-            } else if (fieldName === 'username' && field.value.trim().length < 3) {
-                isValid = false;
-                errorMessage = 'ユーザー名は3文字以上で入力してください';
-            } else if (fieldName === 'password' && field.value.length < 4) {
-                isValid = false;
-                errorMessage = 'パスワードは4文字以上で入力してください';
-            }
-
-            if (errorEl) {
-                if (errorMessage) {
-                    errorEl.textContent = errorMessage;
-                    errorEl.style.display = 'block';
-                    field.classList.add('border-red-300');
-                } else {
-                    errorEl.style.display = 'none';
-                    field.classList.remove('border-red-300');
-                }
-            }
-
-            return isValid;
-        }
-
-        togglePasswordVisibility() {
-            const passwordField = document.getElementById('password');
-            const toggleIcon = document.getElementById('togglePasswordIcon');
             
-            if (passwordField.type === 'password') {
-                passwordField.type = 'text';
-                toggleIcon.className = 'fas fa-eye-slash';
-            } else {
-                passwordField.type = 'password';
-                toggleIcon.className = 'fas fa-eye';
+            await window.database.ref(`${window.DATA_ROOT}/auditLogs`).push(entry);
+            console.log('📝 ログイン監査ログ記録完了');
+        } catch (error) {
+            console.warn('⚠️ ログイン監査ログ記録失敗:', error);
+        }
+    }
+
+    document.addEventListener('DOMContentLoaded', async () => {
+        console.log('🔐 ログイン処理開始（監査ログ対応版）');
+        
+        try {
+            await window.waitForFirebase();
+            console.log('✅ Firebase初期化完了');
+        } catch (error) {
+            console.error('❌ Firebase初期化エラー:', error);
+            window.showMessage('システム初期化に失敗しました', 'error');
+            return;
+        }
+
+        const loginForm = document.getElementById('loginForm');
+        const usernameInput = document.getElementById('username');
+        const passwordInput = document.getElementById('password');
+        const loginBtn = document.getElementById('loginBtn');
+        const forgotPasswordBtn = document.getElementById('forgotPasswordBtn');
+
+        if (!loginForm || !usernameInput || !passwordInput) {
+            console.error('❌ 必要なフォーム要素が見つかりません');
+            window.showMessage('ログインフォームの初期化に失敗しました', 'error');
+            return;
+        }
+
+        function setLoading(isLoading) {
+            if (loginBtn) {
+                loginBtn.disabled = isLoading;
+                loginBtn.innerHTML = isLoading 
+                    ? '<i class="fas fa-spinner fa-spin mr-2"></i>処理中...'
+                    : '<i class="fas fa-sign-in-alt mr-2"></i>ログイン';
             }
         }
 
-        async handleLogin() {
+        // パスワード忘れボタン
+        if (forgotPasswordBtn) {
+            forgotPasswordBtn.addEventListener('click', () => {
+                alert(`パスワードがわからなくなった場合:\n\nシステム管理者にお問い合わせください。\n管理者がパスワードをリセットし、新しい初回パスワードを発行します。`);
+            });
+        }
+
+        // ログイン処理
+        loginForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const username = usernameInput.value.trim();
+            const password = passwordInput.value.trim();
+
+            if (!username || !password) {
+                window.showMessage('ユーザー名とパスワードを入力してください', 'error');
+                return;
+            }
+
+            setLoading(true);
+            window.showMessage('ログイン処理中...', 'info');
+
             try {
-                const usernameValid = this.validateField('username');
-                const passwordIsValid = this.validateField('password');
+                // 1. アクティブユーザーとしてログイン
+                const usernameSnap = await window.database
+                    .ref(`${window.DATA_ROOT}/usernames/${username}`)
+                    .once('value');
                 
-                if (!usernameValid || !passwordIsValid) {
-                    return;
-                }
-
-                const username = document.getElementById('username').value.trim();
-                const password = document.getElementById('password').value;
-
-                if (this.isAccountLocked(username)) {
-                    this.showLoginError('アカウントが一時的にロックされています。しばらく待ってから再試行してください。');
-                    return;
-                }
-
-                this.setLoginLoading(true);
-
-                if (!window.auth.currentUser) {
-                    await window.auth.signInAnonymously();
-                }
-
-                let userData = null;
-                let userUID = null;
-
-                if (window.dataManager) {
-                    const users = await window.dataManager.getUsersByRole(null, true);
-                    
-                    for (const [uid, user] of Object.entries(users)) {
-                        if (user.username === username) {
-                            userData = user;
-                            userUID = uid;
-                            break;
-                        }
-                    }
-                } else {
-                    const usersSnapshot = await window.database.ref(`${window.DATA_ROOT}/users`)
-                        .orderByChild('username')
-                        .equalTo(username)
+                if (usernameSnap.exists()) {
+                    const uid = usernameSnap.val().uid || usernameSnap.val();
+                    const userSnap = await window.database
+                        .ref(`${window.DATA_ROOT}/users/${uid}`)
                         .once('value');
-                    
-                    const usersData = usersSnapshot.val();
-                    if (usersData) {
-                        userUID = Object.keys(usersData)[0];
-                        userData = usersData[userUID];
+                    const userData = userSnap.val();
+
+                    if (userData && userData.setupCompleted) {
+                        // パスワード検証（ハッシュ化済みの場合）
+                        if (userData.password?.hash) {
+                            const passwordValid = await verifyPassword(password, userData.password);
+                            if (!passwordValid) {
+                                window.showMessage('ユーザー名またはパスワードが間違っています', 'error');
+                                setLoading(false);
+                                return;
+                            }
+                        }
+
+                        // 匿名認証を確実に実行
+                        if (!window.auth.currentUser) {
+                            await window.auth.signInAnonymously();
+                        }
+
+                        sessionStorage.setItem('targetUID', uid);
+                        sessionStorage.setItem('currentUsername', username);
+                        
+                        await window.database.ref(`${window.DATA_ROOT}/users/${uid}`).update({
+                            lastLogin: firebase.database.ServerValue.TIMESTAMP
+                        });
+
+                        // 監査ログ記録
+                        await logLogin(username, userData.displayName, uid);
+                        
+                        // 個人設定が必要かチェック
+                        if (userData.needsSetup || userData.passwordResetCompleted || !userData.password?.hash) {
+                            window.showMessage('ログイン成功！個人設定へ移動します...', 'success');
+                            setTimeout(() => {
+                                window.location.href = 'pages/user-setup.html?mode=setup&username=' + encodeURIComponent(username);
+                            }, 1000);
+                        } else {
+                            window.showMessage('ログイン成功！ダッシュボードに移動します...', 'success');
+                            setTimeout(() => {
+                                window.location.href = 'dashboard.html';
+                            }, 1000);
+                        }
+                        return;
                     }
                 }
 
-                if (!userData) {
-                    this.recordFailedAttempt(username);
-                    this.showLoginError('ユーザー名またはパスワードが正しくありません');
-                    return;
-                }
-
-                // パスワード検証
-                let loginSuccess = false;
+                // 2. 初回ログイン待機リストからログイン
+                const pendingSnap = await window.database
+                    .ref(`${window.DATA_ROOT}/pendingUsers/${username}`)
+                    .once('value');
                 
-                if (userData.tempPassword && userData.tempPassword === password && !userData.setupCompleted) {
-                    loginSuccess = true;
-                } else if (userData.password && userData.password === password && userData.setupCompleted) {
-                    loginSuccess = true;
-                }
+                if (pendingSnap.exists()) {
+                    const pendingUserData = pendingSnap.val();
+                    
+                    if (pendingUserData.initialPassword === password) {
+                        window.showMessage('初回ログイン認証成功！アカウントを有効化中...', 'info');
+                        
+                        const authResult = await window.auth.signInAnonymously();
+                        const uid = authResult.user.uid;
 
-                if (!loginSuccess) {
-                    this.recordFailedAttempt(username);
-                    this.showLoginError('ユーザー名またはパスワードが正しくありません');
-                    return;
-                }
+                        const newUserData = {
+                            uid: uid,
+                            username: username,
+                            displayName: pendingUserData.originalDisplayName || username,
+                            role: pendingUserData.role || 'viewer',
+                            setupCompleted: false,
+                            needsSetup: true,
+                            password: null,
+                            createdAt: pendingUserData.createdAt || firebase.database.ServerValue.TIMESTAMP,
+                            lastLogin: firebase.database.ServerValue.TIMESTAMP,
+                            passwordResetCompleted: pendingUserData.isPasswordReset || false
+                        };
 
-                await this.handleSuccessfulLogin(userUID, username, userData);
+                        const updates = {};
+                        updates[`${window.DATA_ROOT}/users/${uid}`] = newUserData;
+                        updates[`${window.DATA_ROOT}/usernames/${username}`] = { uid: uid };
+                        updates[`${window.DATA_ROOT}/pendingUsers/${username}`] = null;
+
+                        await window.database.ref().update(updates);
+
+                        sessionStorage.setItem('targetUID', uid);
+                        sessionStorage.setItem('currentUsername', username);
+                        sessionStorage.setItem('needsSetup', 'true');
+
+                        // 監査ログ記録
+                        await logLogin(username, newUserData.displayName, uid);
+
+                        window.showMessage('アカウント有効化完了！個人設定へ移動します...', 'success');
+                        setTimeout(() => {
+                            window.location.href = 'pages/user-setup.html?mode=initial&username=' + encodeURIComponent(username);
+                        }, 1500);
+                        return;
+                    }
+                }
+                
+                window.showMessage('ユーザー名またはパスワードが間違っています', 'error');
 
             } catch (error) {
-                console.error('❌ ログイン処理エラー:', error);
-                this.showLoginError('ログイン処理中にエラーが発生しました');
+                console.error('❌ ログインエラー:', error);
+                window.showMessage(`ログインに失敗しました: ${error.message}`, 'error');
             } finally {
-                this.setLoginLoading(false);
+                setLoading(false);
             }
-        }
-
-        async handleSuccessfulLogin(userUID, username, userData) {
-            try {
-                sessionStorage.setItem('targetUID', userUID);
-                sessionStorage.setItem('currentUsername', username);
-                
-                if (document.getElementById('rememberMe').checked) {
-                    localStorage.setItem('rememberedUsername', username);
-                } else {
-                    localStorage.removeItem('rememberedUsername');
-                }
-
-                this.clearFailedAttempts(username);
-
-                const auditEntry = {
-                    action: 'login',
-                    details: { 
-                        loginMethod: 'username_password',
-                        rememberMe: document.getElementById('rememberMe').checked,
-                        firstTimeLogin: !userData.setupCompleted
-                    },
-                    uid: userUID,
-                    username: username,
-                    displayName: userData.displayName || username,
-                    timestamp: firebase.database.ServerValue.TIMESTAMP,
-                    userAgent: navigator.userAgent.substring(0, 100)
-                };
-
-                if (window.dataManager) {
-                    const updates = {};
-                    updates[`${window.DATA_ROOT}/auditLogs/${Date.now()}`] = auditEntry;
-                    updates[`${window.DATA_ROOT}/users/${userUID}/lastLoginAt`] = firebase.database.ServerValue.TIMESTAMP;
-                    
-                    await window.dataManager.batchUpdate(updates);
-                }
-
-                if (window.Utils) {
-                    window.Utils.showMessage('ログインしました', 'success');
-                }
-
-                setTimeout(() => {
-                    if (userData.setupCompleted) {
-                        window.location.href = 'dashboard.html';
-                    } else {
-                        window.location.href = 'user-setup-fixed.html';
-                    }
-                }, 1000);
-
-            } catch (error) {
-                console.error('❌ ログイン成功処理エラー:', error);
-                this.showLoginError('ログイン後の処理でエラーが発生しました');
-            }
-        }
-
-        isAccountLocked(username) {
-            const attempts = JSON.parse(localStorage.getItem('loginAttempts') || '{}');
-            const userAttempts = attempts[username];
-            
-            if (!userAttempts) return false;
-            
-            const now = Date.now();
-            if (userAttempts.count >= this.maxLoginAttempts) {
-                if (now - userAttempts.lastAttempt < this.lockoutDuration) {
-                    return true;
-                } else {
-                    delete attempts[username];
-                    localStorage.setItem('loginAttempts', JSON.stringify(attempts));
-                    return false;
-                }
-            }
-            
-            return false;
-        }
-
-        recordFailedAttempt(username) {
-            const attempts = JSON.parse(localStorage.getItem('loginAttempts') || '{}');
-            const now = Date.now();
-            
-            if (!attempts[username]) {
-                attempts[username] = { count: 0, lastAttempt: 0 };
-            }
-            
-            attempts[username].count++;
-            attempts[username].lastAttempt = now;
-            
-            localStorage.setItem('loginAttempts', JSON.stringify(attempts));
-            
-            if (attempts[username].count >= this.maxLoginAttempts) {
-                this.showLoginError(`アカウントが${this.maxLoginAttempts}回の失敗によりロックされました。${this.lockoutDuration / 60000}分後に再試行してください。`);
-            }
-        }
-
-        clearFailedAttempts(username) {
-            const attempts = JSON.parse(localStorage.getItem('loginAttempts') || '{}');
-            delete attempts[username];
-            localStorage.setItem('loginAttempts', JSON.stringify(attempts));
-        }
-
-        setLoginLoading(loading) {
-            const submitBtn = document.getElementById('loginSubmitBtn');
-            const loginText = document.getElementById('loginBtnText');
-            const loginLoading = document.getElementById('loginBtnLoading');
-            
-            if (loading) {
-                submitBtn.disabled = true;
-                loginText.style.display = 'none';
-                loginLoading.style.display = 'inline-flex';
-            } else {
-                submitBtn.disabled = false;
-                loginText.style.display = 'inline-flex';
-                loginLoading.style.display = 'none';
-            }
-        }
-
-        showLoginError(message) {
-            const container = document.getElementById('loginErrorContainer');
-            const messageEl = document.getElementById('loginErrorMessage');
-            
-            if (container && messageEl) {
-                messageEl.textContent = message;
-                container.style.display = 'block';
-                
-                setTimeout(() => {
-                    container.style.display = 'none';
-                }, 5000);
-            }
-        }
-
-        showConnectionError() {
-            const statusEl = document.getElementById('connectionStatus');
-            if (statusEl) {
-                statusEl.innerHTML = '<i class="fas fa-circle text-red-500 mr-1"></i>接続エラー';
-            }
-        }
-
-        showPasswordResetModal() {
-            document.getElementById('passwordResetModal').style.display = 'flex';
-        }
-
-        hidePasswordResetModal() {
-            document.getElementById('passwordResetModal').style.display = 'none';
-        }
-
-        showSystemInfoModal() {
-            document.getElementById('systemInfoModal').style.display = 'flex';
-        }
-
-        hideSystemInfoModal() {
-            document.getElementById('systemInfoModal').style.display = 'none';
-        }
-    }
-
-    // 初期化
-    if (!window.loginSystemInitialized) {
-        window.loginSystemInitialized = true;
-        document.addEventListener('DOMContentLoaded', () => {
-            window.loginSystem = new LoginSystem();
         });
-    }
+    });
     </script>
 </body>
 </html>
