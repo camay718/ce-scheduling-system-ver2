@@ -51,7 +51,7 @@
             });
         }
 
-        // 業務追加モーダル（完全版）
+        // 業務追加モーダル（CE配置対応版）
         openAddEventModal(department = null) {
             if (window.userRole === 'viewer') {
                 window.showMessage('編集権限がありません', 'warning');
@@ -69,7 +69,7 @@
             modal.id = 'addEventModal';
             modal.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50';
             modal.innerHTML = `
-                <div class="glass-card p-6 max-w-lg w-full mx-4 max-h-[90vh] overflow-y-auto">
+                <div class="glass-card p-6 max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
                     <div class="flex justify-between items-center mb-4">
                         <h3 class="text-lg font-bold">業務追加</h3>
                         <button onclick="this.closest('.fixed').remove()" class="text-gray-500 hover:text-gray-700">
@@ -78,13 +78,22 @@
                     </div>
                     
                     <form id="addEventForm" class="space-y-4">
-                        <div>
-                            <label class="block text-sm font-bold mb-2">
-                                <i class="fas fa-building mr-2"></i>部門 *
-                            </label>
-                            <select id="eventDepartment" class="input-unified" required>
-                                <option value="">部門を選択</option>
-                            </select>
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-sm font-bold mb-2">
+                                    <i class="fas fa-building mr-2"></i>部門 *
+                                </label>
+                                <select id="eventDepartment" class="input-unified" required>
+                                    <option value="">部門を選択</option>
+                                </select>
+                            </div>
+                            
+                            <div>
+                                <label class="block text-sm font-bold mb-2">
+                                    <i class="fas fa-calendar mr-2"></i>日付 *
+                                </label>
+                                <input type="date" id="eventDate" class="input-unified" required>
+                            </div>
                         </div>
                         
                         <div>
@@ -129,16 +138,18 @@
                         
                         <div>
                             <label class="block text-sm font-bold mb-2">
-                                <i class="fas fa-calendar mr-2"></i>日付 *
+                                <i class="fas fa-user-check mr-2"></i>担当CE (複数選択可)
                             </label>
-                            <input type="date" id="eventDate" class="input-unified" required>
+                            <select id="eventAssignedCEs" class="input-unified" multiple size="4">
+                            </select>
+                            <p class="text-xs text-gray-500 mt-1">Ctrl/Cmdキーを押しながらクリックで複数選択</p>
                         </div>
                         
                         <div>
                             <label class="block text-sm font-bold mb-2">
                                 <i class="fas fa-info-circle mr-2"></i>詳細
                             </label>
-                            <textarea id="eventDescription" class="input-unified" rows="3"
+                            <textarea id="eventDescription" class="input-unified" rows="2"
                                       placeholder="業務の詳細を入力（任意）"></textarea>
                         </div>
                         
@@ -156,8 +167,11 @@
             `;
 
             document.body.appendChild(modal);
+            this.initializeEventModal(selectedDepartment);
+        }
 
-            // 部門選択肢を動的生成
+        initializeEventModal(selectedDepartment) {
+            // 部門選択肢
             const deptSelect = document.getElementById('eventDepartment');
             if (window.DEPARTMENTS && deptSelect) {
                 window.DEPARTMENTS.forEach(dept => {
@@ -193,10 +207,22 @@
                 }
             }
 
+            // CE選択肢
+            const ceSelect = document.getElementById('eventAssignedCEs');
+            if (ceSelect && window.ceManager?.ceList) {
+                window.ceManager.ceList.forEach(ce => {
+                    const option = document.createElement('option');
+                    option.value = ce.id;
+                    option.textContent = `${ce.iconName || ce.displayName || ce.name} (${ce.workType})`;
+                    ceSelect.appendChild(option);
+                });
+            }
+
             // 今日の日付をデフォルトに設定
             const dateInput = document.getElementById('eventDate');
-            if (dateInput && window.dashboardAuth?.selectedDate) {
-                dateInput.value = window.dashboardAuth.selectedDate.toISOString().slice(0, 10);
+            if (dateInput) {
+                const today = window.dashboardAuth?.selectedDate || new Date();
+                dateInput.value = today.toISOString().slice(0, 10);
             }
 
             // フォーム送信イベント
@@ -209,7 +235,64 @@
             }
         }
 
-        // 期間一括業務追加モーダル（完全版）
+        // 業務保存処理（CE配置対応）
+        async saveEvent() {
+            const department = document.getElementById('eventDepartment')?.value;
+            const name = document.getElementById('eventName')?.value?.trim();
+            const startTime = document.getElementById('eventStartTime')?.value;
+            const endTime = document.getElementById('eventEndTime')?.value;
+            const count = parseInt(document.getElementById('eventCount')?.value) || 0;
+            const requiredPeople = parseInt(document.getElementById('eventRequiredPeople')?.value) || 0;
+            const date = document.getElementById('eventDate')?.value;
+            const description = document.getElementById('eventDescription')?.value?.trim();
+
+            // 選択されたCEを取得
+            const ceSelect = document.getElementById('eventAssignedCEs');
+            const assignedCEs = ceSelect ? 
+                Array.from(ceSelect.selectedOptions).map(option => option.value) : [];
+
+            if (!department || !name || !date) {
+                window.showMessage('必須項目を入力してください', 'warning');
+                return;
+            }
+
+            try {
+                // events/byDate配下に保存
+                const eventRef = window.database.ref(`${window.DATA_ROOT}/events/byDate/${date}`).push();
+                const eventData = {
+                    id: eventRef.key,
+                    department: department,
+                    name: name,
+                    startTime: startTime || null,
+                    endTime: endTime || null,
+                    count: count,
+                    requiredPeople: requiredPeople,
+                    date: date,
+                    description: description || null,
+                    assignedCEs: assignedCEs,
+                    createdAt: firebase.database.ServerValue.TIMESTAMP,
+                    createdBy: window.currentUserData?.displayName || 'unknown'
+                };
+
+                await eventRef.set(eventData);
+
+                document.getElementById('addEventModal').remove();
+                window.showMessage('業務を追加しました', 'success');
+
+                // ダッシュボード更新
+                if (window.dashboardAuth) {
+                    window.dashboardAuth.renderDailySchedule();
+                }
+
+                console.log('✅ 業務保存完了:', eventData);
+
+            } catch (error) {
+                console.error('❌ 業務保存エラー:', error);
+                window.showMessage('業務の保存に失敗しました', 'error');
+            }
+        }
+
+        // 期間一括業務追加モーダル
         openBulkAddModal() {
             if (window.userRole === 'viewer') {
                 window.showMessage('編集権限がありません', 'warning');
@@ -325,8 +408,11 @@
             `;
 
             document.body.appendChild(modal);
+            this.initializeBulkModal();
+        }
 
-            // 部門選択肢を動的生成
+        initializeBulkModal() {
+            // 部門選択肢
             const deptSelect = document.getElementById('bulkDepartment');
             if (window.DEPARTMENTS && deptSelect) {
                 window.DEPARTMENTS.forEach(dept => {
@@ -337,7 +423,7 @@
                 });
             }
 
-            // 件数・人数選択肢を動的生成
+            // 件数・人数選択肢
             const countSelect = document.getElementById('bulkEventCount');
             const peopleSelect = document.getElementById('bulkRequiredPeople');
             
@@ -362,203 +448,6 @@
             }
         }
 
-        // 月次業務追加モーダル（完全版）
-        openMonthlyTaskModal() {
-            if (window.userRole === 'viewer') {
-                window.showMessage('編集権限がありません', 'warning');
-                return;
-            }
-
-            const modal = document.createElement('div');
-            modal.id = 'monthlyTaskModal';
-            modal.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50';
-            modal.innerHTML = `
-                <div class="glass-card p-6 max-w-lg w-full mx-4 max-h-[90vh] overflow-y-auto">
-                    <div class="flex justify-between items-center mb-4">
-                        <h3 class="text-lg font-bold">月次業務追加</h3>
-                        <button onclick="this.closest('.fixed').remove()" class="text-gray-500 hover:text-gray-700">
-                            <i class="fas fa-times text-xl"></i>
-                        </button>
-                    </div>
-                    
-                    <form id="monthlyTaskForm" class="space-y-4">
-                        <div>
-                            <label class="block text-sm font-bold mb-2">部門 *</label>
-                            <select id="monthlyDepartment" class="input-unified" required>
-                                <option value="">部門を選択</option>
-                            </select>
-                        </div>
-                        
-                        <div>
-                            <label class="block text-sm font-bold mb-2">業務名 *</label>
-                            <input type="text" id="monthlyTaskName" class="input-unified" 
-                                   placeholder="例: 月次点検" required>
-                        </div>
-                        
-                        <div class="grid grid-cols-2 gap-4">
-                            <div>
-                                <label class="block text-sm font-bold mb-2">実施月 *</label>
-                                <select id="monthlyMonth" class="input-unified" required>
-                                    <option value="">月を選択</option>
-                                </select>
-                            </div>
-                            <div>
-                                <label class="block text-sm font-bold mb-2">実施日 *</label>
-                                <select id="monthlyDay" class="input-unified" required>
-                                    <option value="">日を選択</option>
-                                </select>
-                            </div>
-                        </div>
-                        
-                        <div class="grid grid-cols-2 gap-4">
-                            <div>
-                                <label class="block text-sm font-bold mb-2">予定件数</label>
-                                <select id="monthlyEventCount" class="input-unified">
-                                </select>
-                            </div>
-                            <div>
-                                <label class="block text-sm font-bold mb-2">必要人数</label>
-                                <select id="monthlyRequiredPeople" class="input-unified">
-                                </select>
-                            </div>
-                        </div>
-                        
-                        <div>
-                            <label class="block text-sm font-bold mb-2">詳細</label>
-                            <textarea id="monthlyDescription" class="input-unified" rows="3"
-                                      placeholder="月次業務の詳細"></textarea>
-                        </div>
-                        
-                        <div class="flex space-x-3">
-                            <button type="button" onclick="this.closest('.fixed').remove()" 
-                                    class="btn-unified btn-outline-unified flex-1">
-                                キャンセル
-                            </button>
-                            <button type="submit" class="btn-unified btn-primary-unified flex-1">
-                                <i class="fas fa-calendar-alt mr-2"></i>追加
-                            </button>
-                        </div>
-                    </form>
-                </div>
-            `;
-
-            document.body.appendChild(modal);
-
-            // 部門選択肢を動的生成
-            const deptSelect = document.getElementById('monthlyDepartment');
-            if (window.DEPARTMENTS && deptSelect) {
-                window.DEPARTMENTS.forEach(dept => {
-                    const option = document.createElement('option');
-                    option.value = dept;
-                    option.textContent = dept;
-                    deptSelect.appendChild(option);
-                });
-            }
-
-            // 月選択肢を動的生成
-            const monthSelect = document.getElementById('monthlyMonth');
-            if (monthSelect) {
-                const currentMonth = new Date().getMonth() + 1;
-                for (let i = 1; i <= 12; i++) {
-                    const option = document.createElement('option');
-                    option.value = i;
-                    option.textContent = `${i}月`;
-                    option.selected = i === currentMonth;
-                    monthSelect.appendChild(option);
-                }
-            }
-
-            // 日選択肢を動的生成
-            const daySelect = document.getElementById('monthlyDay');
-            if (daySelect) {
-                for (let i = 1; i <= 31; i++) {
-                    const option = document.createElement('option');
-                    option.value = i;
-                    option.textContent = `${i}日`;
-                    daySelect.appendChild(option);
-                }
-                const lastOption = document.createElement('option');
-                lastOption.value = 'last';
-                lastOption.textContent = '月末';
-                daySelect.appendChild(lastOption);
-            }
-
-            // 件数・人数選択肢を動的生成
-            const countSelect = document.getElementById('monthlyEventCount');
-            const peopleSelect = document.getElementById('monthlyRequiredPeople');
-            
-            [countSelect, peopleSelect].forEach((select, index) => {
-                if (select) {
-                    for (let i = 0; i <= (index === 0 ? 20 : 10); i++) {
-                        const option = document.createElement('option');
-                        option.value = i;
-                        option.textContent = index === 0 ? `${i}件` : `${i}名`;
-                        option.selected = i === 1;
-                        select.appendChild(option);
-                    }
-                }
-            });
-
-            const form = document.getElementById('monthlyTaskForm');
-            if (form) {
-                form.onsubmit = (e) => {
-                    e.preventDefault();
-                    this.saveMonthlyTask();
-                };
-            }
-        }
-
-        // 業務保存処理（修正版 - events/byDateに保存）
-        async saveEvent() {
-            const department = document.getElementById('eventDepartment')?.value;
-            const name = document.getElementById('eventName')?.value?.trim();
-            const startTime = document.getElementById('eventStartTime')?.value;
-            const endTime = document.getElementById('eventEndTime')?.value;
-            const count = parseInt(document.getElementById('eventCount')?.value) || 0;
-            const requiredPeople = parseInt(document.getElementById('eventRequiredPeople')?.value) || 0;
-            const date = document.getElementById('eventDate')?.value;
-            const description = document.getElementById('eventDescription')?.value?.trim();
-
-            if (!department || !name || !date) {
-                window.showMessage('必須項目を入力してください', 'warning');
-                return;
-            }
-
-            try {
-                // events/byDate配下に保存（schedule-core.jsの監視先と一致）
-                const eventRef = window.database.ref(`${window.DATA_ROOT}/events/byDate/${date}`).push();
-                const eventData = {
-                    id: eventRef.key,
-                    department: department,
-                    name: name,
-                    startTime: startTime || null,
-                    endTime: endTime || null,
-                    count: count,
-                    requiredPeople: requiredPeople,
-                    date: date,
-                    description: description || null,
-                    assignedCEs: [],
-                    createdAt: firebase.database.ServerValue.TIMESTAMP,
-                    createdBy: window.currentUserData?.displayName || 'unknown'
-                };
-
-                await eventRef.set(eventData);
-
-                document.getElementById('addEventModal').remove();
-                window.showMessage('業務を追加しました', 'success');
-
-                // ダッシュボード更新
-                if (window.dashboardAuth) {
-                    window.dashboardAuth.renderDailySchedule();
-                }
-
-            } catch (error) {
-                console.error('❌ 業務保存エラー:', error);
-                window.showMessage('業務の保存に失敗しました', 'error');
-            }
-        }
-
-        // 期間一括業務保存処理（修正版）
         async saveBulkEvent() {
             const startDate = document.getElementById('bulkStartDate')?.value;
             const endDate = document.getElementById('bulkEndDate')?.value;
@@ -630,17 +519,141 @@
             }
         }
 
-        // 月次業務保存処理（修正版）
+        // 月次業務追加モーダル（実施日なし版）
+        openMonthlyTaskModal() {
+            if (window.userRole === 'viewer') {
+                window.showMessage('編集権限がありません', 'warning');
+                return;
+            }
+
+            const modal = document.createElement('div');
+            modal.id = 'monthlyTaskModal';
+            modal.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50';
+            modal.innerHTML = `
+                <div class="glass-card p-6 max-w-lg w-full mx-4 max-h-[90vh] overflow-y-auto">
+                    <div class="flex justify-between items-center mb-4">
+                        <h3 class="text-lg font-bold">月次業務追加</h3>
+                        <button onclick="this.closest('.fixed').remove()" class="text-gray-500 hover:text-gray-700">
+                            <i class="fas fa-times text-xl"></i>
+                        </button>
+                    </div>
+                    
+                    <form id="monthlyTaskForm" class="space-y-4">
+                        <div>
+                            <label class="block text-sm font-bold mb-2">部門 *</label>
+                            <select id="monthlyDepartment" class="input-unified" required>
+                                <option value="">部門を選択</option>
+                            </select>
+                        </div>
+                        
+                        <div>
+                            <label class="block text-sm font-bold mb-2">業務名 *</label>
+                            <input type="text" id="monthlyTaskName" class="input-unified" 
+                                   placeholder="例: 月次点検" required>
+                        </div>
+                        
+                        <div>
+                            <label class="block text-sm font-bold mb-2">実施月 *</label>
+                            <select id="monthlyMonth" class="input-unified" required>
+                                <option value="">月を選択</option>
+                            </select>
+                        </div>
+                        
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-sm font-bold mb-2">予定件数</label>
+                                <select id="monthlyEventCount" class="input-unified">
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-bold mb-2">必要人数</label>
+                                <select id="monthlyRequiredPeople" class="input-unified">
+                                </select>
+                            </div>
+                        </div>
+                        
+                        <div>
+                            <label class="block text-sm font-bold mb-2">詳細</label>
+                            <textarea id="monthlyDescription" class="input-unified" rows="3"
+                                      placeholder="月次業務の詳細"></textarea>
+                        </div>
+                        
+                        <div class="flex space-x-3">
+                            <button type="button" onclick="this.closest('.fixed').remove()" 
+                                    class="btn-unified btn-outline-unified flex-1">
+                                キャンセル
+                            </button>
+                            <button type="submit" class="btn-unified btn-primary-unified flex-1">
+                                <i class="fas fa-calendar-alt mr-2"></i>追加
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            `;
+
+            document.body.appendChild(modal);
+            this.initializeMonthlyModal();
+        }
+
+        initializeMonthlyModal() {
+            // 部門選択肢
+            const deptSelect = document.getElementById('monthlyDepartment');
+            if (window.DEPARTMENTS && deptSelect) {
+                window.DEPARTMENTS.forEach(dept => {
+                    const option = document.createElement('option');
+                    option.value = dept;
+                    option.textContent = dept;
+                    deptSelect.appendChild(option);
+                });
+            }
+
+            // 月選択肢
+            const monthSelect = document.getElementById('monthlyMonth');
+            if (monthSelect) {
+                const currentMonth = new Date().getMonth() + 1;
+                for (let i = 1; i <= 12; i++) {
+                    const option = document.createElement('option');
+                    option.value = i;
+                    option.textContent = `${i}月`;
+                    option.selected = i === currentMonth;
+                    monthSelect.appendChild(option);
+                }
+            }
+
+            // 件数・人数選択肢
+            const countSelect = document.getElementById('monthlyEventCount');
+            const peopleSelect = document.getElementById('monthlyRequiredPeople');
+            
+            [countSelect, peopleSelect].forEach((select, index) => {
+                if (select) {
+                    for (let i = 0; i <= (index === 0 ? 20 : 10); i++) {
+                        const option = document.createElement('option');
+                        option.value = i;
+                        option.textContent = index === 0 ? `${i}件` : `${i}名`;
+                        option.selected = i === 1;
+                        select.appendChild(option);
+                    }
+                }
+            });
+
+            const form = document.getElementById('monthlyTaskForm');
+            if (form) {
+                form.onsubmit = (e) => {
+                    e.preventDefault();
+                    this.saveMonthlyTask();
+                };
+            }
+        }
+
         async saveMonthlyTask() {
             const department = document.getElementById('monthlyDepartment')?.value;
             const name = document.getElementById('monthlyTaskName')?.value?.trim();
             const month = document.getElementById('monthlyMonth')?.value;
-            const day = document.getElementById('monthlyDay')?.value;
             const count = parseInt(document.getElementById('monthlyEventCount')?.value) || 0;
             const requiredPeople = parseInt(document.getElementById('monthlyRequiredPeople')?.value) || 0;
             const description = document.getElementById('monthlyDescription')?.value?.trim();
 
-            if (!department || !name || !month || !day) {
+            if (!department || !name || !month) {
                 window.showMessage('必須項目を入力してください', 'warning');
                 return;
             }
@@ -651,7 +664,6 @@
                     department: department,
                     name: name,
                     month: parseInt(month),
-                    day: day,
                     count: count,
                     requiredPeople: requiredPeople,
                     description: description || null,
@@ -666,9 +678,7 @@
                 document.getElementById('monthlyTaskModal').remove();
                 window.showMessage('月次業務を追加しました', 'success');
 
-                if (window.dashboardAuth) {
-                    window.dashboardAuth.renderDailySchedule();
-                }
+                console.log('✅ 月次業務保存完了:', taskData);
 
             } catch (error) {
                 console.error('❌ 月次業務保存エラー:', error);
