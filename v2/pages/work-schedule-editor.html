@@ -2131,7 +2131,6 @@ Copy<!DOCTYPE html>
 
 // 勤務表操作
 async createNewSchedule() {
-    // 期間設定の値を確実に取得
     const startInput = document.getElementById('periodStartDate');
     const endInput = document.getElementById('periodEndDate');
     
@@ -2147,7 +2146,11 @@ async createNewSchedule() {
     try {
         const dates = this.generateDateRange(this.currentPeriod.startDate, this.currentPeriod.endDate);
         
-        // 現在のCEリストを使用
+        // CEリストが空の場合は再読み込み
+        if (this.ceList.length === 0) {
+            await this.loadExistingCEList();
+        }
+        
         this.ceList.forEach(ce => {
             if (!this.scheduleData[ce.id]) {
                 this.scheduleData[ce.id] = {};
@@ -2158,19 +2161,15 @@ async createNewSchedule() {
                 const isWeekend = date.getDay() === 0 || date.getDay() === 6;
                 const isHoliday = this.isHoliday(date);
                 
-                if (!this.scheduleData[ce.id][dateKey]) {
-                    this.scheduleData[ce.id][dateKey] = {
-                        status: (isWeekend || isHoliday) ? '×' : 'A',
-                        desired: false,
-                        createdAt: firebase.database.ServerValue.TIMESTAMP
-                    };
-                }
+                this.scheduleData[ce.id][dateKey] = {
+                    status: (isWeekend || isHoliday) ? '×' : 'A',
+                    desired: false,
+                    createdAt: firebase.database.ServerValue.TIMESTAMP
+                };
             });
         });
 
-        // データベースに保存
         await window.database.ref(`${window.DATA_ROOT}/workSchedule`).set(this.scheduleData);
-        
         this.renderScheduleTable();
         window.showMessage('新しい勤務表を作成しました', 'success');
         
@@ -2179,18 +2178,7 @@ async createNewSchedule() {
         window.showMessage('勤務表の作成に失敗しました', 'error');
     }
 }
-                
-                await window.database.ref(`${window.DATA_ROOT}/workSchedule`).set(this.scheduleData);
-                
-                this.renderScheduleTable();
-                window.showMessage('新しい勤務表を作成しました', 'success');
-                
-            } catch (error) {
-                console.error('❌ 勤務表作成エラー:', error);
-                window.showMessage('勤務表の作成に失敗しました', 'error');
-            }
-        }
-
+   
         clearAllSchedule() {
             if (!confirm('すべての勤務データをクリアしますか？\nこの操作は元に戻せません。')) {
                 return;
@@ -2512,10 +2500,10 @@ async deleteCE(index) {
     }
 
     // 初期化
-    let workScheduleEditor = null;
-    document.addEventListener('DOMContentLoaded', () => {
-        workScheduleEditor = new WorkScheduleEditor();
-    });
+ let workScheduleEditor = null;
+document.addEventListener('DOMContentLoaded', async () => {
+    workScheduleEditor = new WorkScheduleEditor();
+});
     </script>
 </body>
 </html>
