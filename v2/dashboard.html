@@ -268,15 +268,15 @@ Copy<!DOCTYPE html>
         </div>
     </div>
 
-    <!-- JavaScript読み込み -->
-    <script defer src="js/data/constants.js?v=20241212"></script>
-    <script defer src="js/utils/ui-utils.js?v=20241212"></script>
-    <script defer src="js/utils/date-utils.js?v=20241212"></script>
-    <script defer src="js/schedule/schedule-core.js?v=20241212"></script>
-    <script defer src="js/schedule/calendar-view.js?v=20241212"></script>
-    <script defer src="js/schedule/event-manager.js?v=20241212"></script>
-    <script defer src="js/ui/ce-manager.js?v=20241212"></script>
-    <script defer src="js/ui/ce-daily-status.js?v=20241212"></script>
+<!-- JavaScript読み込み（順次同期読み込み） -->
+<script src="js/data/constants.js?v=20241213"></script>
+<script src="js/utils/ui-utils.js?v=20241213"></script>
+<script src="js/utils/date-utils.js?v=20241213"></script>
+<script src="js/schedule/schedule-core.js?v=20241213"></script>
+<script src="js/schedule/calendar-view.js?v=20241213"></script>
+<script src="js/schedule/event-manager.js?v=20241213"></script>
+<script src="js/ui/ce-manager.js?v=20241213"></script>
+<script src="js/ui/ce-daily-status.js?v=20241213"></script>
 
     <!-- Dashboard専用JavaScript（エラー修正版） -->
     <script>
@@ -573,13 +573,26 @@ Copy<!DOCTYPE html>
             return html;
         }
 
-        openScheduleEditor() {
-            if (window.userRole === 'viewer') {
-                window.showMessage('編集権限がありません', 'warning');
-                return;
-            }
-            window.open('pages/work-schedule-editor.html', '_blank', 'width=1400,height=900');
+  openScheduleEditor() {
+    if (window.userRole === 'viewer') {
+        window.showMessage('編集権限がありません', 'warning');
+        return;
+    }
+    
+    const url = 'pages/work-schedule-editor.html';
+    
+    // 新しいタブで開く（ポップアップブロック対策付き）
+    const win = window.open(url, '_blank', 'noopener,noreferrer,width=1400,height=900');
+    
+    if (!win || win.closed || typeof win.closed === 'undefined') {
+        // ポップアップブロック時は同一タブで遷移
+        if (confirm('新しいタブで開けませんでした。同じタブで勤務表エディタを開きますか？')) {
+            window.location.href = url;
+        } else {
+            window.showMessage('勤務表エディタを開くには、ポップアップを許可してください', 'warning');
         }
+    }
+}
 
         formatDate(date) {
             return date.toISOString().slice(0, 10);
