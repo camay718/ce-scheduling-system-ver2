@@ -1162,36 +1162,74 @@
             
             this.init();
         }
+        hideLoading() {
+    const loadingEl = document.getElementById('loading');
+    const containerEl = document.getElementById('editorContainer');
+    if (loadingEl) loadingEl.style.display = 'none';
+    if (containerEl) containerEl.style.display = 'flex';
+}
+
+showInitError(error, step) {
+    const loadingEl = document.getElementById('loading');
+    if (loadingEl) {
+        loadingEl.innerHTML = `
+            <div class="text-center">
+                <i class="fas fa-exclamation-triangle text-red-500 text-4xl mb-4"></i>
+                <h3 class="text-lg font-semibold text-red-600 mb-2">初期化エラー</h3>
+                <p class="text-gray-600 mb-2">ステップ ${step} で失敗しました</p>
+                <p class="text-sm text-gray-500 mb-4">${error.message}</p>
+                <button onclick="location.reload()" class="btn-unified btn-primary-unified">
+                    <i class="fas fa-redo mr-2"></i>再読み込み
+                </button>
+                <a href="../dashboard.html" class="btn-unified btn-outline-unified ml-2">
+                    <i class="fas fa-arrow-left mr-2"></i>ダッシュボードに戻る
+                </a>
+            </div>
+        `;
+    }
+}
 
         async init() {
-            try {
-                console.log('🔄 勤務表エディタ初期化開始');
-                
-                await window.waitForFirebase();
-                await this.ensureAnonymousAuth();
-                await this.loadExistingCEList();
-                await this.loadWorkTypeOverrides();
-                await this.loadScheduleData();
-                await this.loadSavedSchedules();
-                await this.loadSettings();
-                
-                this.initializePeriod();
-                this.setupEventListeners();
-                this.renderScheduleTable();
-                
-                this.isReady = true;
-                
-                document.getElementById('loading').style.display = 'none';
-                document.getElementById('editorContainer').style.display = 'flex';
-                
-                console.log('✅ 勤務表エディタ初期化完了');
-                window.showMessage('勤務表エディタが初期化されました', 'success');
-                
-            } catch (error) {
-                console.error('❌ 勤務表エディタ初期化エラー:', error);
-                window.showMessage('初期化に失敗しました: ' + error.message, 'error');
-            }
-        }
+    let initStep = 0;
+    try {
+        console.log(`${++initStep}/8: Firebase初期化待機...`);
+        await window.waitForFirebase();
+        
+        console.log(`${++initStep}/8: 匿名認証確認...`);
+        await this.ensureAnonymousAuth();
+        
+        console.log(`${++initStep}/8: CEリスト読み込み...`);
+        await this.loadExistingCEList();
+        
+        console.log(`${++initStep}/8: 勤務区分オーバーライド読み込み...`);
+        await this.loadWorkTypeOverrides();
+        
+        console.log(`${++initStep}/8: スケジュールデータ読み込み...`);
+        await this.loadScheduleData();
+        
+        console.log(`${++initStep}/8: 保存済み勤務表読み込み...`);
+        await this.loadSavedSchedules();
+        
+        console.log(`${++initStep}/8: エディタ設定読み込み...`);
+        await this.loadSettings();
+        
+        console.log(`${++initStep}/8: UI初期化...`);
+        this.initializePeriod();
+        this.setupEventListeners();
+        this.renderScheduleTable();
+        
+        this.isReady = true;
+        console.log('✅ 勤務表エディタ初期化完了');
+        window.showMessage('勤務表エディタが初期化されました', 'success');
+        
+    } catch (error) {
+        console.error(`❌ ステップ${initStep}で初期化エラー:`, error);
+        this.showInitError(error, initStep);
+    } finally {
+        // エラーでも必ずローディングを閉じる
+        this.hideLoading();
+    }
+}
 
         async ensureAnonymousAuth() {
             try {
@@ -1975,6 +2013,10 @@
             // 期間指定オーバーライドがあれば優先
             return this.workTypeOverrides[ce.id]?.[dateKey] || ce.workType || 'ME';
         }
+        isHoliday(date) {
+    // 暫定的に祝日判定なし（将来的に祝日データを追加可能）
+    return false;
+}
 
         createWorkCell(ce, workType, date, dateKey, workData) {
             const cell = document.createElement('td');
