@@ -113,6 +113,15 @@
                 </div>
             </section>
 
+            <!-- エラー表示エリアを追加 -->
+<div id="errorDisplay" class="error-banner" style="display: none;">
+    <div class="error-content">
+        <i class="fas fa-exclamation-triangle"></i>
+        <span id="errorMessage"></span>
+        <button onclick="hideError()" class="error-close">×</button>
+    </div>
+</div>
+
             <!-- 初回ログイン待機リスト -->
             <section class="glass-card p-6 mb-6">
                 <h2 class="text-2xl font-bold text-gray-800 mb-6 flex items-center">
@@ -281,18 +290,39 @@
                 await window.waitForFirebase();
                 console.log('✅ Firebase準備完了');
                 
-                this.database = firebase.database();
-                this.isReady = true;
-                this.setupEventListeners();
-                await this.loadUsers();
-                await this.loadPermissions();
-                console.log('✅ 管理者ユーザー管理初期化完了');
-                window.showMessage('管理者ダッシュボードが初期化されました', 'success');
-            } catch (error) {
-                console.error('❌ 管理者ユーザー管理初期化エラー:', error);
-                window.showMessage('初期化に失敗しました: ' + (error?.message || error), 'error');
-            }
+// 認証完了を待ってからデータ読み込みを開始
+if (window.auth && window.auth.currentUser) {
+    // 既にログイン済みの場合
+    initializeAdminFunctions();
+} else {
+    // 認証状態の監視を設定
+    window.auth.onAuthStateChanged((user) => {
+        if (user) {
+            console.log('🔐 認証確認済み:', user.uid);
+            // 少し待ってから初期化（認証情報の伝播を待つ）
+            setTimeout(initializeAdminFunctions, 500);
         }
+    });
+}
+
+// 管理機能の初期化
+function initializeAdminFunctions() {
+    console.log('🚀 管理機能初期化開始');
+    
+    // 権限設定を先に読み込み
+    loadPermissionSettings().then(() => {
+        // 権限確認後にデータ読み込み
+        loadPendingUsers();
+        loadActiveUsers();
+        
+        console.log('✅ 管理機能初期化完了');
+    }).catch((error) => {
+        console.error('❌ 権限設定読み込みエラー:', error);
+        // 権限設定に失敗しても基本機能は動作させる
+        loadPendingUsers();
+        loadActiveUsers();
+    });
+}
 
         setupEventListeners() {
             const generateBtn = document.getElementById('generatePasswordBtn');
@@ -709,6 +739,80 @@ async function loadActiveUsers() {
     document.addEventListener('DOMContentLoaded', () => {
         adminUserManagement = new AdminUserManagement();
     });
-    </script>
+
+            // エラー表示関数
+function showError(message) {
+    document.getElementById('errorMessage').textContent = message;
+    document.getElementById('errorDisplay').style.display = 'block';
+    
+    // 10秒後に自動で非表示
+    setTimeout(hideError, 10000);
+}
+
+function hideError() {
+    document.getElementById('errorDisplay').style.display = 'none';
+}
+
+// 待機ユーザー表示更新（エラー対応版）
+function updatePendingUsersDisplay(pendingUsers) {
+    const container = document.getElementById('pendingUsersContainer');
+    if (!container) {
+        console.warn('待機ユーザー表示エリアが見つかりません');
+        return;
+    }
+    
+    container.innerHTML = '';
+    const userCount = Object.keys(pendingUsers).length;
+    
+    if (userCount === 0) {
+        container.innerHTML = '<p class="text-gray-500">待機中のユーザーはいません</p>';
+        return;
+    }
+    
+    Object.entries(pendingUsers).forEach(([username, userData]) => {
+        const userElement = document.createElement('div');
+        userElement.className = 'pending-user-item';
+        userElement.innerHTML = `
+            <div class="user-info">
+                <span class="username">${username}</span>
+                <span class="email">${userData.email || 'メール未設定'}</span>
+            </div>
+            <button onclick="activateUser('${username}')" class="activate-btn">
+                有効化
+            </button>
+        `;
+        container.appendChild(userElement);
+    });
+}
+
+// アクティブユーザー表示更新（エラー対応版）
+function updateActiveUsersDisplay(activeUsers) {
+    const container = document.getElementById('activeUsersContainer');
+    if (!container) {
+        console.warn('アクティブユーザー表示エリアが見つかりません');
+        return;
+    }
+    
+    container.innerHTML = '';
+    const onlineUsers = Object.entries(activeUsers).filter(([_, user]) => user.isOnline);
+    
+    if (onlineUsers.length === 0) {
+        container.innerHTML = '<p class="text-gray-500">オンラインユーザーはいません</p>';
+        return;
+    }
+    
+    onlineUsers.forEach(([userId, userData]) => {
+        const userElement = document.createElement('div');
+        userElement.className = 'active-user-item';
+        userElement.innerHTML = `
+            <i class="fas fa-user-circle text-green-500"></i>
+            <span>${userData.name}</span>
+            <small class="text-gray-500">${userData.role || 'ユーザー'}</small>
+        `;
+        container.appendChild(userElement);
+    });
+}
+        
+        </script>
 </body>
 </html>
