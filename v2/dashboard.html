@@ -1140,6 +1140,8 @@
                         }
                     } catch (e) { console.warn('WorkScheduleViewer初期化失敗:', e); }
 
+                    this.setupRealtimeUpdates();
+
                     console.log('✅ V2システム初期化完了');
                 } catch (error) {
                     console.error('❌ V2システム初期化エラー:', error);
@@ -1155,6 +1157,133 @@
             window.dashboardAuth = new DashboardAuth();
         });
     }
+        // イベント編集機能
+window.editEvent = function(dateKey, eventId) {
+    if (window.userRole === 'viewer') {
+        window.showMessage('編集権限がありません', 'warning');
+        return;
+    }
+
+    const modal = document.createElement('div');
+    modal.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50';
+    modal.innerHTML = `
+        <div class="glass-card p-6 max-w-md w-full mx-4">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-lg font-bold">業務編集</h3>
+                <button onclick="this.closest('.fixed').remove()" class="text-gray-500 hover:text-gray-700">
+                    <i class="fas fa-times text-xl"></i>
+                </button>
+            </div>
+            <div class="text-center">
+                <i class="fas fa-spinner fa-spin text-2xl text-blue-600 mb-4"></i>
+                <p>業務データを読み込み中...</p>
+            </div>
+        </div>
+    `;
+    document.body.appendChild(modal);
+
+    // イベントデータを読み込んで編集フォームを表示
+    window.database.ref(`${window.DATA_ROOT}/events/byDate/${dateKey}/${eventId}`).once('value')
+        .then(snapshot => {
+            const eventData = snapshot.val();
+            if (!eventData) {
+                modal.remove();
+                window.showMessage('業務データが見つかりません', 'error');
+                return;
+            }
+
+            modal.querySelector('.glass-card').innerHTML = `
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="text-lg font-bold">業務編集</h3>
+                    <button onclick="this.closest('.fixed').remove()" class="text-gray-500 hover:text-gray-700">
+                        <i class="fas fa-times text-xl"></i>
+                    </button>
+                </div>
+                <form id="editEventForm" class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-bold mb-2">業務名</label>
+                        <input type="text" id="editEventName" class="input-unified" value="${eventData.name || ''}" required>
+                    </div>
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-bold mb-2">開始時間</label>
+                            <input type="time" id="editStartTime" class="input-unified" value="${eventData.startTime || ''}">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-bold mb-2">終了時間</label>
+                            <input type="time" id="editEndTime" class="input-unified" value="${eventData.endTime || ''}">
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-bold mb-2">詳細</label>
+                        <textarea id="editDescription" class="input-unified" rows="3">${eventData.description || ''}</textarea>
+                    </div>
+                    <div class="flex space-x-3">
+                        <button type="button" onclick="window.deleteEvent('${dateKey}', '${eventId}')" 
+                                class="btn-unified btn-outline-unified flex-1 text-red-600 border-red-600">
+                            <i class="fas fa-trash mr-2"></i>削除
+                        </button>
+                        <button type="submit" class="btn-unified btn-primary-unified flex-1">
+                            <i class="fas fa-save mr-2"></i>更新
+                        </button>
+                    </div>
+                </form>
+            `;
+
+            document.getElementById('editEventForm').onsubmit = (e) => {
+                e.preventDefault();
+                window.updateEvent(dateKey, eventId, modal);
+            };
+        })
+        .catch(error => {
+            console.error('イベントデータ読み込みエラー:', error);
+            modal.remove();
+            window.showMessage('業務データの読み込みに失敗しました', 'error');
+        });
+};
+
+window.updateEvent = async function(dateKey, eventId, modal) {
+    const name = document.getElementById('editEventName').value.trim();
+    const startTime = document.getElementById('editStartTime').value;
+    const endTime = document.getElementById('editEndTime').value;
+    const description = document.getElementById('editDescription').value.trim();
+
+    if (!name) {
+        window.showMessage('業務名を入力してください', 'warning');
+        return;
+    }
+
+    try {
+        const updateData = {
+            name: name,
+            startTime: startTime || null,
+            endTime: endTime || null,
+            description: description || null,
+            updatedAt: firebase.database.ServerValue.TIMESTAMP,
+            updatedBy: window.currentUserData?.displayName || 'unknown'
+        };
+
+        await window.database.ref(`${window.DATA_ROOT}/events/byDate/${dateKey}/${eventId}`).update(updateData);
+        modal.remove();
+        window.showMessage('業務を更新しました', 'success');
+    } catch (error) {
+        console.error('業務更新エラー:', error);
+        window.showMessage('業務の更新に失敗しました', 'error');
+    }
+};
+
+window.deleteEvent = async function(dateKey, eventId) {
+    if (!confirm('この業務を削除しますか？')) return;
+
+    try {
+        await window.database.ref(`${window.DATA_ROOT}/events/byDate/${dateKey}/${eventId}`).remove();
+        document.querySelector('.fixed.inset-0').remove();
+        window.showMessage('業務を削除しました', 'success');
+    } catch (error) {
+        console.error('業務削除エラー:', error);
+        window.showMessage('業務の削除に失敗しました', 'error');
+    }
+};
     </script>
 </body>
 </html>
