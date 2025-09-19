@@ -591,6 +591,7 @@
             this.isInitialized = false;
             this.selectedDate = new Date();
             this.monthlyTasks = {};
+            this.eventsListener = null;
             this.init();
         }
 
@@ -648,11 +649,93 @@
             }
             return user;
         }
+        async loadAndRenderEventsForSelectedDate() {
+    const grid = document.getElementById('departmentGrid');
+    if (!grid) return;
+
+    const dateKey = this.formatDate(this.selectedDate);
+    try {
+        const snap = await window.database.ref(`${window.DATA_ROOT}/events/byDate/${dateKey}`).once('value');
+        const eventsById = snap.val() || {};
+        const events = Object.values(eventsById);
+
+        // 既存のタスクリストをクリア（月次業務以外）
+        grid.querySelectorAll('.task-list').forEach(el => {
+            const regularTasks = el.querySelectorAll('.glass-card:not([data-monthly])');
+            regularTasks.forEach(task => task.remove());
+        });
+
+        // イベントを部門ごとに表示
+        events.forEach(ev => {
+            const section = grid.querySelector(`.task-list[data-department="${ev.department}"]`);
+            if (!section) return;
+
+            const item = document.createElement('div');
+            item.className = 'glass-card p-2 mb-2 rounded-lg shadow-sm';
+            const timeText = (ev.startTime && ev.endTime) ? ` ${ev.startTime}-${ev.endTime}` : '';
+            const assigned = Array.isArray(ev.assignedCEs) ? ev.assignedCEs.length : 0;
+            const need = ev.requiredPeople ?? 0;
+
+            item.innerHTML = `
+                <div class="flex justify-between items-center">
+                    <div class="font-semibold text-sm">
+                        <i class="fas fa-briefcase mr-1"></i>${ev.name}${timeText}
+                    </div>
+                    <div class="text-xs text-gray-500">${assigned}/${need}名</div>
+                </div>
+                ${ev.description ? `<div class="text-xs text-gray-600 mt-1">${ev.description}</div>` : ''}
+                ${window.userRole !== 'viewer' ? `
+                    <button onclick="window.editEvent('${dateKey}', '${ev.id}')" 
+                            class="text-blue-600 hover:text-blue-800 text-xs mt-1">
+                        <i class="fas fa-edit mr-1"></i>編集
+                    </button>
+                ` : ''}
+            `;
+            section.appendChild(item);
+        });
+
+        console.log(`✅ ${dateKey} のイベント表示完了: ${events.length}件`);
+
+    } catch (error) {
+        console.error('❌ 日別イベント読み込みエラー:', error);
+        window.showMessage('イベントの読み込みに失敗しました', 'error');
+    }
+}
 
         redirectToLogin() {
             sessionStorage.clear();
             window.location.href = 'index.html';
         }
+
+        setupRealtimeUpdates() {
+    const updateEvents = () => {
+        const dateKey = this.formatDate(this.selectedDate);
+        
+        // 既存のリスナーがあれば削除
+        if (this.eventsListener) {
+            this.eventsListener.off();
+        }
+        
+        // 新しいリスナー設定
+        this.eventsListener = window.database.ref(`${window.DATA_ROOT}/events/byDate/${dateKey}`)
+            .on('value', (snapshot) => {
+                console.log('🔄 イベントデータ更新検知');
+                setTimeout(() => {
+                    this.loadAndRenderEventsForSelectedDate();
+                }, 300);
+            });
+    };
+    
+    // 初回設定
+    updateEvents();
+    
+    // 日付変更時に再設定
+    const originalRenderSchedule = this.renderDailySchedule.bind(this);
+    this.renderDailySchedule = function() {
+        originalRenderSchedule();
+        updateEvents();
+    };
+}
 
         showDashboard() {
             const loadingEl = document.getElementById('loading');
@@ -866,6 +949,9 @@
             }
 
             this.updateCEListCount();
+            
+            this.loadAndRenderEventsForSelectedDate();
+
         }
 
         createDepartmentSection(dept) {
