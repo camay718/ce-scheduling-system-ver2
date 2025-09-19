@@ -172,6 +172,64 @@
             </section>
         </main>
 
+        <!-- 権限設定セクション -->
+<section class="glass-card p-6 mb-6">
+    <h2 class="text-2xl font-bold text-gray-800 mb-6 flex items-center">
+        <i class="fas fa-user-shield text-purple-600 mr-3"></i>
+        システム権限設定
+    </h2>
+    
+    <div class="space-y-6">
+        <!-- Viewer権限設定 -->
+        <div class="p-4 border border-gray-200 rounded-lg bg-gray-50">
+            <h3 class="text-lg font-semibold mb-4 text-gray-800">
+                <i class="fas fa-eye mr-2 text-blue-600"></i>Viewer（閲覧者）権限
+            </h3>
+            
+            <div class="space-y-3">
+                <div class="flex items-center justify-between p-3 bg-white rounded border">
+                    <div>
+                        <div class="font-medium text-gray-800">業務の編集を許可</div>
+                        <div class="text-sm text-gray-600">日別スケジュールでの業務追加・編集・削除を許可します</div>
+                    </div>
+                    <label class="relative inline-flex items-center cursor-pointer">
+                        <input type="checkbox" id="viewerCanEdit" class="sr-only peer">
+                        <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                    </label>
+                </div>
+                
+                <div class="flex items-center justify-between p-3 bg-white rounded border">
+                    <div>
+                        <div class="font-medium text-gray-800">CE配置の変更を許可</div>
+                        <div class="text-sm text-gray-600">業務への担当CE配置の変更を許可します</div>
+                    </div>
+                    <label class="relative inline-flex items-center cursor-pointer">
+                        <input type="checkbox" id="viewerCanAssign" class="sr-only peer">
+                        <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                    </label>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Editor権限設定（将来の拡張用） -->
+        <div class="p-4 border border-gray-200 rounded-lg bg-gray-50 opacity-60">
+            <h3 class="text-lg font-semibold mb-4 text-gray-800">
+                <i class="fas fa-edit mr-2 text-green-600"></i>Editor（編集者）権限
+            </h3>
+            <div class="text-sm text-gray-500 italic">
+                <i class="fas fa-info-circle mr-2"></i>Editor権限の詳細設定は今後のバージョンで実装予定です
+            </div>
+        </div>
+    </div>
+    
+    <div class="mt-6 flex items-center justify-between">
+        <div id="permissionsStatus" class="text-sm"></div>
+        <button id="savePermissionsBtn" class="btn-unified btn-primary-unified">
+            <i class="fas fa-save mr-2"></i>権限設定を保存
+        </button>
+    </div>
+</section>
+
         <!-- ナビゲーション -->
         <footer class="text-center">
             <div class="flex justify-center space-x-4">
@@ -214,6 +272,7 @@
             this.currentPassword = '';
             this.isReady = false;
             this.init();
+            this.permissions = {};
         }
 
         async init() {
@@ -226,7 +285,7 @@
                 this.isReady = true;
                 this.setupEventListeners();
                 await this.loadUsers();
-                
+                await this.loadPermissions();
                 console.log('✅ 管理者ユーザー管理初期化完了');
                 window.showMessage('管理者ダッシュボードが初期化されました', 'success');
             } catch (error) {
@@ -245,7 +304,86 @@
             if (createBtn) {
                 createBtn.onclick = () => this.createUser();
             }
-        }
+
+      // 権限設定ボタン
+    const savePermissionsBtn = document.getElementById('savePermissionsBtn');
+    if (savePermissionsBtn) {
+        savePermissionsBtn.onclick = () => this.savePermissions();
+    }
+}
+
+// 権限設定の読み込み
+async loadPermissions() {
+    try {
+        const snapshot = await this.database.ref(`${window.DATA_ROOT}/permissions`).once('value');
+        this.permissions = snapshot.val() || {};
+        
+        // デフォルト値の設定
+        const defaults = {
+            viewerCanEdit: false,
+            viewerCanAssign: false
+        };
+        
+        // UIに反映
+        Object.keys(defaults).forEach(key => {
+            const checkbox = document.getElementById(key);
+            if (checkbox) {
+                checkbox.checked = this.permissions[key] !== undefined ? this.permissions[key] : defaults[key];
+            }
+        });
+        
+        console.log('✅ 権限設定読み込み完了:', this.permissions);
+    } catch (error) {
+        console.error('❌ 権限設定読み込みエラー:', error);
+        this.showPermissionsStatus('権限設定の読み込みに失敗しました', 'error');
+    }
+}
+
+// 権限設定の保存
+async savePermissions() {
+    try {
+        const newPermissions = {
+            viewerCanEdit: document.getElementById('viewerCanEdit')?.checked || false,
+            viewerCanAssign: document.getElementById('viewerCanAssign')?.checked || false,
+            updatedAt: firebase.database.ServerValue.TIMESTAMP,
+            updatedBy: window.currentUserData?.displayName || 'admin'
+        };
+        
+        await this.database.ref(`${window.DATA_ROOT}/permissions`).set(newPermissions);
+        this.permissions = newPermissions;
+        
+        this.showPermissionsStatus('権限設定を保存しました', 'success');
+        window.showMessage('権限設定を保存しました', 'success');
+        
+        console.log('✅ 権限設定保存完了:', newPermissions);
+    } catch (error) {
+        console.error('❌ 権限設定保存エラー:', error);
+        this.showPermissionsStatus('権限設定の保存に失敗しました', 'error');
+        window.showMessage('権限設定の保存に失敗しました', 'error');
+    }
+}
+
+// 権限設定ステータス表示
+showPermissionsStatus(message, type = 'info') {
+    const statusEl = document.getElementById('permissionsStatus');
+    if (statusEl) {
+        const colors = {
+            success: 'text-green-600',
+            error: 'text-red-600',
+            warning: 'text-yellow-600',
+            info: 'text-blue-600'
+        };
+        
+        statusEl.innerHTML = `<i class="fas fa-${type === 'success' ? 'check' : type === 'error' ? 'exclamation-triangle' : 'info'}-circle mr-1"></i>${message}`;
+        statusEl.className = `text-sm ${colors[type] || colors.info}`;
+        
+        // 3秒後にクリア
+        setTimeout(() => {
+            statusEl.innerHTML = '';
+            statusEl.className = 'text-sm';
+        }, 3000);
+    }
+}
 
         generatePassword() {
             const chars = 'ABCDEFGHJKMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789';
