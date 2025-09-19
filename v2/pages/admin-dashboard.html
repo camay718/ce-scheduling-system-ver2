@@ -462,30 +462,65 @@ showPermissionsStatus(message, type = 'info') {
             }
         }
 
-        async loadUsers() {
-            try {
-                this.database.ref(`${window.DATA_ROOT}/pendingUsers`).on('value', (snapshot) => {
-                    const pending = snapshot.val() || {};
-                    this.pendingUsers = Object.values(pending);
-                    this.renderPendingUsersTable();
-                }, (error) => {
-                    console.error('❌ 待機ユーザー読み込みエラー:', error);
-                    window.showMessage('待機ユーザー読み込みに失敗しました', 'error');
-                });
-
-                this.database.ref(`${window.DATA_ROOT}/users`).on('value', (snapshot) => {
-                    const users = snapshot.val() || {};
-                    this.activeUsers = Object.values(users).filter(user => user.setupCompleted);
-                    this.renderActiveUsersTable();
-                }, (error) => {
-                    console.error('❌ アクティブユーザー読み込みエラー:', error);
-                    window.showMessage('アクティブユーザー読み込みに失敗しました', 'error');
-                });
-            } catch (error) {
-                console.error('❌ ユーザー読み込みエラー:', error);
-                window.showMessage('ユーザー一覧の読み込みに失敗しました', 'error');
-            }
+        // 待機ユーザー読み込み関数の修正
+async function loadPendingUsers() {
+    try {
+        // 認証状態を確認
+        if (!window.auth || !window.auth.currentUser) {
+            console.log('認証待機中...');
+            setTimeout(loadPendingUsers, 1000);
+            return;
         }
+
+        console.log('📋 待機ユーザー読み込み開始');
+        const pendingRef = window.database.ref('ceScheduleV2/pendingUsers');
+        
+        pendingRef.on('value', (snapshot) => {
+            const pendingUsers = snapshot.val() || {};
+            updatePendingUsersDisplay(pendingUsers);
+            console.log('✅ 待機ユーザー読み込み完了:', Object.keys(pendingUsers).length);
+        }, (error) => {
+            console.error('❌ 待機ユーザー読み込みエラー:', error);
+            // エラー時は空の状態で表示を更新
+            updatePendingUsersDisplay({});
+        });
+
+    } catch (error) {
+        console.error('❌ 待機ユーザー読み込み例外:', error);
+        // 5秒後にリトライ
+        setTimeout(loadPendingUsers, 5000);
+    }
+}
+
+// アクティブユーザー読み込み関数の修正
+async function loadActiveUsers() {
+    try {
+        // 認証状態を確認
+        if (!window.auth || !window.auth.currentUser) {
+            console.log('認証待機中...');
+            setTimeout(loadActiveUsers, 1000);
+            return;
+        }
+
+        console.log('👥 アクティブユーザー読み込み開始');
+        const activeRef = window.database.ref('ceScheduleV2/activeUsers');
+        
+        activeRef.on('value', (snapshot) => {
+            const activeUsers = snapshot.val() || {};
+            updateActiveUsersDisplay(activeUsers);
+            console.log('✅ アクティブユーザー読み込み完了:', Object.keys(activeUsers).length);
+        }, (error) => {
+            console.error('❌ アクティブユーザー読み込みエラー:', error);
+            // エラー時は空の状態で表示を更新
+            updateActiveUsersDisplay({});
+        });
+
+    } catch (error) {
+        console.error('❌ アクティブユーザー読み込み例外:', error);
+        // 5秒後にリトライ
+        setTimeout(loadActiveUsers, 5000);
+    }
+}
 
         renderPendingUsersTable() {
             const tbody = document.getElementById('pendingUsersTableBody');
