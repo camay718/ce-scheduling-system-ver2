@@ -49,10 +49,6 @@
         .sidebar-content {
             padding: 20px;
             width: 280px;
-            height: 100%;
-            position: absolute;
-            top: 0;
-            left: 0;
             transition: opacity 0.3s ease;
         }
 
@@ -96,11 +92,11 @@
             background: rgba(248, 249, 250, 0.95);
             border: 1px dashed #e0e0e0;
             border-radius: 4px;
-            padding: 3px 5px;
-            font-size: 7px;
+            padding: 6px 8px;
+            font-size: 10px;
             z-index: 100;
-            max-width: 180px;
-            line-height: 1.1;
+            max-width: 200px;
+            line-height: 1.2;
         }
 
         .work-time-compact table {
@@ -110,9 +106,9 @@
 
         .work-time-compact th,
         .work-time-compact td {
-            padding: 1px 2px;
+            padding: 2px 4px;
             border: none;
-            font-size: 7px;
+            font-size: 10px;
             text-align: left;
         }
 
@@ -121,7 +117,7 @@
             font-weight: 600;
         }
 
-        /* 勤務表テーブル（幅制御強化） */
+        /* 勤務表テーブル */
         .schedule-table-container {
             flex: 1;
             overflow: auto;
@@ -142,10 +138,10 @@
         .schedule-table th,
         .schedule-table td {
             border: 1px solid #e0e0e0;
-            padding: 3px;
+            padding: 4px;
             text-align: center;
             vertical-align: middle;
-            height: 28px;
+            height: 32px;
             overflow: hidden;
         }
 
@@ -157,16 +153,15 @@
             z-index: 10;
         }
 
-        /* No列と名前列（固定幅） */
-        .no-header,
-        .no-cell {
+        /* 固定列 */
+        .no-header, .no-cell {
             position: sticky;
             left: 0;
             background: white;
             z-index: 15;
-            width: 35px;
-            min-width: 35px;
-            max-width: 35px;
+            width: 40px;
+            min-width: 40px;
+            max-width: 40px;
         }
 
         .no-header {
@@ -174,15 +169,14 @@
             z-index: 20;
         }
 
-        .name-header,
-        .name-cell {
+        .name-header, .name-cell {
             position: sticky;
-            left: 35px;
+            left: 40px;
             background: white;
             z-index: 15;
-            width: 120px;
-            min-width: 120px;
-            max-width: 120px;
+            width: 140px;
+            min-width: 140px;
+            max-width: 140px;
             text-align: left;
             padding-left: 8px;
         }
@@ -201,24 +195,24 @@
             background: #f0f8ff;
         }
 
-        /* 日付列（固定幅） */
+        /* 日付列 */
         .date-col {
-            width: 38px;
-            min-width: 38px;
-            max-width: 38px;
+            width: 42px;
+            min-width: 42px;
+            max-width: 42px;
         }
 
-        /* No部分（ダブルクリック対応） */
+        /* CE番号 */
         .ce-number {
             background: var(--brand-primary);
             color: white;
-            width: 20px;
-            height: 20px;
+            width: 24px;
+            height: 24px;
             border-radius: 50%;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 10px;
+            font-size: 11px;
             font-weight: bold;
             cursor: pointer;
             margin: 0 auto;
@@ -234,9 +228,6 @@
             transition: all 0.2s ease;
             font-weight: 600;
             position: relative;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            white-space: nowrap;
         }
 
         .work-cell:hover {
@@ -250,7 +241,6 @@
             color: #1E3A8A; 
         }
 
-        /* OPE + A1 → 紺色（要求仕様） */
         .work-cell.type-ope.status-A1 { 
             background: #1E3A8A !important; 
             color: white !important; 
@@ -271,30 +261,18 @@
             color: #B8860B; 
         }
 
-        /* 非勤務状態（白背景）+ テキスト入力 */
+        /* 非勤務状態 */
         .work-cell.status-非,
         .work-cell.status-×,
         .work-cell.status-年,
         .work-cell.status-出,
-        .work-cell.status-研,
-        .work-cell.status-text {
+        .work-cell.status-研 {
             background: white !important;
             color: #333 !important;
             border: 2px solid #ddd !important;
         }
 
-        /* テキスト入力セル（極小フォント・幅固定強化） */
-        .work-cell.has-custom-text {
-            font-size: 6px !important;
-            line-height: 1.1 !important;
-            padding: 1px !important;
-            word-wrap: break-word;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            white-space: nowrap;
-        }
-
-        /* 希望勤務（下線） */
+        /* 希望勤務 */
         .work-cell.desired {
             text-decoration: underline;
             text-decoration-thickness: 2px;
@@ -310,38 +288,12 @@
         .summary-cell {
             background: #f8f9fa;
             font-weight: 500;
-            width: 45px;
-            min-width: 45px;
-            max-width: 45px;
+            width: 50px;
+            min-width: 50px;
+            max-width: 50px;
         }
 
-        /* フッターサマリー */
-        .footer-summary-row th,
-        .footer-summary-row td {
-            background: linear-gradient(135deg, #e9ecef, #dee2e6);
-            font-weight: 600;
-            position: sticky;
-            bottom: 0;
-            z-index: 8;
-        }
-
-        .footer-summary-row .type-label {
-            position: sticky;
-            left: 0;
-            z-index: 15;
-            background: linear-gradient(135deg, #e9ecef, #dee2e6);
-        }
-
-        /* 警告表示 */
-        .warning-count {
-            color: #dc3545;
-            font-weight: bold;
-            background: rgba(220, 53, 69, 0.1);
-            border-radius: 4px;
-            padding: 2px 4px;
-        }
-
-        /* 勤務状態選択メニュー（画面枠内表示完全対応） */
+        /* 勤務状態選択メニュー */
         .work-status-menu {
             position: fixed;
             background: white;
@@ -383,23 +335,6 @@
             border-color: #007bff;
         }
 
-        /* テキスト入力エリア */
-        .text-input-area {
-            margin-top: 8px;
-            padding-top: 8px;
-            border-top: 1px solid #dee2e6;
-        }
-
-        .text-input-area textarea {
-            width: 100%;
-            height: 50px;
-            font-size: 11px;
-            padding: 6px;
-            border: 1px solid #ccc;
-            border-radius: 4px;
-            resize: none;
-        }
-
         /* モーダル */
         .modal-overlay {
             position: fixed;
@@ -408,7 +343,7 @@
             right: 0;
             bottom: 0;
             background: rgba(0,0,0,0.5);
-            display: flex;
+            display: none;
             align-items: center;
             justify-content: center;
             z-index: 2000;
@@ -423,64 +358,7 @@
             overflow-y: auto;
         }
 
-        /* ドラッグ並び替え */
-        .sortable-list {
-            max-height: 300px;
-            overflow-y: auto;
-        }
-
-        .sortable-item {
-            background: #f8f9fa;
-            border: 1px solid #dee2e6;
-            border-radius: 6px;
-            padding: 8px 12px;
-            margin: 4px 0;
-            cursor: move;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            transition: all 0.2s ease;
-        }
-
-        .sortable-item:hover {
-            background: #e9ecef;
-            transform: translateX(4px);
-        }
-
-        .sortable-item.dragging {
-            opacity: 0.5;
-            transform: rotate(2deg);
-        }
-
-        /* 設定エディタ用スタイル */
-        .ce-editor-item {
-            display: flex;
-            align-items: center;
-            padding: 8px;
-            border: 1px solid #dee2e6;
-            border-radius: 6px;
-            margin-bottom: 8px;
-            background: #f8f9fa;
-        }
-
-        .ce-editor-item .controls {
-            display: flex;
-            gap: 4px;
-            margin-left: 8px;
-        }
-
-        .work-type-editor-item,
-        .work-status-editor-item {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            padding: 8px 12px;
-            border: 1px solid #dee2e6;
-            border-radius: 6px;
-            background: #f8f9fa;
-        }
-
-        /* 印刷スタイル（A4横1枚完全対応） */
+        /* 印刷スタイル */
         @media print {
             body { 
                 overflow: visible !important; 
@@ -489,7 +367,6 @@
                 color-adjust: exact !important;
             }
             
-            /* 印刷時に非表示にする要素 */
             .editor-sidebar,
             .sidebar-toggle,
             .work-time-compact,
@@ -499,7 +376,6 @@
                 display: none !important; 
             }
             
-            /* レイアウト調整 */
             .editor-container { 
                 display: block !important; 
             }
@@ -509,7 +385,6 @@
                 margin: 0 !important;
             }
             
-            /* テーブルの印刷最適化 */
             .schedule-table-container {
                 margin-top: 0 !important;
                 border-radius: 0 !important;
@@ -518,43 +393,31 @@
             }
             
             .schedule-table { 
-                font-size: 6px !important; 
+                font-size: 8px !important; 
                 min-width: auto !important;
-                page-break-inside: avoid;
                 width: 100% !important;
-                table-layout: fixed !important;
             }
             
             .schedule-table th,
             .schedule-table td { 
-                padding: 1px !important; 
+                padding: 2px !important; 
                 height: auto !important; 
                 border: 0.5px solid #000 !important;
-                overflow: hidden !important;
-                text-overflow: ellipsis;
-                white-space: nowrap;
             }
             
-            /* 列幅の最適化 */
             .no-header, .no-cell {
-                width: 20px !important;
-                min-width: 20px !important;
-                max-width: 20px !important;
+                width: 25px !important;
+                min-width: 25px !important;
+                max-width: 25px !important;
             }
             
             .name-header, .name-cell {
-                width: 60px !important;
-                min-width: 60px !important;
-                max-width: 60px !important;
+                width: 80px !important;
+                min-width: 80px !important;
+                max-width: 80px !important;
             }
             
-            .date-col {
-                width: 22px !important;
-                min-width: 22px !important;
-                max-width: 22px !important;
-            }
-            
-            .summary-cell {
+            .date-col, .summary-cell {
                 width: 25px !important;
                 min-width: 25px !important;
                 max-width: 25px !important;
@@ -562,7 +425,7 @@
             
             @page { 
                 size: A4 landscape; 
-                margin: 3mm !important; 
+                margin: 5mm !important; 
             }
         }
     </style>
@@ -631,14 +494,6 @@
                         <i class="fas fa-users mr-2"></i>CE管理
                     </h3>
                     <div class="space-y-2">
-                        <div class="grid grid-cols-2 gap-2">
-                            <button id="addCEBtn" class="btn-unified btn-primary-unified btn-small">
-                                <i class="fas fa-plus mr-1"></i>追加
-                            </button>
-                            <button id="deleteCEBtn" class="btn-unified btn-outline-unified btn-small text-red-600 border-red-600">
-                                <i class="fas fa-trash mr-1"></i>削除
-                            </button>
-                        </div>
                         <button id="sortCENormalBtn" class="btn-unified btn-outline-unified btn-small w-full">
                             <i class="fas fa-list-ol mr-1"></i>通常順
                         </button>
@@ -647,27 +502,6 @@
                         </button>
                         <button id="sortCENameBtn" class="btn-unified btn-outline-unified btn-small w-full">
                             <i class="fas fa-sort-alpha-down mr-1"></i>名前順
-                        </button>
-                        <button id="manualSortCEBtn" class="btn-unified btn-outline-unified btn-small w-full">
-                            <i class="fas fa-arrows-alt mr-1"></i>手動並び替え
-                        </button>
-                    </div>
-                </div>
-
-                <!-- エディタ設定 -->
-                <div class="mb-6">
-                    <h3 class="text-sm font-semibold mb-3">
-                        <i class="fas fa-cog mr-2"></i>エディタ設定
-                    </h3>
-                    <div class="space-y-2">
-                        <button id="ceListSettingsBtn" class="btn-unified btn-outline-unified btn-small w-full">
-                            <i class="fas fa-users mr-1"></i>CEリスト設定
-                        </button>
-                        <button id="workTypeSettingsBtn" class="btn-unified btn-outline-unified btn-small w-full">
-                            <i class="fas fa-briefcase mr-1"></i>勤務区分設定
-                        </button>
-                        <button id="workStatusSettingsBtn" class="btn-unified btn-outline-unified btn-small w-full">
-                            <i class="fas fa-clipboard-list mr-1"></i>勤務状態設定
                         </button>
                     </div>
                 </div>
@@ -741,7 +575,7 @@
 
         <!-- メインエリア -->
         <div class="editor-main">
-            <!-- 勤務時間帯説明（右上極小配置） -->
+            <!-- 勤務時間帯説明 -->
             <div class="work-time-compact no-print">
                 <table>
                     <thead>
@@ -766,15 +600,9 @@
             <!-- 勤務表テーブル -->
             <div class="schedule-table-container">
                 <table id="scheduleTable" class="schedule-table">
-                    <thead id="scheduleTableHead">
-                        <!-- ヘッダーは動的生成 -->
-                    </thead>
-                    <tbody id="scheduleTableBody">
-                        <!-- ボディは動的生成 -->
-                    </tbody>
-                    <tfoot id="scheduleTableFoot">
-                        <!-- フッターは動的生成 -->
-                    </tfoot>
+                    <thead id="scheduleTableHead"></thead>
+                    <tbody id="scheduleTableBody"></tbody>
+                    <tfoot id="scheduleTableFoot"></tfoot>
                 </table>
             </div>
         </div>
@@ -792,334 +620,10 @@
             <input type="checkbox" id="desireWorkCheck" class="text-xs">
             <label for="desireWorkCheck" class="text-xs">希望勤務（下線表示）</label>
         </div>
-        <div class="status-buttons" id="statusButtons">
-            <!-- ボタンは動的生成 -->
-        </div>
+        <div class="status-buttons" id="statusButtons"></div>
         <div class="text-input-area" id="textInputArea" style="display: none;">
             <label class="block text-xs font-medium mb-1">テキスト入力</label>
-            <textarea id="customTextInput" placeholder="自由入力（極小表示）"></textarea>
-        </div>
-    </div>
-
-    <!-- 勤務区分設定モーダル（Noダブルクリック・期間指定修正版） -->
-    <div id="workTypeSetModal" class="modal-overlay" style="display: none;">
-        <div class="modal-content" style="width: 480px;">
-            <div class="flex justify-between items-center mb-4">
-                <h3 class="text-lg font-semibold">勤務区分設定</h3>
-                <button id="closeWorkTypeSetModal" class="text-gray-500 hover:text-gray-700">
-                    <i class="fas fa-times text-xl"></i>
-                </button>
-            </div>
-            
-            <div class="mb-4">
-                <p class="text-sm text-gray-600">対象CE: <span id="workTypeTargetCE" class="font-semibold"></span></p>
-            </div>
-            
-            <div class="mb-4 p-3 bg-yellow-50 border-l-4 border-yellow-400 rounded">
-                <h4 class="font-semibold text-yellow-800 mb-1">
-                    <i class="fas fa-exclamation-triangle mr-2"></i>期間指定について
-                </h4>
-                <p class="text-yellow-700 text-sm">
-                    指定した期間内のみ勤務区分が変更されます。期間外は変更されません。
-                </p>
-            </div>
-            
-            <form id="workTypeSetForm" class="space-y-4">
-                <div>
-                    <label class="block text-sm font-medium mb-2">勤務区分</label>
-                    <select id="newWorkType" class="input-unified">
-                        <option value="OPE">OPE</option>
-                        <option value="ME">ME</option>
-                        <option value="HD">HD</option>
-                        <option value="FLEX">FLEX</option>
-                    </select>
-                </div>
-                
-                <div class="grid grid-cols-2 gap-4">
-                    <div>
-                        <label class="block text-sm font-medium mb-2">適用開始日</label>
-                        <input type="date" id="workTypeStartDate" class="input-unified" required>
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium mb-2">適用終了日</label>
-                        <input type="date" id="workTypeEndDate" class="input-unified" required>
-                    </div>
-                </div>
-                
-                <div class="flex justify-end space-x-3">
-                    <button type="button" id="cancelWorkTypeSet" class="btn-unified btn-outline-unified">
-                        キャンセル
-                    </button>
-                    <button type="submit" class="btn-unified btn-primary-unified">
-                        <i class="fas fa-check mr-2"></i>適用
-                    </button>
-                </div>
-            </form>
-        </div>
-    </div>
-
-    <!-- CE情報編集モーダル（名前ダブルクリック） -->
-    <div id="ceInfoEditModal" class="modal-overlay" style="display: none;">
-        <div class="modal-content" style="width: 480px;">
-            <div class="flex justify-between items-center mb-4">
-                <h3 class="text-lg font-semibold">CE情報編集</h3>
-                <button id="closeCEInfoEditModal" class="text-gray-500 hover:text-gray-700">
-                    <i class="fas fa-times text-xl"></i>
-                </button>
-            </div>
-            
-            <div class="mb-4 p-3 bg-blue-50 border-l-4 border-blue-400 rounded">
-                <h4 class="font-semibold text-blue-800 mb-1">
-                    <i class="fas fa-info-circle mr-2"></i>名前設定について
-                </h4>
-                <ul class="text-blue-700 text-sm space-y-1">
-                    <li><strong>フルネーム:</strong> 勤務表での表示名</li>
-                    <li><strong>アイコン名:</strong> スケジュール画面・集計・ログでの表示名</li>
-                </ul>
-            </div>
-            
-            <form id="ceInfoEditForm" class="space-y-4">
-                <div>
-                    <label class="block text-sm font-medium mb-2">フルネーム（勤務表表示）</label>
-                    <input type="text" id="editCEFullName" class="input-unified" placeholder="安孫子明博" required>
-                </div>
-                
-                <div>
-                    <label class="block text-sm font-medium mb-2">アイコン名（他画面表示）</label>
-                    <input type="text" id="editCEIconName" class="input-unified" placeholder="安孫子" required>
-                </div>
-                
-                <div>
-                    <label class="block text-sm font-medium mb-2">勤務区分</label>
-                    <select id="editCEWorkType" class="input-unified">
-                        <option value="OPE">OPE</option>
-                        <option value="ME">ME</option>
-                        <option value="HD">HD</option>
-                        <option value="FLEX">FLEX</option>
-                    </select>
-                </div>
-                
-                <div class="flex justify-end space-x-3">
-                    <button type="button" id="cancelCEInfoEdit" class="btn-unified btn-outline-unified">
-                        キャンセル
-                    </button>
-                    <button type="submit" class="btn-unified btn-primary-unified">
-                        <i class="fas fa-save mr-2"></i>保存
-                    </button>
-                </div>
-            </form>
-        </div>
-    </div>
-
-    <!-- CE追加モーダル -->
-    <div id="addCEModal" class="modal-overlay" style="display: none;">
-        <div class="modal-content" style="width: 450px;">
-            <div class="flex justify-between items-center mb-4">
-                <h3 class="text-lg font-semibold">CE追加</h3>
-                <button id="closeAddCEModal" class="text-gray-500 hover:text-gray-700">
-                    <i class="fas fa-times text-xl"></i>
-                </button>
-            </div>
-            
-            <form id="addCEForm" class="space-y-4">
-                <div>
-                    <label class="block text-sm font-medium mb-2">フルネーム（勤務表表示）</label>
-                    <input type="text" id="newCEFullName" class="input-unified" placeholder="田中太郎" required>
-                </div>
-                
-                <div>
-                    <label class="block text-sm font-medium mb-2">アイコン名（他画面表示）</label>
-                    <input type="text" id="newCEIconName" class="input-unified" placeholder="田中" required>
-                </div>
-                
-                <div>
-                    <label class="block text-sm font-medium mb-2">勤務区分</label>
-                    <select id="newCEWorkType" class="input-unified">
-                        <option value="OPE">OPE</option>
-                        <option value="ME">ME</option>
-                        <option value="HD">HD</option>
-                        <option value="FLEX">FLEX</option>
-                    </select>
-                </div>
-                
-                <div class="flex justify-end space-x-3">
-                    <button type="button" id="cancelAddCE" class="btn-unified btn-outline-unified">
-                        キャンセル
-                    </button>
-                    <button type="submit" class="btn-unified btn-primary-unified">
-                        <i class="fas fa-plus mr-2"></i>追加
-                    </button>
-                </div>
-            </form>
-        </div>
-    </div>
-
-    <!-- CE削除モーダル -->
-    <div id="deleteCEModal" class="modal-overlay" style="display: none;">
-        <div class="modal-content" style="width: 450px;">
-            <div class="flex justify-between items-center mb-4">
-                <h3 class="text-lg font-semibold">CE削除</h3>
-                <button id="closeDeleteCEModal" class="text-gray-500 hover:text-gray-700">
-                    <i class="fas fa-times text-xl"></i>
-                </button>
-            </div>
-            
-            <div class="mb-4">
-                <p class="text-sm text-gray-600">削除するCEを選択してください</p>
-            </div>
-            
-            <div id="deleteCEList" class="space-y-2 max-h-60 overflow-y-auto">
-                <!-- CE一覧は動的生成 -->
-            </div>
-            
-            <div class="flex justify-end space-x-3 mt-4">
-                <button id="cancelDeleteCE" class="btn-unified btn-outline-unified">
-                    キャンセル
-                </button>
-                <button id="confirmDeleteCE" class="btn-unified btn-primary-unified text-red-600 border-red-600" disabled>
-                    <i class="fas fa-trash mr-2"></i>削除
-                </button>
-            </div>
-        </div>
-    </div>
-
-    <!-- CE並び替えモーダル -->
-    <div id="ceSortModal" class="modal-overlay" style="display: none;">
-        <div class="modal-content" style="width: 500px;">
-            <div class="flex justify-between items-center mb-4">
-                <h3 class="text-lg font-semibold">CE並び替え</h3>
-                <button id="closeCESortModal" class="text-gray-500 hover:text-gray-700">
-                    <i class="fas fa-times text-xl"></i>
-                </button>
-            </div>
-            
-            <div class="mb-4">
-                <p class="text-sm text-gray-600">ドラッグ&ドロップで順序を変更できます</p>
-            </div>
-            
-            <div id="sortableCEList" class="sortable-list">
-                <!-- CE一覧は動的生成 -->
-            </div>
-            
-            <div class="flex justify-end space-x-3 mt-4">
-                <button id="cancelCESort" class="btn-unified btn-outline-unified">
-                    キャンセル
-                </button>
-                <button id="applyCESort" class="btn-unified btn-primary-unified">
-                    <i class="fas fa-save mr-2"></i>順序を保存
-                </button>
-            </div>
-        </div>
-    </div>
-
-    <!-- CEリスト設定モーダル -->
-    <div id="ceListSettingsModal" class="modal-overlay" style="display: none;">
-        <div class="modal-content" style="width: 700px; max-height: 80vh;">
-            <div class="flex justify-between items-center mb-4">
-                <h3 class="text-lg font-semibold">CEリスト設定</h3>
-                <button id="closeCEListSettingsModal" class="text-gray-500 hover:text-gray-700">
-                    <i class="fas fa-times text-xl"></i>
-                </button>
-            </div>
-            
-            <div class="mb-4">
-                <label class="block text-sm font-medium mb-2">並び順</label>
-                <select id="ceSortType" class="input-unified">
-                    <option value="normal">通常順</option>
-                    <option value="name">名前順</option>
-                    <option value="workType">勤務区分順</option>
-                </select>
-            </div>
-            
-            <div class="mb-4">
-                <div class="flex justify-between items-center mb-2">
-                    <label class="block text-sm font-medium">CEリスト</label>
-                    <button id="addNewCEInSettingsBtn" class="btn-unified btn-primary-unified btn-small">
-                        <i class="fas fa-plus mr-1"></i>追加
-                    </button>
-                </div>
-                <div id="ceListEditor" class="max-h-60 overflow-y-auto border rounded p-2">
-                    <!-- CEリストは動的生成 -->
-                </div>
-            </div>
-            
-            <div class="flex justify-end space-x-3">
-                <button id="cancelCEListSettings" class="btn-unified btn-outline-unified">
-                    キャンセル
-                </button>
-                <button id="saveCEListSettings" class="btn-unified btn-primary-unified">
-                    <i class="fas fa-save mr-2"></i>保存
-                </button>
-            </div>
-        </div>
-    </div>
-
-    <!-- 勤務区分設定モーダル -->
-    <div id="workTypeSettingsModal" class="modal-overlay" style="display: none;">
-        <div class="modal-content" style="width: 500px;">
-            <div class="flex justify-between items-center mb-4">
-                <h3 class="text-lg font-semibold">勤務区分設定</h3>
-                <button id="closeWorkTypeSettingsModal" class="text-gray-500 hover:text-gray-700">
-                    <i class="fas fa-times text-xl"></i>
-                </button>
-            </div>
-            
-            <div class="mb-4">
-                <div class="flex justify-between items-center mb-2">
-                    <label class="block text-sm font-medium">勤務区分一覧</label>
-                </div>
-                <div id="workTypeEditor" class="space-y-3">
-                    <!-- 勤務区分は動的生成 -->
-                </div>
-            </div>
-            
-            <div class="flex justify-end space-x-3">
-                <button id="cancelWorkTypeSettings" class="btn-unified btn-outline-unified">
-                    キャンセル
-                </button>
-                <button id="saveWorkTypeSettings" class="btn-unified btn-primary-unified">
-                    <i class="fas fa-save mr-2"></i>保存
-                </button>
-            </div>
-        </div>
-    </div>
-
-    <!-- 勤務状態設定モーダル -->
-    <div id="workStatusSettingsModal" class="modal-overlay" style="display: none;">
-        <div class="modal-content" style="width: 500px;">
-            <div class="flex justify-between items-center mb-4">
-                <h3 class="text-lg font-semibold">勤務状態設定</h3>
-                <button id="closeWorkStatusSettingsModal" class="text-gray-500 hover:text-gray-700">
-                    <i class="fas fa-times text-xl"></i>
-                </button>
-            </div>
-            
-            <div class="mb-4">
-                <div class="flex justify-between items-center mb-2">
-                    <label class="block text-sm font-medium">勤務状態一覧</label>
-                    <button id="addWorkStatusBtn" class="btn-unified btn-primary-unified btn-small">
-                        <i class="fas fa-plus mr-1"></i>追加
-                    </button>
-                </div>
-                <div id="workStatusEditor" class="space-y-2">
-                    <!-- 勤務状態は動的生成 -->
-                </div>
-                <div class="flex gap-2 mt-3">
-                    <input type="text" id="newWorkStatusInput" class="input-unified flex-grow" placeholder="新しい勤務状態">
-                    <button id="addNewWorkStatusBtn" class="btn-unified btn-outline-unified btn-small">
-                        <i class="fas fa-plus mr-1"></i>追加
-                    </button>
-                </div>
-            </div>
-            
-            <div class="flex justify-end space-x-3">
-                <button id="cancelWorkStatusSettings" class="btn-unified btn-outline-unified">
-                    キャンセル
-                </button>
-                <button id="saveWorkStatusSettings" class="btn-unified btn-primary-unified">
-                    <i class="fas fa-save mr-2"></i>保存
-                </button>
-            </div>
+            <textarea id="customTextInput" placeholder="自由入力" class="w-full h-12 text-xs p-2 border rounded"></textarea>
         </div>
     </div>
 
@@ -1132,25 +636,17 @@
         constructor() {
             this.scheduleData = {};
             this.ceList = [];
-            this.workTypeOverrides = {}; // 期間指定勤務区分オーバーライド
-            this.workTypeSettings = {
-                OPE: { label: 'OPE', color: '#87CEEB', textColor: '#1E3A8A' },
-                ME: { label: 'ME', color: '#90EE90', textColor: '#006400' },
-                HD: { label: 'HD', color: '#FFB6C1', textColor: '#8B008B' },
-                FLEX: { label: 'FLEX', color: '#FFFF99', textColor: '#B8860B' }
-            };
+            this.workTypeOverrides = {};
             this.workStatusSettings = ['A', 'A1', 'B', '非', '×', '年', '出', '研'];
             this.currentPeriod = {
                 startDate: new Date(),
                 endDate: new Date()
             };
             this.currentMenuTarget = null;
-            this.currentWorkTypeSetTarget = null;
-            this.currentCEInfoEditTarget = null;
             this.savedSchedules = {};
             this.isReady = false;
             
-            // 通常順の定義（要求仕様・正確な27名）
+            // 通常順の定義（27名）
             this.normalOrder = [
                 '安孫子明博', '八鍬純', '杉山陽子', '中村圭佑', '石山智之', 
                 '亀井祐哉', '丸藤健', '三春摩弥', '斎藤大樹', '田中隆昭', 
@@ -1162,90 +658,117 @@
             
             this.init();
         }
-        hideLoading() {
-    const loadingEl = document.getElementById('loading');
-    const containerEl = document.getElementById('editorContainer');
-    if (loadingEl) loadingEl.style.display = 'none';
-    if (containerEl) containerEl.style.display = 'flex';
-}
 
-showInitError(error, step) {
-    const loadingEl = document.getElementById('loading');
-    if (loadingEl) {
-        loadingEl.innerHTML = `
-            <div class="text-center">
-                <i class="fas fa-exclamation-triangle text-red-500 text-4xl mb-4"></i>
-                <h3 class="text-lg font-semibold text-red-600 mb-2">初期化エラー</h3>
-                <p class="text-gray-600 mb-2">ステップ ${step} で失敗しました</p>
-                <p class="text-sm text-gray-500 mb-4">${error.message}</p>
-                <button onclick="location.reload()" class="btn-unified btn-primary-unified">
-                    <i class="fas fa-redo mr-2"></i>再読み込み
-                </button>
-                <a href="../dashboard.html" class="btn-unified btn-outline-unified ml-2">
-                    <i class="fas fa-arrow-left mr-2"></i>ダッシュボードに戻る
-                </a>
-            </div>
-        `;
-    }
-}
+        hideLoading() {
+            const loadingEl = document.getElementById('loading');
+            const containerEl = document.getElementById('editorContainer');
+            if (loadingEl) loadingEl.style.display = 'none';
+            if (containerEl) containerEl.style.display = 'flex';
+        }
+
+        showInitError(error, step) {
+            const loadingEl = document.getElementById('loading');
+            if (loadingEl) {
+                loadingEl.innerHTML = `
+                    <div class="text-center">
+                        <i class="fas fa-exclamation-triangle text-red-500 text-4xl mb-4"></i>
+                        <h3 class="text-lg font-semibold text-red-600 mb-2">初期化エラー</h3>
+                        <p class="text-gray-600 mb-2">ステップ ${step} で失敗しました</p>
+                        <p class="text-sm text-gray-500 mb-4">${error.message}</p>
+                        <button onclick="location.reload()" class="btn-unified btn-primary-unified">
+                            <i class="fas fa-redo mr-2"></i>再読み込み
+                        </button>
+                        <a href="../dashboard.html" class="btn-unified btn-outline-unified ml-2">
+                            <i class="fas fa-arrow-left mr-2"></i>ダッシュボードに戻る
+                        </a>
+                    </div>
+                `;
+            }
+        }
 
         async init() {
-    let initStep = 0;
-    try {
-        console.log(`${++initStep}/8: Firebase初期化待機...`);
-        await window.waitForFirebase();
-        
-        console.log(`${++initStep}/8: 匿名認証確認...`);
-        await this.ensureAnonymousAuth();
-        
-        console.log(`${++initStep}/8: CEリスト読み込み...`);
-        await this.loadExistingCEList();
-        
-        console.log(`${++initStep}/8: 勤務区分オーバーライド読み込み...`);
-        await this.loadWorkTypeOverrides();
-        
-        console.log(`${++initStep}/8: スケジュールデータ読み込み...`);
-        await this.loadScheduleData();
-        
-        console.log(`${++initStep}/8: 保存済み勤務表読み込み...`);
-        await this.loadSavedSchedules();
-        
-        console.log(`${++initStep}/8: エディタ設定読み込み...`);
-        await this.loadSettings();
-        
-        console.log(`${++initStep}/8: UI初期化...`);
-        this.initializePeriod();
-        this.setupEventListeners();
-        this.renderScheduleTable();
-        
-        this.isReady = true;
-        console.log('✅ 勤務表エディタ初期化完了');
-        window.showMessage('勤務表エディタが初期化されました', 'success');
-        
-    } catch (error) {
-        console.error(`❌ ステップ${initStep}で初期化エラー:`, error);
-        this.showInitError(error, initStep);
-    } finally {
-        // エラーでも必ずローディングを閉じる
-        this.hideLoading();
-    }
-}
+            let initStep = 0;
+            try {
+                console.log(`${++initStep}/8: Firebase初期化待機...`);
+                await window.waitForFirebase();
+                
+                console.log(`${++initStep}/8: 認証確認...`);
+                await this.checkEditorAuth();
+                
+                console.log(`${++initStep}/8: CEリスト読み込み...`);
+                await this.loadCEList();
+                
+                console.log(`${++initStep}/8: 勤務区分オーバーライド読み込み...`);
+                await this.loadWorkTypeOverrides();
+                
+                console.log(`${++initStep}/8: スケジュールデータ読み込み...`);
+                await this.loadScheduleData();
+                
+                console.log(`${++initStep}/8: 保存済み勤務表読み込み...`);
+                await this.loadSavedSchedules();
+                
+                console.log(`${++initStep}/8: UI初期化...`);
+                this.initializePeriod();
+                this.setupEventListeners();
+                this.renderScheduleTable();
+                
+                this.isReady = true;
+                console.log('✅ 勤務表エディタ初期化完了');
+                window.showMessage('勤務表エディタが初期化されました', 'success');
+                
+            } catch (error) {
+                console.error(`❌ ステップ${initStep}で初期化エラー:`, error);
+                this.showInitError(error, initStep);
+            } finally {
+                this.hideLoading();
+            }
+        }
 
-        async ensureAnonymousAuth() {
+        async checkEditorAuth() {
+            const targetUID = sessionStorage.getItem('targetUID');
+            if (!targetUID) {
+                console.error('❌ セッション情報なし');
+                window.location.href = '../index.html';
+                return false;
+            }
+
             try {
                 let user = window.auth.currentUser;
                 if (!user) {
                     const result = await window.auth.signInAnonymously();
                     user = result.user;
                 }
-                return user;
-            } catch (error) {
-                console.error('❌ 匿名認証失敗:', error);
-                throw new Error('認証に失敗しました');
+            } catch (authError) {
+                console.error('❌ 匿名認証失敗:', authError);
+                window.showMessage('認証に失敗しました', 'error');
+                window.location.href = '../index.html';
+                return false;
             }
+
+            const userSnapshot = await window.database.ref(`${window.DATA_ROOT}/users/${targetUID}`).once('value');
+            const userData = userSnapshot.val();
+
+            if (!userData || !userData.setupCompleted) {
+                console.error('❌ ユーザーデータが見つからない');
+                window.location.href = '../index.html';
+                return false;
+            }
+
+            window.currentUserData = userData;
+            window.userRole = userData.role;
+
+            if (window.userRole !== 'admin') { 
+                window.showMessage('この機能へのアクセス権限がありません', 'error');
+                setTimeout(() => {
+                    window.location.href = '../dashboard.html';
+                }, 3000);
+                return false;
+            }
+
+            return true;
         }
 
-        async loadExistingCEList() {
+        async loadCEList() {
             try {
                 const snapshot = await window.database.ref(`${window.DATA_ROOT}/ceList`).once('value');
                 const data = snapshot.val();
@@ -1253,25 +776,24 @@ showInitError(error, step) {
                 if (data && data.list && Array.isArray(data.list) && data.list.length > 0) {
                     this.ceList = data.list.map((ce, index) => ({
                         id: ce.id || `ce${index + 1}`,
-                        name: ce.name || ce.displayName || `CE${index + 1}`,
-                        fullName: ce.fullName || ce.name || ce.displayName || `CE${index + 1}`,
-                        displayName: ce.displayName || ce.name || `CE${index + 1}`,
-                        iconName: ce.iconName || ce.displayName || ce.name || `CE${index + 1}`,
+                        name: ce.iconName || ce.displayName || ce.fullName || `CE${index + 1}`,
+                        fullName: ce.fullName || ce.iconName || ce.displayName || `CE${index + 1}`,
+                        displayName: ce.displayName || ce.iconName || ce.fullName || `CE${index + 1}`,
+                        iconName: ce.iconName || ce.displayName || ce.fullName || `CE${index + 1}`,
                         workType: ce.workType || 'ME'
                     }));
                 } else {
-                    // 通常順27名で初期化（要求仕様）
+                    // 通常順27名で初期化
                     this.ceList = this.normalOrder.map((name, index) => ({
                         id: `ce${index + 1}`,
-                        name: this.getLastName(name),
+                        name: this.getShortName(name),
                         fullName: name,
-                        displayName: this.getLastName(name),
-                        iconName: this.getLastName(name),
+                        displayName: this.getShortName(name),
+                        iconName: this.getShortName(name),
                         workType: ['OPE', 'ME', 'HD', 'FLEX'][index % 4]
                     }));
                     
-                    // 初期CEリストをFirebaseに保存
-                    await this.saveCEListAndNotify();
+                    await this.saveCEList();
                     window.showMessage('CEリストを通常順で初期化しました', 'info');
                 }
                 
@@ -1282,11 +804,9 @@ showInitError(error, step) {
             }
         }
 
-        getLastName(fullName) {
-            // 日本語の姓を取得（漢字対応）
-            if (fullName.length <= 2) return fullName;
-            // 一般的に日本語の姓は2-3文字
-            return fullName.substring(0, Math.min(3, Math.floor(fullName.length / 2)));
+        getShortName(fullName) {
+            if (!fullName) return '';
+            return fullName.substring(0, Math.min(2, fullName.length));
         }
 
         async loadWorkTypeOverrides() {
@@ -1322,41 +842,6 @@ showInitError(error, step) {
             }
         }
 
-        async loadSettings() {
-            try {
-                const snapshot = await window.database.ref(`${window.DATA_ROOT}/editorSettings`).once('value');
-                const settings = snapshot.val();
-                
-                if (settings) {
-                    if (settings.workTypeSettings) {
-                        this.workTypeSettings = { ...this.workTypeSettings, ...settings.workTypeSettings };
-                    }
-                    if (settings.workStatusSettings) {
-                        this.workStatusSettings = settings.workStatusSettings;
-                    }
-                }
-                
-                console.log('✅ エディタ設定読み込み完了');
-            } catch (error) {
-                console.error('❌ エディタ設定読み込みエラー:', error);
-            }
-        }
-
-        async saveSettings() {
-            try {
-                const settings = {
-                    workTypeSettings: this.workTypeSettings,
-                    workStatusSettings: this.workStatusSettings,
-                    updatedAt: firebase.database.ServerValue.TIMESTAMP
-                };
-                
-                await window.database.ref(`${window.DATA_ROOT}/editorSettings`).set(settings);
-                console.log('✅ エディタ設定保存完了');
-            } catch (error) {
-                console.error('❌ エディタ設定保存エラー:', error);
-            }
-        }
-
         initializePeriod() {
             const today = new Date();
             const endDate = new Date(today);
@@ -1373,7 +858,7 @@ showInitError(error, step) {
         }
 
         setupEventListeners() {
-            // サイドバートグル（ダッシュボードと同仕様）
+            // サイドバートグル
             const toggle = document.getElementById('sidebarToggle');
             const sidebar = document.querySelector('.editor-sidebar');
             
@@ -1406,28 +891,13 @@ showInitError(error, step) {
             if (todayBtn) todayBtn.onclick = () => this.goToTodayPeriod();
 
             // CE管理
-            const addCEBtn = document.getElementById('addCEBtn');
-            const deleteCEBtn = document.getElementById('deleteCEBtn');
             const sortNameBtn = document.getElementById('sortCENameBtn');
             const sortWorkTypeBtn = document.getElementById('sortCEWorkTypeBtn');
             const sortNormalBtn = document.getElementById('sortCENormalBtn');
-            const manualSortBtn = document.getElementById('manualSortCEBtn');
             
-            if (addCEBtn) addCEBtn.onclick = () => this.openAddCEModal();
-            if (deleteCEBtn) deleteCEBtn.onclick = () => this.openDeleteCEModal();
             if (sortNameBtn) sortNameBtn.onclick = () => this.sortCEByName();
             if (sortWorkTypeBtn) sortWorkTypeBtn.onclick = () => this.sortCEByWorkType();
             if (sortNormalBtn) sortNormalBtn.onclick = () => this.sortCEByNormal();
-            if (manualSortBtn) manualSortBtn.onclick = () => this.openCESortModal();
-
-            // エディタ設定
-            const ceListSettingsBtn = document.getElementById('ceListSettingsBtn');
-            const workTypeSettingsBtn = document.getElementById('workTypeSettingsBtn');
-            const workStatusSettingsBtn = document.getElementById('workStatusSettingsBtn');
-
-            if (ceListSettingsBtn) ceListSettingsBtn.onclick = () => this.openCEListSettingsModal();
-            if (workTypeSettingsBtn) workTypeSettingsBtn.onclick = () => this.openWorkTypeSettingsModal();
-            if (workStatusSettingsBtn) workStatusSettingsBtn.onclick = () => this.openWorkStatusSettingsModal();
 
             // 勤務表操作
             const createBtn = document.getElementById('createNewScheduleBtn');
@@ -1449,400 +919,21 @@ showInitError(error, step) {
             if (publishBtn) publishBtn.onclick = () => this.publishSchedule();
             if (printBtn) printBtn.onclick = () => this.printSchedule();
 
-            this.setupModalEventListeners();
-
-            // 外部クリックでメニューを閉じる
-            document.addEventListener('click', (e) => {
-                const menu = document.getElementById('workStatusMenu');
-                if (menu && menu.style.display === 'block' && 
-                    !menu.contains(e.target) && 
-                    !e.target.closest('.work-cell') && 
-                    !e.target.closest('.ce-number')) {
-                    this.closeStatusMenu();
-                }
-            });
-        }
-
-        setupModalEventListeners() {
             // 勤務状態メニュー
             const closeMenuBtn = document.getElementById('closeStatusMenu');
             if (closeMenuBtn) {
                 closeMenuBtn.onclick = () => this.closeStatusMenu();
             }
 
-            // 勤務区分設定モーダル（Noダブルクリック）
-            const closeWorkTypeSetBtn = document.getElementById('closeWorkTypeSetModal');
-            const cancelWorkTypeSetBtn = document.getElementById('cancelWorkTypeSet');
-            const workTypeSetForm = document.getElementById('workTypeSetForm');
-            
-            if (closeWorkTypeSetBtn) closeWorkTypeSetBtn.onclick = () => this.closeWorkTypeSetModal();
-            if (cancelWorkTypeSetBtn) cancelWorkTypeSetBtn.onclick = () => this.closeWorkTypeSetModal();
-            if (workTypeSetForm) {
-                workTypeSetForm.onsubmit = (e) => {
-                    e.preventDefault();
-                    this.applyWorkTypeSet();
-                };
-            }
-
-            // CE情報編集モーダル（名前ダブルクリック）
-            const closeCEInfoEditBtn = document.getElementById('closeCEInfoEditModal');
-            const cancelCEInfoEditBtn = document.getElementById('cancelCEInfoEdit');
-            const ceInfoEditForm = document.getElementById('ceInfoEditForm');
-            
-            if (closeCEInfoEditBtn) closeCEInfoEditBtn.onclick = () => this.closeCEInfoEditModal();
-            if (cancelCEInfoEditBtn) cancelCEInfoEditBtn.onclick = () => this.closeCEInfoEditModal();
-            if (ceInfoEditForm) {
-                ceInfoEditForm.onsubmit = (e) => {
-                    e.preventDefault();
-                    this.saveCEInfoEdit();
-                };
-            }
-
-            // CE追加モーダル
-            const closeAddCEBtn = document.getElementById('closeAddCEModal');
-            const cancelAddCEBtn = document.getElementById('cancelAddCE');
-            const addCEForm = document.getElementById('addCEForm');
-            
-            if (closeAddCEBtn) closeAddCEBtn.onclick = () => this.closeAddCEModal();
-            if (cancelAddCEBtn) cancelAddCEBtn.onclick = () => this.closeAddCEModal();
-            if (addCEForm) {
-                addCEForm.onsubmit = (e) => {
-                    e.preventDefault();
-                    this.addNewCE();
-                };
-            }
-
-            // CE削除モーダル
-            const closeDeleteCEBtn = document.getElementById('closeDeleteCEModal');
-            const cancelDeleteCEBtn = document.getElementById('cancelDeleteCE');
-            const confirmDeleteCEBtn = document.getElementById('confirmDeleteCE');
-            
-            if (closeDeleteCEBtn) closeDeleteCEBtn.onclick = () => this.closeDeleteCEModal();
-            if (cancelDeleteCEBtn) cancelDeleteCEBtn.onclick = () => this.closeDeleteCEModal();
-            if (confirmDeleteCEBtn) confirmDeleteCEBtn.onclick = () => this.confirmDeleteCE();
-
-            // CE並び替えモーダル
-            const closeSortBtn = document.getElementById('closeCESortModal');
-            const cancelSortBtn = document.getElementById('cancelCESort');
-            const applySortBtn = document.getElementById('applyCESort');
-            
-            if (closeSortBtn) closeSortBtn.onclick = () => this.closeCESortModal();
-            if (cancelSortBtn) cancelSortBtn.onclick = () => this.closeCESortModal();
-            if (applySortBtn) applySortBtn.onclick = () => this.applyCESort();
-
-            // 設定モーダル
-            this.setupSettingsModalEventListeners();
-        }
-
-        setupSettingsModalEventListeners() {
-            // CEリスト設定モーダル
-            const closeCEListSettingsBtn = document.getElementById('closeCEListSettingsModal');
-            const cancelCEListSettingsBtn = document.getElementById('cancelCEListSettings');
-            const saveCEListSettingsBtn = document.getElementById('saveCEListSettings');
-            const addNewCEInSettingsBtn = document.getElementById('addNewCEInSettingsBtn');
-            
-            if (closeCEListSettingsBtn) closeCEListSettingsBtn.onclick = () => this.closeCEListSettingsModal();
-            if (cancelCEListSettingsBtn) cancelCEListSettingsBtn.onclick = () => this.closeCEListSettingsModal();
-            if (saveCEListSettingsBtn) saveCEListSettingsBtn.onclick = () => this.saveCEListSettingsModal();
-            if (addNewCEInSettingsBtn) addNewCEInSettingsBtn.onclick = () => this.addNewCEInSettings();
-
-            // 勤務区分設定モーダル
-            const closeWorkTypeSettingsBtn = document.getElementById('closeWorkTypeSettingsModal');
-            const cancelWorkTypeSettingsBtn = document.getElementById('cancelWorkTypeSettings');
-            const saveWorkTypeSettingsBtn = document.getElementById('saveWorkTypeSettings');
-            
-            if (closeWorkTypeSettingsBtn) closeWorkTypeSettingsBtn.onclick = () => this.closeWorkTypeSettingsModal();
-            if (cancelWorkTypeSettingsBtn) cancelWorkTypeSettingsBtn.onclick = () => this.closeWorkTypeSettingsModal();
-            if (saveWorkTypeSettingsBtn) saveWorkTypeSettingsBtn.onclick = () => this.saveWorkTypeSettingsModal();
-
-            // 勤務状態設定モーダル
-            const closeWorkStatusSettingsBtn = document.getElementById('closeWorkStatusSettingsModal');
-            const cancelWorkStatusSettingsBtn = document.getElementById('cancelWorkStatusSettings');
-            const saveWorkStatusSettingsBtn = document.getElementById('saveWorkStatusSettings');
-            const addWorkStatusBtn = document.getElementById('addWorkStatusBtn');
-            const addNewWorkStatusBtn = document.getElementById('addNewWorkStatusBtn');
-            
-            if (closeWorkStatusSettingsBtn) closeWorkStatusSettingsBtn.onclick = () => this.closeWorkStatusSettingsModal();
-            if (cancelWorkStatusSettingsBtn) cancelWorkStatusSettingsBtn.onclick = () => this.closeWorkStatusSettingsModal();
-            if (saveWorkStatusSettingsBtn) saveWorkStatusSettingsBtn.onclick = () => this.saveWorkStatusSettingsModal();
-            if (addWorkStatusBtn) addWorkStatusBtn.onclick = () => this.addNewWorkStatus();
-            if (addNewWorkStatusBtn) addNewWorkStatusBtn.onclick = () => this.addNewWorkStatus();
-        }
-
-        // 設定モーダル関数
-        openCEListSettingsModal() {
-            const modal = document.getElementById('ceListSettingsModal');
-            if (modal) {
-                this.renderCEListEditor();
-                modal.style.display = 'flex';
-            }
-        }
-
-        closeCEListSettingsModal() {
-            const modal = document.getElementById('ceListSettingsModal');
-            if (modal) {
-                modal.style.display = 'none';
-            }
-        }
-
-        renderCEListEditor() {
-            const editor = document.getElementById('ceListEditor');
-            if (!editor) return;
-            
-            editor.innerHTML = '';
-            
-            this.ceList.forEach((ce, index) => {
-                const item = document.createElement('div');
-                item.className = 'ce-editor-item';
-                item.innerHTML = `
-                    <div class="flex-1 grid grid-cols-3 gap-2">
-                        <input type="text" value="${ce.fullName || ''}" placeholder="フルネーム" 
-                               class="input-unified text-xs" data-field="fullName" data-index="${index}">
-                        <input type="text" value="${ce.iconName || ce.displayName || ''}" placeholder="アイコン名" 
-                               class="input-unified text-xs" data-field="iconName" data-index="${index}">
-                        <select class="input-unified text-xs" data-field="workType" data-index="${index}">
-                            <option value="OPE" ${ce.workType === 'OPE' ? 'selected' : ''}>OPE</option>
-                            <option value="ME" ${ce.workType === 'ME' ? 'selected' : ''}>ME</option>
-                            <option value="HD" ${ce.workType === 'HD' ? 'selected' : ''}>HD</option>
-                            <option value="FLEX" ${ce.workType === 'FLEX' ? 'selected' : ''}>FLEX</option>
-                        </select>
-                    </div>
-                    <div class="controls">
-                        <button onclick="workScheduleEditor.moveCEInEditor(${index}, -1)" 
-                                class="btn-unified btn-outline-unified btn-small text-xs" ${index === 0 ? 'disabled' : ''}>
-                            <i class="fas fa-arrow-up"></i>
-                        </button>
-                        <button onclick="workScheduleEditor.moveCEInEditor(${index}, 1)" 
-                                class="btn-unified btn-outline-unified btn-small text-xs" ${index === this.ceList.length - 1 ? 'disabled' : ''}>
-                            <i class="fas fa-arrow-down"></i>
-                        </button>
-                        <button onclick="workScheduleEditor.removeCEFromEditor(${index})" 
-                                class="btn-unified btn-outline-unified btn-small text-xs text-red-600">
-                            <i class="fas fa-trash"></i>
-                        </button>
-                    </div>
-                `;
-                editor.appendChild(item);
-            });
-            
-            // 入力フィールドのイベントリスナー
-            editor.querySelectorAll('input, select').forEach(input => {
-                input.onchange = () => this.updateCEInEditor(input);
-            });
-        }
-
-        updateCEInEditor(input) {
-            const index = parseInt(input.dataset.index);
-            const field = input.dataset.field;
-            const value = input.value.trim();
-            
-            if (this.ceList[index]) {
-                this.ceList[index][field] = value;
-                
-                // displayNameとnameも更新
-                if (field === 'iconName') {
-                    this.ceList[index].displayName = value;
-                    this.ceList[index].name = value;
+            // 外部クリックでメニューを閉じる
+            document.addEventListener('click', (e) => {
+                const menu = document.getElementById('workStatusMenu');
+                if (menu && menu.style.display === 'block' && 
+                    !menu.contains(e.target) && 
+                    !e.target.closest('.work-cell')) {
+                    this.closeStatusMenu();
                 }
-            }
-        }
-
-        moveCEInEditor(index, direction) {
-            if (direction === -1 && index > 0) {
-                [this.ceList[index], this.ceList[index - 1]] = [this.ceList[index - 1], this.ceList[index]];
-            } else if (direction === 1 && index < this.ceList.length - 1) {
-                [this.ceList[index], this.ceList[index + 1]] = [this.ceList[index + 1], this.ceList[index]];
-            }
-            this.renderCEListEditor();
-        }
-
-        removeCEFromEditor(index) {
-            if (confirm(`${this.ceList[index].fullName || this.ceList[index].name}を削除しますか？`)) {
-                this.ceList.splice(index, 1);
-                this.renderCEListEditor();
-            }
-        }
-
-        addNewCEInSettings() {
-            const newCE = {
-                id: `ce${Date.now()}`,
-                name: '新しいCE',
-                fullName: '新しいCE',
-                displayName: '新しいCE',
-                iconName: '新しいCE',
-                workType: 'ME'
-            };
-            
-            this.ceList.push(newCE);
-            this.renderCEListEditor();
-        }
-
-        async saveCEListSettingsModal() {
-            try {
-                await this.saveCEListAndNotify();
-                this.closeCEListSettingsModal();
-                this.renderScheduleTable();
-                window.showMessage('CEリスト設定を保存しました', 'success');
-            } catch (error) {
-                console.error('❌ CEリスト設定保存エラー:', error);
-                window.showMessage('CEリスト設定の保存に失敗しました', 'error');
-            }
-        }
-
-        openWorkTypeSettingsModal() {
-            const modal = document.getElementById('workTypeSettingsModal');
-            if (modal) {
-                this.renderWorkTypeEditor();
-                modal.style.display = 'flex';
-            }
-        }
-
-        closeWorkTypeSettingsModal() {
-            const modal = document.getElementById('workTypeSettingsModal');
-            if (modal) {
-                modal.style.display = 'none';
-            }
-        }
-
-        renderWorkTypeEditor() {
-            const editor = document.getElementById('workTypeEditor');
-            if (!editor) return;
-            
-            editor.innerHTML = '';
-            
-            Object.entries(this.workTypeSettings).forEach(([key, settings]) => {
-                const item = document.createElement('div');
-                item.className = 'work-type-editor-item';
-                item.innerHTML = `
-                    <div class="flex items-center space-x-3">
-                        <input type="text" value="${settings.label}" 
-                               class="input-unified w-20" data-key="${key}" data-field="label">
-                        <input type="color" value="${settings.color}" 
-                               class="w-12 h-8 border rounded" data-key="${key}" data-field="color">
-                        <input type="color" value="${settings.textColor}" 
-                               class="w-12 h-8 border rounded" data-key="${key}" data-field="textColor">
-                        <div class="px-3 py-1 rounded text-sm font-medium" 
-                             style="background-color: ${settings.color}; color: ${settings.textColor};">
-                            ${settings.label}
-                        </div>
-                    </div>
-                `;
-                editor.appendChild(item);
             });
-            
-            // 入力フィールドのイベントリスナー
-            editor.querySelectorAll('input').forEach(input => {
-                input.onchange = () => this.updateWorkTypeInEditor(input);
-            });
-        }
-
-        updateWorkTypeInEditor(input) {
-            const key = input.dataset.key;
-            const field = input.dataset.field;
-            const value = input.value;
-            
-            if (this.workTypeSettings[key]) {
-                this.workTypeSettings[key][field] = value;
-                this.renderWorkTypeEditor();
-            }
-        }
-
-        async saveWorkTypeSettingsModal() {
-            try {
-                await this.saveSettings();
-                this.closeWorkTypeSettingsModal();
-                this.renderScheduleTable();
-                window.showMessage('勤務区分設定を保存しました', 'success');
-            } catch (error) {
-                console.error('❌ 勤務区分設定保存エラー:', error);
-                window.showMessage('勤務区分設定の保存に失敗しました', 'error');
-            }
-        }
-
-        openWorkStatusSettingsModal() {
-            const modal = document.getElementById('workStatusSettingsModal');
-            if (modal) {
-                this.renderWorkStatusEditor();
-                modal.style.display = 'flex';
-            }
-        }
-
-        closeWorkStatusSettingsModal() {
-            const modal = document.getElementById('workStatusSettingsModal');
-            if (modal) {
-                modal.style.display = 'none';
-            }
-        }
-
-        renderWorkStatusEditor() {
-            const editor = document.getElementById('workStatusEditor');
-            if (!editor) return;
-            
-            editor.innerHTML = '';
-            
-            this.workStatusSettings.forEach((status, index) => {
-                const item = document.createElement('div');
-                item.className = 'work-status-editor-item';
-                item.innerHTML = `
-                    <div class="flex items-center space-x-3">
-                        <input type="text" value="${status}" 
-                               class="input-unified w-20" data-index="${index}">
-                        <div class="px-3 py-1 bg-gray-100 rounded text-sm">
-                            ${status}
-                        </div>
-                    </div>
-                    <button onclick="workScheduleEditor.removeWorkStatus(${index})" 
-                            class="btn-unified btn-outline-unified btn-small text-red-600">
-                        <i class="fas fa-trash"></i>
-                    </button>
-                `;
-                editor.appendChild(item);
-            });
-            
-            // 入力フィールドのイベントリスナー
-            editor.querySelectorAll('input').forEach(input => {
-                input.onchange = () => this.updateWorkStatusInEditor(input);
-            });
-        }
-
-        updateWorkStatusInEditor(input) {
-            const index = parseInt(input.dataset.index);
-            const value = input.value.trim();
-            
-            if (value && this.workStatusSettings[index] !== undefined) {
-                this.workStatusSettings[index] = value;
-            }
-        }
-
-        addNewWorkStatus() {
-            const input = document.getElementById('newWorkStatusInput');
-            const value = input ? input.value.trim() : '';
-            
-            if (value && !this.workStatusSettings.includes(value)) {
-                this.workStatusSettings.push(value);
-                this.renderWorkStatusEditor();
-                if (input) input.value = '';
-            } else if (value) {
-                window.showMessage('この勤務状態は既に存在します', 'warning');
-            }
-        }
-
-        removeWorkStatus(index) {
-            if (confirm(`勤務状態「${this.workStatusSettings[index]}」を削除しますか？`)) {
-                this.workStatusSettings.splice(index, 1);
-                this.renderWorkStatusEditor();
-            }
-        }
-
-        async saveWorkStatusSettingsModal() {
-            try {
-                await this.saveSettings();
-                this.closeWorkStatusSettingsModal();
-                window.showMessage('勤務状態設定を保存しました', 'success');
-            } catch (error) {
-                console.error('❌ 勤務状態設定保存エラー:', error);
-                window.showMessage('勤務状態設定の保存に失敗しました', 'error');
-            }
         }
 
         // 期間管理
@@ -1895,6 +986,43 @@ showInitError(error, step) {
             this.renderScheduleTable();
         }
 
+        // CE並び替え
+        sortCEByName() {
+            this.ceList.sort((a, b) => (a.fullName || a.name).localeCompare(b.fullName || b.name, 'ja'));
+            this.saveCEList();
+            this.renderScheduleTable();
+            window.showMessage('名前順で並び替えました', 'success');
+        }
+
+        sortCEByWorkType() {
+            const workTypeOrder = { 'OPE': 1, 'ME': 2, 'HD': 3, 'FLEX': 4 };
+            this.ceList.sort((a, b) => {
+                const aOrder = workTypeOrder[a.workType] || 999;
+                const bOrder = workTypeOrder[b.workType] || 999;
+                if (aOrder !== bOrder) return aOrder - bOrder;
+                return (a.fullName || a.name).localeCompare(b.fullName || b.name, 'ja');
+            });
+            this.saveCEList();
+            this.renderScheduleTable();
+            window.showMessage('勤務順で並び替えました', 'success');
+        }
+
+        sortCEByNormal() {
+            const normalOrderMap = new Map(this.normalOrder.map((name, index) => [name, index]));
+            
+            this.ceList.sort((a, b) => {
+                const aIndex = normalOrderMap.get(a.fullName) ?? 999;
+                const bIndex = normalOrderMap.get(b.fullName) ?? 999;
+                
+                if (aIndex !== bIndex) return aIndex - bIndex;
+                return (a.fullName || a.name).localeCompare(b.fullName || b.name, 'ja');
+            });
+            
+            this.saveCEList();
+            this.renderScheduleTable();
+            window.showMessage('通常順で並び替えました', 'success');
+        }
+
         // テーブル描画
         renderScheduleTable() {
             if (this.ceList.length === 0) {
@@ -1906,7 +1034,6 @@ showInitError(error, step) {
             
             this.renderTableHeader(dates);
             this.renderTableBody(dates);
-            this.renderTableFooter(dates);
             this.updateTitle();
         }
 
@@ -1937,10 +1064,8 @@ showInitError(error, step) {
 
             const headerRow = document.createElement('tr');
             
-            // No列 + 氏名列
             headerRow.innerHTML = '<th class="no-header">No</th><th class="name-header">氏名</th>';
             
-            // 日付列
             dates.forEach(date => {
                 const dayOfWeek = ['日', '月', '火', '水', '木', '金', '土'][date.getDay()];
                 const isWeekend = date.getDay() === 0 || date.getDay() === 6;
@@ -1955,10 +1080,9 @@ showInitError(error, step) {
                 `;
             });
             
-            // サマリー列
-            const summaryHeaders = ['A', 'A1', 'B', '非', '×', '休日数', '必要日数', '実勤務', '当直回数'];
+            const summaryHeaders = ['A', 'A1', 'B', '非', '×', '休日数', '実勤務', '当直回数'];
             summaryHeaders.forEach(header => {
-                headerRow.innerHTML += `<th class="summary-header text-xs">${header}</th>`;
+                headerRow.innerHTML += `<th class="summary-cell text-xs">${header}</th>`;
             });
             
             thead.innerHTML = '';
@@ -1974,34 +1098,23 @@ showInitError(error, step) {
             this.ceList.forEach((ce, ceIndex) => {
                 const row = document.createElement('tr');
                 
-                // No列（ダブルクリックで勤務区分設定）
                 const noCell = document.createElement('td');
                 noCell.className = 'no-cell';
-                noCell.innerHTML = `<div class="ce-number" title="勤務区分設定">${ceIndex + 1}</div>`;
-                
-                const ceNumber = noCell.querySelector('.ce-number');
-                if (ceNumber) {
-                    ceNumber.ondblclick = () => this.openWorkTypeSetModal(ceIndex);
-                }
+                noCell.innerHTML = `<div class="ce-number" title="CE設定">${ceIndex + 1}</div>`;
                 row.appendChild(noCell);
                 
-                // 氏名セル（ダブルクリックでCE管理メニュー）
                 const nameCell = document.createElement('td');
                 nameCell.className = 'name-cell';
                 nameCell.innerHTML = `<div class="font-medium text-xs" title="CE管理">${ce.fullName || ce.name}</div>`;
-                nameCell.ondblclick = (e) => this.showCEQuickMenu(e, ceIndex);
                 row.appendChild(nameCell);
                 
-                // 日付セル
                 dates.forEach(date => {
                     const dateKey = this.formatDateKey(date);
                     const workData = this.getWorkData(ce.id, dateKey);
-                    const effectiveWorkType = this.getEffectiveWorkType(ce, dateKey);
-                    const cell = this.createWorkCell(ce, effectiveWorkType, date, dateKey, workData);
+                    const cell = this.createWorkCell(ce, date, dateKey, workData);
                     row.appendChild(cell);
                 });
                 
-                // サマリーセル
                 const summary = this.calculateCESummary(ce, dates);
                 this.appendSummaryCells(row, summary);
                 
@@ -2009,22 +1122,12 @@ showInitError(error, step) {
             });
         }
 
-        getEffectiveWorkType(ce, dateKey) {
-            // 期間指定オーバーライドがあれば優先
-            return this.workTypeOverrides[ce.id]?.[dateKey] || ce.workType || 'ME';
-        }
-        isHoliday(date) {
-    // 暫定的に祝日判定なし（将来的に祝日データを追加可能）
-    return false;
-}
-
-        createWorkCell(ce, workType, date, dateKey, workData) {
+        createWorkCell(ce, date, dateKey, workData) {
             const cell = document.createElement('td');
             const isWeekend = date.getDay() === 0 || date.getDay() === 6;
-            const isHoliday = this.isHoliday(date);
             
-            let cellClass = `work-cell date-col type-${(workType || 'ME').toLowerCase()}`;
-            const status = workData.status || (isWeekend || isHoliday ? '×' : 'A');
+            let cellClass = `work-cell date-col type-${(ce.workType || 'ME').toLowerCase()}`;
+            const status = workData.status || (isWeekend ? '×' : 'A');
             
             if (status) {
                 cellClass += ` status-${status}`;
@@ -2032,29 +1135,51 @@ showInitError(error, step) {
             if (workData.desired) {
                 cellClass += ' desired';
             }
-            if (isWeekend || isHoliday) {
+            if (isWeekend) {
                 cellClass += ' holiday';
             }
             
-            // テキスト入力がある場合（極小フォント表示）
-            if (workData.customText) {
-                cellClass += ' has-custom-text';
-                cell.textContent = workData.customText;
-                cell.title = workData.customText; // ツールチップ
-            } else {
-                cell.textContent = status;
-            }
-            
+            cell.textContent = status;
             cell.className = cellClass;
             cell.onclick = (e) => this.openStatusMenu(e, ce, dateKey);
             
             return cell;
         }
 
+        getWorkData(ceId, dateKey) {
+            return this.scheduleData[ceId]?.[dateKey] || {};
+        }
+
+        calculateCESummary(ce, dates) {
+            const summary = { A: 0, A1: 0, B: 0, non: 0, off: 0, holidays: 0, actual: 0, nightShift: 0 };
+            
+            dates.forEach(date => {
+                const dateKey = this.formatDateKey(date);
+                const workData = this.getWorkData(ce.id, dateKey);
+                const isWeekend = date.getDay() === 0 || date.getDay() === 6;
+                const status = workData.status || (isWeekend ? '×' : 'A');
+                
+                if (isWeekend) summary.holidays++;
+                
+                switch (status) {
+                    case 'A': summary.A++; summary.actual++; break;
+                    case 'A1': summary.A1++; summary.actual++; break;
+                    case 'B': summary.B++; summary.actual++; summary.nightShift++; break;
+                    case '非': summary.non++; summary.actual++; break;
+                    case '×': summary.off++; break;
+                    case '年': summary.actual++; break;
+                    case '出': summary.actual++; break;
+                    case '研': summary.actual++; break;
+                }
+            });
+            
+            return summary;
+        }
+
         appendSummaryCells(row, summary) {
             const summaryData = [
                 summary.A, summary.A1, summary.B, summary.non, summary.off,
-                summary.holidays, summary.required, summary.actual, summary.nightShift
+                summary.holidays, summary.actual, summary.nightShift
             ];
             
             summaryData.forEach((value) => {
@@ -2062,63 +1187,6 @@ showInitError(error, step) {
                 cell.className = 'summary-cell text-xs';
                 cell.textContent = value;
                 row.appendChild(cell);
-            });
-        }
-
-        renderTableFooter(dates) {
-            const tfoot = document.getElementById('scheduleTableFoot');
-            if (!tfoot) return;
-
-            tfoot.innerHTML = '';
-            
-            // 勤務区分別集計行（要求仕様対応）
-            const footerRows = [
-                { label: 'OPE(A)', type: 'OPE', status: 'A' },
-                { label: 'OPE(A1)', type: 'OPE', status: 'A1' },
-                { label: 'ME', type: 'ME', status: null },
-                { label: 'HD', type: 'HD', status: null },
-                { label: 'FLEX', type: 'FLEX', status: null }
-            ];
-
-            footerRows.forEach(rowConfig => {
-                const row = document.createElement('tr');
-                row.className = 'footer-summary-row';
-                
-                row.innerHTML = `<th class="type-label text-xs" colspan="2">${rowConfig.label}</th>`;
-                
-                dates.forEach(date => {
-                    const count = this.countWorkTypeForDate(rowConfig.type, date, rowConfig.status);
-                    row.innerHTML += `<td class="text-xs">${count}</td>`;
-                });
-                
-                // 空のサマリーセル
-                for (let i = 0; i < 9; i++) {
-                    row.innerHTML += '<td class="text-xs"></td>';
-                }
-                
-                tfoot.appendChild(row);
-            });
-            
-            // 当直・非番集計行
-            ['当直', '非番'].forEach(statusType => {
-                const row = document.createElement('tr');
-                row.className = 'footer-summary-row';
-                
-                row.innerHTML = `<th class="type-label text-xs" colspan="2">${statusType}</th>`;
-                
-                dates.forEach(date => {
-                    const status = statusType === '当直' ? 'B' : '非';
-                    const count = this.countStatusForDate(status, date);
-                    const cellClass = (statusType === '当直' && (count === 0 || count >= 2)) ? 'warning-count' : '';
-                    row.innerHTML += `<td class="text-xs ${cellClass}">${count}</td>`;
-                });
-                
-                // 空のサマリーセル
-                for (let i = 0; i < 9; i++) {
-                    row.innerHTML += '<td class="text-xs"></td>';
-                }
-                
-                tfoot.appendChild(row);
             });
         }
 
@@ -2134,20 +1202,17 @@ showInitError(error, step) {
 
             const workData = this.getWorkData(ce.id, dateKey);
             
-            // 希望勤務チェックボックス
             desireCheck.checked = workData.desired || false;
             
-            // カスタムテキスト
             if (customTextInput) {
                 customTextInput.value = workData.customText || '';
             }
             
-            // ステータスボタンを生成（設定に基づく）
             buttonsContainer.innerHTML = '';
             const statuses = [...this.workStatusSettings, 'テキスト'];
             statuses.forEach(status => {
                 const button = document.createElement('button');
-                button.className = `status-btn ${workData.status === status || (status === 'テキスト' && workData.customText) ? 'active' : ''}`;
+                button.className = `status-btn ${workData.status === status ? 'active' : ''}`;
                 button.textContent = status;
                 button.onclick = () => {
                     if (status === 'テキスト') {
@@ -2159,38 +1224,31 @@ showInitError(error, step) {
                 buttonsContainer.appendChild(button);
             });
             
-            // テキスト入力エリアの表示制御
             if (textInputArea) {
-                textInputArea.style.display = (workData.status === 'text' || workData.customText) ? 'block' : 'none';
+                textInputArea.style.display = (workData.customText) ? 'block' : 'none';
             }
             
-            // メニュー位置調整（画面枠内表示完全対応）
             const rect = event.target.getBoundingClientRect();
             menu.style.display = 'block';
             
             let left = rect.left + window.scrollX;
             let top = rect.bottom + window.scrollY + 5;
             
-            // 画面枠内調整（改良版）
             setTimeout(() => {
                 const menuRect = menu.getBoundingClientRect();
                 
-                // 右端チェック
                 if (left + menuRect.width > window.innerWidth) {
                     left = Math.max(10, window.innerWidth - menuRect.width - 10);
                 }
                 
-                // 左端チェック
                 if (left < 10) {
                     left = 10;
                 }
                 
-                // 下端チェック
                 if (top + menuRect.height > window.innerHeight + window.scrollY) {
                     top = Math.max(10, rect.top + window.scrollY - menuRect.height - 5);
                 }
                 
-                // 上端チェック
                 if (top < window.scrollY + 10) {
                     top = window.scrollY + 10;
                 }
@@ -2210,7 +1268,6 @@ showInitError(error, step) {
                 textInputArea.style.display = 'block';
                 customTextInput.focus();
                 
-                // Enterキーで確定
                 customTextInput.onkeydown = (e) => {
                     if (e.key === 'Enter' && !e.shiftKey) {
                         e.preventDefault();
@@ -2234,16 +1291,13 @@ showInitError(error, step) {
                     updatedBy: 'editor'
                 };
                 
-                // データベースに保存
                 await window.database.ref(`${window.DATA_ROOT}/workSchedule/${ceId}/${dateKey}`).set(workData);
                 
-                // ローカルデータ更新
                 if (!this.scheduleData[ceId]) {
                     this.scheduleData[ceId] = {};
                 }
                 this.scheduleData[ceId][dateKey] = workData;
                 
-                // 表示更新
                 this.renderScheduleTable();
                 this.closeStatusMenu();
                 
@@ -2261,449 +1315,8 @@ showInitError(error, step) {
             this.currentMenuTarget = null;
         }
 
-        // 勤務区分設定（Noダブルクリック・期間指定修正版）
-        openWorkTypeSetModal(ceIndex) {
-            const ce = this.ceList[ceIndex];
-            if (!ce) return;
-
-            const modal = document.getElementById('workTypeSetModal');
-            const targetSpan = document.getElementById('workTypeTargetCE');
-            const workTypeSelect = document.getElementById('newWorkType');
-            const startDateInput = document.getElementById('workTypeStartDate');
-            const endDateInput = document.getElementById('workTypeEndDate');
-            
-            if (modal && targetSpan && workTypeSelect) {
-                targetSpan.textContent = ce.fullName || ce.name;
-                workTypeSelect.value = ce.workType || 'ME';
-                
-                if (startDateInput) startDateInput.value = this.formatDateForInput(this.currentPeriod.startDate);
-                if (endDateInput) endDateInput.value = this.formatDateForInput(this.currentPeriod.endDate);
-                
-                modal.style.display = 'flex';
-                this.currentWorkTypeSetTarget = ceIndex;
-            }
-        }
-
-        closeWorkTypeSetModal() {
-            const modal = document.getElementById('workTypeSetModal');
-            if (modal) {
-                modal.style.display = 'none';
-            }
-            this.currentWorkTypeSetTarget = null;
-        }
-
-        async applyWorkTypeSet() {
-            if (this.currentWorkTypeSetTarget === null) return;
-
-            const newWorkType = document.getElementById('newWorkType').value;
-            const startDateStr = document.getElementById('workTypeStartDate').value;
-            const endDateStr = document.getElementById('workTypeEndDate').value;
-
-            if (!newWorkType || !startDateStr || !endDateStr) {
-                window.showMessage('すべての項目を入力してください', 'error');
-                return;
-            }
-
-            const startDate = new Date(startDateStr + 'T00:00:00');
-            const endDate = new Date(endDateStr + 'T00:00:00');
-
-            if (startDate > endDate) {
-                window.showMessage('適用終了日は開始日以降を指定してください', 'error');
-                return;
-            }
-
-            try {
-                const ce = this.ceList[this.currentWorkTypeSetTarget];
-                
-                // 期間指定オーバーライドを保存（指定期間のみ）
-                if (!this.workTypeOverrides[ce.id]) {
-                    this.workTypeOverrides[ce.id] = {};
-                }
-                
-                const targetDates = this.generateDateRange(startDate, endDate);
-                let updatedCount = 0;
-                
-                for (const date of targetDates) {
-                    const dateKey = this.formatDateKey(date);
-                    this.workTypeOverrides[ce.id][dateKey] = newWorkType;
-                    updatedCount++;
-                }
-                
-                // データベースに保存
-                await window.database.ref(`${window.DATA_ROOT}/workTypeOverrides/${ce.id}`).set(this.workTypeOverrides[ce.id]);
-                
-                this.renderScheduleTable();
-                this.closeWorkTypeSetModal();
-                
-                window.showMessage(`${updatedCount}日分の勤務区分を${newWorkType}に設定しました`, 'success');
-                
-            } catch (error) {
-                console.error('❌ 勤務区分設定エラー:', error);
-                window.showMessage('勤務区分の設定に失敗しました', 'error');
-            }
-        }
-
-        // CE情報編集（名前ダブルクリック）
-        openCEInfoEditModal(ceIndex) {
-            const ce = this.ceList[ceIndex];
-            if (!ce) return;
-
-            const modal = document.getElementById('ceInfoEditModal');
-            const fullNameInput = document.getElementById('editCEFullName');
-            const iconNameInput = document.getElementById('editCEIconName');
-            const workTypeSelect = document.getElementById('editCEWorkType');
-            
-            if (modal && fullNameInput && iconNameInput && workTypeSelect) {
-                fullNameInput.value = ce.fullName || '';
-                iconNameInput.value = ce.iconName || ce.displayName || '';
-                workTypeSelect.value = ce.workType || 'ME';
-                
-                modal.style.display = 'flex';
-                this.currentCEInfoEditTarget = ceIndex;
-            }
-        }
-
-        closeCEInfoEditModal() {
-            const modal = document.getElementById('ceInfoEditModal');
-            if (modal) {
-                modal.style.display = 'none';
-            }
-            this.currentCEInfoEditTarget = null;
-        }
-
-        async saveCEInfoEdit() {
-            if (this.currentCEInfoEditTarget === null) return;
-
-            const fullName = document.getElementById('editCEFullName').value.trim();
-            const iconName = document.getElementById('editCEIconName').value.trim();
-            const workType = document.getElementById('editCEWorkType').value;
-
-            if (!fullName || !iconName) {
-                window.showMessage('フルネームとアイコン名を入力してください', 'error');
-                return;
-            }
-
-            try {
-                // CEリスト更新
-                this.ceList[this.currentCEInfoEditTarget] = {
-                    ...this.ceList[this.currentCEInfoEditTarget],
-                    name: iconName, // スケジュール画面用
-                    fullName: fullName, // 勤務表表示用
-                    displayName: iconName, // 他画面表示用
-                    iconName: iconName, // 明示的なアイコン名
-                    workType: workType
-                };
-
-                await this.saveCEListAndNotify();
-
-                this.renderScheduleTable();
-                this.closeCEInfoEditModal();
-                
-                window.showMessage('CE情報を更新しました', 'success');
-                
-            } catch (error) {
-                console.error('❌ CE情報更新エラー:', error);
-                window.showMessage('CE情報の更新に失敗しました', 'error');
-            }
-        }
-
-        // CE追加・削除・並び替え
-        openAddCEModal() {
-            const modal = document.getElementById('addCEModal');
-            if (modal) {
-                document.getElementById('addCEForm').reset();
-                modal.style.display = 'flex';
-            }
-        }
-
-        closeAddCEModal() {
-            const modal = document.getElementById('addCEModal');
-            if (modal) {
-                modal.style.display = 'none';
-            }
-        }
-
-        async addNewCE() {
-            const fullName = document.getElementById('newCEFullName').value.trim();
-            const iconName = document.getElementById('newCEIconName').value.trim();
-            const workType = document.getElementById('newCEWorkType').value;
-
-            if (!fullName || !iconName) {
-                window.showMessage('フルネームとアイコン名を入力してください', 'error');
-                return;
-            }
-
-            try {
-                const newCE = {
-                    id: `ce${Date.now()}`,
-                    name: iconName,
-                    fullName: fullName,
-                    displayName: iconName,
-                    iconName: iconName,
-                    workType: workType
-                };
-
-                this.ceList.push(newCE);
-                await this.saveCEListAndNotify();
-
-                this.renderScheduleTable();
-                this.closeAddCEModal();
-                
-                window.showMessage(`${fullName}を追加しました`, 'success');
-                
-            } catch (error) {
-                console.error('❌ CE追加エラー:', error);
-                window.showMessage('CEの追加に失敗しました', 'error');
-            }
-        }
-
-        openDeleteCEModal() {
-            const modal = document.getElementById('deleteCEModal');
-            const listContainer = document.getElementById('deleteCEList');
-            
-            if (!modal || !listContainer) return;
-
-            listContainer.innerHTML = '';
-            
-            if (this.ceList.length === 0) {
-                listContainer.innerHTML = '<p class="text-gray-500 text-center">削除できるCEがいません</p>';
-                return;
-            }
-
-            this.ceList.forEach((ce, index) => {
-                const item = document.createElement('div');
-                item.className = 'flex items-center p-2 border rounded hover:bg-gray-50';
-                item.innerHTML = `
-                    <input type="checkbox" class="delete-ce-checkbox mr-3" data-index="${index}">
-                    <div class="flex-1">
-                        <div class="font-medium">${ce.fullName || ce.name}</div>
-                        <div class="text-xs text-gray-500">${ce.workType} | アイコン: ${ce.iconName || ce.displayName}</div>
-                    </div>
-                `;
-                listContainer.appendChild(item);
-            });
-
-            // チェックボックス監視
-            const checkboxes = listContainer.querySelectorAll('.delete-ce-checkbox');
-            const confirmBtn = document.getElementById('confirmDeleteCE');
-            
-            checkboxes.forEach(checkbox => {
-                checkbox.onchange = () => {
-                    const checkedCount = listContainer.querySelectorAll('.delete-ce-checkbox:checked').length;
-                    if (confirmBtn) {
-                        confirmBtn.disabled = checkedCount === 0;
-                    }
-                };
-            });
-
-            modal.style.display = 'flex';
-        }
-
-        closeDeleteCEModal() {
-            const modal = document.getElementById('deleteCEModal');
-            if (modal) {
-                modal.style.display = 'none';
-            }
-        }
-
-        async confirmDeleteCE() {
-            const checkedBoxes = document.querySelectorAll('.delete-ce-checkbox:checked');
-            
-            if (checkedBoxes.length === 0) return;
-
-            const deleteIndices = Array.from(checkedBoxes).map(cb => parseInt(cb.dataset.index));
-            const deleteNames = deleteIndices.map(i => this.ceList[i].fullName || this.ceList[i].name);
-
-            if (!confirm(`以下のCEを削除しますか？\n\n${deleteNames.join('\n')}\n\nこの操作は元に戻せません。`)) {
-                return;
-            }
-
-            try {
-                // 逆順で削除（インデックスずれ防止）
-                deleteIndices.sort((a, b) => b - a).forEach(index => {
-                    this.ceList.splice(index, 1);
-                });
-
-                await this.saveCEListAndNotify();
-
-                this.renderScheduleTable();
-                this.closeDeleteCEModal();
-                
-                window.showMessage(`${deleteNames.length}名のCEを削除しました`, 'success');
-                
-            } catch (error) {
-                console.error('❌ CE削除エラー:', error);
-                window.showMessage('CEの削除に失敗しました', 'error');
-            }
-        }
-
-        // CE並び替え機能
-        sortCEByName() {
-            this.ceList.sort((a, b) => (a.fullName || a.name).localeCompare(b.fullName || b.name, 'ja'));
-            this.saveCEListAndNotify();
-            this.renderScheduleTable();
-            window.showMessage('名前順で並び替えました', 'success');
-        }
-
-        sortCEByWorkType() {
-            const workTypeOrder = { 'OPE': 1, 'ME': 2, 'HD': 3, 'FLEX': 4 };
-            const normalOrderMap = new Map(this.normalOrder.map((name, index) => [name, index]));
-            
-            this.ceList.sort((a, b) => {
-                const aOrder = workTypeOrder[a.workType] || 999;
-                const bOrder = workTypeOrder[b.workType] || 999;
-                if (aOrder !== bOrder) return aOrder - bOrder;
-                
-                // 同一勤務区分内は通常順
-                const aIndex = normalOrderMap.get(a.fullName) ?? 999;
-                const bIndex = normalOrderMap.get(b.fullName) ?? 999;
-                return aIndex - bIndex;
-            });
-            
-            this.saveCEListAndNotify();
-            this.renderScheduleTable();
-            window.showMessage('勤務順で並び替えました', 'success');
-        }
-
-        sortCEByNormal() {
-            const normalOrderMap = new Map(this.normalOrder.map((name, index) => [name, index]));
-            
-            this.ceList.sort((a, b) => {
-                const aIndex = normalOrderMap.get(a.fullName) ?? 999;
-                const bIndex = normalOrderMap.get(b.fullName) ?? 999;
-                
-                if (aIndex !== bIndex) return aIndex - bIndex;
-                return (a.fullName || a.name).localeCompare(b.fullName || b.name, 'ja');
-            });
-            
-            this.saveCEListAndNotify();
-            this.renderScheduleTable();
-            window.showMessage('通常順で並び替えました', 'success');
-        }
-
-        openCESortModal() {
-            const modal = document.getElementById('ceSortModal');
-            const listContainer = document.getElementById('sortableCEList');
-            
-            if (!modal || !listContainer) return;
-
-            listContainer.innerHTML = '';
-            this.ceList.forEach((ce, index) => {
-                const item = document.createElement('div');
-                item.className = 'sortable-item';
-                item.draggable = true;
-                item.dataset.index = index;
-                
-                item.innerHTML = `
-                    <div>
-                        <div class="font-medium">${ce.fullName || ce.name}</div>
-                        <div class="text-xs text-gray-500">${ce.workType} | アイコン: ${ce.iconName || ce.displayName}</div>
-                    </div>
-                    <div class="text-gray-400">
-                        <i class="fas fa-grip-vertical"></i>
-                    </div>
-                `;
-                
-                item.addEventListener('dragstart', (e) => {
-                    e.dataTransfer.effectAllowed = 'move';
-                    e.dataTransfer.setData('text/plain', index.toString());
-                    item.classList.add('dragging');
-                });
-                
-                item.addEventListener('dragend', () => {
-                    item.classList.remove('dragging');
-                });
-                
-                listContainer.appendChild(item);
-            });
-
-            listContainer.addEventListener('dragover', (e) => {
-                e.preventDefault();
-                const dragging = listContainer.querySelector('.dragging');
-                if (!dragging) return;
-                
-                const afterElement = this.getDragAfterElement(listContainer, e.clientY);
-                if (afterElement == null) {
-                    listContainer.appendChild(dragging);
-                } else {
-                    listContainer.insertBefore(dragging, afterElement);
-                }
-            });
-
-            modal.style.display = 'flex';
-        }
-
-        getDragAfterElement(container, y) {
-            const draggableElements = [...container.querySelectorAll('.sortable-item:not(.dragging)')];
-            
-            return draggableElements.reduce((closest, child) => {
-                const box = child.getBoundingClientRect();
-                const offset = y - box.top - box.height / 2;
-                
-                if (offset < 0 && offset > closest.offset) {
-                    return { offset: offset, element: child };
-                } else {
-                    return closest;
-                }
-            }, { offset: Number.NEGATIVE_INFINITY }).element;
-        }
-
-        closeCESortModal() {
-            const modal = document.getElementById('ceSortModal');
-            if (modal) {
-                modal.style.display = 'none';
-            }
-        }
-
-        async applyCESort() {
-            const listContainer = document.getElementById('sortableCEList');
-            const items = listContainer.querySelectorAll('.sortable-item');
-            
-            const newOrder = Array.from(items).map(item => {
-                const index = parseInt(item.dataset.index);
-                return this.ceList[index];
-            });
-            
-            try {
-                this.ceList = newOrder;
-                await this.saveCEListAndNotify();
-                
-                this.renderScheduleTable();
-                this.closeCESortModal();
-                
-                window.showMessage('CE順序を変更しました', 'success');
-            } catch (error) {
-                console.error('❌ CE順序保存エラー:', error);
-                window.showMessage('順序の保存に失敗しました', 'error');
-            }
-        }
-
-        // CEリスト保存とダッシュボード通知
-        async saveCEListAndNotify() {
-            const ceListData = {
-                list: this.ceList,
-                updatedAt: firebase.database.ServerValue.TIMESTAMP
-            };
-            await window.database.ref(`${window.DATA_ROOT}/ceList`).set(ceListData);
-            
-            // ダッシュボードへの変更通知
-            try {
-                localStorage.setItem('ceListUpdated', Date.now().toString());
-            } catch (e) {
-                console.warn('localStorage通知失敗:', e);
-            }
-        }
-
         // 勤務表操作
         async createNewSchedule() {
-            const startInput = document.getElementById('periodStartDate');
-            const endInput = document.getElementById('periodEndDate');
-            
-            if (startInput?.value && endInput?.value) {
-                this.currentPeriod.startDate = new Date(startInput.value + 'T00:00:00');
-                this.currentPeriod.endDate = new Date(endInput.value + 'T00:00:00');
-            }
-
             if (!confirm('新しい勤務表を作成しますか？\n現在のCEリストで平日は「A」、土日祝日は「×」で初期化されます。')) {
                 return;
             }
@@ -2711,9 +1324,8 @@ showInitError(error, step) {
             try {
                 const dates = this.generateDateRange(this.currentPeriod.startDate, this.currentPeriod.endDate);
                 
-                // CEリストが空の場合は再読み込み
                 if (this.ceList.length === 0) {
-                    await this.loadExistingCEList();
+                    await this.loadCEList();
                 }
                 
                 this.ceList.forEach(ce => {
@@ -2724,10 +1336,9 @@ showInitError(error, step) {
                     dates.forEach(date => {
                         const dateKey = this.formatDateKey(date);
                         const isWeekend = date.getDay() === 0 || date.getDay() === 6;
-                        const isHoliday = this.isHoliday(date);
                         
                         this.scheduleData[ce.id][dateKey] = {
-                            status: (isWeekend || isHoliday) ? '×' : 'A',
+                            status: isWeekend ? '×' : 'A',
                             desired: false,
                             createdAt: firebase.database.ServerValue.TIMESTAMP
                         };
@@ -2822,7 +1433,7 @@ showInitError(error, step) {
                 if (startInput) startInput.value = schedule.startDate;
                 if (endInput) endInput.value = schedule.endDate;
                 
-                await this.saveCEListAndNotify();
+                await this.saveCEList();
                 this.renderScheduleTable();
                 window.showMessage('勤務表を読み込みました', 'success');
                 
@@ -2883,6 +1494,53 @@ showInitError(error, step) {
             try {
                 await window.database.ref(`${window.DATA_ROOT}/workSchedule`).set(this.scheduleData);
                 await window.database.ref(`${window.DATA_ROOT}/workTypeOverrides`).set(this.workTypeOverrides);
-                await this.saveCEListAndNotify();
+                await this.saveCEList();
                 
                 window.showMessage('勤務表を公開しました', 'success');
+                
+            } catch (error) {
+                console.error('❌ 勤務表公開エラー:', error);
+                window.showMessage('勤務表の公開に失敗しました', 'error');
+            }
+        }
+
+        printSchedule() {
+            window.print();
+        }
+
+        async saveCEList() {
+            const ceListData = {
+                list: this.ceList,
+                updatedAt: firebase.database.ServerValue.TIMESTAMP
+            };
+            await window.database.ref(`${window.DATA_ROOT}/ceList`).set(ceListData);
+            
+            try {
+                localStorage.setItem('ceListUpdated', Date.now().toString());
+            } catch (e) {
+                console.warn('localStorage通知失敗:', e);
+            }
+        }
+
+        // ユーティリティ関数
+        formatDateForInput(date) {
+            return date.toISOString().slice(0, 10);
+        }
+
+        formatDateKey(date) {
+            return date.toISOString().slice(0, 10);
+        }
+
+        formatDateDisplay(date) {
+            return date.toLocaleDateString('ja-JP');
+        }
+    }
+
+    // 初期化
+    let workScheduleEditor = null;
+    document.addEventListener('DOMContentLoaded', () => {
+        workScheduleEditor = new WorkScheduleEditor();
+    });
+    </script>
+</body>
+</html>
