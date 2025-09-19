@@ -305,10 +305,74 @@
                     }
                     debugLog(`ユーザー名からメールアドレス取得: ${email}`, 'info');
                 }
+
+                // システムUIDを取得する関数
+async function getSystemUidFromFirebaseUid(firebaseUid) {
+    try {
+        const userRef = database.ref(`ceScheduleV2/users/${firebaseUid}`);
+        const snapshot = await userRef.once('value');
+        if (snapshot.exists()) {
+            return firebaseUid; // FirebaseのUIDがそのままシステムUIDとして使用される
+        }
+        
+        // 旧システムのユーザー名ベースUIDをサポートする場合
+        const mappingRef = database.ref(`ceScheduleV2/uidMapping/${firebaseUid}`);
+        const mappingSnapshot = await mappingRef.once('value');
+        if (mappingSnapshot.exists()) {
+            return mappingSnapshot.val().systemUid;
+        }
+        
+        return firebaseUid; // デフォルトとしてFirebase UIDを使用
+    } catch (error) {
+        debugLog(`システムUID取得エラー: ${error.message}`, 'error');
+        return firebaseUid;
+    }
+}
+
+// アクティブユーザー状態を更新
+async function updateActiveUserStatus(userId, username) {
+    try {
+        const activeUsersRef = database.ref(`ceScheduleV2/activeUsers/${userId}`);
+        await activeUsersRef.set({
+            name: username,
+            loginTime: firebase.database.ServerValue.TIMESTAMP,
+            lastActivity: firebase.database.ServerValue.TIMESTAMP,
+            isOnline: true
+        });
+        
+        // 30分後に自動でオフラインにする
+        setTimeout(async () => {
+            try {
+                await activeUsersRef.update({ isOnline: false });
+            } catch (error) {
+                console.error('オフライン更新エラー:', error);
+            }
+        }, 30 * 60 * 1000);
+        
+        debugLog('アクティブユーザー状態を更新', 'success');
+    } catch (error) {
+        debugLog(`アクティブユーザー更新エラー: ${error.message}`, 'error');
+    }
+}
                 
-                // Firebase認証
-                await auth.signInWithEmailAndPassword(email, password);
-                debugLog(`認証成功: ${email}`, 'success');
+        // Firebase認証
+await auth.signInWithEmailAndPassword(email, password);
+debugLog(`認証成功: ${email}`, 'success');
+
+// UIDマッピングとセッション情報の管理
+const firebaseUid = auth.currentUser.uid;
+const systemUid = await getSystemUidFromFirebaseUid(firebaseUid);
+if (systemUid) {
+    // セッション情報を更新
+    window.USER_SESSION = window.USER_SESSION || {};
+    window.USER_SESSION.isAuthenticated = true;
+    window.USER_SESSION.userId = systemUid; // システム内のUID
+    window.USER_SESSION.firebaseUid = firebaseUid; // Firebase認証のUID
+    window.USER_SESSION.lastActivity = Date.now();
+
+    // アクティブユーザーとしてデータベースに登録
+    await updateActiveUserStatus(systemUid, loginInput);
+}
                 showStatus('loginStatus', 'ログイン成功！', 'success');
                 
             } catch (error) {
@@ -516,6 +580,9 @@
         // ページ読み込み時の初期化
         document.addEventListener('DOMContentLoaded', function() {
             debugLog('ページ読み込み完了', 'success');
+
+             // アクティブユーザー表示機能を初期化
+    initializeActiveUserDisplay();
             
             if (initializeFirebase()) {
                 debugLog('システム初期化完了', 'success');
@@ -538,6 +605,81 @@
                 }
             });
         });
+
+        // アクティブユーザー表示機能の初期化
+function initializeActiveUserDisplay() {
+    // 認証状態が確定してからアクティブユーザー監視を開始
+    const checkAuthAndStartMonitoring = () => {
+        if (auth && auth.currentUser) {
+            displayActiveUsers();
+        } else {
+            // 認証完了を待機
+            setTimeout(checkAuthAndStartMonitoring, 1000);
+        }
+    };
+    
+    // 3秒後に監視開始（認証処理完了を待つ）
+    setTimeout(checkAuthAndStartMonitoring, 3000);
+}
+
+// アクティブユーザー表示機能
+function displayActiveUsers() {
+    // 認証状態を確認してからアクセス
+    if (!auth || !auth.currentUser) {
+        debugLog('認証が必要です - アクティブユーザー表示をスキップ', 'warning');
+        return;
+    }
+    
+    const activeUsersRef = database.ref('ceScheduleV2/activeUsers');
+    
+    activeUsersRef.on('value', (snapshot) => {
+        const activeUsers = snapshot.val() || {};
+        const activeUsersList = document.getElementById('activeUsersList');
+        
+        // アクティブユーザー表示エリアがある場合のみ処理
+        if (activeUsersList) {
+            activeUsersList.innerHTML = '';
+            
+            let onlineCount = 0;
+            Object.entries(activeUsers).forEach(([userId, userData]) => {
+                if (userData.isOnline) {
+                    onlineCount++;
+                    const userElement = document.createElement('div');
+                    userElement.className = 'active-user-item flex items-center space-x-2 mb-2';
+                    userElement.innerHTML = `
+                        <i class="fas fa-user-circle text-green-500"></i>
+                        <span class="font-medium">${userData.name}</span>
+                        <small class="text-gray-500">${userData.role || 'ユーザー'}</small>
+                    `;
+                    activeUsersList.appendChild(userElement);
+                }
+            });
+            
+            debugLog(`アクティブユーザー更新: ${onlineCount}人オンライン`, 'info');
+        } else {
+            // アクティブユーザー表示エリアがない場合は、コンソールにログ出力
+            const onlineUsers = Object.values(activeUsers).filter(u => u.isOnline);
+            debugLog(`現在のアクティブユーザー: ${onlineUsers.length}人`, 'info');
+        }
+    }, (error) => {
+        debugLog(`アクティブユーザー取得エラー: ${error.message}`, 'error');
+    });
+}
+
+// ページ離脱時にオフライン状態に更新
+window.addEventListener('beforeunload', () => {
+    if (auth && auth.currentUser && window.USER_SESSION && window.USER_SESSION.userId) {
+        try {
+            database.ref(`ceScheduleV2/activeUsers/${window.USER_SESSION.userId}`).update({
+                isOnline: false,
+                lastActivity: firebase.database.ServerValue.TIMESTAMP
+            });
+        } catch (error) {
+            console.error('オフライン状態更新エラー:', error);
+        }
+    }
+});
+        
     </script>
 </body>
 </html>
