@@ -731,7 +731,8 @@ class WorkScheduleViewer {
             this.isInitialized = false;
             this.selectedDate = new Date();
             this.monthlyTasks = {};
-            this.eventsListener = null;
+            this.eventsRef = null;
+            this.eventsCallback = null;
             this.init();
         }
 
@@ -913,23 +914,24 @@ async loadAndRenderEventsForSelectedDate() {
             window.location.href = 'index.html';
         }
 
-        setupRealtimeUpdates() {
+setupRealtimeUpdates() {
     const updateEvents = () => {
         const dateKey = this.formatDate(this.selectedDate);
         
-        // 既存のリスナーがあれば削除
-        if (this.eventsListener) {
-            this.eventsListener.off();
+        // 既存のリスナーがあれば正しく解除
+        if (this.eventsRef && this.eventsCallback) {
+            this.eventsRef.off('value', this.eventsCallback);
         }
         
         // 新しいリスナー設定
-        this.eventsListener = window.database.ref(`${window.DATA_ROOT}/events/byDate/${dateKey}`)
-            .on('value', (snapshot) => {
-                console.log('🔄 イベントデータ更新検知');
-                setTimeout(() => {
-                    this.loadAndRenderEventsForSelectedDate();
-                }, 300);
-            });
+        this.eventsRef = window.database.ref(`${window.DATA_ROOT}/events/byDate/${dateKey}`);
+        this.eventsCallback = (snapshot) => {
+            console.log('🔄 イベントデータ更新検知');
+            setTimeout(() => {
+                this.loadAndRenderEventsForSelectedDate();
+            }, 300);
+        };
+        this.eventsRef.on('value', this.eventsCallback);
     };
     
     // 初回設定
