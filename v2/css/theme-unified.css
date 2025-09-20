@@ -1476,3 +1476,102 @@ body.theme-unified {
         display: none !important;
     }
 }
+
+/* ==========================================================================
+   勤務区分表UI改善スタイル
+   ========================================================================== */
+
+/* 期間表示ヘッダー */
+.period-display-header {
+    text-align: center;
+    margin-bottom: 20px;
+    padding: 15px;
+    background: rgba(255, 255, 255, 0.8);
+    border-radius: 12px;
+}
+
+/* 下部コントロールフッター */
+.schedule-controls-footer {
+    margin-top: 20px;
+    padding: 15px;
+    background: rgba(255, 255, 255, 0.9);
+    border-radius: 12px;
+    border: 1px solid #e0e0e0;
+}
+
+.controls-container {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 15px;
+}
+
+.navigation-controls {
+    display: flex;
+    gap: 10px;
+}
+
+.admin-controls-container {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.admin-controls {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    background: rgba(220, 53, 69, 0.1);
+    border: 1px dashed #dc3545;
+    border-radius: 8px;
+}
+
+.admin-label {
+    font-size: 12px;
+    font-weight: bold;
+    color: #dc3545;
+}
+
+/* 管理者ボタンスタイル */
+.btn-small {
+    font-size: 10px;
+    padding: 4px 8px;
+    border-radius: 4px;
+    border: none;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    min-width: 28px;
+    height: 28px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.btn-small:hover {
+    transform: scale(1.05);
+    opacity: 0.9;
+}
+
+/* 右上の勤務時間表示のz-index調整 */
+.work-time-compact {
+    z-index: 50 !important;
+    pointer-events: none;
+}
+
+/* レスポンシブ対応 */
+@media (max-width: 768px) {
+    .controls-container {
+        flex-direction: column;
+        text-align: center;
+    }
+    
+    .navigation-controls {
+        order: 2;
+    }
+    
+    .admin-controls-container {
+        order: 1;
+    }
+}
