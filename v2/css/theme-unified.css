@@ -1195,3 +1195,284 @@ body.theme-unified {
     background: rgba(239, 68, 68, 0.2);
     transform: scale(1.2);
 }
+/* ==========================================================================
+   勤務区分表表示・管理機能強化スタイル（V2.1対応）
+   ========================================================================== */
+
+/* 管理者用ボタンスタイル強化 */
+.btn-small {
+    font-size: 10px;
+    padding: 2px 6px;
+    border-radius: 3px;
+    border: none;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    margin: 0 2px;
+}
+
+.btn-small:hover {
+    transform: scale(1.05);
+    opacity: 0.9;
+}
+
+/* 勤務区分表コンテナの改善 */
+.schedule-display-container {
+    background: var(--glass-bg);
+    backdrop-filter: blur(10px);
+    border: 1px solid var(--glass-border);
+    border-radius: 16px;
+    padding: 20px;
+    margin: 20px 0;
+}
+
+.period-navigation {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 20px;
+    padding: 15px;
+    background: rgba(255, 255, 255, 0.8);
+    border-radius: 12px;
+}
+
+.period-display {
+    text-align: center;
+    flex-grow: 1;
+    margin: 0 20px;
+}
+
+/* 勤務区分表テーブルの改善 */
+.work-schedule-table-wrapper {
+    overflow-x: auto;
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+    margin: 20px 0;
+}
+
+.work-schedule-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 10px;
+    min-width: 1200px;
+    table-layout: fixed;
+}
+
+.work-schedule-table th,
+.work-schedule-table td {
+    border: 1px solid #e0e0e0;
+    padding: 2px 4px;
+    text-align: center;
+    vertical-align: middle;
+    height: 28px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.work-schedule-table th {
+    background: linear-gradient(135deg, #f8f9fa, #e9ecef) !important;
+    font-weight: 600;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+}
+
+/* 固定列の改善 */
+.work-schedule-table th.name-header,
+.work-schedule-table td.name-cell {
+    width: 100px;
+    min-width: 100px;
+    text-align: left;
+    padding-left: 5px;
+    position: sticky;
+    left: 0;
+    z-index: 15;
+}
+
+.work-schedule-table th.name-header {
+    background: linear-gradient(135deg, #f8f9fa, #e9ecef) !important;
+    z-index: 20;
+}
+
+.work-schedule-table td.name-cell {
+    background: white !important;
+}
+
+/* 勤務区分オーバーライド反映の確実な表示 */
+.work-schedule-table .work-cell.type-ope { 
+    background: #87CEEB !important; 
+    color: #1E3A8A !important; 
+}
+
+.work-schedule-table .work-cell.type-ope.status-A1 { 
+    background: #1E3A8A !important; 
+    color: white !important; 
+}
+
+.work-schedule-table .work-cell.type-me { 
+    background: #90EE90 !important; 
+    color: #006400 !important; 
+}
+
+.work-schedule-table .work-cell.type-hd { 
+    background: #FFB6C1 !important; 
+    color: #8B008B !important; 
+}
+
+.work-schedule-table .work-cell.type-flex { 
+    background: #FFFF99 !important; 
+    color: #B8860B !important; 
+}
+
+/* 非勤務状態の白色表示 */
+.work-schedule-table .work-cell.status-非,
+.work-schedule-table .work-cell.status-×,
+.work-schedule-table .work-cell.status-年,
+.work-schedule-table .work-cell.status-出,
+.work-schedule-table .work-cell.status-研 {
+    background: white !important;
+    color: #333 !important;
+}
+
+/* 休日セルの白色表示 */
+.work-schedule-table .work-cell.holiday {
+    background: white !important;
+    color: #333 !important;
+}
+
+/* 希望勤務の下線表示 */
+.work-schedule-table .work-cell.desired {
+    text-decoration: underline !important;
+    text-decoration-thickness: 1px;
+    text-underline-offset: 2px;
+}
+
+/* 警告表示の強調 */
+.work-schedule-table .warning-count {
+    color: #dc3545 !important;
+    font-weight: 700 !important;
+    background: #ffe6e6 !important;
+}
+
+/* 集計セルの統一 */
+.work-schedule-table th.summary-header,
+.work-schedule-table td.summary-cell {
+    width: 40px;
+    min-width: 40px;
+    background: #f8f9fa !important;
+    font-weight: 500;
+    font-size: 8px;
+}
+
+/* フッター集計行の改善 */
+.work-schedule-table tfoot .footer-summary-row {
+    background: #f1f3f4 !important;
+    border-top: 2px solid #dee2e6 !important;
+}
+
+.work-schedule-table tfoot .footer-summary-row th.type-label {
+    background: #e9ecef !important;
+    font-weight: 700;
+    text-align: left !important;
+    padding-left: 5px !important;
+    position: sticky;
+    left: 0;
+    z-index: 15;
+}
+
+/* 管理者コントロール */
+.admin-controls {
+    display: inline-flex;
+    gap: 8px;
+    margin-left: 15px;
+    align-items: center;
+}
+
+.admin-controls .btn-small {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    border-radius: 4px;
+    font-size: 10px;
+    transition: all 0.2s ease;
+}
+
+.admin-controls .btn-small:hover {
+    transform: scale(1.1);
+}
+
+/* 表示状態インジケータ */
+.visibility-indicator {
+    display: inline-block;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 10px;
+    font-weight: bold;
+    margin-left: 8px;
+}
+
+.visibility-indicator.hidden {
+    background: #fee2e2;
+    color: #dc2626;
+}
+
+.visibility-indicator.visible {
+    background: #d1fae5;
+    color: #059669;
+}
+
+/* レスポンシブ対応 */
+@media (max-width: 1400px) {
+    .work-schedule-table {
+        font-size: 9px;
+    }
+    
+    .work-schedule-table th,
+    .work-schedule-table td {
+        padding: 1px 2px;
+        height: 24px;
+    }
+}
+
+@media (max-width: 1200px) {
+    .work-schedule-table {
+        font-size: 8px;
+    }
+    
+    .work-schedule-table th.name-header,
+    .work-schedule-table td.name-cell {
+        width: 80px;
+        min-width: 80px;
+    }
+}
+
+/* 印刷時の最適化 */
+@media print {
+    .work-schedule-table-wrapper {
+        overflow: visible !important;
+        box-shadow: none !important;
+        border-radius: 0 !important;
+    }
+    
+    .work-schedule-table {
+        font-size: 7px !important;
+        min-width: auto !important;
+        width: 100% !important;
+    }
+    
+    .work-schedule-table th,
+    .work-schedule-table td {
+        border: 0.5px solid #000 !important;
+        padding: 0.5px 1px !important;
+        height: auto !important;
+    }
+    
+    .admin-controls,
+    .btn-small,
+    .period-navigation button {
+        display: none !important;
+    }
+}
