@@ -276,64 +276,62 @@
     class AdminUserManagement {
         constructor() {
             this.database = null;
-            this.pendingUsers = [];
-            this.activeUsers = [];
-            this.currentPassword = '';
-            this.isReady = false;
-            this.init();
-            this.permissions = {};
+this.pendingUsers = [];
+this.activeUsers = [];
+this.currentPassword = '';
+this.isReady = false;
+this.permissions = {};
+this.init();
         }
 
-        async init() {
-            try {
-                console.log('⏳ Firebase初期化待機中...');
-                await window.waitForFirebase();
-                console.log('✅ Firebase準備完了');
-                
-// 認証完了を待ってからデータ読み込みを開始
-if (window.auth && window.auth.currentUser) {
-    // 既にログイン済みの場合
-    initializeAdminFunctions();
-} else {
-    // 認証状態の監視を設定
-    window.auth.onAuthStateChanged((user) => {
-        if (user) {
-            console.log('🔐 認証確認済み:', user.uid);
-            // 少し待ってから初期化（認証情報の伝播を待つ）
-            setTimeout(initializeAdminFunctions, 500);
-        }
-    });
-}
-
-// 管理機能の初期化
-function initializeAdminFunctions() {
-    console.log('🚀 管理機能初期化開始');
-    
-    // 権限設定を先に読み込み
-    loadPermissionSettings().then(() => {
-        // 権限確認後にデータ読み込み
-        loadPendingUsers();
-        loadActiveUsers();
+ async init() {
+    try {
+        console.log('⏳ Firebase初期化待機中...');
+        await window.waitForFirebase();
+        console.log('✅ Firebase準備完了');
         
-        console.log('✅ 管理機能初期化完了');
-    }).catch((error) => {
-        console.error('❌ 権限設定読み込みエラー:', error);
-        // 権限設定に失敗しても基本機能は動作させる
-        loadPendingUsers();
-        loadActiveUsers();
-    });
+        this.database = window.database;
+        
+        // 認証状態の確認
+        if (window.auth && window.auth.currentUser) {
+            console.log('🔐 認証確認済み:', window.auth.currentUser.uid);
+            this.initializeAdminFunctions();
+        } else {
+            // 認証状態の監視を設定
+            window.auth.onAuthStateChanged((user) => {
+                if (user) {
+                    console.log('🔐 認証確認済み:', user.uid);
+                    // 少し待ってから初期化（認証情報の伝播を待つ）
+                    setTimeout(() => this.initializeAdminFunctions(), 500);
+                }
+            });
+        }
+        
+    } catch (error) {
+        console.error('❌ 初期化エラー:', error);
+        setTimeout(() => this.init(), 3000); // 3秒後にリトライ
+    }
 }
 
         setupEventListeners() {
-            const generateBtn = document.getElementById('generatePasswordBtn');
-            if (generateBtn) {
-                generateBtn.onclick = () => this.generatePassword();
-            }
+    const generateBtn = document.getElementById('generatePasswordBtn');
+    if (generateBtn) {
+        generateBtn.onclick = () => this.generatePassword();
+    }
 
-            const createBtn = document.getElementById('createUserBtn');
-            if (createBtn) {
-                createBtn.onclick = () => this.createUser();
-            }
+    const createBtn = document.getElementById('createUserBtn');
+    if (createBtn) {
+        createBtn.onclick = () => this.createUser();
+    }
+
+    // 権限設定ボタン
+    const savePermissionsBtn = document.getElementById('savePermissionsBtn');
+    if (savePermissionsBtn) {
+        savePermissionsBtn.onclick = () => this.savePermissions();
+    }
+    
+    console.log('✅ イベントリスナー設定完了');
+}
 
       // 権限設定ボタン
     const savePermissionsBtn = document.getElementById('savePermissionsBtn');
@@ -492,64 +490,70 @@ showPermissionsStatus(message, type = 'info') {
             }
         }
 
-        // 待機ユーザー読み込み関数の修正
-async function loadPendingUsers() {
-    try {
-        // 認証状態を確認
-        if (!window.auth || !window.auth.currentUser) {
-            console.log('認証待機中...');
-            setTimeout(loadPendingUsers, 1000);
-            return;
-        }
-
-        console.log('📋 待機ユーザー読み込み開始');
-        const pendingRef = window.database.ref('ceScheduleV2/pendingUsers');
-        
-        pendingRef.on('value', (snapshot) => {
-            const pendingUsers = snapshot.val() || {};
-            updatePendingUsersDisplay(pendingUsers);
-            console.log('✅ 待機ユーザー読み込み完了:', Object.keys(pendingUsers).length);
-        }, (error) => {
-            console.error('❌ 待機ユーザー読み込みエラー:', error);
-            // エラー時は空の状態で表示を更新
-            updatePendingUsersDisplay({});
-        });
-
-    } catch (error) {
-        console.error('❌ 待機ユーザー読み込み例外:', error);
-        // 5秒後にリトライ
-        setTimeout(loadPendingUsers, 5000);
+ // 待機ユーザー読み込み（クラスメソッド版）
+loadPendingUsers() {
+    if (!this.database) {
+        console.error('❌ データベース未初期化');
+        setTimeout(() => this.loadPendingUsers(), 2000);
+        return;
     }
+
+    console.log('📋 待機ユーザー読み込み開始');
+    
+    const pendingRef = this.database.ref('ceScheduleV2/pendingUsers');
+    
+    pendingRef.on('value', (snapshot) => {
+        try {
+            const pendingUsers = snapshot.val() || {};
+            this.pendingUsers = Object.entries(pendingUsers).map(([username, userData]) => ({
+                username,
+                ...userData
+            }));
+            
+            this.renderPendingUsersTable();
+            console.log('✅ 待機ユーザー読み込み完了:', this.pendingUsers.length + '人');
+        } catch (error) {
+            console.error('❌ 待機ユーザーデータ処理エラー:', error);
+        }
+    }, (error) => {
+        console.error('❌ 待機ユーザー読み込みエラー:', error);
+        // エラー時は空で表示
+        this.pendingUsers = [];
+        this.renderPendingUsersTable();
+    });
 }
 
-// アクティブユーザー読み込み関数の修正
-async function loadActiveUsers() {
-    try {
-        // 認証状態を確認
-        if (!window.auth || !window.auth.currentUser) {
-            console.log('認証待機中...');
-            setTimeout(loadActiveUsers, 1000);
-            return;
-        }
-
-        console.log('👥 アクティブユーザー読み込み開始');
-        const activeRef = window.database.ref('ceScheduleV2/activeUsers');
-        
-        activeRef.on('value', (snapshot) => {
-            const activeUsers = snapshot.val() || {};
-            updateActiveUsersDisplay(activeUsers);
-            console.log('✅ アクティブユーザー読み込み完了:', Object.keys(activeUsers).length);
-        }, (error) => {
-            console.error('❌ アクティブユーザー読み込みエラー:', error);
-            // エラー時は空の状態で表示を更新
-            updateActiveUsersDisplay({});
-        });
-
-    } catch (error) {
-        console.error('❌ アクティブユーザー読み込み例外:', error);
-        // 5秒後にリトライ
-        setTimeout(loadActiveUsers, 5000);
+// アクティブユーザー読み込み（クラスメソッド版）
+loadActiveUsers() {
+    if (!this.database) {
+        console.error('❌ データベース未初期化');
+        setTimeout(() => this.loadActiveUsers(), 2000);
+        return;
     }
+
+    console.log('👥 アクティブユーザー読み込み開始');
+    
+    const usersRef = this.database.ref('ceScheduleV2/users');
+    
+    usersRef.on('value', (snapshot) => {
+        try {
+            const users = snapshot.val() || {};
+            this.activeUsers = Object.entries(users).map(([uid, userData]) => ({
+                uid,
+                ...userData
+            }));
+            
+            this.renderActiveUsersTable();
+            console.log('✅ アクティブユーザー読み込み完了:', this.activeUsers.length + '人');
+        } catch (error) {
+            console.error('❌ アクティブユーザーデータ処理エラー:', error);
+        }
+    }, (error) => {
+        console.error('❌ アクティブユーザー読み込みエラー:', error);
+        // エラー時は空で表示
+        this.activeUsers = [];
+        this.renderActiveUsersTable();
+    });
 }
 
         renderPendingUsersTable() {
