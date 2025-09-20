@@ -190,58 +190,36 @@
             </div>
 
             <!-- CE勤務区分表（表示専用・改善版） -->
-            <div id="ceManagementContent" class="screen-content" style="display:none; position: relative;">
-                <!-- 勤務時間帯説明（右上極小配置） -->
-         <div class="work-time-compact" style="position: absolute; top: 15px; right: 15px; background: rgba(248, 249, 250, 0.95); border: 1px dashed #e0e0e0; border-radius: 4px; padding: 4px 6px; font-size: 8px; z-index: 100; max-width: 300px; line-height: 1.2; white-space: nowrap;">
-    <table style="width: 100%; border-collapse: collapse;">
-        <thead>
-            <tr>
-                <th style="padding: 2px 4px; font-size: 8px; background: #f2f5f7; font-weight: 600; text-align: left;">区分</th>
-                <th style="padding: 2px 4px; font-size: 8px; background: #f2f5f7; font-weight: 600; text-align: left;">勤務時間</th>
-                <th style="padding: 2px 4px; font-size: 8px; background: #f2f5f7; font-weight: 600; text-align: left;">休憩時間</th>
-            </tr>
-        </thead>
-        <tbody>
-            <tr><td style="padding: 2px 4px; font-size: 8px;">A</td><td style="padding: 2px 4px; font-size: 8px;">8:00〜16:30</td><td style="padding: 2px 4px; font-size: 8px;">11:45～12:30</td></tr>
-            <tr><td style="padding: 2px 4px; font-size: 8px;">A1</td><td style="padding: 2px 4px; font-size: 8px;">7:00〜15:30</td><td style="padding: 2px 4px; font-size: 8px;">11:45～12:30</td></tr>
-            <tr><td style="padding: 2px 4px; font-size: 8px;">B</td><td style="padding: 2px 4px; font-size: 8px;">8:00〜翌8:00（0:00～6:30宿直相当勤務）</td><td style="padding: 2px 4px; font-size: 8px;">11:45～12:45及び16:45～17:45</td></tr>
-            <tr><td style="padding: 2px 4px; font-size: 8px;">×</td><td style="padding: 2px 4px; font-size: 8px;">休日</td><td style="padding: 2px 4px; font-size: 8px;">-</td></tr>
-        </tbody>
-    </table>
+  <div id="ceManagementContent" class="screen-content" style="display:none; position: relative;">
+    <!-- 勤務時間帯説明（右上極小配置） -->
+    <div class="work-time-compact" style="position: absolute; top: 15px; right: 15px; background: rgba(248, 249, 250, 0.95); border: 1px dashed #e0e0e0; border-radius: 4px; padding: 4px 6px; font-size: 8px; z-index: 50; max-width: 300px; line-height: 1.2; white-space: nowrap;">
+        <!-- 既存の勤務時間表示テーブル -->
+    </div>
+
+    <div class="schedule-display-container">
+        <!-- 上部：期間表示のみ（ボタンは削除） -->
+        <div class="period-display-header">
+            <div id="currentPeriodDisplay" class="text-lg font-bold">期間を読み込み中...</div>
+            <div class="text-sm text-gray-500">28日間の勤務表</div>
+        </div>
+        
+        <div class="text-center mb-4">
+            <button id="openScheduleEditorBtn" class="btn-unified btn-primary-unified">
+                <i class="fas fa-edit mr-2"></i>勤務表を作成・編集
+            </button>
+        </div>
+
+        <!-- 勤務区分表表示エリア -->
+        <div id="workScheduleDisplayArea" class="text-center py-8 text-gray-500">
+            <!-- 勤務表がここに表示される -->
+        </div>
+
+        <!-- 下部：期間ナビゲーションと管理者コントロール -->
+        <div id="scheduleControlsFooter" class="schedule-controls-footer">
+            <!-- JavaScriptで動的に生成 -->
+        </div>
+    </div>
 </div>
-
-                <div class="schedule-display-container">
-                    <div class="period-navigation">
-                        <button id="prevPeriodBtn" class="btn-unified btn-outline-unified">
-                            <i class="fas fa-chevron-left mr-1"></i>前の期間
-                        </button>
-                        <div class="period-display">
-                            <div id="currentPeriodDisplay" class="text-lg font-bold">期間を読み込み中...</div>
-                            <div class="text-sm text-gray-500">28日間の勤務表</div>
-                        </div>
-                        <button id="nextPeriodBtn" class="btn-unified btn-outline-unified">
-                            次の期間<i class="fas fa-chevron-right ml-1"></i>
-                        </button>
-                    </div>
-                    
-                    <div class="text-center mb-4">
-                        <button id="openScheduleEditorBtn" class="btn-unified btn-primary-unified">
-                            <i class="fas fa-edit mr-2"></i>勤務表を作成・編集
-                        </button>
-                    </div>
-
-                    <!-- 勤務区分表表示エリア -->
-                    <div id="workScheduleDisplayArea" class="text-center py-8 text-gray-500">
-                        <i class="fas fa-table text-4xl mb-4"></i>
-                        <h3 class="text-lg font-semibold mb-2">勤務区分表</h3>
-                        <p class="mb-4">作成済みの勤務表がここに表示されます</p>
-                        <button onclick="document.getElementById('openScheduleEditorBtn').click()" 
-                                class="btn-unified btn-primary-unified">
-                            <i class="fas fa-plus mr-2"></i>最初の勤務表を作成
-                        </button>
-                    </div>
-                </div>
-            </div>
 
             <!-- その他のタブコンテンツ -->
             <div id="calendarContent" class="screen-content" style="display:none;">
@@ -385,45 +363,85 @@ class WorkScheduleViewer {
         if (editorBtn) editorBtn.onclick = () => this.openScheduleEditor();
     }
 
-    async displayCurrentPeriod() {
-        const displayEl = document.getElementById('currentPeriodDisplay');
-        const areaEl = document.getElementById('workScheduleDisplayArea');
-        
-        if (this.availablePeriods.length === 0) {
-            this.displayNoPeriods();
-            return;
-        }
-
-        const currentPeriod = this.availablePeriods[this.currentPeriodIndex];
-        if (displayEl) {
-            const visibilityStatus = currentPeriod.isVisible === false ? ' (非公開)' : '';
-            displayEl.innerHTML = `
-                <div>${currentPeriod.startDate} ～ ${currentPeriod.endDate}${visibilityStatus}</div>
-                <div class="text-sm text-gray-500">
-                    (${this.currentPeriodIndex + 1}/${this.availablePeriods.length})
-                    ${window.userRole === 'admin' ? this.renderAdminControls(currentPeriod) : ''}
-                </div>
-            `;
-        }
-
-        await this.renderWorkScheduleTable(currentPeriod.key);
+async displayCurrentPeriod() {
+    const displayEl = document.getElementById('currentPeriodDisplay');
+    const footerEl = document.getElementById('scheduleControlsFooter');
+    
+    if (this.availablePeriods.length === 0) {
+        this.displayNoPeriods();
+        return;
     }
 
-    renderAdminControls(period) {
-        return `
-            <div class="inline-flex gap-2 ml-4">
-                <button onclick="window.workScheduleViewer.toggleVisibility('${period.key}')" 
-                        class="btn-small ${period.isVisible === false ? 'bg-green-500' : 'bg-yellow-500'} text-white" 
-                        title="表示/非表示切替">
-                    <i class="fas fa-eye${period.isVisible === false ? '' : '-slash'}"></i>
-                </button>
-                <button onclick="window.workScheduleViewer.deleteSchedule('${period.key}')" 
-                        class="btn-small bg-red-500 text-white" title="削除">
-                    <i class="fas fa-trash"></i>
-                </button>
+    const currentPeriod = this.availablePeriods[this.currentPeriodIndex];
+    
+    // 上部の期間表示
+    if (displayEl) {
+        const visibilityStatus = currentPeriod.isVisible === false ? ' (非公開)' : '';
+        displayEl.innerHTML = `
+            <div>${currentPeriod.startDate} ～ ${currentPeriod.endDate}${visibilityStatus}</div>
+            <div class="text-sm text-gray-500">
+                (${this.currentPeriodIndex + 1}/${this.availablePeriods.length})
             </div>
         `;
     }
+
+    // 勤務表の描画
+    await this.renderWorkScheduleTable(currentPeriod.key);
+    
+    // 下部コントロールの描画
+    if (footerEl) {
+        footerEl.innerHTML = `
+            <div class="controls-container">
+                <div class="navigation-controls">
+                    <button id="prevPeriodBtnFooter" class="btn-unified btn-outline-unified">
+                        <i class="fas fa-chevron-left mr-1"></i>前の期間
+                    </button>
+                    <button id="nextPeriodBtnFooter" class="btn-unified btn-outline-unified">
+                        次の期間<i class="fas fa-chevron-right ml-1"></i>
+                    </button>
+                </div>
+                <div class="admin-controls-container">
+                    ${this.renderAdminControls(currentPeriod)}
+                </div>
+            </div>
+        `;
+        
+        // イベントリスナーの設定
+        const prevBtn = document.getElementById('prevPeriodBtnFooter');
+        const nextBtn = document.getElementById('nextPeriodBtnFooter');
+        if (prevBtn) prevBtn.onclick = () => this.navigatePeriod(-1);
+        if (nextBtn) nextBtn.onclick = () => this.navigatePeriod(1);
+    }
+}
+
+renderAdminControls(period) {
+    // より厳密な管理者権限チェック
+    const isAdmin = (
+        window.userRole === 'admin' && 
+        window.currentUserData && 
+        window.currentUserData.role === 'admin'
+    );
+    
+    if (!isAdmin) {
+        console.log('👤 管理者権限なし - コントロール非表示');
+        return '';
+    }
+    
+    return `
+        <div class="admin-controls">
+            <span class="admin-label">管理者操作:</span>
+            <button onclick="window.workScheduleViewer.toggleVisibility('${period.key}')" 
+                    class="btn-small ${period.isVisible === false ? 'bg-green-500' : 'bg-yellow-500'} text-white" 
+                    title="表示/非表示切替">
+                <i class="fas fa-eye${period.isVisible === false ? '' : '-slash'}"></i>
+            </button>
+            <button onclick="window.workScheduleViewer.deleteSchedule('${period.key}')" 
+                    class="btn-small bg-red-500 text-white" title="削除">
+                <i class="fas fa-trash"></i>
+            </button>
+        </div>
+    `;
+}
 
     displayNoPeriods() {
         const displayEl = document.getElementById('currentPeriodDisplay');
@@ -625,11 +643,17 @@ class WorkScheduleViewer {
     }
 
     // 管理者機能：表示/非表示切替
-    async toggleVisibility(periodKey) {
-        if (window.userRole !== 'admin') {
-            window.showMessage('管理者権限が必要です', 'warning');
-            return;
-        }
+async toggleVisibility(periodKey) {
+    const isAdmin = (
+        window.userRole === 'admin' && 
+        window.currentUserData && 
+        window.currentUserData.role === 'admin'
+    );
+    
+    if (!isAdmin) {
+        window.showMessage('管理者権限が必要です', 'warning');
+        return;
+    }
 
         try {
             const snapshot = await window.database.ref(`${window.DATA_ROOT}/workSchedules/${periodKey}/metadata`).once('value');
@@ -647,11 +671,17 @@ class WorkScheduleViewer {
     }
 
     // 管理者機能：勤務表削除
-    async deleteSchedule(periodKey) {
-        if (window.userRole !== 'admin') {
-            window.showMessage('管理者権限が必要です', 'warning');
-            return;
-        }
+async deleteSchedule(periodKey) {
+    const isAdmin = (
+        window.userRole === 'admin' && 
+        window.currentUserData && 
+        window.currentUserData.role === 'admin'
+    );
+    
+    if (!isAdmin) {
+        window.showMessage('管理者権限が必要です', 'warning');
+        return;
+    }
 
         const period = this.availablePeriods.find(p => p.key === periodKey);
         if (!period) return;
