@@ -107,7 +107,7 @@
             position: relative;
         }
 
-        /* 勤務表テーブル（レスポンシブ対応） */
+        /* 勤務表テーブル（画面フィット対応） */
         .schedule-table-container {
             flex: 1;
             overflow: auto;
@@ -120,18 +120,19 @@
         .schedule-table {
             width: 100%;
             border-collapse: collapse;
-            font-size: 10px;
-            table-layout: auto;
-            min-width: 1200px;
+            font-size: 9px;
+            table-layout: fixed;
+            min-width: 1000px;
+            transform-origin: top left;
         }
 
         .schedule-table th,
         .schedule-table td {
             border: 1px solid #e0e0e0;
-            padding: 3px;
+            padding: 2px;
             text-align: center;
             vertical-align: middle;
-            height: 28px;
+            height: 24px;
             overflow: hidden;
             white-space: nowrap;
         }
@@ -142,7 +143,7 @@
             position: sticky;
             top: 0;
             z-index: 10;
-            font-size: 9px;
+            font-size: 8px;
         }
 
         /* 固定列 */
@@ -151,9 +152,9 @@
             left: 0;
             background: white;
             z-index: 15;
-            width: 35px;
-            min-width: 35px;
-            max-width: 35px;
+            width: 30px;
+            min-width: 30px;
+            max-width: 30px;
         }
 
         .no-header {
@@ -163,14 +164,14 @@
 
         .name-header, .name-cell {
             position: sticky;
-            left: 35px;
+            left: 30px;
             background: white;
             z-index: 15;
-            width: 100px;
-            min-width: 100px;
-            max-width: 100px;
+            width: 80px;
+            min-width: 80px;
+            max-width: 80px;
             text-align: left;
-            padding-left: 4px;
+            padding-left: 3px;
         }
 
         .name-header {
@@ -189,22 +190,22 @@
 
         /* 日付列 */
         .date-col {
-            width: 28px;
-            min-width: 28px;
-            max-width: 28px;
+            width: 24px;
+            min-width: 24px;
+            max-width: 24px;
         }
 
         /* CE番号 */
         .ce-number {
             background: var(--brand-primary);
             color: white;
-            width: 20px;
-            height: 20px;
+            width: 18px;
+            height: 18px;
             border-radius: 50%;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 9px;
+            font-size: 8px;
             font-weight: bold;
             cursor: pointer;
             margin: 0 auto;
@@ -220,7 +221,7 @@
             transition: all 0.2s ease;
             font-weight: 600;
             position: relative;
-            font-size: 9px;
+            font-size: 8px;
         }
 
         .work-cell:hover {
@@ -254,18 +255,26 @@
             color: #B8860B; 
         }
 
-        /* 勤務区分オーバーライド時の背景色 */
-        .work-cell.override {
-            border: 2px solid #ff6b35 !important;
-            box-shadow: 0 0 4px rgba(255, 107, 53, 0.4) !important;
-        }
-
-        /* 非勤務状態 */
+        /* 非勤務状態（白色表示） */
         .work-cell.status-非,
         .work-cell.status-×,
         .work-cell.status-年,
         .work-cell.status-出,
         .work-cell.status-研 {
+            background: white !important;
+            color: #333 !important;
+            border: 1px solid #ddd !important;
+        }
+
+        /* 休日セル（土日祝日は白色） */
+        .work-cell.holiday {
+            background: white !important;
+            color: #333 !important;
+            border: 1px solid #ddd !important;
+        }
+
+        /* 休日のB勤務も白色 */
+        .work-cell.holiday.status-B {
             background: white !important;
             color: #333 !important;
             border: 1px solid #ddd !important;
@@ -278,19 +287,14 @@
             text-underline-offset: 2px;
         }
 
-        /* 休日セル */
-        .work-cell.holiday {
-            background: linear-gradient(135deg, #f0f8ff, #e6f3ff);
-        }
-
         /* サマリーセル */
         .summary-cell {
             background: #f8f9fa;
             font-weight: 500;
-            width: 35px;
-            min-width: 35px;
-            max-width: 35px;
-            font-size: 8px;
+            width: 30px;
+            min-width: 30px;
+            max-width: 30px;
+            font-size: 7px;
         }
 
         /* 集計行スタイル */
@@ -301,15 +305,15 @@
 
         .summary-row td {
             font-weight: 600;
-            font-size: 8px;
-            padding: 2px !important;
+            font-size: 7px;
+            padding: 1px !important;
         }
 
         .summary-label {
             background: #e9ecef !important;
             font-weight: 700;
             text-align: left !important;
-            padding-left: 4px !important;
+            padding-left: 3px !important;
         }
 
         .warning-count {
@@ -458,9 +462,10 @@
             }
             
             .schedule-table { 
-                font-size: 7px !important; 
+                font-size: 6px !important; 
                 min-width: auto !important;
                 width: 100% !important;
+                transform: none !important;
             }
             
             .schedule-table th,
@@ -796,6 +801,18 @@
             this.savedSchedules = {};
             this.isReady = false;
             
+            // 2024-2025年の日本の祝日データ
+            this.holidays = new Set([
+                '2024-01-01', '2024-01-08', '2024-02-11', '2024-02-12', '2024-02-23',
+                '2024-03-20', '2024-04-29', '2024-05-03', '2024-05-04', '2024-05-05',
+                '2024-07-15', '2024-08-11', '2024-08-12', '2024-09-16', '2024-09-22',
+                '2024-09-23', '2024-10-14', '2024-11-03', '2024-11-04', '2024-11-23',
+                '2024-12-23', '2025-01-01', '2025-01-13', '2025-02-11', '2025-02-23',
+                '2025-03-20', '2025-04-29', '2025-05-03', '2025-05-04', '2025-05-05',
+                '2025-07-21', '2025-08-11', '2025-09-15', '2025-09-23', '2025-10-13',
+                '2025-11-03', '2025-11-23', '2025-12-23'
+            ]);
+            
             // 通常順の定義（27名）
             this.normalOrder = [
                 '安孫子明博', '八鍬純', '杉山陽子', '中村圭佑', '石山智之', 
@@ -809,12 +826,44 @@
             this.init();
         }
 
+        // 日付処理ヘルパー関数（タイムゾーン問題を解決）
+        createDateFromKey(dateKey) {
+            const [year, month, day] = dateKey.split('-').map(Number);
+            return new Date(year, month - 1, day);
+        }
+
+        formatDateKey(date) {
+            const year = date.getFullYear();
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const day = String(date.getDate()).padStart(2, '0');
+            return `${year}-${month}-${day}`;
+        }
+
+        formatDateForInput(date) {
+            return this.formatDateKey(date);
+        }
+
+        formatDateDisplay(date) {
+            return date.toLocaleDateString('ja-JP');
+        }
+
+        // 祝日判定
+        isHoliday(date) {
+            const dateKey = this.formatDateKey(date);
+            return this.holidays.has(dateKey);
+        }
+
+        // 休日判定（土日祝日）
+        isWeekendOrHoliday(date) {
+            const dayOfWeek = date.getDay();
+            return dayOfWeek === 0 || dayOfWeek === 6 || this.isHoliday(date);
+        }
+
         // 勤務区分の実効値を取得（複数オーバーライド対応）
         getEffectiveWorkType(ceId, dateKey) {
             const ce = this.ceList.find(c => c.id === ceId);
             if (!ce) return 'ME';
 
-            // 複数のオーバーライドから該当するものを探す
             const overrides = this.workTypeOverrides[ceId];
             if (Array.isArray(overrides)) {
                 for (const override of overrides) {
@@ -823,26 +872,26 @@
                     }
                 }
             } else if (overrides && overrides.startDate && dateKey >= overrides.startDate && dateKey <= overrides.endDate) {
-                // 旧形式との互換性
                 return overrides.workType;
             }
             
             return ce.workType || 'ME';
         }
 
-        // B勤務の翌日に自動で非番を設定
+        // B勤務の翌日に自動で非番を設定（日付計算修正）
         async autoSetNextDayOff(ceId, dateKey, status, desired) {
             if (status === 'B' || (status === 'A' && desired)) {
-                const currentDate = new Date(dateKey + 'T00:00:00');
+                const currentDate = this.createDateFromKey(dateKey);
                 const nextDate = new Date(currentDate);
                 nextDate.setDate(currentDate.getDate() + 1);
                 const nextDateKey = this.formatDateKey(nextDate);
 
-                // 翌日が期間内かチェック
+                console.log(`🔄 B勤務翌日自動設定: ${dateKey} -> ${nextDateKey}`);
+
                 if (nextDate <= this.currentPeriod.endDate) {
                     const nextDayData = {
                         status: '非',
-                        desired: desired, // 希望勤務の場合は下線を継承
+                        desired: desired,
                         autoSet: true,
                         updatedAt: firebase.database.ServerValue.TIMESTAMP,
                         updatedBy: 'auto-system'
@@ -856,7 +905,7 @@
                         }
                         this.scheduleData[ceId][nextDateKey] = nextDayData;
                         
-                        console.log(`✅ 自動非番設定: ${ceId} ${nextDateKey}`);
+                        console.log(`✅ 自動非番設定完了: ${ceId} ${nextDateKey}`);
                     } catch (error) {
                         console.error('❌ 自動非番設定エラー:', error);
                     }
@@ -864,7 +913,31 @@
             }
         }
 
-        // CE管理機能の初期化
+        // テーブルを画面にフィット
+        fitTableToViewport() {
+            setTimeout(() => {
+                const container = document.querySelector('.schedule-table-container');
+                const table = document.getElementById('scheduleTable');
+                if (!container || !table) return;
+
+                table.style.transform = 'scale(1)';
+                
+                const containerWidth = container.clientWidth - 4;
+                const containerHeight = container.clientHeight - 4;
+                const tableWidth = table.scrollWidth;
+                const tableHeight = table.scrollHeight;
+
+                const scaleX = containerWidth / tableWidth;
+                const scaleY = containerHeight / tableHeight;
+                const scale = Math.min(1, scaleX, scaleY);
+
+                if (scale < 1) {
+                    table.style.transform = `scale(${scale})`;
+                    console.log(`📏 テーブルスケール調整: ${scale.toFixed(3)}`);
+                }
+            }, 100);
+        }
+
         setupCEManagement() {
             const addCEBtn = document.getElementById('addCEBtn');
             if (addCEBtn) {
@@ -997,6 +1070,11 @@
             if (index < 16) return 'ME';
             if (index < 22) return 'HD';
             return 'FLEX';
+        }
+
+        getShortName(fullName) {
+            if (!fullName) return '';
+            return fullName.substring(0, Math.min(2, fullName.length));
         }
 
         hideLoading() {
@@ -1189,7 +1267,7 @@
                         fullName: name,
                         displayName: this.getShortName(name),
                         iconName: this.getShortName(name),
-                        workType: ['OPE', 'ME', 'HD', 'FLEX'][index % 4]
+                        workType: this.getDefaultWorkType(index)
                     }));
                     
                     await this.saveCEList();
@@ -1203,17 +1281,11 @@
             }
         }
 
-        getShortName(fullName) {
-            if (!fullName) return '';
-            return fullName.substring(0, Math.min(2, fullName.length));
-        }
-
         async loadWorkTypeOverrides() {
             try {
                 const snapshot = await window.database.ref(`${window.DATA_ROOT}/workTypeOverrides`).once('value');
                 const rawData = snapshot.val() || {};
                 
-                // 旧形式（単一オブジェクト）を配列形式に正規化
                 this.workTypeOverrides = {};
                 Object.entries(rawData).forEach(([ceId, value]) => {
                     if (Array.isArray(value)) {
@@ -1356,6 +1428,15 @@
                 saveCEEditBtn.onclick = () => this.saveCEEdit();
             }
 
+            // リサイズ時のテーブルフィット
+            let resizeTimer = null;
+            window.addEventListener('resize', () => {
+                clearTimeout(resizeTimer);
+                resizeTimer = setTimeout(() => {
+                    if (this.isReady) this.fitTableToViewport();
+                }, 250);
+            });
+
             document.addEventListener('click', (e) => {
                 const statusMenu = document.getElementById('workStatusMenu');
                 const workTypeMenu = document.getElementById('workTypeOverrideMenu');
@@ -1386,8 +1467,8 @@
             const endInput = document.getElementById('periodEndDate');
             
             if (startInput && endInput) {
-                const startDate = new Date(startInput.value + 'T00:00:00');
-                const endDate = new Date(endInput.value + 'T00:00:00');
+                const startDate = this.createDateFromKey(startInput.value);
+                const endDate = this.createDateFromKey(endInput.value);
                 
                 if (startDate <= endDate) {
                     this.currentPeriod.startDate = startDate;
@@ -1478,6 +1559,7 @@
             this.renderTableBody(dates);
             this.renderTableFooter(dates);
             this.updateTitle();
+            this.fitTableToViewport();
         }
 
         updateTitle() {
@@ -1511,9 +1593,17 @@
             
             dates.forEach(date => {
                 const dayOfWeek = ['日', '月', '火', '水', '木', '金', '土'][date.getDay()];
-                const isWeekend = date.getDay() === 0 || date.getDay() === 6;
-                const headerClass = `date-col ${isWeekend ? 'weekend-header' : ''}`;
-                const dayClass = date.getDay() === 0 ? 'text-red-600' : (date.getDay() === 6 ? 'text-blue-600' : '');
+                const isWeekendOrHoliday = this.isWeekendOrHoliday(date);
+                const isHoliday = this.isHoliday(date);
+                
+                let headerClass = 'date-col';
+                let dayClass = '';
+                
+                if (date.getDay() === 0 || isHoliday) {
+                    dayClass = 'text-red-600';
+                } else if (date.getDay() === 6) {
+                    dayClass = 'text-blue-600';
+                }
                 
                 headerRow.innerHTML += `
                     <th class="${headerClass}">
@@ -1600,7 +1690,8 @@
                     this.ceList.forEach(ce => {
                         const effectiveWorkType = this.getEffectiveWorkType(ce.id, dateKey);
                         const workData = this.getWorkData(ce.id, dateKey);
-                        const status = workData.status || (date.getDay() === 0 || date.getDay() === 6 ? '×' : 'A');
+                        const isWeekendOrHoliday = this.isWeekendOrHoliday(date);
+                        const status = workData.status || (isWeekendOrHoliday ? '×' : 'A');
                         
                         if (rowDef.filter(ce, status, effectiveWorkType)) {
                             count++;
@@ -1630,21 +1721,12 @@
 
         createWorkCell(ce, date, dateKey, workData) {
             const cell = document.createElement('td');
-            const isWeekend = date.getDay() === 0 || date.getDay() === 6;
+            const isWeekendOrHoliday = this.isWeekendOrHoliday(date);
             
             const effectiveWorkType = this.getEffectiveWorkType(ce.id, dateKey);
             
             let cellClass = `work-cell date-col type-${effectiveWorkType.toLowerCase()}`;
-            const status = workData.status || (isWeekend ? '×' : 'A');
-            
-            const overrides = this.workTypeOverrides[ce.id];
-            const hasOverride = Array.isArray(overrides) 
-                ? overrides.some(o => dateKey >= o.startDate && dateKey <= o.endDate)
-                : (overrides && overrides.startDate && dateKey >= overrides.startDate && dateKey <= overrides.endDate);
-            
-            if (hasOverride) {
-                cellClass += ' override';
-            }
+            const status = workData.status || (isWeekendOrHoliday ? '×' : 'A');
             
             if (status) {
                 cellClass += ` status-${status}`;
@@ -1652,7 +1734,7 @@
             if (workData.desired) {
                 cellClass += ' desired';
             }
-            if (isWeekend) {
+            if (isWeekendOrHoliday) {
                 cellClass += ' holiday';
             }
             
@@ -1673,10 +1755,10 @@
             dates.forEach(date => {
                 const dateKey = this.formatDateKey(date);
                 const workData = this.getWorkData(ce.id, dateKey);
-                const isWeekend = date.getDay() === 0 || date.getDay() === 6;
-                const status = workData.status || (isWeekend ? '×' : 'A');
+                const isWeekendOrHoliday = this.isWeekendOrHoliday(date);
+                const status = workData.status || (isWeekendOrHoliday ? '×' : 'A');
                 
-                if (isWeekend) summary.holidays++;
+                if (isWeekendOrHoliday) summary.holidays++;
                 
                 switch (status) {
                     case 'A': summary.A++; summary.actual++; break;
@@ -1701,7 +1783,7 @@
             
             summaryData.forEach((value) => {
                 const cell = document.createElement('td');
-                cell.className = 'summary-cell text-xs';
+                cell.className = 'summary-cell';
                 cell.textContent = value;
                 row.appendChild(cell);
             });
@@ -1744,7 +1826,12 @@
                 textInputArea.style.display = (workData.customText) ? 'block' : 'none';
             }
             
-            const rect = event.target.getBoundingClientRect();
+            this.positionMenu(menu, event.target);
+            this.currentMenuTarget = { ceId: ce.id, dateKey: dateKey };
+        }
+
+        positionMenu(menu, targetElement) {
+            const rect = targetElement.getBoundingClientRect();
             menu.style.display = 'block';
             
             let left = rect.left + window.scrollX;
@@ -1772,8 +1859,6 @@
                 menu.style.left = `${left}px`;
                 menu.style.top = `${top}px`;
             }, 10);
-            
-            this.currentMenuTarget = { ceId: ce.id, dateKey: dateKey };
         }
 
         showTextInput() {
@@ -1856,34 +1941,7 @@
                 };
             });
 
-            const rect = event.target.getBoundingClientRect();
-            menu.style.display = 'block';
-            
-            let left = rect.left + window.scrollX;
-            let top = rect.bottom + window.scrollY + 5;
-            
-            setTimeout(() => {
-                const menuRect = menu.getBoundingClientRect();
-                
-                if (left + menuRect.width > window.innerWidth) {
-                    left = Math.max(10, window.innerWidth - menuRect.width - 10);
-                }
-                
-                if (left < 10) {
-                    left = 10;
-                }
-                
-                if (top + menuRect.height > window.innerHeight + window.scrollY) {
-                    top = Math.max(10, rect.top + window.scrollY - menuRect.height - 5);
-                }
-                
-                if (top < window.scrollY + 10) {
-                    top = window.scrollY + 10;
-                }
-                
-                menu.style.left = `${left}px`;
-                menu.style.top = `${top}px`;
-            }, 10);
+            this.positionMenu(menu, event.target);
         }
 
         closeWorkTypeOverrideMenu() {
@@ -1895,7 +1953,6 @@
         }
 
         async applyWorkTypeOverride() {
-            // エラー修正: currentWorkTypeTargetを事前に変数に退避
             const targetCE = this.currentWorkTypeTarget;
             if (!targetCE) {
                 console.error('❌ currentWorkTypeTargetがnull');
@@ -1916,7 +1973,7 @@
                 return;
             }
 
-            if (new Date(startDate) > new Date(endDate)) {
+            if (this.createDateFromKey(startDate) > this.createDateFromKey(endDate)) {
                 window.showMessage('終了日は開始日以降を指定してください', 'error');
                 return;
             }
@@ -1930,19 +1987,15 @@
                     createdAt: Date.now()
                 };
 
-                // 複数オーバーライドに対応（配列形式）
                 if (!this.workTypeOverrides[ceId]) {
                     this.workTypeOverrides[ceId] = [];
                 } else if (!Array.isArray(this.workTypeOverrides[ceId])) {
-                    // 旧形式を配列に変換
                     this.workTypeOverrides[ceId] = [this.workTypeOverrides[ceId]];
                 }
 
-                // 重複する期間をチェックして上書きまたは追加
                 let updated = false;
                 for (let i = 0; i < this.workTypeOverrides[ceId].length; i++) {
                     const existing = this.workTypeOverrides[ceId][i];
-                    // 完全に同じ期間の場合は上書き
                     if (existing.startDate === startDate && existing.endDate === endDate) {
                         this.workTypeOverrides[ceId][i] = newOverride;
                         updated = true;
@@ -1981,7 +2034,7 @@
                 return;
             }
 
-            let confirmMessage = `${targetCE.fullName}の勤務区分オーバーライドを解除しますか？`;
+            let confirmMessage = '';
             if (startDate && endDate) {
                 confirmMessage = `${targetCE.fullName}の${startDate}～${endDate}の勤務区分オーバーライドを解除しますか？`;
             } else {
@@ -1993,20 +2046,22 @@
             }
 
             try {
-                let removed = 0;
+                let removedCount = 0;
                 if (startDate && endDate && Array.isArray(this.workTypeOverrides[targetCE.id])) {
-                    // 指定期間のオーバーライドのみ削除
                     const originalLength = this.workTypeOverrides[targetCE.id].length;
                     this.workTypeOverrides[targetCE.id] = this.workTypeOverrides[targetCE.id].filter(override => 
                         !(override.startDate === startDate && override.endDate === endDate)
                     );
-                    removed = originalLength - this.workTypeOverrides[targetCE.id].length;
+                    removedCount = originalLength - this.workTypeOverrides[targetCE.id].length;
+                    
+                    if (this.workTypeOverrides[targetCE.id].length === 0) {
+                        delete this.workTypeOverrides[targetCE.id];
+                    }
                 } else {
-                    // 全削除
                     if (Array.isArray(this.workTypeOverrides[targetCE.id])) {
-                        removed = this.workTypeOverrides[targetCE.id].length;
+                        removedCount = this.workTypeOverrides[targetCE.id].length;
                     } else {
-                        removed = 1;
+                        removedCount = 1;
                     }
                     delete this.workTypeOverrides[targetCE.id];
                 }
@@ -2015,7 +2070,7 @@
                 this.renderScheduleTable();
                 this.closeWorkTypeOverrideMenu();
                 
-                window.showMessage(`${targetCE.fullName}のオーバーライドを${removed}件解除しました`, 'success');
+                window.showMessage(`${targetCE.fullName}のオーバーライドを${removedCount}件解除しました`, 'success');
                 
             } catch (error) {
                 console.error('❌ 勤務区分オーバーライド解除エラー:', error);
@@ -2045,34 +2100,7 @@
             fullNameInput.value = ce.fullName || '';
             iconNameInput.value = ce.iconName || '';
 
-            const rect = event.target.getBoundingClientRect();
-            menu.style.display = 'block';
-            
-            let left = rect.left + window.scrollX;
-            let top = rect.bottom + window.scrollY + 5;
-            
-            setTimeout(() => {
-                const menuRect = menu.getBoundingClientRect();
-                
-                if (left + menuRect.width > window.innerWidth) {
-                    left = Math.max(10, window.innerWidth - menuRect.width - 10);
-                }
-                
-                if (left < 10) {
-                    left = 10;
-                }
-                
-                if (top + menuRect.height > window.innerHeight + window.scrollY) {
-                    top = Math.max(10, rect.top + window.scrollY - menuRect.height - 5);
-                }
-                
-                if (top < window.scrollY + 10) {
-                    top = window.scrollY + 10;
-                }
-                
-                menu.style.left = `${left}px`;
-                menu.style.top = `${top}px`;
-            }, 10);
+            this.positionMenu(menu, event.target);
         }
 
         closeCEEditMenu() {
@@ -2141,10 +2169,10 @@
                     
                     dates.forEach(date => {
                         const dateKey = this.formatDateKey(date);
-                        const isWeekend = date.getDay() === 0 || date.getDay() === 6;
+                        const isWeekendOrHoliday = this.isWeekendOrHoliday(date);
                         
                         this.scheduleData[ce.id][dateKey] = {
-                            status: isWeekend ? '×' : 'A',
+                            status: isWeekendOrHoliday ? '×' : 'A',
                             desired: false,
                             createdAt: firebase.database.ServerValue.TIMESTAMP
                         };
@@ -2229,8 +2257,8 @@
                 this.scheduleData = schedule.scheduleData || {};
                 this.ceList = schedule.ceList || this.ceList;
                 this.workTypeOverrides = schedule.workTypeOverrides || {};
-                this.currentPeriod.startDate = new Date(schedule.startDate + 'T00:00:00');
-                this.currentPeriod.endDate = new Date(schedule.endDate + 'T00:00:00');
+                this.currentPeriod.startDate = this.createDateFromKey(schedule.startDate);
+                this.currentPeriod.endDate = this.createDateFromKey(schedule.endDate);
                 
                 const startInput = document.getElementById('periodStartDate');
                 const endInput = document.getElementById('periodEndDate');
@@ -2297,15 +2325,17 @@
             }
 
             try {
-                // 期間キーを生成してworkSchedulesに保存（ダッシュボード対応）
                 const startKey = this.formatDateKey(this.currentPeriod.startDate);
                 const endKey = this.formatDateKey(this.currentPeriod.endDate);
                 const periodKey = `${startKey}_${endKey}`;
+
+                console.log('🚀 勤務表公開開始:', { periodKey, startKey, endKey });
 
                 const publishData = {
                     metadata: {
                         startDate: startKey,
                         endDate: endKey,
+                        createdAt: firebase.database.ServerValue.TIMESTAMP,
                         publishedAt: firebase.database.ServerValue.TIMESTAMP,
                         publishedBy: window.currentUserData?.displayName || 'editor'
                     },
@@ -2314,7 +2344,7 @@
                     workTypeOverrides: this.workTypeOverrides
                 };
 
-                // 新形式での保存（ダッシュボードのWorkScheduleViewer対応）
+                // ダッシュボード用の新形式で保存
                 await window.database.ref(`${window.DATA_ROOT}/workSchedules/${periodKey}`).set(publishData);
                 
                 // 従来形式でも保存（互換性維持）
@@ -2322,6 +2352,7 @@
                 await window.database.ref(`${window.DATA_ROOT}/workTypeOverrides`).set(this.workTypeOverrides);
                 await this.saveCEList();
                 
+                console.log('✅ 勤務表公開完了:', periodKey);
                 window.showMessage('勤務表を公開しました', 'success');
                 
             } catch (error) {
@@ -2346,18 +2377,6 @@
             } catch (e) {
                 console.warn('localStorage通知失敗:', e);
             }
-        }
-
-        formatDateForInput(date) {
-            return date.toISOString().slice(0, 10);
-        }
-
-        formatDateKey(date) {
-            return date.toISOString().slice(0, 10);
-        }
-
-        formatDateDisplay(date) {
-            return date.toLocaleDateString('ja-JP');
         }
     }
 
