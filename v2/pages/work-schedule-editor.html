@@ -724,49 +724,101 @@
             }
         }
 
-        async checkEditorAuth() {
-            const targetUID = sessionStorage.getItem('targetUID');
-            if (!targetUID) {
-                console.error('❌ セッション情報なし');
-                window.location.href = '../index.html';
-                return false;
-            }
-
-            try {
-                let user = window.auth.currentUser;
-                if (!user) {
-                    const result = await window.auth.signInAnonymously();
-                    user = result.user;
+   async checkEditorAuth() {
+    console.log('🔐 勤務表エディタ認証チェック開始');
+    
+    // セッションストレージから認証情報を取得
+    const targetUID = sessionStorage.getItem('targetUID');
+    const currentUsername = sessionStorage.getItem('currentUsername');
+    
+    if (!targetUID || !currentUsername) {
+        console.error('❌ セッション情報なし');
+        
+        // 親ウィンドウから情報を取得する試み
+        try {
+            if (window.opener && window.opener.sessionStorage) {
+                const parentUID = window.opener.sessionStorage.getItem('targetUID');
+                const parentUsername = window.opener.sessionStorage.getItem('currentUsername');
+                
+                if (parentUID && parentUsername) {
+                    sessionStorage.setItem('targetUID', parentUID);
+                    sessionStorage.setItem('currentUsername', parentUsername);
+                    console.log('✅ 親ウィンドウからセッション情報を取得');
+                } else {
+                    throw new Error('親ウィンドウにも認証情報なし');
                 }
-            } catch (authError) {
-                console.error('❌ 匿名認証失敗:', authError);
-                window.showMessage('認証に失敗しました', 'error');
-                window.location.href = '../index.html';
-                return false;
+            } else {
+                throw new Error('親ウィンドウアクセス不可');
             }
-
-            const userSnapshot = await window.database.ref(`${window.DATA_ROOT}/users/${targetUID}`).once('value');
-            const userData = userSnapshot.val();
-
-            if (!userData || !userData.setupCompleted) {
-                console.error('❌ ユーザーデータが見つからない');
-                window.location.href = '../index.html';
-                return false;
-            }
-
-            window.currentUserData = userData;
-            window.userRole = userData.role;
-
-            if (window.userRole !== 'admin') { 
-                window.showMessage('この機能へのアクセス権限がありません', 'error');
-                setTimeout(() => {
-                    window.location.href = '../dashboard.html';
-                }, 3000);
-                return false;
-            }
-
-            return true;
+        } catch (error) {
+            console.error('❌ 親ウィンドウからの情報取得失敗:', error);
+            window.showMessage('認証情報が見つかりません。ダッシュボードから再度開いてください。', 'error');
+            setTimeout(() => {
+                if (window.opener) {
+                    window.close();
+                } else {
+                    window.location.href = '../index.html';
+                }
+            }, 3000);
+            return false;
         }
+    }
+
+    try {
+        // Firebase初期化を確実に待機
+        await window.waitForFirebase();
+        
+        // 匿名認証を確実に実行
+        let user = window.auth.currentUser;
+        if (!user) {
+            console.log('🔄 匿名認証実行中...');
+            const result = await window.auth.signInAnonymously();
+            user = result.user;
+            console.log('✅ 匿名認証成功:', user.uid);
+        }
+
+        // ユーザーデータを取得
+        const userSnapshot = await window.database.ref(`${window.DATA_ROOT}/users/${targetUID}`).once('value');
+        const userData = userSnapshot.val();
+
+        if (!userData || !userData.setupCompleted) {
+            console.error('❌ ユーザーデータが見つからないか未完了');
+            window.showMessage('ユーザー情報が見つかりません。再度ログインしてください。', 'error');
+            setTimeout(() => {
+                window.location.href = '../index.html';
+            }, 3000);
+            return false;
+        }
+
+        window.currentUserData = userData;
+        window.userRole = userData.role;
+
+        // 権限チェック（管理者と編集者のみ許可）
+        if (!['admin', 'editor'].includes(window.userRole)) {
+            console.error('❌ 勤務表編集権限なし:', window.userRole);
+            window.showMessage('勤務表編集の権限がありません', 'error');
+            setTimeout(() => {
+                if (window.opener) {
+                    window.close();
+                } else {
+                    window.location.href = '../dashboard.html';
+                }
+            }, 3000);
+            return false;
+        }
+
+        console.log('✅ 勤務表エディタ認証成功:', userData.displayName, `(${userData.role})`);
+        return true;
+
+    } catch (error) {
+        console.error('❌ 認証チェックエラー:', error);
+        window.showMessage('認証確認でエラーが発生しました', 'error');
+        setTimeout(() => {
+            window.location.href = '../index.html';
+        }, 3000);
+        return false;
+    }
+}
 
         async loadCEList() {
             try {
