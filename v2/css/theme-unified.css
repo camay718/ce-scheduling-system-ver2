@@ -1088,3 +1088,110 @@ body.theme-unified {
     color: #ef4444;
     background: rgba(239, 68, 68, 0.2);
 }
+
+/* ドラッグ&ドロップ強化スタイル */
+.ce-item[draggable="true"] {
+    cursor: move;
+    transition: all 0.2s ease;
+    border: 2px solid transparent;
+}
+
+.ce-item[draggable="true"]:hover {
+    border-color: #10b981;
+    transform: translateY(-1px);
+}
+
+.ce-item.dragging {
+    opacity: 0.6;
+    transform: scale(0.95) rotate(2deg);
+    border-color: #3b82f6;
+}
+
+.event-drop-target {
+    position: relative;
+    transition: all 0.3s ease;
+    border: 2px solid transparent;
+}
+
+.event-drop-target.drag-over {
+    border: 2px dashed #10b981 !important;
+    background: rgba(16, 185, 129, 0.1) !important;
+    transform: scale(1.02);
+    box-shadow: 0 0 0 4px rgba(16, 185, 129, 0.1);
+    animation: dragPulse 1s infinite;
+}
+
+@keyframes dragPulse {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.4); }
+    50% { box-shadow: 0 0 0 10px rgba(16, 185, 129, 0); }
+}
+
+.drop-hint {
+    opacity: 0.7;
+    font-style: italic;
+    color: #6b7280;
+}
+
+.event-drop-target:hover .drop-hint {
+    opacity: 1;
+    color: #10b981;
+}
+
+.assigned-ces {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    margin-top: 8px;
+}
+
+.chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    border-radius: 12px;
+    padding: 3px 8px;
+    font-size: 11px;
+    font-weight: 600;
+    position: relative;
+    border: 1px solid rgba(0,0,0,0.1);
+}
+
+.chip.worktype-ope { 
+    background: linear-gradient(135deg, #87CEEB, #B0E0E6); 
+    color: #1E3A8A; 
+}
+
+.chip.worktype-me { 
+    background: linear-gradient(135deg, #90EE90, #98FB98); 
+    color: #006400; 
+}
+
+.chip.worktype-hd { 
+    background: linear-gradient(135deg, #FFB6C1, #FFC0CB); 
+    color: #8B008B; 
+}
+
+.chip.worktype-flex { 
+    background: linear-gradient(135deg, #FFFF99, #FFFFE0); 
+    color: #B8860B; 
+}
+
+.chip .remove {
+    cursor: pointer;
+    color: rgba(0,0,0,0.4);
+    margin-left: 4px;
+    font-weight: bold;
+    width: 14px;
+    height: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    transition: all 0.2s ease;
+}
+
+.chip .remove:hover {
+    color: #ef4444;
+    background: rgba(239, 68, 68, 0.2);
+    transform: scale(1.2);
+}
