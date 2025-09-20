@@ -675,7 +675,7 @@ openScheduleEditor() {
             }
             return user;
         }
-        async loadAndRenderEventsForSelectedDate() {
+  async loadAndRenderEventsForSelectedDate() {
     const grid = document.getElementById('departmentGrid');
     if (!grid) return;
 
@@ -685,10 +685,9 @@ openScheduleEditor() {
         const eventsById = snap.val() || {};
         const events = Object.values(eventsById);
 
-        // 既存のタスクリストをクリア（月次業務以外）
+        // 既存のイベントカードをクリア
         grid.querySelectorAll('.task-list').forEach(el => {
-            const regularTasks = el.querySelectorAll('.glass-card:not([data-monthly])');
-            regularTasks.forEach(task => task.remove());
+            el.querySelectorAll('.glass-card.event-card').forEach(card => card.remove());
         });
 
         // イベントを部門ごとに表示
@@ -697,10 +696,34 @@ openScheduleEditor() {
             if (!section) return;
 
             const item = document.createElement('div');
-            item.className = 'glass-card p-2 mb-2 rounded-lg shadow-sm';
+            item.className = 'glass-card p-2 mb-2 rounded-lg shadow-sm event-card event-drop-target';
+            item.dataset.eventId = ev.id;
+            item.dataset.dateKey = dateKey;
+            item.dataset.department = ev.department;
+
+            // ドロップイベントリスナー（thisバインド）
+            item.addEventListener('dragover', (e) => this.handleEventDragOver(e));
+            item.addEventListener('dragleave', (e) => this.handleEventDragLeave(e));
+            item.addEventListener('drop', (e) => this.handleEventDrop(e));
+
             const timeText = (ev.startTime && ev.endTime) ? ` ${ev.startTime}-${ev.endTime}` : '';
             const assigned = Array.isArray(ev.assignedCEs) ? ev.assignedCEs.length : 0;
             const need = ev.requiredPeople ?? 0;
+
+            // 配置済みCEチップの生成
+            let assignedCEChips = '';
+            if (ev.assignedCEs && ev.assignedCEs.length > 0 && window.ceManager?.ceList) {
+                assignedCEChips = ev.assignedCEs.map(assignedCeId => {
+                    const ce = window.ceManager.ceList.find(c => c.id === assignedCeId);
+                    if (ce) {
+                        return `<span class="chip worktype-${ce.workType.toLowerCase()}" data-ce-id="${ce.id}" title="${ce.fullName || ce.name}">
+                                    ${ce.iconName || ce.displayName || ce.name}
+                                    <i class="fas fa-times remove" title="配置解除"></i>
+                                </span>`;
+                    }
+                    return '';
+                }).filter(chip => chip).join('');
+            }
 
             item.innerHTML = `
                 <div class="flex justify-between items-center">
@@ -710,15 +733,42 @@ openScheduleEditor() {
                     <div class="text-xs text-gray-500">${assigned}/${need}名</div>
                 </div>
                 ${ev.description ? `<div class="text-xs text-gray-600 mt-1">${ev.description}</div>` : ''}
-                ${window.userRole !== 'viewer' ? `
-                    <button onclick="window.editEvent('${dateKey}', '${ev.id}')" 
-                            class="text-blue-600 hover:text-blue-800 text-xs mt-1">
-                        <i class="fas fa-edit mr-1"></i>編集
-                    </button>
-                ` : ''}
+                ${assignedCEChips ? `<div class="assigned-ces mt-2">${assignedCEChips}</div>` : ''}
+                <div class="drop-hint text-xs text-gray-400 mt-1 italic">CEをドラッグ&ドロップで配置</div>
+                ${window.userRole !== 'viewer' ? `<button class="edit-event-btn text-blue-600 hover:text-blue-800 text-xs mt-1">
+                    <i class="fas fa-edit mr-1"></i>編集
+                </button>` : ''}
             `;
+
+            // 編集ボタンのイベント（inline onclickを回避）
+            const editBtn = item.querySelector('.edit-event-btn');
+            if (editBtn) {
+                editBtn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    window.editEvent(dateKey, ev.id);
+                });
+            }
+
+            // 配置解除ボタンのイベント（inline onclickを回避）
+            const removeButtons = item.querySelectorAll('.chip .remove');
+            removeButtons.forEach(removeBtn => {
+                removeBtn.addEventListener('click', async (e) => {
+                    e.stopPropagation();
+                    const chip = e.currentTarget.closest('.chip');
+                    const ceId = chip?.dataset?.ceId;
+                    if (ceId) {
+                        await this.unassignCE(dateKey, ev.id, ceId);
+                    }
+                });
+            });
+
             section.appendChild(item);
         });
+
+        // CEアイテムにドラッグ機能を有効化
+        setTimeout(() => {
+            this.enableCEDragging();
+        }, 100);
 
         console.log(`✅ ${dateKey} のイベント表示完了: ${events.length}件`);
 
@@ -761,6 +811,213 @@ openScheduleEditor() {
         originalRenderSchedule();
         updateEvents();
     };
+}
+
+        // CEドラッグ機能の有効化
+enableCEDragging() {
+    const ceItems = document.querySelectorAll('.ce-item:not([draggable])');
+    const ceList = window.ceManager?.ceList || [];
+
+    ceItems.forEach((item, index) => {
+        item.draggable = true;
+
+        // CEデータの設定（CEマネージャーから取得）
+        const ce = ceList[index];
+        if (ce) {
+            item.dataset.ceId = ce.id;
+            item.dataset.ceName = ce.iconName || ce.displayName || ce.name;
+            item.dataset.workType = ce.workType;
+        } else {
+            // フォールバック：表示名からCEを検索
+            const displayName = item.textContent.trim();
+            const matchedCE = ceList.find(c => 
+                c.iconName === displayName || 
+                c.displayName === displayName || 
+                c.name === displayName
+            );
+            if (matchedCE) {
+                item.dataset.ceId = matchedCE.id;
+                item.dataset.ceName = matchedCE.iconName || matchedCE.displayName || matchedCE.name;
+                item.dataset.workType = matchedCE.workType;
+            }
+        }
+
+        // ドラッグイベント
+        item.addEventListener('dragstart', (e) => {
+            const ceData = {
+                ceId: item.dataset.ceId,
+                ceName: item.dataset.ceName,
+                workType: item.dataset.workType || 'ME'
+            };
+
+            e.dataTransfer.setData('application/json', JSON.stringify(ceData));
+            e.dataTransfer.effectAllowed = 'copy';
+            item.classList.add('dragging');
+            console.log('🎯 CEドラッグ開始:', ceData);
+        });
+
+        item.addEventListener('dragend', () => {
+            item.classList.remove('dragging');
+        });
+    });
+
+    console.log('✅ CEドラッグ機能有効化完了');
+}
+
+// ドラッグオーバー処理
+handleEventDragOver(e) {
+    if (window.userRole === 'viewer') return;
+    
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'copy';
+    e.currentTarget.classList.add('drag-over');
+}
+
+// ドラッグリーブ処理
+handleEventDragLeave(e) {
+    if (!e.currentTarget.contains(e.relatedTarget)) {
+        e.currentTarget.classList.remove('drag-over');
+    }
+}
+
+// ドロップ処理
+async handleEventDrop(e) {
+    e.preventDefault();
+    e.currentTarget.classList.remove('drag-over');
+
+    if (window.userRole === 'viewer') {
+        window.showMessage('編集権限がありません', 'warning');
+        return;
+    }
+
+    try {
+        const ceDataStr = e.dataTransfer.getData('application/json');
+        if (!ceDataStr) return;
+
+        const ceData = JSON.parse(ceDataStr);
+        const eventId = e.currentTarget.dataset.eventId;
+        const dateKey = e.currentTarget.dataset.dateKey;
+
+        console.log('📥 ドロップ処理:', { ceData, eventId, dateKey });
+        await this.assignCEToEvent(dateKey, eventId, ceData);
+
+    } catch (error) {
+        console.error('❌ ドロップ処理エラー:', error);
+        window.showMessage('CE配置に失敗しました', 'error');
+    }
+}
+
+// CEを業務に配置
+async assignCEToEvent(dateKey, eventId, ceData) {
+    try {
+        const eventRef = window.database.ref(`${window.DATA_ROOT}/events/byDate/${dateKey}/${eventId}`);
+        const snapshot = await eventRef.once('value');
+        const eventData = snapshot.val();
+
+        if (!eventData) {
+            window.showMessage('業務データが見つかりません', 'error');
+            return;
+        }
+
+        const currentAssigned = eventData.assignedCEs || [];
+        
+        if (currentAssigned.includes(ceData.ceId)) {
+            window.showMessage(`${ceData.ceName}は既に配置済みです`, 'warning');
+            return;
+        }
+
+        const updatedAssigned = [...currentAssigned, ceData.ceId];
+
+        await eventRef.update({
+            assignedCEs: updatedAssigned,
+            updatedAt: firebase.database.ServerValue.TIMESTAMP,
+            updatedBy: window.currentUserData?.displayName || 'user'
+        });
+
+        window.showMessage(`${ceData.ceName}を配置しました`, 'success');
+        console.log('✅ CE配置完了:', ceData.ceName);
+
+        // 画面を再描画
+        setTimeout(() => {
+            this.loadAndRenderEventsForSelectedDate();
+        }, 500);
+
+    } catch (error) {
+        console.error('❌ CE配置エラー:', error);
+        window.showMessage('CE配置処理でエラーが発生しました', 'error');
+    }
+}
+
+// CE配置解除
+async unassignCE(dateKey, eventId, ceId) {
+    if (!confirm('このCEの配置を解除しますか？')) return;
+
+    try {
+        const eventRef = window.database.ref(`${window.DATA_ROOT}/events/byDate/${dateKey}/${eventId}`);
+        const snapshot = await eventRef.once('value');
+        const eventData = snapshot.val();
+
+        if (!eventData) {
+            window.showMessage('業務データが見つかりません', 'error');
+            return;
+        }
+
+        const currentAssigned = eventData.assignedCEs || [];
+        const updatedAssigned = currentAssigned.filter(id => id !== ceId);
+
+        if (updatedAssigned.length !== currentAssigned.length) {
+            await eventRef.update({
+                assignedCEs: updatedAssigned,
+                updatedAt: firebase.database.ServerValue.TIMESTAMP,
+                updatedBy: window.currentUserData?.displayName || 'user'
+            });
+
+            window.showMessage('CEの配置を解除しました', 'success');
+            
+            // 画面を再描画
+            setTimeout(() => {
+                this.loadAndRenderEventsForSelectedDate();
+            }, 500);
+        }
+
+    } catch (error) {
+        console.error('❌ CE配置解除エラー:', error);
+        window.showMessage('CE配置解除に失敗しました', 'error');
+    }
+}
+
+// 業務追加機能の修正
+openQuickAddEvent(department) {
+    if (window.userRole === 'viewer') {
+        window.showMessage('編集権限がありません', 'warning');
+        return;
+    }
+    
+    // EventManagerの初期化確認
+    if (!window.eventManager) {
+        if (window.EventManager) {
+            try { 
+                window.eventManager = new window.EventManager(); 
+                console.log('✅ EventManager初期化完了');
+            } catch (e) { 
+                console.error('EventManager初期化失敗:', e);
+                window.showMessage('イベント管理システムの初期化に失敗しました', 'error');
+                return;
+            }
+        } else {
+            window.showMessage('イベント管理システムが読み込まれていません', 'error');
+            return;
+        }
+    }
+    
+    // 初期化完了を待ってから実行
+    setTimeout(() => {
+        if (window.eventManager && typeof window.eventManager.openAddEventModal === 'function') {
+            window.eventManager.openAddEventModal(department);
+        } else {
+            window.showMessage('業務追加機能が利用できません', 'error');
+        }
+    }, 100);
 }
 
         showDashboard() {
