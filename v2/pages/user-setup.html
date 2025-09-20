@@ -297,102 +297,158 @@ document.addEventListener('DOMContentLoaded', async () => {
         window.showMessage('ユーザー情報の読み込みに失敗しました', 'error');
     }
 
-    if (setupForm) {
-        setupForm.addEventListener('submit', async (e) => {
-            e.preventDefault();
+// フォーム送信処理（修正版）
+if (setupForm) {
+    setupForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        
+        console.log('📝 個人設定保存開始');
+        
+        const displayName = displayNameInput.value.trim();
+        const newPassword = newPasswordInput.value;
+        const confirmPassword = confirmPasswordInput.value;
+
+        // バリデーション
+        if (!displayName) {
+            window.showMessage('表示名を入力してください', 'error');
+            return;
+        }
+
+        if (displayName.length > 50) {
+            window.showMessage('表示名は50文字以内で入力してください', 'error');
+            return;
+        }
+
+        if (!newPassword) {
+            window.showMessage('新しいパスワードを入力してください', 'error');
+            return;
+        }
+
+        if (!checkPasswordStrength(newPassword)) {
+            window.showMessage('パスワードの強度が不十分です。8文字以上で、英字・数字を含めてください。', 'error');
+            return;
+        }
+
+        if (!checkPasswordMatch()) {
+            window.showMessage('パスワードが一致しません', 'error');
+            return;
+        }
+
+        setLoading(true);
+        window.showMessage('個人設定を保存中...', 'info');
+
+        try {
+            // 認証状態を再確認
+            let user = window.auth.currentUser;
+            if (!user) {
+                console.log('🔄 匿名認証実行中...');
+                const result = await window.auth.signInAnonymously();
+                user = result.user;
+                // 認証完了まで少し待機
+                await new Promise(resolve => setTimeout(resolve, 500));
+            }
+            console.log('✅ 認証確認完了:', user.uid);
+
+            console.log('🔐 パスワードハッシュ化開始');
+            const passwordRecord = await hashPassword(newPassword);
+            console.log('✅ パスワードハッシュ化完了');
             
-            console.log('📝 個人設定保存開始');
-            
-            const displayName = displayNameInput.value.trim();
-            const newPassword = newPasswordInput.value;
-            const confirmPassword = confirmPasswordInput.value;
+            // ユーザーデータの更新
+            const updateData = {
+                displayName: displayName,
+                password: passwordRecord,
+                hasCustomPassword: true,
+                setupCompleted: true,
+                needsSetup: false,
+                fromPending: false,
+                passwordResetCompleted: false,
+                lastUpdated: firebase.database.ServerValue.TIMESTAMP,
+                setupCompletedAt: firebase.database.ServerValue.TIMESTAMP
+            };
 
-            if (!displayName) {
-                window.showMessage('表示名を入力してください', 'error');
-                return;
-            }
+            console.log('💾 データベース更新開始');
+            await window.database.ref(`${window.DATA_ROOT}/users/${targetUID}`).update(updateData);
+            console.log('✅ データベース更新完了');
 
-            if (displayName.length > 50) {
-                window.showMessage('表示名は50文字以内で入力してください', 'error');
-                return;
-            }
+            // ユーザー名マッピング更新（確実性向上）
+            await window.database.ref(`${window.DATA_ROOT}/usernames/${currentUsername}`).set({ uid: targetUID });
+            console.log('✅ ユーザー名マッピング更新完了');
 
-            if (!newPassword) {
-                window.showMessage('新しいパスワードを入力してください', 'error');
-                return;
-            }
-
-            if (!checkPasswordStrength(newPassword)) {
-                window.showMessage('パスワードの強度が不十分です。8文字以上で、英字・数字を含めてください。', 'error');
-                return;
-            }
-
-            if (!checkPasswordMatch()) {
-                window.showMessage('パスワードが一致しません', 'error');
-                return;
-            }
-
-            setLoading(true);
-            window.showMessage('個人設定を保存中...', 'info');
-
+            // 監査ログ記録
             try {
-                console.log('🔐 パスワードハッシュ化開始');
-                const passwordRecord = await hashPassword(newPassword);
-                console.log('✅ パスワードハッシュ化完了');
-                
-                const updateData = {
-                    displayName: displayName,
-                    password: passwordRecord,
-                    hasCustomPassword: true,
-                    setupCompleted: true,
-                    needsSetup: false,
-                    fromPending: false,
-                    passwordResetCompleted: false,
-                    lastUpdated: firebase.database.ServerValue.TIMESTAMP,
-                    setupCompletedAt: firebase.database.ServerValue.TIMESTAMP
-                };
-
-                console.log('💾 データベース更新開始');
-                await window.database.ref(`${window.DATA_ROOT}/users/${targetUID}`).update(updateData);
-                console.log('✅ データベース更新完了');
-
-                try {
-                    const auditEntry = {
-                        action: 'user_setup_completed',
-                        details: { 
-                            username: currentUsername,
-                            displayName: displayName,
-                            setupType: sessionStorage.getItem('needsSetup') ? 'initial_setup' : 'password_reset_setup'
-                        },
-                        uid: targetUID,
+                const auditEntry = {
+                    action: 'user_setup_completed',
+                    details: { 
                         username: currentUsername,
                         displayName: displayName,
-                        timestamp: firebase.database.ServerValue.TIMESTAMP
-                    };
-                    
-                    await window.database.ref(`${window.DATA_ROOT}/auditLogs`).push(auditEntry);
-                    console.log('📝 個人設定完了監査ログ記録完了');
-                } catch (logError) {
-                    console.warn('⚠️ 監査ログ記録失敗:', logError);
-                }
-
-                sessionStorage.removeItem('needsSetup');
-
-                window.showMessage('個人設定を保存しました！ダッシュボードに移動します...', 'success');
+                        setupType: sessionStorage.getItem('needsSetup') ? 'initial_setup' : 'password_reset_setup'
+                    },
+                    uid: targetUID,
+                    username: currentUsername,
+                    displayName: displayName,
+                    timestamp: firebase.database.ServerValue.TIMESTAMP
+                };
                 
-                setTimeout(() => {
-                    console.log('🔄 ダッシュボードへリダイレクト');
-                    window.location.href = '../dashboard.html';
-                }, 1500);
-
-            } catch (error) {
-                console.error('❌ 個人設定保存エラー:', error);
-                window.showMessage(`設定の保存に失敗しました: ${error.message}`, 'error');
-            } finally {
-                setLoading(false);
+                await window.database.ref(`${window.DATA_ROOT}/auditLogs`).push(auditEntry);
+                console.log('📝 個人設定完了監査ログ記録完了');
+            } catch (logError) {
+                console.warn('⚠️ 監査ログ記録失敗:', logError);
             }
-        });
+
+            // セッション情報をクリア
+            sessionStorage.removeItem('needsSetup');
+
+            window.showMessage('個人設定を保存しました！ダッシュボードに移動します...', 'success');
+            
+            // 確実にリダイレクト（複数の方法を試行）
+            setTimeout(() => {
+                console.log('🔄 ダッシュボードへリダイレクト');
+                try {
+                    window.location.replace('../dashboard.html');
+                } catch (replaceError) {
+                    console.warn('location.replace失敗、hrefを使用:', replaceError);
+                    try {
+                        window.location.href = '../dashboard.html';
+                    } catch (hrefError) {
+                        console.error('リダイレクト完全失敗:', hrefError);
+                        // 最後の手段として手動でページを開く指示
+                        alert('設定が完了しました。ブラウザでダッシュボード（dashboard.html）を開いてください。');
+                    }
+                }
+            }, 2000);
+
+        } catch (error) {
+            console.error('❌ 個人設定保存エラー:', error);
+            window.showMessage(`設定の保存に失敗しました: ${error.message}`, 'error');
+        } finally {
+            setLoading(false);
+        }
+    });
+}
+
+// goBack関数の修正
+function goBack() {
+    if (confirm('設定を中断してログイン画面に戻りますか？\n設定内容は保存されません。')) {
+        try {
+            sessionStorage.clear();
+            localStorage.clear(); // 念のためlocalStorageもクリア
+        } catch (storageError) {
+            console.warn('ストレージクリア失敗:', storageError);
+        }
+        
+        try {
+            window.location.replace('../index.html');
+        } catch (replaceError) {
+            console.warn('location.replace失敗、hrefを使用:', replaceError);
+            try {
+                window.location.href = '../index.html';
+            } catch (hrefError) {
+                console.error('リダイレクト完全失敗:', hrefError);
+                alert('ログイン画面（index.html）を手動で開いてください。');
+            }
+        }
     }
+}
     
     console.log('✅ 個人設定画面初期化完了（システム設計最適化版）');
 });
