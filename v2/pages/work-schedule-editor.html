@@ -724,51 +724,57 @@
             }
         }
 
-   async checkEditorAuth() {
+async checkEditorAuth() {
     console.log('🔐 勤務表エディタ認証チェック開始');
     
-    // セッションストレージから認証情報を取得
-    const targetUID = sessionStorage.getItem('targetUID');
-    const currentUsername = sessionStorage.getItem('currentUsername');
+    // URLパラメータから認証情報を取得
+    const urlParams = new URLSearchParams(window.location.search);
+    const uidFromUrl = urlParams.get('uid');
+    const userFromUrl = urlParams.get('username');
+    const roleFromUrl = urlParams.get('role');
     
+    let targetUID = sessionStorage.getItem('targetUID');
+    let currentUsername = sessionStorage.getItem('currentUsername');
+    
+    // URLパラメータがある場合は優先して使用
+    if (uidFromUrl && userFromUrl) {
+        targetUID = uidFromUrl;
+        currentUsername = userFromUrl;
+        sessionStorage.setItem('targetUID', targetUID);
+        sessionStorage.setItem('currentUsername', currentUsername);
+        console.log('✅ URLパラメータからセッション情報を取得');
+    }
+    
+    // 親ウィンドウからの情報取得（フォールバック）
     if (!targetUID || !currentUsername) {
-        console.error('❌ セッション情報なし');
-        
-        // 親ウィンドウから情報を取得する試み
         try {
-            if (window.opener && window.opener.sessionStorage) {
+            if (window.opener && !window.opener.closed) {
                 const parentUID = window.opener.sessionStorage.getItem('targetUID');
                 const parentUsername = window.opener.sessionStorage.getItem('currentUsername');
                 
                 if (parentUID && parentUsername) {
+                    targetUID = parentUID;
+                    currentUsername = parentUsername;
                     sessionStorage.setItem('targetUID', parentUID);
                     sessionStorage.setItem('currentUsername', parentUsername);
                     console.log('✅ 親ウィンドウからセッション情報を取得');
-                } else {
-                    throw new Error('親ウィンドウにも認証情報なし');
                 }
-            } else {
-                throw new Error('親ウィンドウアクセス不可');
             }
         } catch (error) {
-            console.error('❌ 親ウィンドウからの情報取得失敗:', error);
-            window.showMessage('認証情報が見つかりません。ダッシュボードから再度開いてください。', 'error');
-            setTimeout(() => {
-                if (window.opener) {
-                    window.close();
-                } else {
-                    window.location.href = '../index.html';
-                }
-            }, 3000);
-            return false;
+            console.warn('⚠️ 親ウィンドウからの情報取得失敗:', error);
         }
+    }
+    
+    if (!targetUID || !currentUsername) {
+        console.error('❌ セッション情報が見つかりません');
+        this.showAuthError('認証情報が見つかりません', 'ダッシュボードから再度開いてください。');
+        return false;
     }
 
     try {
-        // Firebase初期化を確実に待機
         await window.waitForFirebase();
         
-        // 匿名認証を確実に実行
+        // 匿名認証
         let user = window.auth.currentUser;
         if (!user) {
             console.log('🔄 匿名認証実行中...');
@@ -783,27 +789,17 @@
 
         if (!userData || !userData.setupCompleted) {
             console.error('❌ ユーザーデータが見つからないか未完了');
-            window.showMessage('ユーザー情報が見つかりません。再度ログインしてください。', 'error');
-            setTimeout(() => {
-                window.location.href = '../index.html';
-            }, 3000);
+            this.showAuthError('ユーザー情報が見つかりません', '再度ログインしてください。');
             return false;
         }
 
         window.currentUserData = userData;
         window.userRole = userData.role;
 
-        // 権限チェック（管理者と編集者のみ許可）
+        // 権限チェック
         if (!['admin', 'editor'].includes(window.userRole)) {
             console.error('❌ 勤務表編集権限なし:', window.userRole);
-            window.showMessage('勤務表編集の権限がありません', 'error');
-            setTimeout(() => {
-                if (window.opener) {
-                    window.close();
-                } else {
-                    window.location.href = '../dashboard.html';
-                }
-            }, 3000);
+            this.showAuthError('勤務表編集の権限がありません', `現在の権限: ${window.userRole}`);
             return false;
         }
 
@@ -812,11 +808,31 @@
 
     } catch (error) {
         console.error('❌ 認証チェックエラー:', error);
-        window.showMessage('認証確認でエラーが発生しました', 'error');
-        setTimeout(() => {
-            window.location.href = '../index.html';
-        }, 3000);
+        this.showAuthError('認証確認でエラーが発生しました', error.message);
         return false;
+    }
+}
+
+// エラー表示メソッドの追加
+showAuthError(title, message) {
+    const loadingEl = document.getElementById('loading');
+    if (loadingEl) {
+        loadingEl.innerHTML = `
+            <div class="text-center">
+                <i class="fas fa-exclamation-triangle text-red-500 text-4xl mb-4"></i>
+                <h3 class="text-lg font-semibold text-red-600 mb-2">${title}</h3>
+                <p class="text-gray-600 mb-4">${message}</p>
+                <div class="space-y-2">
+                    <button onclick="window.close()" class="btn-unified btn-primary-unified">
+                        <i class="fas fa-times mr-2"></i>このタブを閉じる
+                    </button>
+                    <br>
+                    <a href="../dashboard.html" class="btn-unified btn-outline-unified">
+                        <i class="fas fa-arrow-left mr-2"></i>ダッシュボードに戻る
+                    </a>
+                </div>
+            </div>
+        `;
     }
 }
 
