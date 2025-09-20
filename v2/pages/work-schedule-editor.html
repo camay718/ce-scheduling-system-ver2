@@ -35,8 +35,9 @@
             background: var(--glass-bg);
             backdrop-filter: blur(10px);
             border-right: 1px solid var(--glass-border);
-            overflow-x: hidden;
-            overflow-y: auto;
+            /* 修正: flexboxレイアウトを追加し、overflow-y: autoを削除 */
+            display: flex;
+            flex-direction: column;
             transition: width 0.3s ease;
             position: relative;
             flex-shrink: 0;
@@ -50,11 +51,38 @@
             padding: 20px;
             width: 280px;
             transition: opacity 0.3s ease;
+            /* 修正: スクロール可能領域として設定 */
+            flex: 1;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* スクロールバーを非表示にする */
+        .sidebar-content::-webkit-scrollbar {
+            display: none;
+        }
+        .sidebar-content {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
         }
 
         .editor-sidebar.collapsed .sidebar-content {
             opacity: 0;
             pointer-events: none;
+        }
+
+        /* サイドバーのメインコンテンツエリア */
+        .sidebar-main-content {
+            flex: 1;
+        }
+
+        /* ナビゲーション部分を最下部に固定 */
+        .sidebar-navigation {
+            margin-top: auto;
+            padding-top: 20px;
+            border-top: 1px solid var(--glass-border);
+            flex-shrink: 0;
         }
 
         .sidebar-toggle {
@@ -95,7 +123,7 @@
             padding: 6px 8px;
             font-size: 10px;
             z-index: 100;
-            max-width: 200px;
+            max-width: 280px;
             line-height: 1.2;
         }
 
@@ -447,181 +475,203 @@
                 <i class="fas fa-chevron-left"></i>
             </button>
 
- <div class="sidebar-content">
-    <!-- ヘッダー -->
-    <div class="mb-6 text-center">
-        <h1 class="text-lg font-bold text-gray-800 mb-2">
-            <i class="fas fa-table mr-2 text-green-600"></i>
-            勤務表作成・編集
-        </h1>
-        <p class="text-xs text-gray-600">CEスケジュール管理システム V2</p>
-    </div>
+            <div class="sidebar-content">
+                <div class="sidebar-main-content">
+                    <!-- ヘッダー -->
+                    <div class="mb-6 text-center">
+                        <h1 class="text-lg font-bold text-gray-800 mb-2">
+                            <i class="fas fa-table mr-2 text-green-600"></i>
+                            勤務表作成・編集
+                        </h1>
+                        <p class="text-xs text-gray-600">CEスケジュール管理システム V2</p>
+                    </div>
 
-    <!-- 1. 期間設定 -->
-    <div class="mb-6">
-        <h3 class="text-sm font-semibold mb-3">
-            <i class="fas fa-calendar mr-2"></i>期間設定
-        </h3>
-        <div class="space-y-3">
-            <div>
-                <label class="block text-xs font-medium mb-1">開始日</label>
-                <input type="date" id="periodStartDate" class="input-unified text-xs">
-            </div>
-            <div>
-                <label class="block text-xs font-medium mb-1">終了日</label>
-                <input type="date" id="periodEndDate" class="input-unified text-xs">
-            </div>
-            <div class="grid grid-cols-3 gap-2">
-                <button id="prevPeriodBtn" class="btn-unified btn-outline-unified btn-small">
-                    <i class="fas fa-chevron-left"></i>
-                </button>
-                <button id="todayPeriodBtn" class="btn-unified btn-primary-unified btn-small">
-                    今日
-                </button>
-                <button id="nextPeriodBtn" class="btn-unified btn-outline-unified btn-small">
-                    <i class="fas fa-chevron-right"></i>
-                </button>
-            </div>
-            <button id="updatePeriodBtn" class="btn-unified btn-primary-unified btn-small w-full">
-                <i class="fas fa-sync mr-1"></i>期間更新
-            </button>
-        </div>
-    </div>
+                    <!-- 1. 期間設定 -->
+                    <div class="mb-6">
+                        <h3 class="text-sm font-semibold mb-3">
+                            <i class="fas fa-calendar mr-2"></i>期間設定
+                        </h3>
+                        <div class="space-y-3">
+                            <div>
+                                <label class="block text-xs font-medium mb-1">開始日</label>
+                                <input type="date" id="periodStartDate" class="input-unified text-xs">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-medium mb-1">終了日</label>
+                                <input type="date" id="periodEndDate" class="input-unified text-xs">
+                            </div>
+                            <div class="grid grid-cols-3 gap-2">
+                                <button id="prevPeriodBtn" class="btn-unified btn-outline-unified btn-small">
+                                    <i class="fas fa-chevron-left"></i>
+                                </button>
+                                <button id="todayPeriodBtn" class="btn-unified btn-primary-unified btn-small">
+                                    今日
+                                </button>
+                                <button id="nextPeriodBtn" class="btn-unified btn-outline-unified btn-small">
+                                    <i class="fas fa-chevron-right"></i>
+                                </button>
+                            </div>
+                            <button id="updatePeriodBtn" class="btn-unified btn-primary-unified btn-small w-full">
+                                <i class="fas fa-sync mr-1"></i>期間更新
+                            </button>
+                        </div>
+                    </div>
 
-    <!-- 2. 勤務表操作 -->
-    <div class="mb-6">
-        <h3 class="text-sm font-semibold mb-3">
-            <i class="fas fa-table mr-2"></i>勤務表操作
-        </h3>
-        <div class="space-y-2">
-            <button id="createNewScheduleBtn" class="btn-unified btn-primary-unified btn-small w-full">
-                <i class="fas fa-plus mr-1"></i>新規作成
-            </button>
-            <button id="clearAllBtn" class="btn-unified btn-outline-unified btn-small w-full">
-                <i class="fas fa-eraser mr-1"></i>全クリア
-            </button>
-        </div>
-    </div>
+                    <!-- 2. 勤務表操作 -->
+                    <div class="mb-6">
+                        <h3 class="text-sm font-semibold mb-3">
+                            <i class="fas fa-table mr-2"></i>勤務表操作
+                        </h3>
+                        <div class="space-y-2">
+                            <button id="createNewScheduleBtn" class="btn-unified btn-primary-unified btn-small w-full">
+                                <i class="fas fa-plus mr-1"></i>新規作成
+                            </button>
+                            <button id="clearAllBtn" class="btn-unified btn-outline-unified btn-small w-full">
+                                <i class="fas fa-eraser mr-1"></i>全クリア
+                            </button>
+                        </div>
+                    </div>
 
-    <!-- 3. 保存・読み込み -->
-    <div class="mb-6">
-        <h3 class="text-sm font-semibold mb-3">
-            <i class="fas fa-database mr-2"></i>保存・読み込み
-        </h3>
-        <div class="space-y-2">
-            <div class="flex gap-2">
-                <input type="text" id="snapshotTitle" class="input-unified text-xs" placeholder="タイトル">
-                <button id="saveSnapshotBtn" class="btn-unified btn-primary-unified btn-small">
-                    <i class="fas fa-save"></i>
-                </button>
-            </div>
-            <select id="snapshotSelect" class="input-unified text-xs">
-                <option value="">保存データを選択</option>
-            </select>
-            <div class="flex gap-2">
-                <button id="loadSnapshotBtn" class="btn-unified btn-outline-unified btn-small flex-1">
-                    <i class="fas fa-folder-open mr-1"></i>読込
-                </button>
-                <button id="deleteSnapshotBtn" class="btn-unified btn-outline-unified btn-small flex-1 text-red-600 border-red-600">
-                    <i class="fas fa-trash mr-1"></i>削除
-                </button>
-            </div>
-        </div>
-    </div>
+                    <!-- 3. 保存・読み込み -->
+                    <div class="mb-6">
+                        <h3 class="text-sm font-semibold mb-3">
+                            <i class="fas fa-database mr-2"></i>保存・読み込み
+                        </h3>
+                        <div class="space-y-2">
+                            <div class="flex gap-2">
+                                <input type="text" id="snapshotTitle" class="input-unified text-xs" placeholder="タイトル">
+                                <button id="saveSnapshotBtn" class="btn-unified btn-primary-unified btn-small">
+                                    <i class="fas fa-save"></i>
+                                </button>
+                            </div>
+                            <select id="snapshotSelect" class="input-unified text-xs">
+                                <option value="">保存データを選択</option>
+                            </select>
+                            <div class="flex gap-2">
+                                <button id="loadSnapshotBtn" class="btn-unified btn-outline-unified btn-small flex-1">
+                                    <i class="fas fa-folder-open mr-1"></i>読込
+                                </button>
+                                <button id="deleteSnapshotBtn" class="btn-unified btn-outline-unified btn-small flex-1 text-red-600 border-red-600">
+                                    <i class="fas fa-trash mr-1"></i>削除
+                                </button>
+                            </div>
+                        </div>
+                    </div>
 
-    <!-- 4. 公開・印刷 -->
-    <div class="mb-6">
-        <h3 class="text-sm font-semibold mb-3">
-            <i class="fas fa-share mr-2"></i>公開・印刷
-        </h3>
-        <div class="space-y-2">
-            <button id="publishScheduleBtn" class="btn-unified btn-primary-unified btn-small w-full">
-                <i class="fas fa-bullhorn mr-1"></i>勤務表を公開
-            </button>
-            <button id="printScheduleBtn" class="btn-unified btn-outline-unified btn-small w-full">
-                <i class="fas fa-print mr-1"></i>印刷（A4横）
-            </button>
-        </div>
-    </div>
+                    <!-- 4. 公開・印刷 -->
+                    <div class="mb-6">
+                        <h3 class="text-sm font-semibold mb-3">
+                            <i class="fas fa-share mr-2"></i>公開・印刷
+                        </h3>
+                        <div class="space-y-2">
+                            <button id="publishScheduleBtn" class="btn-unified btn-primary-unified btn-small w-full">
+                                <i class="fas fa-bullhorn mr-1"></i>勤務表を公開
+                            </button>
+                            <button id="printScheduleBtn" class="btn-unified btn-outline-unified btn-small w-full">
+                                <i class="fas fa-print mr-1"></i>印刷（A4横）
+                            </button>
+                        </div>
+                    </div>
 
-    <!-- 5. CE管理 -->
-    <div class="mb-6">
-        <h3 class="text-sm font-semibold mb-3">
-            <i class="fas fa-users mr-2"></i>CE管理
-        </h3>
-        <div class="space-y-2">
-            <!-- CE追加フォーム -->
-            <div class="bg-white p-3 rounded border">
-                <label class="block text-xs font-medium mb-1">新規CE追加</label>
-                <div class="flex gap-2 mb-2">
-                    <input type="text" id="newCEName" class="input-unified text-xs flex-1" placeholder="氏名">
-                    <select id="newCEWorkType" class="input-unified text-xs" style="width: 70px;">
-                        <option value="OPE">OPE</option>
-                        <option value="ME">ME</option>
-                        <option value="HD">HD</option>
-                        <option value="FLEX">FLEX</option>
-                    </select>
+                    <!-- 5. CE管理 -->
+                    <div class="mb-6">
+                        <h3 class="text-sm font-semibold mb-3">
+                            <i class="fas fa-users mr-2"></i>CE管理
+                        </h3>
+                        <div class="space-y-2">
+                            <!-- CE追加フォーム -->
+                            <div class="bg-white p-3 rounded border">
+                                <label class="block text-xs font-medium mb-1">新規CE追加</label>
+                                <div class="flex gap-2 mb-2">
+                                    <input type="text" id="newCEName" class="input-unified text-xs flex-1" placeholder="氏名">
+                                    <select id="newCEWorkType" class="input-unified text-xs" style="width: 70px;">
+                                        <option value="OPE">OPE</option>
+                                        <option value="ME">ME</option>
+                                        <option value="HD">HD</option>
+                                        <option value="FLEX">FLEX</option>
+                                    </select>
+                                </div>
+                                <button id="addCEBtn" class="btn-unified btn-primary-unified btn-small w-full">
+                                    <i class="fas fa-user-plus mr-1"></i>追加
+                                </button>
+                            </div>
+                            
+                            <!-- CE削除フォーム -->
+                            <div class="bg-white p-3 rounded border">
+                                <label class="block text-xs font-medium mb-1">CE削除</label>
+                                <select id="removeCESelect" class="input-unified text-xs mb-2">
+                                    <option value="">削除するCEを選択</option>
+                                </select>
+                                <button id="removeCEBtn" class="btn-unified btn-outline-unified btn-small w-full text-red-600 border-red-600">
+                                    <i class="fas fa-user-minus mr-1"></i>削除
+                                </button>
+                            </div>
+                            
+                            <!-- 27名初期化ボタン -->
+                            <button id="init27CEBtn" class="btn-unified btn-outline-unified btn-small w-full">
+                                <i class="fas fa-users mr-1"></i>27名で初期化
+                            </button>
+                            
+                            <!-- 並び替えボタン -->
+                            <div class="border-t pt-2">
+                                <button id="sortCENormalBtn" class="btn-unified btn-outline-unified btn-small w-full mb-1">
+                                    <i class="fas fa-list-ol mr-1"></i>通常順
+                                </button>
+                                <button id="sortCEWorkTypeBtn" class="btn-unified btn-outline-unified btn-small w-full mb-1">
+                                    <i class="fas fa-briefcase mr-1"></i>勤務順
+                                </button>
+                                <button id="sortCENameBtn" class="btn-unified btn-outline-unified btn-small w-full">
+                                    <i class="fas fa-sort-alpha-down mr-1"></i>名前順
+                                </button>
+                            </div>
+                        </div>
+                    </div>
                 </div>
-                <button id="addCEBtn" class="btn-unified btn-primary-unified btn-small w-full">
-                    <i class="fas fa-user-plus mr-1"></i>追加
-                </button>
-            </div>
-            
-            <!-- CE削除フォーム -->
-            <div class="bg-white p-3 rounded border">
-                <label class="block text-xs font-medium mb-1">CE削除</label>
-                <select id="removeCESelect" class="input-unified text-xs mb-2">
-                    <option value="">削除するCEを選択</option>
-                </select>
-                <button id="removeCEBtn" class="btn-unified btn-outline-unified btn-small w-full text-red-600 border-red-600">
-                    <i class="fas fa-user-minus mr-1"></i>削除
-                </button>
-            </div>
-            
-            <!-- 27名初期化ボタン -->
-            <button id="init27CEBtn" class="btn-unified btn-outline-unified btn-small w-full">
-                <i class="fas fa-users mr-1"></i>27名で初期化
-            </button>
-            
-            <!-- 並び替えボタン -->
-            <div class="border-t pt-2">
-                <button id="sortCENormalBtn" class="btn-unified btn-outline-unified btn-small w-full mb-1">
-                    <i class="fas fa-list-ol mr-1"></i>通常順
-                </button>
-                <button id="sortCEWorkTypeBtn" class="btn-unified btn-outline-unified btn-small w-full mb-1">
-                    <i class="fas fa-briefcase mr-1"></i>勤務順
-                </button>
-                <button id="sortCENameBtn" class="btn-unified btn-outline-unified btn-small w-full">
-                    <i class="fas fa-sort-alpha-down mr-1"></i>名前順
-                </button>
-            </div>
-        </div>
-    </div>
 
-    <!-- ナビゲーション -->
-    <div class="mt-auto pt-4 border-t border-gray-200">
-        <div class="space-y-2">
-            <a href="../dashboard.html" class="btn-unified btn-outline-unified btn-small w-full">
-                <i class="fas fa-arrow-left mr-1"></i>ダッシュボードに戻る
-            </a>
+                <!-- ナビゲーション（常に最下部に固定） -->
+                <div class="sidebar-navigation">
+                    <div class="space-y-2">
+                        <a href="../dashboard.html" class="btn-unified btn-outline-unified btn-small w-full">
+                            <i class="fas fa-arrow-left mr-1"></i>ダッシュボードに戻る
+                        </a>
+                    </div>
+                </div>
+            </div>
         </div>
-    </div>
-</div>
 
         <!-- メインエリア -->
         <div class="editor-main">
-            <!-- 勤務時間帯説明 -->
+            <!-- 勤務時間帯説明（修正されたテーブル構造） -->
             <div class="work-time-compact no-print">
                 <table>
                     <thead>
-                        <tr><th>区分</th><th>勤務時間</th></tr>休憩時間</th></tr>
+                        <tr>
+                            <th>区分</th>
+                            <th>勤務時間</th>
+                            <th>休憩時間</th>
+                        </tr>
                     </thead>
                     <tbody>
-                        <tr><td>A</td><td>8:00〜16:30</td></tr>11:45～12:30</td></tr>
-                        <tr><td>A1</td><td>7:00〜15:30</td></tr>11:45～12:30</td></tr>
-                        <tr><td>B</td><td>8:00〜翌8:00(0:00～6:30宿直相当勤務)</td></tr>11:45～12:45及び
-16:45～17:45</td></tr>
-                        <tr><td>×</td><td>休日</td></tr>
+                        <tr>
+                            <td>A</td>
+                            <td>8:00〜16:30</td>
+                            <td>11:45～12:30</td>
+                        </tr>
+                        <tr>
+                            <td>A1</td>
+                            <td>7:00〜15:30</td>
+                            <td>11:45～12:30</td>
+                        </tr>
+                        <tr>
+                            <td>B</td>
+                            <td>8:00〜翌8:00<br>(0:00～6:30宿直相当勤務)</td>
+                            <td>11:45～12:45及び<br>16:45～17:45</td>
+                        </tr>
+                        <tr>
+                            <td>×</td>
+                            <td>休日</td>
+                            <td>-</td>
+                        </tr>
                     </tbody>
                 </table>
             </div>
@@ -696,161 +746,161 @@
         }
 
         // CE管理機能の初期化
-setupCEManagement() {
-    // CE追加ボタン
-    const addCEBtn = document.getElementById('addCEBtn');
-    if (addCEBtn) {
-        addCEBtn.onclick = () => this.addCE();
-    }
+        setupCEManagement() {
+            // CE追加ボタン
+            const addCEBtn = document.getElementById('addCEBtn');
+            if (addCEBtn) {
+                addCEBtn.onclick = () => this.addCE();
+            }
 
-    // CE削除ボタン
-    const removeCEBtn = document.getElementById('removeCEBtn');
-    if (removeCEBtn) {
-        removeCEBtn.onclick = () => this.removeCE();
-    }
+            // CE削除ボタン
+            const removeCEBtn = document.getElementById('removeCEBtn');
+            if (removeCEBtn) {
+                removeCEBtn.onclick = () => this.removeCE();
+            }
 
-    // 27名初期化ボタン
-    const init27CEBtn = document.getElementById('init27CEBtn');
-    if (init27CEBtn) {
-        init27CEBtn.onclick = () => this.initialize27CE();
-    }
+            // 27名初期化ボタン
+            const init27CEBtn = document.getElementById('init27CEBtn');
+            if (init27CEBtn) {
+                init27CEBtn.onclick = () => this.initialize27CE();
+            }
 
-    // 削除用セレクトボックスの更新
-    this.updateRemoveCESelect();
-}
+            // 削除用セレクトボックスの更新
+            this.updateRemoveCESelect();
+        }
 
-// CE追加機能
-addCE() {
-    const nameInput = document.getElementById('newCEName');
-    const workTypeSelect = document.getElementById('newCEWorkType');
-    
-    const name = nameInput?.value?.trim();
-    const workType = workTypeSelect?.value || 'ME';
-    
-    if (!name) {
-        window.showMessage('CE名を入力してください', 'warning');
-        return;
-    }
+        // CE追加機能
+        addCE() {
+            const nameInput = document.getElementById('newCEName');
+            const workTypeSelect = document.getElementById('newCEWorkType');
+            
+            const name = nameInput?.value?.trim();
+            const workType = workTypeSelect?.value || 'ME';
+            
+            if (!name) {
+                window.showMessage('CE名を入力してください', 'warning');
+                return;
+            }
 
-    // 重複チェック
-    const exists = this.ceList.some(ce => ce.fullName === name);
-    if (exists) {
-        window.showMessage('同じ名前のCEが既に存在します', 'warning');
-        return;
-    }
+            // 重複チェック
+            const exists = this.ceList.some(ce => ce.fullName === name);
+            if (exists) {
+                window.showMessage('同じ名前のCEが既に存在します', 'warning');
+                return;
+            }
 
-    const newCE = {
-        id: `ce_${Date.now()}`,
-        name: this.getShortName(name),
-        fullName: name,
-        displayName: this.getShortName(name),
-        iconName: this.getShortName(name),
-        workType: workType
-    };
+            const newCE = {
+                id: `ce_${Date.now()}`,
+                name: this.getShortName(name),
+                fullName: name,
+                displayName: this.getShortName(name),
+                iconName: this.getShortName(name),
+                workType: workType
+            };
 
-    this.ceList.push(newCE);
-    this.saveCEList();
-    this.renderScheduleTable();
-    this.updateRemoveCESelect();
-    
-    // 入力フィールドをクリア
-    if (nameInput) nameInput.value = '';
-    if (workTypeSelect) workTypeSelect.value = 'ME';
-    
-    window.showMessage(`CE「${name}」を追加しました`, 'success');
-}
+            this.ceList.push(newCE);
+            this.saveCEList();
+            this.renderScheduleTable();
+            this.updateRemoveCESelect();
+            
+            // 入力フィールドをクリア
+            if (nameInput) nameInput.value = '';
+            if (workTypeSelect) workTypeSelect.value = 'ME';
+            
+            window.showMessage(`CE「${name}」を追加しました`, 'success');
+        }
 
-// CE削除機能
-removeCE() {
-    const select = document.getElementById('removeCESelect');
-    const selectedId = select?.value;
-    
-    if (!selectedId) {
-        window.showMessage('削除するCEを選択してください', 'warning');
-        return;
-    }
+        // CE削除機能
+        removeCE() {
+            const select = document.getElementById('removeCESelect');
+            const selectedId = select?.value;
+            
+            if (!selectedId) {
+                window.showMessage('削除するCEを選択してください', 'warning');
+                return;
+            }
 
-    const ceToRemove = this.ceList.find(ce => ce.id === selectedId);
-    if (!ceToRemove) {
-        window.showMessage('選択されたCEが見つかりません', 'error');
-        return;
-    }
+            const ceToRemove = this.ceList.find(ce => ce.id === selectedId);
+            if (!ceToRemove) {
+                window.showMessage('選択されたCEが見つかりません', 'error');
+                return;
+            }
 
-    if (!confirm(`CE「${ceToRemove.fullName}」を削除しますか？\n\n※関連する勤務データも削除されます。`)) {
-        return;
-    }
+            if (!confirm(`CE「${ceToRemove.fullName}」を削除しますか？\n\n※関連する勤務データも削除されます。`)) {
+                return;
+            }
 
-    // CEリストから削除
-    this.ceList = this.ceList.filter(ce => ce.id !== selectedId);
-    
-    // 関連する勤務データを削除
-    delete this.scheduleData[selectedId];
-    
-    this.saveCEList();
-    this.renderScheduleTable();
-    this.updateRemoveCESelect();
-    
-    window.showMessage(`CE「${ceToRemove.fullName}」を削除しました`, 'success');
-}
+            // CEリストから削除
+            this.ceList = this.ceList.filter(ce => ce.id !== selectedId);
+            
+            // 関連する勤務データを削除
+            delete this.scheduleData[selectedId];
+            
+            this.saveCEList();
+            this.renderScheduleTable();
+            this.updateRemoveCESelect();
+            
+            window.showMessage(`CE「${ceToRemove.fullName}」を削除しました`, 'success');
+        }
 
-// 27名で初期化
-initialize27CE() {
-    if (!confirm('CEリストを指定の27名で初期化しますか？\n\n※現在のCEリストと勤務データは全て削除されます。')) {
-        return;
-    }
+        // 27名で初期化
+        initialize27CE() {
+            if (!confirm('CEリストを指定の27名で初期化しますか？\n\n※現在のCEリストと勤務データは全て削除されます。')) {
+                return;
+            }
 
-    // 27名のリスト
-    const names27 = [
-        '安孫子明博', '八鍬純', '杉山陽子', '中村圭佑', '石山智之', 
-        '亀井祐哉', '丸藤健', '三春摩弥', '斎藤大樹', '田中隆昭', 
-        '宇井勇気', '宇野沢徹', '佐藤将志', '庄司由紀', '小沼和樹', 
-        '武田優斗', '設樂佑介', '伊藤大晟', '上松野聖', '笹生貴之', 
-        '和田彩花', '伊藤大稀', '佐藤千優', '桑島亜依', '村田七星', 
-        '小林将己', '寒河江悠輝'
-    ];
+            // 27名のリスト
+            const names27 = [
+                '安孫子明博', '八鍬純', '杉山陽子', '中村圭佑', '石山智之', 
+                '亀井祐哉', '丸藤健', '三春摩弥', '斎藤大樹', '田中隆昭', 
+                '宇井勇気', '宇野沢徹', '佐藤将志', '庄司由紀', '小沼和樹', 
+                '武田優斗', '設樂佑介', '伊藤大晟', '上松野聖', '笹生貴之', 
+                '和田彩花', '伊藤大稀', '佐藤千優', '桑島亜依', '村田七星', 
+                '小林将己', '寒河江悠輝'
+            ];
 
-    // CEリストを27名で初期化
-    this.ceList = names27.map((name, index) => ({
-        id: `ce${index + 1}`,
-        name: this.getShortName(name),
-        fullName: name,
-        displayName: this.getShortName(name),
-        iconName: this.getShortName(name),
-        workType: this.getDefaultWorkType(index)
-    }));
+            // CEリストを27名で初期化
+            this.ceList = names27.map((name, index) => ({
+                id: `ce${index + 1}`,
+                name: this.getShortName(name),
+                fullName: name,
+                displayName: this.getShortName(name),
+                iconName: this.getShortName(name),
+                workType: this.getDefaultWorkType(index)
+            }));
 
-    // 勤務データをクリア
-    this.scheduleData = {};
+            // 勤務データをクリア
+            this.scheduleData = {};
 
-    this.saveCEList();
-    this.renderScheduleTable();
-    this.updateRemoveCESelect();
-    
-    window.showMessage('CEリストを27名で初期化しました', 'success');
-}
+            this.saveCEList();
+            this.renderScheduleTable();
+            this.updateRemoveCESelect();
+            
+            window.showMessage('CEリストを27名で初期化しました', 'success');
+        }
 
-// 削除用セレクトボックスの更新
-updateRemoveCESelect() {
-    const select = document.getElementById('removeCESelect');
-    if (!select) return;
+        // 削除用セレクトボックスの更新
+        updateRemoveCESelect() {
+            const select = document.getElementById('removeCESelect');
+            if (!select) return;
 
-    select.innerHTML = '<option value="">削除するCEを選択</option>';
-    
-    this.ceList.forEach(ce => {
-        const option = document.createElement('option');
-        option.value = ce.id;
-        option.textContent = `${ce.fullName} (${ce.workType})`;
-        select.appendChild(option);
-    });
-}
+            select.innerHTML = '<option value="">削除するCEを選択</option>';
+            
+            this.ceList.forEach(ce => {
+                const option = document.createElement('option');
+                option.value = ce.id;
+                option.textContent = `${ce.fullName} (${ce.workType})`;
+                select.appendChild(option);
+            });
+        }
 
-// デフォルト勤務区分の設定
-getDefaultWorkType(index) {
-    if (index < 8) return 'OPE';      // 最初の8名はOPE
-    if (index < 16) return 'ME';      // 次の8名はME
-    if (index < 22) return 'HD';      // 次の6名はHD
-    return 'FLEX';                    // 残りはFLEX
-}
+        // デフォルト勤務区分の設定
+        getDefaultWorkType(index) {
+            if (index < 8) return 'OPE';      // 最初の8名はOPE
+            if (index < 16) return 'ME';      // 次の8名はME
+            if (index < 22) return 'HD';      // 次の6名はHD
+            return 'FLEX';                    // 残りはFLEX
+        }
 
         hideLoading() {
             const loadingEl = document.getElementById('loading');
@@ -917,117 +967,117 @@ getDefaultWorkType(index) {
             }
         }
 
-async checkEditorAuth() {
-    console.log('🔐 勤務表エディタ認証チェック開始');
-    
-    // URLパラメータから認証情報を取得
-    const urlParams = new URLSearchParams(window.location.search);
-    const uidFromUrl = urlParams.get('uid');
-    const userFromUrl = urlParams.get('username');
-    const roleFromUrl = urlParams.get('role');
-    
-    let targetUID = sessionStorage.getItem('targetUID');
-    let currentUsername = sessionStorage.getItem('currentUsername');
-    
-    // URLパラメータがある場合は優先して使用
-    if (uidFromUrl && userFromUrl) {
-        targetUID = uidFromUrl;
-        currentUsername = userFromUrl;
-        sessionStorage.setItem('targetUID', targetUID);
-        sessionStorage.setItem('currentUsername', currentUsername);
-        console.log('✅ URLパラメータからセッション情報を取得');
-    }
-    
-    // 親ウィンドウからの情報取得（フォールバック）
-    if (!targetUID || !currentUsername) {
-        try {
-            if (window.opener && !window.opener.closed) {
-                const parentUID = window.opener.sessionStorage.getItem('targetUID');
-                const parentUsername = window.opener.sessionStorage.getItem('currentUsername');
-                
-                if (parentUID && parentUsername) {
-                    targetUID = parentUID;
-                    currentUsername = parentUsername;
-                    sessionStorage.setItem('targetUID', parentUID);
-                    sessionStorage.setItem('currentUsername', parentUsername);
-                    console.log('✅ 親ウィンドウからセッション情報を取得');
+        async checkEditorAuth() {
+            console.log('🔐 勤務表エディタ認証チェック開始');
+            
+            // URLパラメータから認証情報を取得
+            const urlParams = new URLSearchParams(window.location.search);
+            const uidFromUrl = urlParams.get('uid');
+            const userFromUrl = urlParams.get('username');
+            const roleFromUrl = urlParams.get('role');
+            
+            let targetUID = sessionStorage.getItem('targetUID');
+            let currentUsername = sessionStorage.getItem('currentUsername');
+            
+            // URLパラメータがある場合は優先して使用
+            if (uidFromUrl && userFromUrl) {
+                targetUID = uidFromUrl;
+                currentUsername = userFromUrl;
+                sessionStorage.setItem('targetUID', targetUID);
+                sessionStorage.setItem('currentUsername', currentUsername);
+                console.log('✅ URLパラメータからセッション情報を取得');
+            }
+            
+            // 親ウィンドウからの情報取得（フォールバック）
+            if (!targetUID || !currentUsername) {
+                try {
+                    if (window.opener && !window.opener.closed) {
+                        const parentUID = window.opener.sessionStorage.getItem('targetUID');
+                        const parentUsername = window.opener.sessionStorage.getItem('currentUsername');
+                        
+                        if (parentUID && parentUsername) {
+                            targetUID = parentUID;
+                            currentUsername = parentUsername;
+                            sessionStorage.setItem('targetUID', parentUID);
+                            sessionStorage.setItem('currentUsername', parentUsername);
+                            console.log('✅ 親ウィンドウからセッション情報を取得');
+                        }
+                    }
+                } catch (error) {
+                    console.warn('⚠️ 親ウィンドウからの情報取得失敗:', error);
                 }
             }
-        } catch (error) {
-            console.warn('⚠️ 親ウィンドウからの情報取得失敗:', error);
+            
+            if (!targetUID || !currentUsername) {
+                console.error('❌ セッション情報が見つかりません');
+                this.showAuthError('認証情報が見つかりません', 'ダッシュボードから再度開いてください。');
+                return false;
+            }
+
+            try {
+                await window.waitForFirebase();
+                
+                // 匿名認証
+                let user = window.auth.currentUser;
+                if (!user) {
+                    console.log('🔄 匿名認証実行中...');
+                    const result = await window.auth.signInAnonymously();
+                    user = result.user;
+                    console.log('✅ 匿名認証成功:', user.uid);
+                }
+
+                // ユーザーデータを取得
+                const userSnapshot = await window.database.ref(`${window.DATA_ROOT}/users/${targetUID}`).once('value');
+                const userData = userSnapshot.val();
+
+                if (!userData || !userData.setupCompleted) {
+                    console.error('❌ ユーザーデータが見つからないか未完了');
+                    this.showAuthError('ユーザー情報が見つかりません', '再度ログインしてください。');
+                    return false;
+                }
+
+                window.currentUserData = userData;
+                window.userRole = userData.role;
+
+                // 権限チェック
+                if (!['admin', 'editor'].includes(window.userRole)) {
+                    console.error('❌ 勤務表編集権限なし:', window.userRole);
+                    this.showAuthError('勤務表編集の権限がありません', `現在の権限: ${window.userRole}`);
+                    return false;
+                }
+
+                console.log('✅ 勤務表エディタ認証成功:', userData.displayName, `(${userData.role})`);
+                return true;
+
+            } catch (error) {
+                console.error('❌ 認証チェックエラー:', error);
+                this.showAuthError('認証確認でエラーが発生しました', error.message);
+                return false;
+            }
         }
-    }
-    
-    if (!targetUID || !currentUsername) {
-        console.error('❌ セッション情報が見つかりません');
-        this.showAuthError('認証情報が見つかりません', 'ダッシュボードから再度開いてください。');
-        return false;
-    }
 
-    try {
-        await window.waitForFirebase();
-        
-        // 匿名認証
-        let user = window.auth.currentUser;
-        if (!user) {
-            console.log('🔄 匿名認証実行中...');
-            const result = await window.auth.signInAnonymously();
-            user = result.user;
-            console.log('✅ 匿名認証成功:', user.uid);
+        // エラー表示メソッドの追加
+        showAuthError(title, message) {
+            const loadingEl = document.getElementById('loading');
+            if (loadingEl) {
+                loadingEl.innerHTML = `
+                    <div class="text-center">
+                        <i class="fas fa-exclamation-triangle text-red-500 text-4xl mb-4"></i>
+                        <h3 class="text-lg font-semibold text-red-600 mb-2">${title}</h3>
+                        <p class="text-gray-600 mb-4">${message}</p>
+                        <div class="space-y-2">
+                            <button onclick="window.close()" class="btn-unified btn-primary-unified">
+                                <i class="fas fa-times mr-2"></i>このタブを閉じる
+                            </button>
+                            <br>
+                            <a href="../dashboard.html" class="btn-unified btn-outline-unified">
+                                <i class="fas fa-arrow-left mr-2"></i>ダッシュボードに戻る
+                            </a>
+                        </div>
+                    </div>
+                `;
+            }
         }
-
-        // ユーザーデータを取得
-        const userSnapshot = await window.database.ref(`${window.DATA_ROOT}/users/${targetUID}`).once('value');
-        const userData = userSnapshot.val();
-
-        if (!userData || !userData.setupCompleted) {
-            console.error('❌ ユーザーデータが見つからないか未完了');
-            this.showAuthError('ユーザー情報が見つかりません', '再度ログインしてください。');
-            return false;
-        }
-
-        window.currentUserData = userData;
-        window.userRole = userData.role;
-
-        // 権限チェック
-        if (!['admin', 'editor'].includes(window.userRole)) {
-            console.error('❌ 勤務表編集権限なし:', window.userRole);
-            this.showAuthError('勤務表編集の権限がありません', `現在の権限: ${window.userRole}`);
-            return false;
-        }
-
-        console.log('✅ 勤務表エディタ認証成功:', userData.displayName, `(${userData.role})`);
-        return true;
-
-    } catch (error) {
-        console.error('❌ 認証チェックエラー:', error);
-        this.showAuthError('認証確認でエラーが発生しました', error.message);
-        return false;
-    }
-}
-
-// エラー表示メソッドの追加
-showAuthError(title, message) {
-    const loadingEl = document.getElementById('loading');
-    if (loadingEl) {
-        loadingEl.innerHTML = `
-            <div class="text-center">
-                <i class="fas fa-exclamation-triangle text-red-500 text-4xl mb-4"></i>
-                <h3 class="text-lg font-semibold text-red-600 mb-2">${title}</h3>
-                <p class="text-gray-600 mb-4">${message}</p>
-                <div class="space-y-2">
-                    <button onclick="window.close()" class="btn-unified btn-primary-unified">
-                        <i class="fas fa-times mr-2"></i>このタブを閉じる
-                    </button>
-                    <br>
-                    <a href="../dashboard.html" class="btn-unified btn-outline-unified">
-                        <i class="fas fa-arrow-left mr-2"></i>ダッシュボードに戻る
-                    </a>
-                </div>
-            </div>
-        `;
-    }
-}
 
         async loadCEList() {
             try {
@@ -1160,8 +1210,8 @@ showAuthError(title, message) {
             if (sortWorkTypeBtn) sortWorkTypeBtn.onclick = () => this.sortCEByWorkType();
             if (sortNormalBtn) sortNormalBtn.onclick = () => this.sortCEByNormal();
 
-             // CE管理機能の設定を追加
-    this.setupCEManagement();
+            // CE管理機能の設定を追加
+            this.setupCEManagement();
 
             // 勤務表操作
             const createBtn = document.getElementById('createNewScheduleBtn');
