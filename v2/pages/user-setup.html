@@ -121,268 +121,289 @@
     
     <!-- 個人設定処理（安定化版） -->
     <script>
-    // パスワードハッシュ化ユーティリティ
-    async function hashPassword(password, saltB64 = null, iterations = 120000) {
-        const enc = new TextEncoder();
-        const salt = saltB64 ? 
-            Uint8Array.from(atob(saltB64), c => c.charCodeAt(0)) : 
-            crypto.getRandomValues(new Uint8Array(16));
+ <!-- 個人設定処理（システム設計最適化版） -->
+<script>
+// パスワードハッシュ化ユーティリティ（強化版）
+async function hashPassword(password, saltB64 = null, iterations = 120000) {
+    const enc = new TextEncoder();
+    const salt = saltB64 ? 
+        Uint8Array.from(atob(saltB64), c => c.charCodeAt(0)) : 
+        crypto.getRandomValues(new Uint8Array(16));
+    
+    const keyMaterial = await crypto.subtle.importKey(
+        'raw', 
+        enc.encode(password), 
+        'PBKDF2', 
+        false, 
+        ['deriveBits']
+    );
+    
+    const bits = await crypto.subtle.deriveBits(
+        { name: 'PBKDF2', salt, iterations, hash: 'SHA-256' }, 
+        keyMaterial, 
+        256
+    );
+    
+    const hashBytes = new Uint8Array(bits);
+    const hashB64 = btoa(String.fromCharCode(...hashBytes));
+    const saltOutB64 = btoa(String.fromCharCode(...salt));
+    
+    return { 
+        hash: hashB64, 
+        salt: saltOutB64, 
+        iterations, 
+        algo: 'PBKDF2-SHA256',
+        createdAt: new Date().toISOString()
+    };
+}
+
+document.addEventListener('DOMContentLoaded', async () => {
+    console.log('⚙️ 個人設定画面初期化開始（システム設計最適化版）');
+    
+    try {
+        await window.waitForFirebase();
+        console.log('✅ Firebase初期化完了');
         
-        const keyMaterial = await crypto.subtle.importKey(
-            'raw', 
-            enc.encode(password), 
-            'PBKDF2', 
-            false, 
-            ['deriveBits']
-        );
+        let user = window.auth.currentUser;
+        if (!user) {
+            const result = await window.auth.signInAnonymously();
+            user = result.user;
+        }
+        console.log('✅ 認証確認完了:', user.uid);
         
-        const bits = await crypto.subtle.deriveBits(
-            { name: 'PBKDF2', salt, iterations, hash: 'SHA-256' }, 
-            keyMaterial, 
-            256
-        );
-        
-        const hashBytes = new Uint8Array(bits);
-        const hashB64 = btoa(String.fromCharCode(...hashBytes));
-        const saltOutB64 = btoa(String.fromCharCode(...salt));
-        
-        return { 
-            hash: hashB64, 
-            salt: saltOutB64, 
-            iterations, 
-            algo: 'PBKDF2-SHA256' 
-        };
+    } catch (error) {
+        console.error('❌ 初期化エラー:', error);
+        window.showMessage('システム初期化に失敗しました。ページを再読み込みしてください。', 'error');
+        return;
     }
 
-    document.addEventListener('DOMContentLoaded', async () => {
-        console.log('⚙️ 個人設定画面初期化開始（安定化版）');
-        
-        try {
-            // Firebase初期化を確実に待機
-            await window.waitForFirebase();
-            console.log('✅ Firebase初期化完了');
-            
-            // 匿名認証を確実に実行
-            await ensureAnonymousAuth();
-            console.log('✅ 匿名認証確認完了');
-            
-        } catch (error) {
-            console.error('❌ 初期化エラー:', error);
-            window.showMessage('システム初期化に失敗しました。ページを再読み込みしてください。', 'error');
-            return;
+    const targetUID = sessionStorage.getItem('targetUID');
+    const currentUsername = sessionStorage.getItem('currentUsername');
+    
+    if (!targetUID || !currentUsername) {
+        console.log('❌ セッション情報なし → ログイン画面へ');
+        window.showMessage('セッション情報が不足しています', 'error');
+        setTimeout(() => {
+            window.location.href = '../index.html';
+        }, 2000);
+        return;
+    }
+
+    console.log('✅ セッション確認完了:', { targetUID, currentUsername });
+
+    const setupForm = document.getElementById('setupForm');
+    const displayNameInput = document.getElementById('displayName');
+    const newPasswordInput = document.getElementById('newPassword');
+    const confirmPasswordInput = document.getElementById('confirmPassword');
+    const setupBtn = document.getElementById('setupBtn');
+
+    function setLoading(isLoading) {
+        if (setupBtn) {
+            setupBtn.disabled = isLoading;
+            setupBtn.innerHTML = isLoading 
+                ? '<i class="fas fa-spinner fa-spin mr-2"></i>保存中...'
+                : '<i class="fas fa-save mr-2"></i>設定を保存してダッシュボードへ';
         }
+    }
 
-        // セッション確認
-        const targetUID = sessionStorage.getItem('targetUID');
-        const currentUsername = sessionStorage.getItem('currentUsername');
+    function checkPasswordStrength(password) {
+        const strengthDiv = document.getElementById('passwordStrength');
+        if (!strengthDiv) return false;
         
-        if (!targetUID || !currentUsername) {
-            console.log('❌ セッション情報なし → ログイン画面へ');
-            window.showMessage('セッション情報が不足しています', 'error');
-            setTimeout(() => {
-                window.location.href = '../index.html';
-            }, 2000);
-            return;
+        let strength = 0;
+        let feedback = [];
+        
+        if (password.length >= 8) strength++;
+        else feedback.push('8文字以上');
+        
+        if (/[a-z]/.test(password)) strength++;
+        else feedback.push('小文字');
+        
+        if (/[A-Z]/.test(password)) strength++;
+        else feedback.push('大文字');
+        
+        if (/[0-9]/.test(password)) strength++;
+        else feedback.push('数字');
+        
+        if (/[!@#$%^&*(),.?":{}|<>]/.test(password)) strength++;
+
+        if (password.length === 0) {
+            strengthDiv.innerHTML = '';
+            return false;
+        } else if (strength < 3) {
+            strengthDiv.innerHTML = `<span class="strength-weak"><i class="fas fa-times mr-1"></i>弱い（必要: ${feedback.join(', ')}）</span>`;
+            return false;
+        } else if (strength < 4) {
+            strengthDiv.innerHTML = '<span class="strength-medium"><i class="fas fa-exclamation-triangle mr-1"></i>普通（推奨: 特殊文字も追加）</span>';
+            return true;
+        } else {
+            strengthDiv.innerHTML = '<span class="strength-strong"><i class="fas fa-check mr-1"></i>強い</span>';
+            return true;
         }
+    }
 
-        console.log('✅ セッション確認完了:', { targetUID, currentUsername });
+    function checkPasswordMatch() {
+        const matchDiv = document.getElementById('passwordMatch');
+        if (!matchDiv) return false;
+        
+        const password = newPasswordInput.value;
+        const confirm = confirmPasswordInput.value;
+        
+        if (confirm === '') {
+            matchDiv.innerHTML = '';
+            return false;
+        } else if (password === confirm) {
+            matchDiv.innerHTML = '<span class="text-green-600"><i class="fas fa-check mr-1"></i>パスワードが一致しています</span>';
+            return true;
+        } else {
+            matchDiv.innerHTML = '<span class="text-red-600"><i class="fas fa-times mr-1"></i>パスワードが一致しません</span>';
+            return false;
+        }
+    }
 
-        // フォーム要素の取得
-        const setupForm = document.getElementById('setupForm');
-        const displayNameInput = document.getElementById('displayName');
-        const newPasswordInput = document.getElementById('newPassword');
-        const confirmPasswordInput = document.getElementById('confirmPassword');
-        const setupBtn = document.getElementById('setupBtn');
+    if (newPasswordInput) {
+        newPasswordInput.addEventListener('input', () => {
+            checkPasswordStrength(newPasswordInput.value);
+            checkPasswordMatch();
+        });
+    }
 
-        // 匿名認証確保関数
-        async function ensureAnonymousAuth() {
-            try {
-                let user = window.auth.currentUser;
-                if (!user) {
-                    console.log('🔄 匿名認証実行中...');
-                    const result = await window.auth.signInAnonymously();
-                    user = result.user;
-                    console.log('✅ 匿名認証成功:', user.uid);
+    if (confirmPasswordInput) {
+        confirmPasswordInput.addEventListener('input', checkPasswordMatch);
+    }
+
+    try {
+        const userSnap = await window.database.ref(`${window.DATA_ROOT}/users/${targetUID}`).once('value');
+        const userData = userSnap.val();
+        
+        if (userData) {
+            if (displayNameInput) displayNameInput.value = userData.displayName || currentUsername;
+            
+            const setupInfo = document.getElementById('setupInfo');
+            if (setupInfo) {
+                if (userData.passwordResetCompleted) {
+                    setupInfo.innerHTML = `<strong>パスワードリセット完了</strong><br>新しい表示名とパスワードを設定してください。設定完了後、通常通りログインできるようになります。`;
+                } else if (userData.fromPending) {
+                    setupInfo.innerHTML = `<strong>初回ログイン完了</strong><br>表示名とパスワードを設定してください。これらの情報は今後のログインで使用されます。`;
                 } else {
-                    console.log('✅ 既存認証確認:', user.uid);
+                    setupInfo.innerHTML = `表示名とパスワードの設定が必要です。`;
                 }
-                return user;
-            } catch (error) {
-                console.error('❌ 匿名認証失敗:', error);
-                throw new Error('認証に失敗しました');
             }
+            
+            console.log('✅ ユーザー情報読み込み完了:', userData);
         }
+    } catch (error) {
+        console.error('❌ ユーザー情報読み込みエラー:', error);
+        window.showMessage('ユーザー情報の読み込みに失敗しました', 'error');
+    }
 
-        function setLoading(isLoading) {
-            if (setupBtn) {
-                setupBtn.disabled = isLoading;
-                setupBtn.innerHTML = isLoading 
-                    ? '<i class="fas fa-spinner fa-spin mr-2"></i>保存中...'
-                    : '<i class="fas fa-save mr-2"></i>設定を保存してダッシュボードへ';
+    if (setupForm) {
+        setupForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            console.log('📝 個人設定保存開始');
+            
+            const displayName = displayNameInput.value.trim();
+            const newPassword = newPasswordInput.value;
+            const confirmPassword = confirmPasswordInput.value;
+
+            if (!displayName) {
+                window.showMessage('表示名を入力してください', 'error');
+                return;
             }
-        }
 
-        // パスワード強度チェック
-        function checkPasswordStrength(password) {
-            const strengthDiv = document.getElementById('passwordStrength');
-            if (!strengthDiv) return;
-            
-            let strength = 0;
-            
-            if (password.length >= 8) strength++;
-            if (/[a-z]/.test(password)) strength++;
-            if (/[A-Z]/.test(password)) strength++;
-            if (/[0-9]/.test(password)) strength++;
-            
-            if (password.length === 0) {
-                strengthDiv.innerHTML = '';
-            } else if (strength < 2) {
-                strengthDiv.innerHTML = '<span class="strength-weak"><i class="fas fa-times mr-1"></i>弱い</span>';
-            } else if (strength < 4) {
-                strengthDiv.innerHTML = '<span class="strength-medium"><i class="fas fa-exclamation-triangle mr-1"></i>普通</span>';
-            } else {
-                strengthDiv.innerHTML = '<span class="strength-strong"><i class="fas fa-check mr-1"></i>強い</span>';
+            if (displayName.length > 50) {
+                window.showMessage('表示名は50文字以内で入力してください', 'error');
+                return;
             }
-        }
 
-        // パスワード一致チェック
-        function checkPasswordMatch() {
-            const matchDiv = document.getElementById('passwordMatch');
-            if (!matchDiv) return;
-            
-            const password = newPasswordInput.value;
-            const confirm = confirmPasswordInput.value;
-            
-            if (confirm === '') {
-                matchDiv.innerHTML = '';
-            } else if (password === confirm) {
-                matchDiv.innerHTML = '<span class="text-green-600"><i class="fas fa-check mr-1"></i>パスワードが一致しています</span>';
-            } else {
-                matchDiv.innerHTML = '<span class="text-red-600"><i class="fas fa-times mr-1"></i>パスワードが一致しません</span>';
+            if (!newPassword) {
+                window.showMessage('新しいパスワードを入力してください', 'error');
+                return;
             }
-        }
 
-        // イベントリスナーの設定
-        if (newPasswordInput) {
-            newPasswordInput.addEventListener('input', () => {
-                checkPasswordStrength(newPasswordInput.value);
-                checkPasswordMatch();
-            });
-        }
+            if (!checkPasswordStrength(newPassword)) {
+                window.showMessage('パスワードの強度が不十分です。8文字以上で、英字・数字を含めてください。', 'error');
+                return;
+            }
 
-        if (confirmPasswordInput) {
-            confirmPasswordInput.addEventListener('input', checkPasswordMatch);
-        }
+            if (!checkPasswordMatch()) {
+                window.showMessage('パスワードが一致しません', 'error');
+                return;
+            }
 
-        // 既存のユーザー情報を読み込み
-        try {
-            const userSnap = await window.database.ref(`${window.DATA_ROOT}/users/${targetUID}`).once('value');
-            const userData = userSnap.val();
-            
-            if (userData) {
-                if (displayNameInput) displayNameInput.value = userData.displayName || currentUsername;
+            setLoading(true);
+            window.showMessage('個人設定を保存中...', 'info');
+
+            try {
+                console.log('🔐 パスワードハッシュ化開始');
+                const passwordRecord = await hashPassword(newPassword);
+                console.log('✅ パスワードハッシュ化完了');
                 
-                const setupInfo = document.getElementById('setupInfo');
-                if (userData.passwordResetCompleted && setupInfo) {
-                    setupInfo.innerHTML = `パスワードがリセットされました。<br>新しい表示名とパスワードを設定してください。`;
-                }
-                
-                console.log('✅ ユーザー情報読み込み完了:', userData);
-            }
-        } catch (error) {
-            console.error('❌ ユーザー情報読み込みエラー:', error);
-            window.showMessage('ユーザー情報の読み込みに失敗しました', 'error');
-        }
+                const updateData = {
+                    displayName: displayName,
+                    password: passwordRecord,
+                    hasCustomPassword: true,
+                    setupCompleted: true,
+                    needsSetup: false,
+                    fromPending: false,
+                    passwordResetCompleted: false,
+                    lastUpdated: firebase.database.ServerValue.TIMESTAMP,
+                    setupCompletedAt: firebase.database.ServerValue.TIMESTAMP
+                };
 
-        // フォーム送信処理（安定化版）
-        if (setupForm) {
-            setupForm.addEventListener('submit', async (e) => {
-                e.preventDefault();
-                
-                console.log('📝 フォーム送信開始');
-                
-                const displayName = displayNameInput.value.trim();
-                const newPassword = newPasswordInput.value;
-                const confirmPassword = confirmPasswordInput.value;
-
-                // バリデーション
-                if (!displayName) {
-                    window.showMessage('表示名を入力してください', 'error');
-                    return;
-                }
-
-                if (!newPassword) {
-                    window.showMessage('新しいパスワードを入力してください', 'error');
-                    return;
-                }
-
-                if (newPassword.length < 8) {
-                    window.showMessage('パスワードは8文字以上で入力してください', 'error');
-                    return;
-                }
-
-                if (newPassword !== confirmPassword) {
-                    window.showMessage('パスワードが一致しません', 'error');
-                    return;
-                }
-
-                setLoading(true);
-                window.showMessage('設定を保存中...', 'info');
+                console.log('💾 データベース更新開始');
+                await window.database.ref(`${window.DATA_ROOT}/users/${targetUID}`).update(updateData);
+                console.log('✅ データベース更新完了');
 
                 try {
-                    // 認証を再確認
-                    await ensureAnonymousAuth();
-                    console.log('✅ 保存前認証確認完了');
-                    
-                    // パスワードをハッシュ化
-                    console.log('🔐 パスワードハッシュ化開始');
-                    const passwordRecord = await hashPassword(newPassword);
-                    console.log('✅ パスワードハッシュ化完了');
-                    
-                    // ユーザーデータの更新
-                    const updateData = {
+                    const auditEntry = {
+                        action: 'user_setup_completed',
+                        details: { 
+                            username: currentUsername,
+                            displayName: displayName,
+                            setupType: sessionStorage.getItem('needsSetup') ? 'initial_setup' : 'password_reset_setup'
+                        },
+                        uid: targetUID,
+                        username: currentUsername,
                         displayName: displayName,
-                        password: passwordRecord,
-                        hasCustomPassword: true,
-                        setupCompleted: true,
-                        needsSetup: false,
-                        lastUpdated: firebase.database.ServerValue.TIMESTAMP,
-                        passwordResetCompleted: false
+                        timestamp: firebase.database.ServerValue.TIMESTAMP
                     };
-
-                    console.log('💾 データベース更新開始');
-                    await window.database.ref(`${window.DATA_ROOT}/users/${targetUID}`).update(updateData);
-                    console.log('✅ データベース更新完了');
-
-                    // セッション情報をクリア
-                    sessionStorage.removeItem('needsSetup');
-
-                    window.showMessage('設定を保存しました！ダッシュボードに移動します...', 'success');
                     
-                    // 確実にリダイレクト
-                    setTimeout(() => {
-                        console.log('🔄 ダッシュボードへリダイレクト');
-                        window.location.href = '../dashboard.html';
-                    }, 1500);
-
-                } catch (error) {
-                    console.error('❌ 設定保存エラー:', error);
-                    window.showMessage(`設定の保存に失敗しました: ${error.message}`, 'error');
-                } finally {
-                    setLoading(false);
+                    await window.database.ref(`${window.DATA_ROOT}/auditLogs`).push(auditEntry);
+                    console.log('📝 個人設定完了監査ログ記録完了');
+                } catch (logError) {
+                    console.warn('⚠️ 監査ログ記録失敗:', logError);
                 }
-            });
-        }
-        
-        console.log('✅ 個人設定画面初期化完了（安定化版）');
-    });
 
-    function goBack() {
-        if (confirm('設定を中断してログイン画面に戻りますか？')) {
-            sessionStorage.clear();
-            window.location.href = '../index.html';
-        }
+                sessionStorage.removeItem('needsSetup');
+
+                window.showMessage('個人設定を保存しました！ダッシュボードに移動します...', 'success');
+                
+                setTimeout(() => {
+                    console.log('🔄 ダッシュボードへリダイレクト');
+                    window.location.href = '../dashboard.html';
+                }, 1500);
+
+            } catch (error) {
+                console.error('❌ 個人設定保存エラー:', error);
+                window.showMessage(`設定の保存に失敗しました: ${error.message}`, 'error');
+            } finally {
+                setLoading(false);
+            }
+        });
     }
+    
+    console.log('✅ 個人設定画面初期化完了（システム設計最適化版）');
+});
+
+function goBack() {
+    if (confirm('設定を中断してログイン画面に戻りますか？\n設定内容は保存されません。')) {
+        sessionStorage.clear();
+        window.location.href = '../index.html';
+    }
+}
+</script>
     </script>
 </body>
 </html>
