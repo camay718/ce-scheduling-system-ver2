@@ -722,77 +722,192 @@
             }
         }
 
-        async resetUserPassword(uid, username) {
-            if (!confirm(`ユーザー「${username}」のパスワードをリセットしますか？\n\n⚠️ 実行内容:\n• ユーザーが初回ログイン待機リストに移行されます\n• 新しい初回パスワードが生成されます\n• ユーザーは新パスワードで再ログインが必要になります`)) {
-                return;
-            }
-
-            try {
-                window.showMessage('パスワードリセット処理中...', 'info');
-
-                const userSnapshot = await this.database.ref(`${window.DATA_ROOT}/users/${uid}`).once('value');
-                const userData = userSnapshot.val();
-                
-                if (!userData) {
-                    window.showMessage('ユーザーデータが見つかりません', 'error');
-                    return;
-                }
-
-                const chars = 'ABCDEFGHJKMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789';
-                let newPassword = '';
-                for (let i = 0; i < 8; i++) {
-                    newPassword += chars.charAt(Math.floor(Math.random() * chars.length));
-                }
-
-                const pendingUserData = {
-                    username: userData.username,
-                    role: userData.role,
-                    initialPassword: newPassword,
-                    createdAt: firebase.database.ServerValue.TIMESTAMP,
-                    createdBy: 'admin_reset',
-                    resetFrom: uid,
-                    isPasswordReset: true,
-                    originalDisplayName: userData.displayName
-                };
-
-                const updates = {};
-                updates[`${window.DATA_ROOT}/pendingUsers/${userData.username}`] = pendingUserData;
-                updates[`${window.DATA_ROOT}/users/${uid}`] = null;
-                updates[`${window.DATA_ROOT}/usernames/${userData.username}`] = null;
-
-                await this.database.ref().update(updates);
-
-                window.showMessage(`✅ リセット完了！\n\nユーザー: ${username}\n新パスワード: ${newPassword}\n\n📋 このパスワードを本人に伝達してください。`, 'success');
-
-                try {
-                    await navigator.clipboard.writeText(newPassword);
-                    console.log('📋 新パスワードをクリップボードにコピーしました');
-                } catch (clipError) {
-                    console.log('📋 クリップボードコピー非対応');
-                }
-
-            } catch (error) {
-                console.error('❌ パスワードリセットエラー:', error);
-                window.showMessage(`パスワードリセットに失敗しました: ${error.message}`, 'error');
-            }
-        }
-
-        async deleteUser(uid, username) {
-            if (!confirm(`ユーザー「${username}」を削除しますか？\n\nこの操作は元に戻せません。`)) {
-                return;
-            }
-
-            try {
-                await this.database.ref(`${window.DATA_ROOT}/users/${uid}`).remove();
-                await this.database.ref(`${window.DATA_ROOT}/usernames/${username}`).remove();
-
-                window.showMessage(`ユーザー「${username}」を削除しました`, 'success');
-            } catch (error) {
-                console.error('❌ ユーザー削除エラー:', error);
-                window.showMessage('ユーザーの削除に失敗しました', 'error');
-            }
-        }
+// パスワードリセット機能（システム設計最適化版）
+async resetUserPassword(uid, username) {
+    if (!confirm(`ユーザー「${username}」のパスワードをリセットしますか？\n\n⚠️ 実行内容:\n• ユーザーが初回ログイン待機リストに移行されます\n• 新しい初回パスワードが生成されます\n• ユーザーは新パスワードで再ログインが必要になります\n• 再ログイン後、個人設定で新しいパスワードを設定できます\n\n※この操作により、ユーザーは一時的にシステムにアクセスできなくなります。`)) {
+        return;
     }
+
+    try {
+        window.showMessage('パスワードリセット処理中...', 'info');
+
+        // 現在のユーザーデータを取得
+        const userSnapshot = await this.database.ref(`${window.DATA_ROOT}/users/${uid}`).once('value');
+        const userData = userSnapshot.val();
+        
+        if (!userData) {
+            window.showMessage('ユーザーデータが見つかりません', 'error');
+            return;
+        }
+
+        // 新しい初回パスワード生成（8文字、読みやすい文字のみ）
+        const chars = 'ABCDEFGHJKMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789';
+        let newPassword = '';
+        for (let i = 0; i < 8; i++) {
+            newPassword += chars.charAt(Math.floor(Math.random() * chars.length));
+        }
+
+        // 初回ログイン待機リストに移行するためのデータ
+        const pendingUserData = {
+            username: userData.username,
+            role: userData.role,
+            initialPassword: newPassword, // 新しい初回パスワード
+            createdAt: firebase.database.ServerValue.TIMESTAMP,
+            createdBy: 'admin_reset',
+            resetFrom: uid, // 元のUID（参照用）
+            isPasswordReset: true, // リセットフラグ
+            originalDisplayName: userData.displayName, // 元の表示名を保持
+            resetReason: 'admin_password_reset',
+            resetTimestamp: firebase.database.ServerValue.TIMESTAMP,
+            resetByAdmin: window.currentUserData?.displayName || 'admin'
+        };
+
+        // データベース更新（アクティブユーザー → 初回ログイン待機リスト）
+        const updates = {};
+        updates[`${window.DATA_ROOT}/pendingUsers/${userData.username}`] = pendingUserData;
+        updates[`${window.DATA_ROOT}/users/${uid}`] = null; // アクティブユーザーから削除
+        updates[`${window.DATA_ROOT}/usernames/${userData.username}`] = null; // ユーザー名マッピングも削除
+
+        await this.database.ref().update(updates);
+
+        // 監査ログ記録
+        try {
+            const auditEntry = {
+                action: 'password_reset_by_admin',
+                details: { 
+                    resetUser: username,
+                    resetByAdmin: window.currentUserData?.displayName || 'admin',
+                    reason: 'パスワード忘れ対応'
+                },
+                uid: uid,
+                username: username,
+                displayName: userData.displayName,
+                timestamp: firebase.database.ServerValue.TIMESTAMP,
+                adminAction: true,
+                adminUid: window.currentUserData?.uid
+            };
+            
+            await this.database.ref(`${window.DATA_ROOT}/auditLogs`).push(auditEntry);
+            console.log('📝 パスワードリセット監査ログ記録完了');
+        } catch (logError) {
+            console.warn('⚠️ 監査ログ記録失敗:', logError);
+        }
+
+        // 成功メッセージとパスワード表示
+        const resetMessage = `✅ パスワードリセット完了！
+
+【重要】以下の情報を本人に伝達してください：
+
+ユーザー名: ${username}
+新しい初回パスワード: ${newPassword}
+
+【復旧手順】
+1. 上記のユーザー名と初回パスワードでログイン
+2. 個人設定画面で新しいパスワードを設定
+3. 設定完了後、通常通りログイン可能
+
+※この初回パスワードは再表示されません。
+※パスワードはクリップボードにコピーされました。`;
+
+        alert(resetMessage);
+        window.showMessage('パスワードリセットが完了しました', 'success');
+
+        // クリップボードにコピー
+        try {
+            await navigator.clipboard.writeText(newPassword);
+            console.log('📋 新しい初回パスワードをクリップボードにコピーしました');
+        } catch (clipError) {
+            console.log('📋 クリップボードコピー非対応');
+        }
+
+    } catch (error) {
+        console.error('❌ パスワードリセットエラー:', error);
+        window.showMessage(`パスワードリセットに失敗しました: ${error.message}`, 'error');
+    }
+}
+
+// ユーザー作成機能の最適化
+async createUser() {
+    if (!this.isReady) {
+        window.showMessage('初期化中です。少し待ってから再度お試しください', 'error');
+        return;
+    }
+
+    const username = document.getElementById('username')?.value?.trim();
+    const role = document.getElementById('role')?.value;
+
+    if (!username || !role || !this.currentPassword) {
+        window.showMessage('ユーザー名・権限・初回パスワード（生成）が必要です', 'error');
+        return;
+    }
+
+    // ユーザー名バリデーション強化
+    const forbiddenChars = /[.#$\[\]\/\s]/; // スペースも禁止
+    if (username.length < 2 || username.length > 50 || forbiddenChars.test(username)) {
+        window.showMessage('ユーザー名は2-50文字で、記号やスペースを含まないでください', 'error');
+        return;
+    }
+
+    try {
+        // 重複チェック（アクティブユーザーと待機ユーザー両方）
+        const [usernameSnap, pendingSnap] = await Promise.all([
+            this.database.ref(`${window.DATA_ROOT}/usernames/${username}`).once('value'),
+            this.database.ref(`${window.DATA_ROOT}/pendingUsers/${username}`).once('value')
+        ]);
+
+        if (usernameSnap.exists() || pendingSnap.exists()) {
+            window.showMessage('このユーザー名は既に存在します', 'error');
+            return;
+        }
+
+        // 初回ログイン待機リストに追加
+        const pendingUserData = {
+            username: username,
+            role: role,
+            initialPassword: this.currentPassword,
+            createdAt: firebase.database.ServerValue.TIMESTAMP,
+            createdBy: window.currentUserData?.displayName || 'admin',
+            createdByUid: window.currentUserData?.uid,
+            status: 'waiting_initial_login'
+        };
+
+        await this.database.ref(`${window.DATA_ROOT}/pendingUsers/${username}`).set(pendingUserData);
+
+        // 監査ログ記録
+        try {
+            const auditEntry = {
+                action: 'user_created_by_admin',
+                details: { 
+                    newUser: username,
+                    role: role,
+                    createdBy: window.currentUserData?.displayName || 'admin'
+                },
+                username: username,
+                timestamp: firebase.database.ServerValue.TIMESTAMP,
+                adminAction: true,
+                adminUid: window.currentUserData?.uid
+            };
+            
+            await this.database.ref(`${window.DATA_ROOT}/auditLogs`).push(auditEntry);
+        } catch (logError) {
+            console.warn('⚠️ 監査ログ記録失敗:', logError);
+        }
+
+        window.showMessage(`✅ ユーザー「${username}」を作成しました\n\n初回パスワード: ${this.currentPassword}\n\n※この情報を本人に伝達してください`, 'success');
+        
+        // フォームリセット
+        document.getElementById('createUserForm')?.reset();
+        const passwordDisplay = document.getElementById('generatedPassword');
+        if (passwordDisplay) passwordDisplay.textContent = 'パスワードを生成してください';
+        const createBtn = document.getElementById('createUserBtn');
+        if (createBtn) createBtn.disabled = true;
+        this.currentPassword = '';
+
+    } catch (error) {
+        console.error('❌ ユーザー作成エラー:', error);
+        window.showMessage(`ユーザー作成に失敗しました: ${error.message}`, 'error');
+    }
+}
 
     let adminUserManagement = null;
     document.addEventListener('DOMContentLoaded', () => {
