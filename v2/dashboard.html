@@ -563,23 +563,49 @@
             return html;
         }
 
-        openScheduleEditor() {
-            if (window.userRole === 'viewer') {
-                window.showMessage('編集権限がありません', 'warning');
-                return;
-            }
-            
-            const url = 'pages/work-schedule-editor.html';
-            const win = window.open(url, '_blank', 'noopener,noreferrer,width=1400,height=900');
-            
-            if (!win || win.closed || typeof win.closed === 'undefined') {
-                if (confirm('新しいタブで開けませんでした。同じタブで勤務表エディタを開きますか？')) {
-                    window.location.href = url;
-                } else {
-                    window.showMessage('勤務表エディタを開くには、ポップアップを許可してください', 'warning');
-                }
-            }
+openScheduleEditor() {
+    if (window.userRole === 'viewer') {
+        window.showMessage('編集権限がありません', 'warning');
+        return;
+    }
+    
+    // セッション情報の確認
+    const targetUID = sessionStorage.getItem('targetUID');
+    const currentUsername = sessionStorage.getItem('currentUsername');
+    
+    if (!targetUID || !currentUsername) {
+        window.showMessage('セッション情報が不足しています。再度ログインしてください。', 'error');
+        return;
+    }
+    
+    const url = 'pages/work-schedule-editor.html';
+    
+    // 新しいタブで開く
+    const win = window.open(url, '_blank', 'noopener,noreferrer,width=1400,height=900');
+    
+    if (!win || win.closed || typeof win.closed === 'undefined') {
+        if (confirm('新しいタブで開けませんでした。同じタブで勤務表エディタを開きますか？')) {
+            window.location.href = url;
+        } else {
+            window.showMessage('勤務表エディタを開くには、ポップアップを許可してください', 'warning');
         }
+    } else {
+        console.log('✅ 勤務表エディタを新しいタブで開きました');
+        
+        // 新しいタブに認証情報を渡すため、少し待ってからセッション情報を設定
+        setTimeout(() => {
+            try {
+                if (win.sessionStorage) {
+                    win.sessionStorage.setItem('targetUID', targetUID);
+                    win.sessionStorage.setItem('currentUsername', currentUsername);
+                    console.log('✅ 新しいタブにセッション情報を設定');
+                }
+            } catch (error) {
+                console.warn('⚠️ 新しいタブへのセッション情報設定失敗:', error);
+            }
+        }, 1000);
+    }
+}
 
         formatDate(date) {
             return date.toISOString().slice(0, 10);
