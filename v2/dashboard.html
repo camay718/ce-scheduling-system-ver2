@@ -311,297 +311,418 @@
         }
     };
 
-    class WorkScheduleViewer {
-        constructor() {
-            this.currentPeriodIndex = 0;
-            this.availablePeriods = [];
-            this.init();
-        }
+// WorkScheduleViewerクラスの完全改良版
+class WorkScheduleViewer {
+    constructor() {
+        this.currentPeriodIndex = 0;
+        this.availablePeriods = [];
+        this.realtimeListener = null;
+        this.init();
+    }
 
-        async init() {
-            try {
-                await window.waitForFirebase();
-                await this.loadAvailablePeriods();
-                this.setupEventListeners();
-                console.log('✅ 勤務区分表ビューアー初期化完了');
-            } catch (error) {
-                console.error('❌ 勤務区分表ビューアー初期化エラー:', error);
-            }
+    async init() {
+        try {
+            await window.waitForFirebase();
+            this.setupRealtimeListener();
+            this.setupEventListeners();
+            console.log('✅ 勤務区分表ビューアー初期化完了');
+        } catch (error) {
+            console.error('❌ 勤務区分表ビューアー初期化エラー:', error);
         }
+    }
 
-        async loadAvailablePeriods() {
-            try {
-                const snapshot = await window.database.ref(`${window.DATA_ROOT}/workSchedules`).once('value');
-                const data = snapshot.val() || {};
-                
-                this.availablePeriods = Object.keys(data).map(periodKey => ({
+    // リアルタイム更新リスナーの設定
+    setupRealtimeListener() {
+        if (this.realtimeListener) {
+            this.realtimeListener.off();
+        }
+        
+        this.realtimeListener = window.database.ref(`${window.DATA_ROOT}/workSchedules`);
+        this.realtimeListener.on('value', async (snapshot) => {
+            console.log('🔄 公開勤務表データ更新検知');
+            await this.loadAvailablePeriods();
+            this.displayCurrentPeriod();
+        });
+    }
+
+    async loadAvailablePeriods() {
+        try {
+            const snapshot = await window.database.ref(`${window.DATA_ROOT}/workSchedules`).once('value');
+            const data = snapshot.val() || {};
+            
+            this.availablePeriods = Object.keys(data)
+                .map(periodKey => ({
                     key: periodKey,
                     ...data[periodKey].metadata
-                })).sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
-                
-                if (this.availablePeriods.length > 0) {
+                }))
+                .filter(period => {
+                    // 管理者は全て表示、一般ユーザーは表示可能なもののみ
+                    return window.userRole === 'admin' || (period.isVisible !== false);
+                })
+                .sort((a, b) => (b.publishedAt || b.createdAt || 0) - (a.publishedAt || a.createdAt || 0));
+            
+            if (this.availablePeriods.length > 0) {
+                // 現在のインデックスが範囲外の場合は調整
+                if (this.currentPeriodIndex >= this.availablePeriods.length) {
                     this.currentPeriodIndex = 0;
-                    this.displayCurrentPeriod();
                 }
-            } catch (error) {
-                console.error('❌ 期間データ読み込みエラー:', error);
+                this.displayCurrentPeriod();
+            } else {
+                this.displayNoPeriods();
             }
+        } catch (error) {
+            console.error('❌ 期間データ読み込みエラー:', error);
+        }
+    }
+
+    setupEventListeners() {
+        const prevBtn = document.getElementById('prevPeriodBtn');
+        const nextBtn = document.getElementById('nextPeriodBtn');
+        const editorBtn = document.getElementById('openScheduleEditorBtn');
+
+        if (prevBtn) prevBtn.onclick = () => this.navigatePeriod(-1);
+        if (nextBtn) nextBtn.onclick = () => this.navigatePeriod(1);
+        if (editorBtn) editorBtn.onclick = () => this.openScheduleEditor();
+    }
+
+    async displayCurrentPeriod() {
+        const displayEl = document.getElementById('currentPeriodDisplay');
+        const areaEl = document.getElementById('workScheduleDisplayArea');
+        
+        if (this.availablePeriods.length === 0) {
+            this.displayNoPeriods();
+            return;
         }
 
-        setupEventListeners() {
-            const prevBtn = document.getElementById('prevPeriodBtn');
-            const nextBtn = document.getElementById('nextPeriodBtn');
-            const editorBtn = document.getElementById('openScheduleEditorBtn');
-
-            if (prevBtn) prevBtn.onclick = () => this.navigatePeriod(-1);
-            if (nextBtn) nextBtn.onclick = () => this.navigatePeriod(1);
-            if (editorBtn) editorBtn.onclick = () => this.openScheduleEditor();
+        const currentPeriod = this.availablePeriods[this.currentPeriodIndex];
+        if (displayEl) {
+            const visibilityStatus = currentPeriod.isVisible === false ? ' (非公開)' : '';
+            displayEl.innerHTML = `
+                <div>${currentPeriod.startDate} ～ ${currentPeriod.endDate}${visibilityStatus}</div>
+                <div class="text-sm text-gray-500">
+                    (${this.currentPeriodIndex + 1}/${this.availablePeriods.length})
+                    ${window.userRole === 'admin' ? this.renderAdminControls(currentPeriod) : ''}
+                </div>
+            `;
         }
 
-        navigatePeriod(direction) {
-            const newIndex = this.currentPeriodIndex + direction;
+        await this.renderWorkScheduleTable(currentPeriod.key);
+    }
+
+    renderAdminControls(period) {
+        return `
+            <div class="inline-flex gap-2 ml-4">
+                <button onclick="window.workScheduleViewer.toggleVisibility('${period.key}')" 
+                        class="btn-small ${period.isVisible === false ? 'bg-green-500' : 'bg-yellow-500'} text-white" 
+                        title="表示/非表示切替">
+                    <i class="fas fa-eye${period.isVisible === false ? '' : '-slash'}"></i>
+                </button>
+                <button onclick="window.workScheduleViewer.deleteSchedule('${period.key}')" 
+                        class="btn-small bg-red-500 text-white" title="削除">
+                    <i class="fas fa-trash"></i>
+                </button>
+            </div>
+        `;
+    }
+
+    displayNoPeriods() {
+        const displayEl = document.getElementById('currentPeriodDisplay');
+        const areaEl = document.getElementById('workScheduleDisplayArea');
+        
+        if (displayEl) displayEl.textContent = '作成済みの期間なし';
+        if (areaEl) {
+            areaEl.innerHTML = `
+                <div class="text-center py-12">
+                    <i class="fas fa-calendar-plus text-4xl text-gray-400 mb-4"></i>
+                    <h3 class="text-lg font-semibold text-gray-600 mb-2">勤務区分表</h3>
+                    <p class="text-gray-500 mb-4">まだ勤務表が作成されていません</p>
+                    <button onclick="document.getElementById('openScheduleEditorBtn').click()" 
+                            class="btn-unified btn-primary-unified">
+                        <i class="fas fa-plus mr-2"></i>最初の勤務表を作成
+                    </button>
+                </div>
+            `;
+        }
+    }
+
+    async renderWorkScheduleTable(periodKey) {
+        const areaEl = document.getElementById('workScheduleDisplayArea');
+        if (!areaEl) return;
+
+        try {
+            const snapshot = await window.database.ref(`${window.DATA_ROOT}/workSchedules/${periodKey}`).once('value');
+            const periodData = snapshot.val();
             
-            if (newIndex < 0 || newIndex >= this.availablePeriods.length) {
-                window.showMessage('これ以上の期間はありません', 'info');
-                return;
-            }
-            
-            this.currentPeriodIndex = newIndex;
-            this.displayCurrentPeriod();
-        }
-
-        async displayCurrentPeriod() {
-            const displayEl = document.getElementById('currentPeriodDisplay');
-            const areaEl = document.getElementById('workScheduleDisplayArea');
-            
-            if (this.availablePeriods.length === 0) {
-                if (displayEl) displayEl.textContent = '作成済みの期間なし';
-                if (areaEl) {
-                    areaEl.innerHTML = `
-                        <div class="text-center py-12">
-                            <i class="fas fa-calendar-plus text-4xl text-gray-400 mb-4"></i>
-                            <h3 class="text-lg font-semibold text-gray-600 mb-2">勤務区分表</h3>
-                            <p class="text-gray-500 mb-4">まだ勤務表が作成されていません</p>
-                            <button onclick="document.getElementById('openScheduleEditorBtn').click()" 
-                                    class="btn-unified btn-primary-unified">
-                                <i class="fas fa-plus mr-2"></i>最初の勤務表を作成
-                            </button>
-                        </div>
-                    `;
-                }
-                return;
-            }
-
-            const currentPeriod = this.availablePeriods[this.currentPeriodIndex];
-            if (displayEl) {
-                displayEl.innerHTML = `
-                    <div>${currentPeriod.startDate} ～ ${currentPeriod.endDate}</div>
-                    <div class="text-sm text-gray-500">(${this.currentPeriodIndex + 1}/${this.availablePeriods.length})</div>
-                `;
-            }
-
-            await this.renderWorkScheduleTable(currentPeriod.key);
-        }
-
-        async renderWorkScheduleTable(periodKey) {
-            const areaEl = document.getElementById('workScheduleDisplayArea');
-            if (!areaEl) return;
-
-            try {
-                const snapshot = await window.database.ref(`${window.DATA_ROOT}/workSchedules/${periodKey}`).once('value');
-                const periodData = snapshot.val();
-                
-                if (!periodData || !window.ceManager?.ceList) {
-                    areaEl.innerHTML = `
-                        <div class="text-center py-8">
-                            <i class="fas fa-exclamation-triangle text-4xl text-yellow-500 mb-4"></i>
-                            <p class="text-gray-600">勤務表データを読み込めませんでした</p>
-                        </div>
-                    `;
-                    return;
-                }
-
-                const scheduleData = periodData.scheduleData || {};
-                const metadata = periodData.metadata || {};
-                const dates = this.generateDateRange(new Date(metadata.startDate), new Date(metadata.endDate));
-
-                areaEl.innerHTML = `
-                    <div class="work-schedule-table-wrapper">
-                        <table class="work-schedule-table">
-                            ${this.generateTableHTML(dates, scheduleData)}
-                        </table>
-                    </div>
-                `;
-
-            } catch (error) {
-                console.error('❌ 勤務表表示エラー:', error);
+            if (!periodData || !periodData.ceList) {
                 areaEl.innerHTML = `
                     <div class="text-center py-8">
-                        <i class="fas fa-exclamation-triangle text-4xl text-red-500 mb-4"></i>
-                        <p class="text-gray-600">勤務表の読み込みでエラーが発生しました</p>
+                        <i class="fas fa-exclamation-triangle text-4xl text-yellow-500 mb-4"></i>
+                        <p class="text-gray-600">勤務表データまたはCEリストが見つかりません</p>
                     </div>
                 `;
+                return;
             }
-        }
 
-        generateDateRange(startDate, endDate) {
-            const dates = [];
-            const current = new Date(startDate);
-            
-            while (current <= endDate) {
-                dates.push(new Date(current));
-                current.setDate(current.getDate() + 1);
+            const scheduleData = periodData.scheduleData || {};
+            const ceList = periodData.ceList;
+            const workTypeOverrides = periodData.workTypeOverrides || {};
+            const metadata = periodData.metadata || {};
+            const dates = this.generateDateRange(new Date(metadata.startDate), new Date(metadata.endDate));
+
+            areaEl.innerHTML = `
+                <div class="work-schedule-table-wrapper">
+                    <table class="work-schedule-table">
+                        ${this.generateTableHTML(dates, scheduleData, ceList, workTypeOverrides)}
+                    </table>
+                </div>
+            `;
+
+        } catch (error) {
+            console.error('❌ 勤務表表示エラー:', error);
+            areaEl.innerHTML = `
+                <div class="text-center py-8">
+                    <i class="fas fa-exclamation-triangle text-4xl text-red-500 mb-4"></i>
+                    <p class="text-gray-600">勤務表の読み込みでエラーが発生しました</p>
+                </div>
+            `;
+        }
+    }
+
+    // 実効勤務区分取得（オーバーライド適用）
+    getEffectiveWorkType(ceId, dateKey, ceList, workTypeOverrides) {
+        const ce = ceList.find(c => c.id === ceId);
+        if (!ce) return 'ME';
+
+        const overrides = workTypeOverrides[ceId];
+        if (Array.isArray(overrides)) {
+            const validOverrides = overrides.filter(override => 
+                dateKey >= override.startDate && dateKey <= override.endDate
+            );
+            if (validOverrides.length > 0) {
+                const latest = validOverrides.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0))[0];
+                return latest.workType;
             }
-            
-            return dates;
+        } else if (overrides && overrides.startDate && dateKey >= overrides.startDate && dateKey <= overrides.endDate) {
+            return overrides.workType;
         }
+        
+        return ce.workType || 'ME';
+    }
 
-        generateTableHTML(dates, scheduleData) {
-            let html = '<thead><tr><th class="name-header">氏名</th>';
+    generateTableHTML(dates, scheduleData, ceList, workTypeOverrides) {
+        let html = '<thead><tr><th class="name-header">氏名</th>';
+        
+        // ヘッダー行
+        dates.forEach(date => {
+            const dayOfWeek = ['日', '月', '火', '水', '木', '金', '土'][date.getDay()];
+            const isWeekend = date.getDay() === 0 || date.getDay() === 6;
+            const headerClass = isWeekend ? 'date-header weekend-header' : 'date-header';
+            
+            html += `
+                <th class="${headerClass}">
+                    <div>${date.getDate()}</div>
+                    <div class="text-xs">${dayOfWeek}</div>
+                </th>
+            `;
+        });
+        
+        const summaryHeaders = ['A', 'A1', 'B', '非', '×', '年', '出', '研', '休日数', '実勤務', '当直回数'];
+        summaryHeaders.forEach(header => {
+            html += `<th class="summary-header">${header}</th>`;
+        });
+        html += '</tr></thead>';
+        
+        // ボディ行
+        html += '<tbody>';
+        ceList.forEach(ce => {
+            const fullName = ce.fullName || ce.name || '';
+            html += `<tr><td class="name-cell">
+                <div class="font-medium">${fullName}</div>
+                <div class="text-xs text-gray-500">${ce.workType}</div>
+            </td>`;
+            
+            const summary = { A: 0, A1: 0, B: 0, non: 0, off: 0, year: 0, trip: 0, training: 0, holidays: 0, actual: 0, night: 0 };
             
             dates.forEach(date => {
-                const dayOfWeek = ['日', '月', '火', '水', '木', '金', '土'][date.getDay()];
+                const dateKey = this.formatDate(date);
+                const workData = scheduleData[ce.id]?.[dateKey] || {};
                 const isWeekend = date.getDay() === 0 || date.getDay() === 6;
-                const headerClass = isWeekend ? 'date-header weekend-header' : 'date-header';
+                const status = workData.customText?.trim() || workData.status || (isWeekend ? '×' : 'A');
+                const desired = workData.desired || false;
                 
-                html += `
-                    <th class="${headerClass}">
-                        <div>${date.getDate()}</div>
-                        <div class="text-xs">${dayOfWeek}</div>
-                    </th>
-                `;
+                // 実効勤務区分を取得（オーバーライド反映）
+                const effectiveWorkType = this.getEffectiveWorkType(ce.id, dateKey, ceList, workTypeOverrides);
+                
+                if (isWeekend) summary.holidays++;
+                switch (workData.status || (isWeekend ? '×' : 'A')) {
+                    case 'A': summary.A++; summary.actual++; break;
+                    case 'A1': summary.A1++; summary.actual++; break;
+                    case 'B': summary.B++; summary.actual++; summary.night++; break;
+                    case '非': summary.non++; summary.actual++; break;
+                    case '×': summary.off++; break;
+                    case '年': summary.year++; summary.actual++; break;
+                    case '出': summary.trip++; summary.actual++; break;
+                    case '研': summary.training++; summary.actual++; break;
+                }
+                
+                let cellClass = `work-cell type-${effectiveWorkType.toLowerCase()}`;
+                if (workData.status) cellClass += ` status-${workData.status}`;
+                if (desired) cellClass += ' desired';
+                if (isWeekend) cellClass += ' holiday';
+                
+                html += `<td class="${cellClass}">${status}</td>`;
             });
             
-            const summaryHeaders = ['A', 'A1', 'B', '非', '×', '年', '出', '研', '休日数', '実勤務', '当直回数'];
-            summaryHeaders.forEach(header => {
-                html += `<th class="summary-header">${header}</th>`;
+            const summaryValues = [summary.A, summary.A1, summary.B, summary.non, summary.off, summary.year, summary.trip, summary.training, summary.holidays, summary.actual, summary.night];
+            summaryValues.forEach(value => {
+                html += `<td class="summary-cell">${value}</td>`;
             });
-            html += '</tr></thead>';
             
-            html += '<tbody>';
-            if (window.ceManager && window.ceManager.ceList) {
-                window.ceManager.ceList.forEach(ce => {
-                    const fullName = ce.fullName || ce.name || '';
-                    html += `<tr><td class="name-cell">
-                        <div class="font-medium">${fullName}</div>
-                        <div class="text-xs text-gray-500">${ce.workType}</div>
-                    </td>`;
-                    
-                    const summary = { A: 0, A1: 0, B: 0, non: 0, off: 0, year: 0, trip: 0, training: 0, holidays: 0, actual: 0, night: 0 };
-                    
-                    dates.forEach(date => {
-                        const dateKey = this.formatDate(date);
-                        const workData = scheduleData[ce.id]?.[dateKey] || {};
-                        const isWeekend = date.getDay() === 0 || date.getDay() === 6;
-                        const status = workData.status || (isWeekend ? '×' : 'A');
-                        const desired = workData.desired || false;
-                        
-                        if (isWeekend) summary.holidays++;
-                        switch (status) {
-                            case 'A': summary.A++; summary.actual++; break;
-                            case 'A1': summary.A1++; summary.actual++; break;
-                            case 'B': summary.B++; summary.actual++; summary.night++; break;
-                            case '非': summary.non++; summary.actual++; break;
-                            case '×': summary.off++; break;
-                            case '年': summary.year++; summary.actual++; break;
-                            case '出': summary.trip++; summary.actual++; break;
-                            case '研': summary.training++; summary.actual++; break;
-                        }
-                        
-                        let cellClass = `work-cell type-${ce.workType.toLowerCase()}`;
-                        if (status) cellClass += ` status-${status}`;
-                        if (desired) cellClass += ' desired';
-                        if (isWeekend) cellClass += ' holiday';
-                        
-                        html += `<td class="${cellClass}">${status}</td>`;
-                    });
-                    
-                    const summaryValues = [summary.A, summary.A1, summary.B, summary.non, summary.off, summary.year, summary.trip, summary.training, summary.holidays, summary.actual, summary.night];
-                    summaryValues.forEach(value => {
-                        html += `<td class="summary-cell">${value}</td>`;
-                    });
-                    
-                    html += '</tr>';
-                });
-            }
-            html += '</tbody>';
+            html += '</tr>';
+        });
+        html += '</tbody>';
 
-            html += '<tfoot>';
-            const footerTypes = [
-                { label: 'OPE(A)', filter: (ce, status) => ce.workType === 'OPE' && status === 'A' },
-                { label: 'OPE(A1)', filter: (ce, status) => ce.workType === 'OPE' && status === 'A1' },
-                { label: 'ME', filter: (ce, status) => ce.workType === 'ME' && ['A', 'A1', 'B', '非', '年', '出', '研'].includes(status) },
-                { label: 'HD', filter: (ce, status) => ce.workType === 'HD' && ['A', 'A1', 'B', '非', '年', '出', '研'].includes(status) },
-                { label: 'FLEX', filter: (ce, status) => ce.workType === 'FLEX' && ['A', 'A1', 'B', '非', '年', '出', '研'].includes(status) },
-                { label: '当直', filter: (ce, status) => status === 'B' },
-                { label: '非番', filter: (ce, status) => status === '非' }
-            ];
+        // フッター（集計行）
+        html += '<tfoot>';
+        const footerTypes = [
+            { label: 'OPE(A)', filter: (effectiveType, status) => effectiveType === 'OPE' && status === 'A' },
+            { label: 'OPE(A1)', filter: (effectiveType, status) => effectiveType === 'OPE' && status === 'A1' },
+            { label: 'ME', filter: (effectiveType, status) => effectiveType === 'ME' && ['A', 'A1', 'B', '非', '年', '出', '研'].includes(status) },
+            { label: 'HD', filter: (effectiveType, status) => effectiveType === 'HD' && ['A', 'A1', 'B', '非', '年', '出', '研'].includes(status) },
+            { label: 'FLEX', filter: (effectiveType, status) => effectiveType === 'FLEX' && ['A', 'A1', 'B', '非', '年', '出', '研'].includes(status) },
+            { label: '当直', filter: (effectiveType, status) => status === 'B', target: 1 },
+            { label: '非番', filter: (effectiveType, status) => status === '非', target: 1 }
+        ];
 
-            if (window.ceManager && window.ceManager.ceList) {
-                footerTypes.forEach(type => {
-                    html += `<tr class="footer-summary-row"><th class="type-label">${type.label}</th>`;
+        footerTypes.forEach(type => {
+            html += `<tr class="footer-summary-row"><th class="type-label">${type.label}</th>`;
+            
+            dates.forEach(date => {
+                const dateKey = this.formatDate(date);
+                let count = 0;
+                ceList.forEach(ce => {
+                    const workData = scheduleData[ce.id]?.[dateKey] || {};
+                    const status = workData.status || (date.getDay() === 0 || date.getDay() === 6 ? '×' : 'A');
+                    const effectiveType = this.getEffectiveWorkType(ce.id, dateKey, ceList, workTypeOverrides);
                     
-                    dates.forEach(date => {
-                        const dateKey = this.formatDate(date);
-                        let count = 0;
-                        window.ceManager.ceList.forEach(ce => {
-                            const workData = scheduleData[ce.id]?.[dateKey] || {};
-                            const status = workData.status || (date.getDay() === 0 || date.getDay() === 6 ? '×' : 'A');
-                            if (type.filter(ce, status)) {
-                                count++;
-                            }
-                        });
-                        
-                        const cellClass = (type.label === '当直' || type.label === '非番') && (count === 0 || count >= 2) ? 'warning-count' : '';
-                        html += `<td class="${cellClass}">${count}</td>`;
-                    });
-                    
-                    for (let i = 0; i < summaryHeaders.length; i++) {
-                        html += '<td></td>';
+                    if (type.filter(effectiveType, status)) {
+                        count++;
                     }
-                    html += '</tr>';
                 });
-            }
+                
+                const cellClass = type.target && count !== type.target ? 'warning-count' : '';
+                html += `<td class="${cellClass}">${count}</td>`;
+            });
             
-            html += '</tfoot>';
-            return html;
+            for (let i = 0; i < summaryHeaders.length; i++) {
+                html += '<td></td>';
+            }
+            html += '</tr>';
+        });
+        
+        html += '</tfoot>';
+        return html;
+    }
+
+    // 管理者機能：表示/非表示切替
+    async toggleVisibility(periodKey) {
+        if (window.userRole !== 'admin') {
+            window.showMessage('管理者権限が必要です', 'warning');
+            return;
         }
 
-openScheduleEditor() {
-    if (window.userRole === 'viewer') {
-        window.showMessage('編集権限がありません', 'warning');
-        return;
-    }
-    
-    const targetUID = sessionStorage.getItem('targetUID');
-    const currentUsername = sessionStorage.getItem('currentUsername');
-    
-    if (!targetUID || !currentUsername) {
-        window.showMessage('セッション情報が不足しています。再度ログインしてください。', 'error');
-        return;
-    }
-    
-    // URLパラメータでセッション情報を渡す
-    const params = new URLSearchParams({
-        uid: targetUID,
-        username: currentUsername,
-        role: window.userRole,
-        timestamp: Date.now()
-    });
-    
-    const url = `pages/work-schedule-editor.html?${params.toString()}`;
-    
-    // 新しいタブで開く（noopenerを削除してセッション共有を可能に）
-    const win = window.open(url, 'workScheduleEditor', 'width=1400,height=900,scrollbars=yes,resizable=yes');
-    
-    if (!win || win.closed || typeof win.closed === 'undefined') {
-        if (confirm('新しいタブで開けませんでした。同じタブで勤務表エディタを開きますか？')) {
-            window.location.href = url;
-        } else {
-            window.showMessage('勤務表エディタを開くには、ポップアップを許可してください', 'warning');
+        try {
+            const snapshot = await window.database.ref(`${window.DATA_ROOT}/workSchedules/${periodKey}/metadata`).once('value');
+            const metadata = snapshot.val();
+            
+            const newVisibility = !(metadata?.isVisible !== false);
+            await window.database.ref(`${window.DATA_ROOT}/workSchedules/${periodKey}/metadata/isVisible`).set(newVisibility);
+            
+            window.showMessage(`勤務表を${newVisibility ? '表示' : '非表示'}に設定しました`, 'success');
+            
+        } catch (error) {
+            console.error('❌ 表示切替エラー:', error);
+            window.showMessage('表示設定の変更に失敗しました', 'error');
         }
-    } else {
-        console.log('✅ 勤務表エディタを新しいタブで開きました');
+    }
+
+    // 管理者機能：勤務表削除
+    async deleteSchedule(periodKey) {
+        if (window.userRole !== 'admin') {
+            window.showMessage('管理者権限が必要です', 'warning');
+            return;
+        }
+
+        const period = this.availablePeriods.find(p => p.key === periodKey);
+        if (!period) return;
+
+        if (!confirm(`勤務表「${period.startDate} ～ ${period.endDate}」を完全に削除しますか？\n\nこの操作は元に戻せません。`)) {
+            return;
+        }
+
+        try {
+            await window.database.ref(`${window.DATA_ROOT}/workSchedules/${periodKey}`).remove();
+            window.showMessage('勤務表を削除しました', 'success');
+            
+        } catch (error) {
+            console.error('❌ 勤務表削除エラー:', error);
+            window.showMessage('勤務表の削除に失敗しました', 'error');
+        }
+    }
+
+    generateDateRange(startDate, endDate) {
+        const dates = [];
+        const current = new Date(startDate);
+        
+        while (current <= endDate) {
+            dates.push(new Date(current));
+            current.setDate(current.getDate() + 1);
+        }
+        
+        return dates;
+    }
+
+    formatDate(date) {
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const day = String(date.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+    }
+
+    openScheduleEditor() {
+        if (window.userRole === 'viewer') {
+            window.showMessage('編集権限がありません', 'warning');
+            return;
+        }
+        
+        const targetUID = sessionStorage.getItem('targetUID');
+        const currentUsername = sessionStorage.getItem('currentUsername');
+        
+        if (!targetUID || !currentUsername) {
+            window.showMessage('セッション情報が不足しています。再度ログインしてください。', 'error');
+            return;
+        }
+        
+        const params = new URLSearchParams({
+            uid: targetUID,
+            username: currentUsername,
+            role: window.userRole,
+            timestamp: Date.now()
+        });
+        
+        const url = `pages/work-schedule-editor.html?${params.toString()}`;
+        
+        const win = window.open(url, 'workScheduleEditor', 'width=1400,height=900,scrollbars=yes,resizable=yes');
+        
+        if (!win || win.closed || typeof win.closed === 'undefined') {
+            if (confirm('新しいタブで開けませんでした。同じタブで勤務表エディタを開きますか？')) {
+                window.location.href = url;
+            } else {
+                window.showMessage('勤務表エディタを開くには、ポップアップを許可してください', 'warning');
+            }
+        } else {
+            console.log('✅ 勤務表エディタを新しいタブで開きました');
+        }
     }
 }
 
