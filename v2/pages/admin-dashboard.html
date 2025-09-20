@@ -28,6 +28,33 @@
             font-size: 14px;
             font-weight: bold;
         }
+        .error-banner {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: #fee2e2;
+            border: 1px solid #fecaca;
+            color: #dc2626;
+            padding: 12px 16px;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            z-index: 1000;
+            max-width: 400px;
+        }
+        .error-content {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .error-close {
+            background: none;
+            border: none;
+            font-size: 18px;
+            font-weight: bold;
+            color: #dc2626;
+            cursor: pointer;
+            margin-left: 12px;
+        }
     </style>
 </head>
 <body class="theme-unified">
@@ -113,14 +140,14 @@
                 </div>
             </section>
 
-            <!-- エラー表示エリアを追加 -->
-<div id="errorDisplay" class="error-banner" style="display: none;">
-    <div class="error-content">
-        <i class="fas fa-exclamation-triangle"></i>
-        <span id="errorMessage"></span>
-        <button onclick="hideError()" class="error-close">×</button>
-    </div>
-</div>
+            <!-- エラー表示エリア -->
+            <div id="errorDisplay" class="error-banner" style="display: none;">
+                <div class="error-content">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    <span id="errorMessage"></span>
+                    <button onclick="hideError()" class="error-close">×</button>
+                </div>
+            </div>
 
             <!-- 初回ログイン待機リスト -->
             <section class="glass-card p-6 mb-6">
@@ -179,65 +206,65 @@
                     </table>
                 </div>
             </section>
-        </main>
 
-        <!-- 権限設定セクション -->
-<section class="glass-card p-6 mb-6">
-    <h2 class="text-2xl font-bold text-gray-800 mb-6 flex items-center">
-        <i class="fas fa-user-shield text-purple-600 mr-3"></i>
-        システム権限設定
-    </h2>
-    
-    <div class="space-y-6">
-        <!-- Viewer権限設定 -->
-        <div class="p-4 border border-gray-200 rounded-lg bg-gray-50">
-            <h3 class="text-lg font-semibold mb-4 text-gray-800">
-                <i class="fas fa-eye mr-2 text-blue-600"></i>Viewer（閲覧者）権限
-            </h3>
-            
-            <div class="space-y-3">
-                <div class="flex items-center justify-between p-3 bg-white rounded border">
-                    <div>
-                        <div class="font-medium text-gray-800">業務の編集を許可</div>
-                        <div class="text-sm text-gray-600">日別スケジュールでの業務追加・編集・削除を許可します</div>
+            <!-- 権限設定セクション -->
+            <section class="glass-card p-6 mb-6">
+                <h2 class="text-2xl font-bold text-gray-800 mb-6 flex items-center">
+                    <i class="fas fa-user-shield text-purple-600 mr-3"></i>
+                    システム権限設定
+                </h2>
+                
+                <div class="space-y-6">
+                    <!-- Viewer権限設定 -->
+                    <div class="p-4 border border-gray-200 rounded-lg bg-gray-50">
+                        <h3 class="text-lg font-semibold mb-4 text-gray-800">
+                            <i class="fas fa-eye mr-2 text-blue-600"></i>Viewer（閲覧者）権限
+                        </h3>
+                        
+                        <div class="space-y-3">
+                            <div class="flex items-center justify-between p-3 bg-white rounded border">
+                                <div>
+                                    <div class="font-medium text-gray-800">業務の編集を許可</div>
+                                    <div class="text-sm text-gray-600">日別スケジュールでの業務追加・編集・削除を許可します</div>
+                                </div>
+                                <label class="relative inline-flex items-center cursor-pointer">
+                                    <input type="checkbox" id="viewerCanEdit" class="sr-only peer">
+                                    <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                                </label>
+                            </div>
+                            
+                            <div class="flex items-center justify-between p-3 bg-white rounded border">
+                                <div>
+                                    <div class="font-medium text-gray-800">CE配置の変更を許可</div>
+                                    <div class="text-sm text-gray-600">業務への担当CE配置の変更を許可します</div>
+                                </div>
+                                <label class="relative inline-flex items-center cursor-pointer">
+                                    <input type="checkbox" id="viewerCanAssign" class="sr-only peer">
+                                    <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                                </label>
+                            </div>
+                        </div>
                     </div>
-                    <label class="relative inline-flex items-center cursor-pointer">
-                        <input type="checkbox" id="viewerCanEdit" class="sr-only peer">
-                        <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
-                    </label>
+                    
+                    <!-- Editor権限設定（将来の拡張用） -->
+                    <div class="p-4 border border-gray-200 rounded-lg bg-gray-50 opacity-60">
+                        <h3 class="text-lg font-semibold mb-4 text-gray-800">
+                            <i class="fas fa-edit mr-2 text-green-600"></i>Editor（編集者）権限
+                        </h3>
+                        <div class="text-sm text-gray-500 italic">
+                            <i class="fas fa-info-circle mr-2"></i>Editor権限の詳細設定は今後のバージョンで実装予定です
+                        </div>
+                    </div>
                 </div>
                 
-                <div class="flex items-center justify-between p-3 bg-white rounded border">
-                    <div>
-                        <div class="font-medium text-gray-800">CE配置の変更を許可</div>
-                        <div class="text-sm text-gray-600">業務への担当CE配置の変更を許可します</div>
-                    </div>
-                    <label class="relative inline-flex items-center cursor-pointer">
-                        <input type="checkbox" id="viewerCanAssign" class="sr-only peer">
-                        <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
-                    </label>
+                <div class="mt-6 flex items-center justify-between">
+                    <div id="permissionsStatus" class="text-sm"></div>
+                    <button id="savePermissionsBtn" class="btn-unified btn-primary-unified">
+                        <i class="fas fa-save mr-2"></i>権限設定を保存
+                    </button>
                 </div>
-            </div>
-        </div>
-        
-        <!-- Editor権限設定（将来の拡張用） -->
-        <div class="p-4 border border-gray-200 rounded-lg bg-gray-50 opacity-60">
-            <h3 class="text-lg font-semibold mb-4 text-gray-800">
-                <i class="fas fa-edit mr-2 text-green-600"></i>Editor（編集者）権限
-            </h3>
-            <div class="text-sm text-gray-500 italic">
-                <i class="fas fa-info-circle mr-2"></i>Editor権限の詳細設定は今後のバージョンで実装予定です
-            </div>
-        </div>
-    </div>
-    
-    <div class="mt-6 flex items-center justify-between">
-        <div id="permissionsStatus" class="text-sm"></div>
-        <button id="savePermissionsBtn" class="btn-unified btn-primary-unified">
-            <i class="fas fa-save mr-2"></i>権限設定を保存
-        </button>
-    </div>
-</section>
+            </section>
+        </main>
 
         <!-- ナビゲーション -->
         <footer class="text-center">
@@ -269,6 +296,19 @@
         cont.appendChild(div);
         setTimeout(() => div.remove(), 5000);
     });
+
+    // エラー表示関数
+    function showError(message) {
+        document.getElementById('errorMessage').textContent = message;
+        document.getElementById('errorDisplay').style.display = 'block';
+        
+        // 10秒後に自動で非表示
+        setTimeout(hideError, 10000);
+    }
+
+    function hideError() {
+        document.getElementById('errorDisplay').style.display = 'none';
+    }
     </script>
 
     <!-- メインスクリプト -->
@@ -276,142 +316,223 @@
     class AdminUserManagement {
         constructor() {
             this.database = null;
-this.pendingUsers = [];
-this.activeUsers = [];
-this.currentPassword = '';
-this.isReady = false;
-this.permissions = {};
-this.init();
+            this.pendingUsers = [];
+            this.activeUsers = [];
+            this.currentPassword = '';
+            this.isReady = false;
+            this.permissions = {};
+            this.init();
         }
 
- async init() {
-    try {
-        console.log('⏳ Firebase初期化待機中...');
-        await window.waitForFirebase();
-        console.log('✅ Firebase準備完了');
-        
-        this.database = window.database;
-        
-        // 認証状態の確認
-        if (window.auth && window.auth.currentUser) {
-            console.log('🔐 認証確認済み:', window.auth.currentUser.uid);
-            this.initializeAdminFunctions();
-        } else {
-            // 認証状態の監視を設定
-            window.auth.onAuthStateChanged((user) => {
-                if (user) {
-                    console.log('🔐 認証確認済み:', user.uid);
-                    // 少し待ってから初期化（認証情報の伝播を待つ）
-                    setTimeout(() => this.initializeAdminFunctions(), 500);
+        async init() {
+            try {
+                console.log('⏳ Firebase初期化待機中...');
+                await window.waitForFirebase();
+                console.log('✅ Firebase準備完了');
+                
+                this.database = window.database;
+                
+                // 認証状態の確認
+                if (window.auth && window.auth.currentUser) {
+                    console.log('🔐 認証確認済み:', window.auth.currentUser.uid);
+                    this.initializeAdminFunctions();
+                } else {
+                    // 認証状態の監視を設定
+                    window.auth.onAuthStateChanged((user) => {
+                        if (user) {
+                            console.log('🔐 認証確認済み:', user.uid);
+                            // 少し待ってから初期化（認証情報の伝播を待つ）
+                            setTimeout(() => this.initializeAdminFunctions(), 500);
+                        }
+                    });
                 }
+                
+            } catch (error) {
+                console.error('❌ 初期化エラー:', error);
+                setTimeout(() => this.init(), 3000); // 3秒後にリトライ
+            }
+        }
+
+        // 管理機能の初期化
+        initializeAdminFunctions() {
+            console.log('🚀 管理機能初期化開始');
+            
+            this.isReady = true;
+            this.setupEventListeners();
+            
+            // 権限設定を先に読み込み
+            this.loadPermissions().then(() => {
+                // 権限確認後にデータ読み込み
+                this.loadPendingUsers();
+                this.loadActiveUsers();
+                console.log('✅ 管理機能初期化完了');
+            }).catch((error) => {
+                console.error('❌ 権限設定読み込みエラー:', error);
+                // 権限設定に失敗しても基本機能は動作させる
+                this.loadPendingUsers();
+                this.loadActiveUsers();
+                console.log('✅ 管理機能初期化完了（権限設定除く）');
             });
         }
-        
-    } catch (error) {
-        console.error('❌ 初期化エラー:', error);
-        setTimeout(() => this.init(), 3000); // 3秒後にリトライ
-    }
-}
 
         setupEventListeners() {
-    const generateBtn = document.getElementById('generatePasswordBtn');
-    if (generateBtn) {
-        generateBtn.onclick = () => this.generatePassword();
-    }
-
-    const createBtn = document.getElementById('createUserBtn');
-    if (createBtn) {
-        createBtn.onclick = () => this.createUser();
-    }
-
-    // 権限設定ボタン
-    const savePermissionsBtn = document.getElementById('savePermissionsBtn');
-    if (savePermissionsBtn) {
-        savePermissionsBtn.onclick = () => this.savePermissions();
-    }
-    
-    console.log('✅ イベントリスナー設定完了');
-}
-
-      // 権限設定ボタン
-    const savePermissionsBtn = document.getElementById('savePermissionsBtn');
-    if (savePermissionsBtn) {
-        savePermissionsBtn.onclick = () => this.savePermissions();
-    }
-}
-
-// 権限設定の読み込み
-async loadPermissions() {
-    try {
-        const snapshot = await this.database.ref(`${window.DATA_ROOT}/permissions`).once('value');
-        this.permissions = snapshot.val() || {};
-        
-        // デフォルト値の設定
-        const defaults = {
-            viewerCanEdit: false,
-            viewerCanAssign: false
-        };
-        
-        // UIに反映
-        Object.keys(defaults).forEach(key => {
-            const checkbox = document.getElementById(key);
-            if (checkbox) {
-                checkbox.checked = this.permissions[key] !== undefined ? this.permissions[key] : defaults[key];
+            const generateBtn = document.getElementById('generatePasswordBtn');
+            if (generateBtn) {
+                generateBtn.onclick = () => this.generatePassword();
             }
-        });
-        
-        console.log('✅ 権限設定読み込み完了:', this.permissions);
-    } catch (error) {
-        console.error('❌ 権限設定読み込みエラー:', error);
-        this.showPermissionsStatus('権限設定の読み込みに失敗しました', 'error');
-    }
-}
 
-// 権限設定の保存
-async savePermissions() {
-    try {
-        const newPermissions = {
-            viewerCanEdit: document.getElementById('viewerCanEdit')?.checked || false,
-            viewerCanAssign: document.getElementById('viewerCanAssign')?.checked || false,
-            updatedAt: firebase.database.ServerValue.TIMESTAMP,
-            updatedBy: window.currentUserData?.displayName || 'admin'
-        };
-        
-        await this.database.ref(`${window.DATA_ROOT}/permissions`).set(newPermissions);
-        this.permissions = newPermissions;
-        
-        this.showPermissionsStatus('権限設定を保存しました', 'success');
-        window.showMessage('権限設定を保存しました', 'success');
-        
-        console.log('✅ 権限設定保存完了:', newPermissions);
-    } catch (error) {
-        console.error('❌ 権限設定保存エラー:', error);
-        this.showPermissionsStatus('権限設定の保存に失敗しました', 'error');
-        window.showMessage('権限設定の保存に失敗しました', 'error');
-    }
-}
+            const createBtn = document.getElementById('createUserBtn');
+            if (createBtn) {
+                createBtn.onclick = () => this.createUser();
+            }
 
-// 権限設定ステータス表示
-showPermissionsStatus(message, type = 'info') {
-    const statusEl = document.getElementById('permissionsStatus');
-    if (statusEl) {
-        const colors = {
-            success: 'text-green-600',
-            error: 'text-red-600',
-            warning: 'text-yellow-600',
-            info: 'text-blue-600'
-        };
-        
-        statusEl.innerHTML = `<i class="fas fa-${type === 'success' ? 'check' : type === 'error' ? 'exclamation-triangle' : 'info'}-circle mr-1"></i>${message}`;
-        statusEl.className = `text-sm ${colors[type] || colors.info}`;
-        
-        // 3秒後にクリア
-        setTimeout(() => {
-            statusEl.innerHTML = '';
-            statusEl.className = 'text-sm';
-        }, 3000);
-    }
-}
+            // 権限設定ボタン
+            const savePermissionsBtn = document.getElementById('savePermissionsBtn');
+            if (savePermissionsBtn) {
+                savePermissionsBtn.onclick = () => this.savePermissions();
+            }
+            
+            console.log('✅ イベントリスナー設定完了');
+        }
+
+        // 権限設定の読み込み
+        async loadPermissions() {
+            try {
+                const snapshot = await this.database.ref(`${window.DATA_ROOT}/permissions`).once('value');
+                this.permissions = snapshot.val() || {};
+                
+                // デフォルト値の設定
+                const defaults = {
+                    viewerCanEdit: false,
+                    viewerCanAssign: false
+                };
+                
+                // UIに反映
+                Object.keys(defaults).forEach(key => {
+                    const checkbox = document.getElementById(key);
+                    if (checkbox) {
+                        checkbox.checked = this.permissions[key] !== undefined ? this.permissions[key] : defaults[key];
+                    }
+                });
+                
+                console.log('✅ 権限設定読み込み完了:', this.permissions);
+            } catch (error) {
+                console.error('❌ 権限設定読み込みエラー:', error);
+                this.showPermissionsStatus('権限設定の読み込みに失敗しました', 'error');
+            }
+        }
+
+        // 権限設定の保存
+        async savePermissions() {
+            try {
+                const newPermissions = {
+                    viewerCanEdit: document.getElementById('viewerCanEdit')?.checked || false,
+                    viewerCanAssign: document.getElementById('viewerCanAssign')?.checked || false,
+                    updatedAt: firebase.database.ServerValue.TIMESTAMP,
+                    updatedBy: window.currentUserData?.displayName || 'admin'
+                };
+                
+                await this.database.ref(`${window.DATA_ROOT}/permissions`).set(newPermissions);
+                this.permissions = newPermissions;
+                
+                this.showPermissionsStatus('権限設定を保存しました', 'success');
+                window.showMessage('権限設定を保存しました', 'success');
+                
+                console.log('✅ 権限設定保存完了:', newPermissions);
+            } catch (error) {
+                console.error('❌ 権限設定保存エラー:', error);
+                this.showPermissionsStatus('権限設定の保存に失敗しました', 'error');
+                window.showMessage('権限設定の保存に失敗しました', 'error');
+            }
+        }
+
+        // 権限設定ステータス表示
+        showPermissionsStatus(message, type = 'info') {
+            const statusEl = document.getElementById('permissionsStatus');
+            if (statusEl) {
+                const colors = {
+                    success: 'text-green-600',
+                    error: 'text-red-600',
+                    warning: 'text-yellow-600',
+                    info: 'text-blue-600'
+                };
+                
+                statusEl.innerHTML = `<i class="fas fa-${type === 'success' ? 'check' : type === 'error' ? 'exclamation-triangle' : 'info'}-circle mr-1"></i>${message}`;
+                statusEl.className = `text-sm ${colors[type] || colors.info}`;
+                
+                // 3秒後にクリア
+                setTimeout(() => {
+                    statusEl.innerHTML = '';
+                    statusEl.className = 'text-sm';
+                }, 3000);
+            }
+        }
+
+        // 待機ユーザー読み込み（クラスメソッド版）
+        loadPendingUsers() {
+            if (!this.database) {
+                console.error('❌ データベース未初期化');
+                setTimeout(() => this.loadPendingUsers(), 2000);
+                return;
+            }
+
+            console.log('📋 待機ユーザー読み込み開始');
+            
+            const pendingRef = this.database.ref('ceScheduleV2/pendingUsers');
+            
+            pendingRef.on('value', (snapshot) => {
+                try {
+                    const pendingUsers = snapshot.val() || {};
+                    this.pendingUsers = Object.entries(pendingUsers).map(([username, userData]) => ({
+                        username,
+                        ...userData
+                    }));
+                    
+                    this.renderPendingUsersTable();
+                    console.log('✅ 待機ユーザー読み込み完了:', this.pendingUsers.length + '人');
+                } catch (error) {
+                    console.error('❌ 待機ユーザーデータ処理エラー:', error);
+                }
+            }, (error) => {
+                console.error('❌ 待機ユーザー読み込みエラー:', error);
+                // エラー時は空で表示
+                this.pendingUsers = [];
+                this.renderPendingUsersTable();
+            });
+        }
+
+        // アクティブユーザー読み込み（クラスメソッド版）
+        loadActiveUsers() {
+            if (!this.database) {
+                console.error('❌ データベース未初期化');
+                setTimeout(() => this.loadActiveUsers(), 2000);
+                return;
+            }
+
+            console.log('👥 アクティブユーザー読み込み開始');
+            
+            const usersRef = this.database.ref('ceScheduleV2/users');
+            
+            usersRef.on('value', (snapshot) => {
+                try {
+                    const users = snapshot.val() || {};
+                    this.activeUsers = Object.entries(users).map(([uid, userData]) => ({
+                        uid,
+                        ...userData
+                    }));
+                    
+                    this.renderActiveUsersTable();
+                    console.log('✅ アクティブユーザー読み込み完了:', this.activeUsers.length + '人');
+                } catch (error) {
+                    console.error('❌ アクティブユーザーデータ処理エラー:', error);
+                }
+            }, (error) => {
+                console.error('❌ アクティブユーザー読み込みエラー:', error);
+                // エラー時は空で表示
+                this.activeUsers = [];
+                this.renderActiveUsersTable();
+            });
+        }
 
         generatePassword() {
             const chars = 'ABCDEFGHJKMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789';
@@ -489,72 +610,6 @@ showPermissionsStatus(message, type = 'info') {
                 window.showMessage(`ユーザー作成に失敗しました: ${error.message}`, 'error');
             }
         }
-
- // 待機ユーザー読み込み（クラスメソッド版）
-loadPendingUsers() {
-    if (!this.database) {
-        console.error('❌ データベース未初期化');
-        setTimeout(() => this.loadPendingUsers(), 2000);
-        return;
-    }
-
-    console.log('📋 待機ユーザー読み込み開始');
-    
-    const pendingRef = this.database.ref('ceScheduleV2/pendingUsers');
-    
-    pendingRef.on('value', (snapshot) => {
-        try {
-            const pendingUsers = snapshot.val() || {};
-            this.pendingUsers = Object.entries(pendingUsers).map(([username, userData]) => ({
-                username,
-                ...userData
-            }));
-            
-            this.renderPendingUsersTable();
-            console.log('✅ 待機ユーザー読み込み完了:', this.pendingUsers.length + '人');
-        } catch (error) {
-            console.error('❌ 待機ユーザーデータ処理エラー:', error);
-        }
-    }, (error) => {
-        console.error('❌ 待機ユーザー読み込みエラー:', error);
-        // エラー時は空で表示
-        this.pendingUsers = [];
-        this.renderPendingUsersTable();
-    });
-}
-
-// アクティブユーザー読み込み（クラスメソッド版）
-loadActiveUsers() {
-    if (!this.database) {
-        console.error('❌ データベース未初期化');
-        setTimeout(() => this.loadActiveUsers(), 2000);
-        return;
-    }
-
-    console.log('👥 アクティブユーザー読み込み開始');
-    
-    const usersRef = this.database.ref('ceScheduleV2/users');
-    
-    usersRef.on('value', (snapshot) => {
-        try {
-            const users = snapshot.val() || {};
-            this.activeUsers = Object.entries(users).map(([uid, userData]) => ({
-                uid,
-                ...userData
-            }));
-            
-            this.renderActiveUsersTable();
-            console.log('✅ アクティブユーザー読み込み完了:', this.activeUsers.length + '人');
-        } catch (error) {
-            console.error('❌ アクティブユーザーデータ処理エラー:', error);
-        }
-    }, (error) => {
-        console.error('❌ アクティブユーザー読み込みエラー:', error);
-        // エラー時は空で表示
-        this.activeUsers = [];
-        this.renderActiveUsersTable();
-    });
-}
 
         renderPendingUsersTable() {
             const tbody = document.getElementById('pendingUsersTableBody');
@@ -743,80 +798,6 @@ loadActiveUsers() {
     document.addEventListener('DOMContentLoaded', () => {
         adminUserManagement = new AdminUserManagement();
     });
-
-            // エラー表示関数
-function showError(message) {
-    document.getElementById('errorMessage').textContent = message;
-    document.getElementById('errorDisplay').style.display = 'block';
-    
-    // 10秒後に自動で非表示
-    setTimeout(hideError, 10000);
-}
-
-function hideError() {
-    document.getElementById('errorDisplay').style.display = 'none';
-}
-
-// 待機ユーザー表示更新（エラー対応版）
-function updatePendingUsersDisplay(pendingUsers) {
-    const container = document.getElementById('pendingUsersContainer');
-    if (!container) {
-        console.warn('待機ユーザー表示エリアが見つかりません');
-        return;
-    }
-    
-    container.innerHTML = '';
-    const userCount = Object.keys(pendingUsers).length;
-    
-    if (userCount === 0) {
-        container.innerHTML = '<p class="text-gray-500">待機中のユーザーはいません</p>';
-        return;
-    }
-    
-    Object.entries(pendingUsers).forEach(([username, userData]) => {
-        const userElement = document.createElement('div');
-        userElement.className = 'pending-user-item';
-        userElement.innerHTML = `
-            <div class="user-info">
-                <span class="username">${username}</span>
-                <span class="email">${userData.email || 'メール未設定'}</span>
-            </div>
-            <button onclick="activateUser('${username}')" class="activate-btn">
-                有効化
-            </button>
-        `;
-        container.appendChild(userElement);
-    });
-}
-
-// アクティブユーザー表示更新（エラー対応版）
-function updateActiveUsersDisplay(activeUsers) {
-    const container = document.getElementById('activeUsersContainer');
-    if (!container) {
-        console.warn('アクティブユーザー表示エリアが見つかりません');
-        return;
-    }
-    
-    container.innerHTML = '';
-    const onlineUsers = Object.entries(activeUsers).filter(([_, user]) => user.isOnline);
-    
-    if (onlineUsers.length === 0) {
-        container.innerHTML = '<p class="text-gray-500">オンラインユーザーはいません</p>';
-        return;
-    }
-    
-    onlineUsers.forEach(([userId, userData]) => {
-        const userElement = document.createElement('div');
-        userElement.className = 'active-user-item';
-        userElement.innerHTML = `
-            <i class="fas fa-user-circle text-green-500"></i>
-            <span>${userData.name}</span>
-            <small class="text-gray-500">${userData.role || 'ユーザー'}</small>
-        `;
-        container.appendChild(userElement);
-    });
-}
-        
-        </script>
+    </script>
 </body>
 </html>
