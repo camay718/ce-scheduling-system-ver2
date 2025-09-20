@@ -192,19 +192,23 @@
             <!-- CE勤務区分表（表示専用・改善版） -->
             <div id="ceManagementContent" class="screen-content" style="display:none; position: relative;">
                 <!-- 勤務時間帯説明（右上極小配置） -->
-                <div class="work-time-compact" style="position: absolute; top: 15px; right: 15px; background: rgba(248, 249, 250, 0.95); border: 1px dashed #e0e0e0; border-radius: 4px; padding: 3px 5px; font-size: 7px; z-index: 100; max-width: 180px; line-height: 1.1;">
-                    <table style="width: 100%; border-collapse: collapse;">
-                        <thead>
-                            <tr><th style="padding: 1px 2px; font-size: 7px; background: #f2f5f7; font-weight: 600;">区分</th><th style="padding: 1px 2px; font-size: 7px; background: #f2f5f7; font-weight: 600;">時間</th></tr>
-                        </thead>
-                        <tbody>
-                            <tr><td style="padding: 1px 2px; font-size: 7px;">A</td><td style="padding: 1px 2px; font-size: 7px;">8:00-16:30</td></tr>
-                            <tr><td style="padding: 1px 2px; font-size: 7px;">A1</td><td style="padding: 1px 2px; font-size: 7px;">7:00-15:30</td></tr>
-                            <tr><td style="padding: 1px 2px; font-size: 7px;">B</td><td style="padding: 1px 2px; font-size: 7px;">8:00-翌8:00</td></tr>
-                            <tr><td style="padding: 1px 2px; font-size: 7px;">×</td><td style="padding: 1px 2px; font-size: 7px;">休日</td></tr>
-                        </tbody>
-                    </table>
-                </div>
+         <div class="work-time-compact" style="position: absolute; top: 15px; right: 15px; background: rgba(248, 249, 250, 0.95); border: 1px dashed #e0e0e0; border-radius: 4px; padding: 4px 6px; font-size: 8px; z-index: 100; max-width: 300px; line-height: 1.2; white-space: nowrap;">
+    <table style="width: 100%; border-collapse: collapse;">
+        <thead>
+            <tr>
+                <th style="padding: 2px 4px; font-size: 8px; background: #f2f5f7; font-weight: 600; text-align: left;">区分</th>
+                <th style="padding: 2px 4px; font-size: 8px; background: #f2f5f7; font-weight: 600; text-align: left;">勤務時間</th>
+                <th style="padding: 2px 4px; font-size: 8px; background: #f2f5f7; font-weight: 600; text-align: left;">休憩時間</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr><td style="padding: 2px 4px; font-size: 8px;">A</td><td style="padding: 2px 4px; font-size: 8px;">8:00〜16:30</td><td style="padding: 2px 4px; font-size: 8px;">11:45～12:30</td></tr>
+            <tr><td style="padding: 2px 4px; font-size: 8px;">A1</td><td style="padding: 2px 4px; font-size: 8px;">7:00〜15:30</td><td style="padding: 2px 4px; font-size: 8px;">11:45～12:30</td></tr>
+            <tr><td style="padding: 2px 4px; font-size: 8px;">B</td><td style="padding: 2px 4px; font-size: 8px;">8:00〜翌8:00（0:00～6:30宿直相当勤務）</td><td style="padding: 2px 4px; font-size: 8px;">11:45～12:45及び16:45～17:45</td></tr>
+            <tr><td style="padding: 2px 4px; font-size: 8px;">×</td><td style="padding: 2px 4px; font-size: 8px;">休日</td><td style="padding: 2px 4px; font-size: 8px;">-</td></tr>
+        </tbody>
+    </table>
+</div>
 
                 <div class="schedule-display-container">
                     <div class="period-navigation">
