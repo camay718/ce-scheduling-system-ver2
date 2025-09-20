@@ -2319,47 +2319,72 @@
             });
         }
 
-        async publishSchedule() {
-            if (!confirm('現在の勤務表を公開しますか？\nダッシュボードから閲覧できるようになります。')) {
-                return;
-            }
+ async publishSchedule() {
+    if (!confirm('現在の勤務表を公開しますか？\nダッシュボードから閲覧できるようになります。')) {
+        return;
+    }
 
-            try {
-                const startKey = this.formatDateKey(this.currentPeriod.startDate);
-                const endKey = this.formatDateKey(this.currentPeriod.endDate);
-                const periodKey = `${startKey}_${endKey}`;
+    try {
+        const startKey = this.formatDateKey(this.currentPeriod.startDate);
+        const endKey = this.formatDateKey(this.currentPeriod.endDate);
+        const periodKey = `${startKey}_${endKey}`;
 
-                console.log('🚀 勤務表公開開始:', { periodKey, startKey, endKey });
+        console.log('🚀 勤務表公開開始:', { periodKey, startKey, endKey });
 
-                const publishData = {
-                    metadata: {
-                        startDate: startKey,
-                        endDate: endKey,
-                        createdAt: firebase.database.ServerValue.TIMESTAMP,
-                        publishedAt: firebase.database.ServerValue.TIMESTAMP,
-                        publishedBy: window.currentUserData?.displayName || 'editor'
-                    },
-                    scheduleData: this.scheduleData,
-                    ceList: this.ceList,
-                    workTypeOverrides: this.workTypeOverrides
-                };
+        const publishData = {
+            metadata: {
+                startDate: startKey,
+                endDate: endKey,
+                title: `勤務表（${startKey}～${endKey}）`,
+                createdAt: firebase.database.ServerValue.TIMESTAMP,
+                publishedAt: firebase.database.ServerValue.TIMESTAMP,
+                publishedBy: window.currentUserData?.displayName || 'editor',
+                isVisible: true,  // 管理用表示フラグ
+                version: '2.0'    // データ形式バージョン
+            },
+            scheduleData: this.scheduleData,
+            ceList: this.ceList,
+            workTypeOverrides: this.workTypeOverrides
+        };
 
-                // ダッシュボード用の新形式で保存
-                await window.database.ref(`${window.DATA_ROOT}/workSchedules/${periodKey}`).set(publishData);
-                
-                // 従来形式でも保存（互換性維持）
-                await window.database.ref(`${window.DATA_ROOT}/workSchedule`).set(this.scheduleData);
-                await window.database.ref(`${window.DATA_ROOT}/workTypeOverrides`).set(this.workTypeOverrides);
-                await this.saveCEList();
-                
-                console.log('✅ 勤務表公開完了:', periodKey);
-                window.showMessage('勤務表を公開しました', 'success');
-                
-            } catch (error) {
-                console.error('❌ 勤務表公開エラー:', error);
-                window.showMessage('勤務表の公開に失敗しました', 'error');
-            }
+        // 新形式で保存
+        await window.database.ref(`${window.DATA_ROOT}/workSchedules/${periodKey}`).set(publishData);
+        
+        // 従来形式も保存（互換性維持）
+        await window.database.ref(`${window.DATA_ROOT}/workSchedule`).set(this.scheduleData);
+        await window.database.ref(`${window.DATA_ROOT}/workTypeOverrides`).set(this.workTypeOverrides);
+        await this.saveCEList();
+        
+        console.log('✅ 勤務表公開完了:', periodKey);
+        window.showMessage('勤務表を公開しました', 'success');
+        
+    } catch (error) {
+        console.error('❌ 勤務表公開エラー:', error);
+        window.showMessage('勤務表の公開に失敗しました', 'error');
+    }
+}
+
+// getEffectiveWorkType関数の改良（オーバーライド適用の確実性向上）
+getEffectiveWorkType(ceId, dateKey) {
+    const ce = this.ceList.find(c => c.id === ceId);
+    if (!ce) return 'ME';
+
+    const overrides = this.workTypeOverrides[ceId];
+    if (Array.isArray(overrides)) {
+        // 最新の有効なオーバーライドを優先
+        const validOverrides = overrides
+            .filter(override => dateKey >= override.startDate && dateKey <= override.endDate)
+            .sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+        
+        if (validOverrides.length > 0) {
+            return validOverrides[0].workType;
         }
+    } else if (overrides && overrides.startDate && dateKey >= overrides.startDate && dateKey <= overrides.endDate) {
+        return overrides.workType;
+    }
+    
+    return ce.workType || 'ME';
+}
 
         printSchedule() {
             window.print();
