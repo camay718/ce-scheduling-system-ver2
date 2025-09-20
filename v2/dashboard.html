@@ -669,7 +669,7 @@ openScheduleEditor() {
             }
             return user;
         }
-  async loadAndRenderEventsForSelectedDate() {
+async loadAndRenderEventsForSelectedDate() {
     const grid = document.getElementById('departmentGrid');
     if (!grid) return;
 
@@ -695,36 +695,52 @@ openScheduleEditor() {
             item.dataset.dateKey = dateKey;
             item.dataset.department = ev.department;
 
-            // ドロップイベントリスナー（thisバインド）
+            // ドロップイベントリスナー
             item.addEventListener('dragover', (e) => this.handleEventDragOver(e));
             item.addEventListener('dragleave', (e) => this.handleEventDragLeave(e));
             item.addEventListener('drop', (e) => this.handleEventDrop(e));
 
             const timeText = (ev.startTime && ev.endTime) ? ` ${ev.startTime}-${ev.endTime}` : '';
-            const assigned = Array.isArray(ev.assignedCEs) ? ev.assignedCEs.length : 0;
-            const need = ev.requiredPeople ?? 0;
+
+            // assignedCEsの互換処理（ID配列とオブジェクト配列両対応）
+            const assignedList = Array.isArray(ev.assignedCEs) ? ev.assignedCEs : [];
+            const normalizedAssigned = assignedList.map(entry => {
+                if (typeof entry === 'string') {
+                    // ID文字列の場合、CEManagerから情報を取得
+                    const ce = window.ceManager?.ceList?.find(c => c.id === entry);
+                    return ce ? { 
+                        id: ce.id, 
+                        name: ce.iconName || ce.displayName || ce.name, 
+                        workType: ce.workType || 'ME' 
+                    } : { id: entry, name: entry, workType: 'ME' };
+                } else if (entry && typeof entry === 'object') {
+                    // オブジェクトの場合はそのまま使用
+                    return { 
+                        id: entry.id, 
+                        name: entry.name, 
+                        workType: entry.workType || 'ME' 
+                    };
+                }
+                return null;
+            }).filter(Boolean);
+
+            const assignedCount = normalizedAssigned.length;
+            const need = Number.isFinite(ev.requiredPeople) ? ev.requiredPeople : 0;
 
             // 配置済みCEチップの生成
-            let assignedCEChips = '';
-            if (ev.assignedCEs && ev.assignedCEs.length > 0 && window.ceManager?.ceList) {
-                assignedCEChips = ev.assignedCEs.map(assignedCeId => {
-                    const ce = window.ceManager.ceList.find(c => c.id === assignedCeId);
-                    if (ce) {
-                        return `<span class="chip worktype-${ce.workType.toLowerCase()}" data-ce-id="${ce.id}" title="${ce.fullName || ce.name}">
-                                    ${ce.iconName || ce.displayName || ce.name}
-                                    <i class="fas fa-times remove" title="配置解除"></i>
-                                </span>`;
-                    }
-                    return '';
-                }).filter(chip => chip).join('');
-            }
+            const assignedCEChips = normalizedAssigned.map(assigned => `
+                <span class="chip worktype-${(assigned.workType || 'ME').toLowerCase()}" data-ce-id="${assigned.id}" title="${assigned.name}">
+                    ${assigned.name}
+                    ${window.userRole !== 'viewer' ? `<i class="fas fa-times remove" title="配置解除"></i>` : ''}
+                </span>
+            `).join('');
 
             item.innerHTML = `
                 <div class="flex justify-between items-center">
                     <div class="font-semibold text-sm">
                         <i class="fas fa-briefcase mr-1"></i>${ev.name}${timeText}
                     </div>
-                    <div class="text-xs text-gray-500">${assigned}/${need}名</div>
+                    <div class="text-xs text-gray-500">${assignedCount}/${need}名</div>
                 </div>
                 ${ev.description ? `<div class="text-xs text-gray-600 mt-1">${ev.description}</div>` : ''}
                 ${assignedCEChips ? `<div class="assigned-ces mt-2">${assignedCEChips}</div>` : ''}
@@ -734,16 +750,16 @@ openScheduleEditor() {
                 </button>` : ''}
             `;
 
-            // 編集ボタンのイベント（inline onclickを回避）
+            // 編集ボタンのイベント（inline onclick回避）
             const editBtn = item.querySelector('.edit-event-btn');
             if (editBtn) {
                 editBtn.addEventListener('click', (e) => {
                     e.stopPropagation();
-                    window.editEvent(dateKey, ev.id);
+                    this.openEditEventModal(dateKey, ev.id, ev);
                 });
             }
 
-            // 配置解除ボタンのイベント（inline onclickを回避）
+            // 配置解除ボタンのイベント（inline onclick回避）
             const removeButtons = item.querySelectorAll('.chip .remove');
             removeButtons.forEach(removeBtn => {
                 removeBtn.addEventListener('click', async (e) => {
@@ -807,7 +823,7 @@ openScheduleEditor() {
     };
 }
 
-        // CEドラッグ機能の有効化
+// CEドラッグ機能の有効化
 enableCEDragging() {
     const ceItems = document.querySelectorAll('.ce-item:not([draggable])');
     const ceList = window.ceManager?.ceList || [];
@@ -815,7 +831,7 @@ enableCEDragging() {
     ceItems.forEach((item, index) => {
         item.draggable = true;
 
-        // CEデータの設定（CEマネージャーから取得）
+        // CEデータの設定
         const ce = ceList[index];
         if (ce) {
             item.dataset.ceId = ce.id;
@@ -901,7 +917,7 @@ async handleEventDrop(e) {
     }
 }
 
-// CEを業務に配置
+// CEを業務に配置（オブジェクト配列対応）
 async assignCEToEvent(dateKey, eventId, ceData) {
     try {
         const eventRef = window.database.ref(`${window.DATA_ROOT}/events/byDate/${dateKey}/${eventId}`);
@@ -913,17 +929,42 @@ async assignCEToEvent(dateKey, eventId, ceData) {
             return;
         }
 
-        const currentAssigned = eventData.assignedCEs || [];
+        const currentAssigned = Array.isArray(eventData.assignedCEs) ? eventData.assignedCEs : [];
         
-        if (currentAssigned.includes(ceData.ceId)) {
+        // 重複チェック（ID文字列とオブジェクト両対応）
+        const exists = currentAssigned.some(x => 
+            (typeof x === 'string' ? x === ceData.ceId : x?.id === ceData.ceId)
+        );
+        
+        if (exists) {
             window.showMessage(`${ceData.ceName}は既に配置済みです`, 'warning');
             return;
         }
 
-        const updatedAssigned = [...currentAssigned, ceData.ceId];
+        // オブジェクト形式でCE情報を保存
+        const ceEntry = {
+            id: ceData.ceId,
+            name: ceData.ceName,
+            workType: ceData.workType || 'ME'
+        };
+
+        // 既存のID文字列をオブジェクト形式に変換（後方互換性）
+        const upgradedAssigned = currentAssigned.map(x => {
+            if (typeof x === 'string') {
+                const ce = window.ceManager?.ceList?.find(c => c.id === x);
+                return {
+                    id: x,
+                    name: ce?.iconName || ce?.displayName || x,
+                    workType: ce?.workType || 'ME'
+                };
+            }
+            return x;
+        });
+
+        upgradedAssigned.push(ceEntry);
 
         await eventRef.update({
-            assignedCEs: updatedAssigned,
+            assignedCEs: upgradedAssigned,
             updatedAt: firebase.database.ServerValue.TIMESTAMP,
             updatedBy: window.currentUserData?.displayName || 'user'
         });
@@ -956,8 +997,10 @@ async unassignCE(dateKey, eventId, ceId) {
             return;
         }
 
-        const currentAssigned = eventData.assignedCEs || [];
-        const updatedAssigned = currentAssigned.filter(id => id !== ceId);
+        const currentAssigned = Array.isArray(eventData.assignedCEs) ? eventData.assignedCEs : [];
+        const updatedAssigned = currentAssigned.filter(x => 
+            (typeof x === 'string' ? x !== ceId : x?.id !== ceId)
+        );
 
         if (updatedAssigned.length !== currentAssigned.length) {
             await eventRef.update({
@@ -977,6 +1020,134 @@ async unassignCE(dateKey, eventId, ceId) {
     } catch (error) {
         console.error('❌ CE配置解除エラー:', error);
         window.showMessage('CE配置解除に失敗しました', 'error');
+    }
+}
+
+// 業務編集モーダル（統一版）
+openEditEventModal(dateKey, eventId, eventData) {
+    const modal = document.createElement('div');
+    modal.id = 'editEventModal';
+    modal.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50';
+    modal.innerHTML = `
+        <div class="glass-card p-6 max-w-lg w-full mx-4 max-h-[90vh] overflow-y-auto">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-lg font-bold">業務編集</h3>
+                <button onclick="this.closest('.fixed').remove()" class="text-gray-500 hover:text-gray-700">
+                    <i class="fas fa-times text-xl"></i>
+                </button>
+            </div>
+            
+            <form id="editEventForm" class="space-y-4">
+                <div>
+                    <label class="block text-sm font-bold mb-2">業務名 *</label>
+                    <input type="text" id="editEventName" class="input-unified" value="${eventData.name || ''}" required>
+                </div>
+                
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-bold mb-2">開始時間</label>
+                        <input type="time" id="editStartTime" class="input-unified" value="${eventData.startTime || ''}">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-bold mb-2">終了時間</label>
+                        <input type="time" id="editEndTime" class="input-unified" value="${eventData.endTime || ''}">
+                    </div>
+                </div>
+                
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-bold mb-2">予定件数</label>
+                        <input type="number" id="editEventCount" class="input-unified" min="0" max="99" value="${eventData.count || 0}">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-bold mb-2">必要人数</label>
+                        <input type="number" id="editRequiredPeople" class="input-unified" min="0" max="20" value="${eventData.requiredPeople || 0}">
+                    </div>
+                </div>
+                
+                <div>
+                    <label class="block text-sm font-bold mb-2">詳細</label>
+                    <textarea id="editDescription" class="input-unified" rows="3">${eventData.description || ''}</textarea>
+                </div>
+                
+                <div class="flex space-x-3">
+                    <button type="button" onclick="window.dashboardAuth.deleteEvent('${dateKey}', '${eventId}')" 
+                            class="btn-unified btn-outline-unified flex-1 text-red-600 border-red-600">
+                        <i class="fas fa-trash mr-2"></i>削除
+                    </button>
+                    <button type="submit" class="btn-unified btn-primary-unified flex-1">
+                        <i class="fas fa-save mr-2"></i>更新
+                    </button>
+                </div>
+            </form>
+        </div>
+    `;
+
+    document.body.appendChild(modal);
+
+    document.getElementById('editEventForm').onsubmit = (e) => {
+        e.preventDefault();
+        this.updateEvent(dateKey, eventId, modal);
+    };
+}
+
+// 業務更新処理
+async updateEvent(dateKey, eventId, modal) {
+    const name = document.getElementById('editEventName')?.value?.trim();
+    const startTime = document.getElementById('editStartTime')?.value;
+    const endTime = document.getElementById('editEndTime')?.value;
+    const count = parseInt(document.getElementById('editEventCount')?.value) || 0;
+    const requiredPeople = parseInt(document.getElementById('editRequiredPeople')?.value) || 0;
+    const description = document.getElementById('editDescription')?.value?.trim();
+
+    if (!name) {
+        window.showMessage('業務名を入力してください', 'warning');
+        return;
+    }
+
+    try {
+        const updateData = {
+            name: name,
+            startTime: startTime || null,
+            endTime: endTime || null,
+            count: count,
+            requiredPeople: requiredPeople,
+            description: description || null,
+            updatedAt: firebase.database.ServerValue.TIMESTAMP,
+            updatedBy: window.currentUserData?.displayName || 'unknown'
+        };
+
+        await window.database.ref(`${window.DATA_ROOT}/events/byDate/${dateKey}/${eventId}`).update(updateData);
+        modal.remove();
+        window.showMessage('業務を更新しました', 'success');
+        
+        // 画面を再描画
+        setTimeout(() => {
+            this.loadAndRenderEventsForSelectedDate();
+        }, 500);
+
+    } catch (error) {
+        console.error('業務更新エラー:', error);
+        window.showMessage('業務の更新に失敗しました', 'error');
+    }
+}
+
+// 業務削除処理
+async deleteEvent(dateKey, eventId) {
+    if (!confirm('この業務を削除しますか？')) return;
+
+    try {
+        await window.database.ref(`${window.DATA_ROOT}/events/byDate/${dateKey}/${eventId}`).remove();
+        document.getElementById('editEventModal')?.remove();
+        window.showMessage('業務を削除しました', 'success');
+        
+        // 画面を再描画
+        setTimeout(() => {
+            this.loadAndRenderEventsForSelectedDate();
+        }, 500);
+    } catch (error) {
+        console.error('業務削除エラー:', error);
+        window.showMessage('業務の削除に失敗しました', 'error');
     }
 }
 
