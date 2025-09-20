@@ -569,7 +569,6 @@ openScheduleEditor() {
         return;
     }
     
-    // セッション情報の確認
     const targetUID = sessionStorage.getItem('targetUID');
     const currentUsername = sessionStorage.getItem('currentUsername');
     
@@ -578,10 +577,18 @@ openScheduleEditor() {
         return;
     }
     
-    const url = 'pages/work-schedule-editor.html';
+    // URLパラメータでセッション情報を渡す
+    const params = new URLSearchParams({
+        uid: targetUID,
+        username: currentUsername,
+        role: window.userRole,
+        timestamp: Date.now()
+    });
     
-    // 新しいタブで開く
-    const win = window.open(url, '_blank', 'noopener,noreferrer,width=1400,height=900');
+    const url = `pages/work-schedule-editor.html?${params.toString()}`;
+    
+    // 新しいタブで開く（noopenerを削除してセッション共有を可能に）
+    const win = window.open(url, 'workScheduleEditor', 'width=1400,height=900,scrollbars=yes,resizable=yes');
     
     if (!win || win.closed || typeof win.closed === 'undefined') {
         if (confirm('新しいタブで開けませんでした。同じタブで勤務表エディタを開きますか？')) {
@@ -591,19 +598,6 @@ openScheduleEditor() {
         }
     } else {
         console.log('✅ 勤務表エディタを新しいタブで開きました');
-        
-        // 新しいタブに認証情報を渡すため、少し待ってからセッション情報を設定
-        setTimeout(() => {
-            try {
-                if (win.sessionStorage) {
-                    win.sessionStorage.setItem('targetUID', targetUID);
-                    win.sessionStorage.setItem('currentUsername', currentUsername);
-                    console.log('✅ 新しいタブにセッション情報を設定');
-                }
-            } catch (error) {
-                console.warn('⚠️ 新しいタブへのセッション情報設定失敗:', error);
-            }
-        }, 1000);
     }
 }
 
