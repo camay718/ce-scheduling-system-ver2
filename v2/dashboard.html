@@ -330,10 +330,9 @@
     <!-- Firebase設定 -->
     <script src="js/config/firebase-config.js?v=20241213"></script>
 
-    <style>
+<style>
 /* スマホ専用レスポンシブデザイン */
 @media (max-width: 768px) {
-    /* 基本レイアウト調整 */
     body {
         font-size: 14px;
         line-height: 1.4;
@@ -364,14 +363,6 @@
         transform: translateY(0);
     }
     
-    /* メインコンテンツ調整 */
-    .main-content {
-        margin-left: 0 !important;
-        padding: 12px !important;
-        padding-bottom: 80px;
-        width: 100%;
-    }
-    
     /* ハンバーガーメニューボタン */
     #toggleSidebar {
         position: fixed !important;
@@ -389,6 +380,14 @@
         display: flex !important;
         align-items: center;
         justify-content: center;
+    }
+    
+    /* メインコンテンツ調整 */
+    .main-content {
+        margin-left: 0 !important;
+        padding: 12px !important;
+        padding-bottom: 80px;
+        width: 100%;
     }
     
     /* ヘッダー部分の調整 */
@@ -774,11 +773,11 @@
                             <i class="fas fa-calendar-day mr-1"></i>今日
                         </button>
                         <button id="addEventButtonDaily" class="btn-unified btn-primary-unified">
-                            <i class="fas fa-plus mr-2"></i>業務追加
-                        </button>
-                        <button id="addBulkEventBtn" class="btn-unified btn-primary-unified">
-                            <i class="fas fa-calendar-plus mr-1"></i>＋期間一括追加
-                        </button>
+    <i class="fas fa-plus mr-2"></i>業務追加
+</button>
+<button id="addBulkEventBtn" class="btn-unified btn-primary-unified">
+    <i class="fas fa-calendar-plus mr-1"></i>期間一括追加
+</button>
                         <button id="addMonthlyTaskBtn" class="btn-unified btn-primary-unified">
                             <i class="fas fa-calendar-alt mr-1"></i>＋月次業務追加
                         </button>
@@ -1828,14 +1827,14 @@
                 
                 this.monthlyRef = window.database.ref(`${window.DATA_ROOT}/monthlyTasks/${yearMonth}`);
                 this.monthlyCallback = (snapshot) => {
-                    console.log('🔄 月次業務データ更新検知');
-                    const data = snapshot.val() || {};
-                    this.monthlyTasks[yearMonth] = data;
-                    setTimeout(() => {
-                        this.renderMonthlyTasks();
-                        await this.updateDailySummary();
-                    }, 200);
-                };
+    console.log('🔄 月次業務データ更新検知');
+    const data = snapshot.val() || {};
+    this.monthlyTasks[yearMonth] = data;
+    setTimeout(async () => {
+        this.renderMonthlyTasks();
+        await this.updateDailySummary();
+    }, 200);
+};
                 this.monthlyRef.on('value', this.monthlyCallback);
             };
             
@@ -3318,12 +3317,12 @@ this.openSimpleAddEventModal(department);
 
                 // 現在の表示月と同じなら画面を再描画
                 const currentYearMonth = this.formatDate(this.selectedDate).substring(0, 7);
-                if (currentYearMonth === yearMonth) {
-                    setTimeout(() => {
-                        this.renderMonthlyTasks();
-                        await this.updateDailySummary();
-                    }, 500);
-                }
+               if (currentYearMonth === yearMonth) {
+    setTimeout(async () => {
+        this.renderMonthlyTasks();
+        await this.updateDailySummary();
+    }, 500);
+}
 
             } catch (error) {
                 console.error('月次業務追加エラー:', error);
@@ -3469,12 +3468,8 @@ this.openSimpleAddEventModal(department);
                             console.warn('EventManager初期化失敗:', e); 
                         }
                     }
-                    if (window.eventManager && typeof window.eventManager.openBulkAddModal === 'function') {
-                        window.eventManager.openBulkAddModal();
-                    } else {
-                        // フォールバック：期間一括業務追加モーダル
-                        this.openBulkAddEventModal();
-                    }
+                    // EventManagerエラー回避のため、常にフォールバック使用
+this.openBulkAddEventModal();
                 };
             }
 
@@ -3492,12 +3487,8 @@ this.openSimpleAddEventModal(department);
                             console.warn('EventManager初期化失敗:', e); 
                         }
                     }
-                    if (window.eventManager && typeof window.eventManager.openMonthlyTaskModal === 'function') {
-                        window.eventManager.openMonthlyTaskModal();
-                    } else {
-                        // フォールバック：月次業務追加モーダル
-                        this.openMonthlyTaskModal();
-                    }
+                    // EventManagerエラー回避のため、常にフォールバック使用
+this.openMonthlyTaskModal();
                 };
             }
 
