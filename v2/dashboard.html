@@ -329,6 +329,330 @@
     
     <!-- Firebase設定 -->
     <script src="js/config/firebase-config.js?v=20241213"></script>
+
+    <style>
+/* スマホ専用レスポンシブデザイン */
+@media (max-width: 768px) {
+    /* 基本レイアウト調整 */
+    body {
+        font-size: 14px;
+        line-height: 1.4;
+    }
+    
+    /* サイドバーをボトムシートスタイルに */
+    .sidebar {
+        position: fixed !important;
+        left: 0 !important;
+        right: 0 !important;
+        bottom: 0 !important;
+        top: auto !important;
+        width: 100% !important;
+        height: auto !important;
+        max-height: 70vh;
+        transform: translateY(100%);
+        transition: transform 0.3s ease;
+        z-index: 1000;
+        background: rgba(255, 255, 255, 0.98);
+        backdrop-filter: blur(10px);
+        border-radius: 16px 16px 0 0;
+        border-top: 2px solid #e5e7eb;
+        overflow-y: auto;
+        box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.15);
+    }
+    
+    .sidebar.expanded {
+        transform: translateY(0);
+    }
+    
+    /* メインコンテンツ調整 */
+    .main-content {
+        margin-left: 0 !important;
+        padding: 12px !important;
+        padding-bottom: 80px;
+        width: 100%;
+    }
+    
+    /* ハンバーガーメニューボタン */
+    #toggleSidebar {
+        position: fixed !important;
+        bottom: 20px;
+        right: 20px;
+        background: var(--brand-primary);
+        color: white;
+        border-radius: 50%;
+        width: 56px;
+        height: 56px;
+        border: none;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        z-index: 1001;
+        font-size: 18px;
+        display: flex !important;
+        align-items: center;
+        justify-content: center;
+    }
+    
+    /* ヘッダー部分の調整 */
+    .mb-4.flex.justify-between.items-start.flex-wrap {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 12px;
+        margin-bottom: 16px;
+    }
+    
+    #dailyScheduleTitle {
+        font-size: 20px;
+        margin-bottom: 8px;
+    }
+    
+    /* 日別集計統計の調整 */
+    .daily-summary-stats {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 8px;
+        margin-left: 0;
+        font-size: 12px;
+        background: rgba(255, 255, 255, 0.8);
+        padding: 8px;
+        border-radius: 8px;
+    }
+    
+    .daily-summary-item {
+        justify-content: space-between;
+    }
+    
+    .progress-bar-mini {
+        width: 60px;
+        height: 6px;
+    }
+    
+    /* アクションボタン行の調整 */
+    .action-buttons-row {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 8px;
+        width: 100%;
+    }
+    
+    .action-buttons-row .btn-unified {
+        font-size: 11px;
+        padding: 8px 6px;
+        white-space: nowrap;
+    }
+    
+    #scheduleDatePicker {
+        grid-column: 1 / -1;
+        width: 100%;
+    }
+    
+    #prevDayBtn, #nextDayBtn {
+        display: none;
+    }
+    
+    /* 部門グリッドを1カラムに */
+    #departmentGrid {
+        grid-template-columns: 1fr !important;
+        gap: 12px !important;
+    }
+    
+    /* 部門セクションの調整 */
+    .department-section {
+        padding: 12px !important;
+        border-radius: 12px;
+        background: rgba(255, 255, 255, 0.95);
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        border: 1px solid rgba(0, 0, 0, 0.05);
+    }
+    
+    .department-section h3 {
+        font-size: 14px;
+    }
+    
+    .dept-summary-container {
+        flex-direction: column;
+        gap: 4px;
+        margin-top: 6px;
+    }
+    
+    .dept-ratio-bar {
+        height: 4px;
+    }
+    
+    /* 業務カードの調整 */
+    .event-card {
+        padding: 10px !important;
+        margin-bottom: 8px;
+        border-radius: 8px;
+        font-size: 12px;
+    }
+    
+    .event-card .font-semibold {
+        font-size: 13px;
+    }
+    
+    /* 月次業務カードの調整 */
+    .monthly-task-card {
+        padding: 8px !important;
+        font-size: 11px;
+        border-radius: 8px;
+    }
+    
+    .monthly-progress-bar {
+        height: 3px;
+    }
+    
+    .monthly-input-section {
+        flex-wrap: wrap;
+        gap: 4px;
+        font-size: 10px;
+    }
+    
+    .monthly-input-section input {
+        width: 50px;
+        font-size: 10px;
+        padding: 2px 4px;
+    }
+    
+    .monthly-input-section button {
+        font-size: 9px;
+        padding: 4px 6px;
+    }
+    
+    /* CEリストの調整 */
+    .ce-grid {
+        grid-template-columns: repeat(auto-fill, minmax(60px, 1fr)) !important;
+        gap: 6px !important;
+    }
+    
+    .ce-item {
+        padding: 6px 4px !important;
+        font-size: 10px !important;
+        min-height: 50px;
+        border-radius: 8px;
+    }
+    
+    /* CEチップの調整 */
+    .assigned-ces {
+        flex-wrap: wrap;
+        gap: 4px;
+        margin-top: 6px;
+    }
+    
+    .ce-chip {
+        font-size: 9px !important;
+        padding: 2px 4px !important;
+        border-radius: 6px;
+        line-height: 1.2;
+    }
+    
+    .ce-chip .remove-ce {
+        font-size: 8px;
+        margin-left: 2px;
+    }
+    
+    /* モーダルの調整 */
+    .fixed.inset-0 .glass-card {
+        margin: 8px !important;
+        padding: 16px !important;
+        max-width: none !important;
+        width: calc(100% - 16px) !important;
+        max-height: 90vh;
+        overflow-y: auto;
+    }
+    
+    .glass-card .grid.grid-cols-2 {
+        grid-template-columns: 1fr !important;
+        gap: 8px;
+    }
+    
+    .glass-card .btn-unified {
+        font-size: 12px;
+        padding: 10px;
+    }
+    
+    /* ナビゲーションタブの調整 */
+    .nav-tab {
+        padding: 10px;
+        text-align: center;
+        border-radius: 8px;
+        margin-bottom: 4px;
+        font-size: 12px;
+    }
+    
+    .nav-tab i {
+        display: block;
+        margin-bottom: 4px;
+        font-size: 16px;
+    }
+    
+    .sidebar-text {
+        font-size: 11px;
+    }
+    
+    /* グラスカードの調整 */
+    .glass-card {
+        padding: 12px !important;
+        margin-bottom: 12px;
+        border-radius: 10px;
+    }
+    
+    .glass-card h3 {
+        font-size: 14px;
+        margin-bottom: 8px;
+    }
+}
+
+/* 極小画面対応 */
+@media (max-width: 480px) {
+    .main-content {
+        padding: 8px !important;
+    }
+    
+    .action-buttons-row {
+        grid-template-columns: 1fr;
+    }
+    
+    .ce-grid {
+        grid-template-columns: repeat(auto-fill, minmax(50px, 1fr)) !important;
+    }
+    
+    .ce-item {
+        font-size: 9px !important;
+        min-height: 45px;
+        padding: 4px 2px !important;
+    }
+    
+    .event-card, .monthly-task-card {
+        font-size: 11px;
+        padding: 8px !important;
+    }
+    
+    .ce-chip {
+        font-size: 8px !important;
+        padding: 1px 3px !important;
+    }
+}
+
+/* ランドスケープ対応 */
+@media (max-width: 768px) and (orientation: landscape) {
+    .sidebar {
+        max-height: 60vh;
+    }
+    
+    .daily-summary-stats {
+        flex-direction: row;
+        flex-wrap: wrap;
+    }
+    
+    .action-buttons-row {
+        grid-template-columns: repeat(3, 1fr);
+    }
+    
+    #scheduleDatePicker {
+        grid-column: auto;
+    }
+}
+</style>
+    
 </head>
 <body class="theme-unified">
     <!-- ローディング画面 -->
@@ -450,7 +774,7 @@
                             <i class="fas fa-calendar-day mr-1"></i>今日
                         </button>
                         <button id="addEventButtonDaily" class="btn-unified btn-primary-unified">
-                            <i class="fas fa-plus mr-2"></i>＋業務追加
+                            <i class="fas fa-plus mr-2"></i>業務追加
                         </button>
                         <button id="addBulkEventBtn" class="btn-unified btn-primary-unified">
                             <i class="fas fa-calendar-plus mr-1"></i>＋期間一括追加
@@ -1509,7 +1833,7 @@
                     this.monthlyTasks[yearMonth] = data;
                     setTimeout(() => {
                         this.renderMonthlyTasks();
-                        this.updateDailySummary();
+                        await this.updateDailySummary();
                     }, 200);
                 };
                 this.monthlyRef.on('value', this.monthlyCallback);
@@ -1644,8 +1968,7 @@
                 this.renderMonthlyTasks();
 
                 // 集計の更新
-                this.updateDailySummary();
-
+                await this.updateDailySummary();
                 console.log(`✅ ${dateKey} のイベント表示完了: ${events.length}件`);
 
             } catch (error) {
@@ -1790,9 +2113,9 @@
             console.log(`✅ ${yearMonth} の月次業務表示完了`);
         }
 
-        updateDailySummary() {
-            const dateKey = this.formatDate(this.selectedDate);
-            const yearMonth = dateKey.substring(0, 7);
+        async updateDailySummary() {
+    const dateKey = this.formatDate(this.selectedDate);
+    const yearMonth = dateKey.substring(0, 7);
             
             // 通常業務の集計
             const eventCards = document.querySelectorAll('.event-card');
@@ -1822,14 +2145,18 @@
                 }
             });
 
-            // 配置可能人数の計算（勤務状態がA、A1、Bの人数）
-            let totalAvailable = 0;
-            if (window.ceManager?.ceList) {
-                totalAvailable = window.ceManager.ceList.filter(ce => {
-                    // 簡易的に全員を配置可能とする（実際は勤務表との連動が必要）
-                    return true;
-                }).length;
-            }
+           // 配置可能人数の計算（勤務状態がA、A1、Bの人数）
+let totalAvailable = 0;
+if (window.ceManager?.ceList && window.publishedScheduleResolver) {
+    for (const ce of window.ceManager.ceList) {
+        const workStatus = await window.publishedScheduleResolver.getCEWorkStatusForDate(ce.id, dateKey);
+        if (workStatus && ['A', 'A1', 'B'].includes(workStatus.status)) {
+            totalAvailable++;
+        }
+    }
+} else if (window.ceManager?.ceList) {
+    totalAvailable = window.ceManager.ceList.length;
+}
 
             // UI更新
             const totalEventCountEl = document.getElementById('totalEventCount');
@@ -2524,12 +2851,8 @@
             }
             
                 setTimeout(() => {
-                if (window.eventManager && typeof window.eventManager.openAddEventModal === 'function') {
-                    window.eventManager.openAddEventModal(department);
-                } else {
-                    // フォールバック：簡易的な業務追加モーダル（部門選択肢対応）
-                    this.openSimpleAddEventModal(department);
-                }
+                // EventManagerエラー回避のため、常にフォールバック使用
+this.openSimpleAddEventModal(department);
             }, 100);
         }
 
@@ -2925,7 +3248,7 @@
                         <div class="grid grid-cols-2 gap-4">
                             <div>
                                 <label class="block text-sm font-bold mb-2">目標件数</label>
-                                <input type="number" id="monthlyGoalCount" class="input-unified" min="0" max="999" value="10">
+                                <input type="number" id="monthlyGoalCount" class="input-unified" min="0" max="999" value="0">
                             </div>
                             <div>
                                 <label class="block text-sm font-bold mb-2">必要人数</label>
@@ -2998,7 +3321,7 @@
                 if (currentYearMonth === yearMonth) {
                     setTimeout(() => {
                         this.renderMonthlyTasks();
-                        this.updateDailySummary();
+                        await this.updateDailySummary();
                     }, 500);
                 }
 
