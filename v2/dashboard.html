@@ -1832,14 +1832,12 @@
                 }
                 
                 this.monthlyRef = window.database.ref(`${window.DATA_ROOT}/monthlyTasks/${yearMonth}`);
-                this.monthlyCallback = (snapshot) => {
+               this.monthlyCallback = async (snapshot) => {
     console.log('🔄 月次業務データ更新検知');
     const data = snapshot.val() || {};
     this.monthlyTasks[yearMonth] = data;
-    setTimeout(async () => {
-        this.renderMonthlyTasks();
-        await this.updateDailySummary();
-    }, 200);
+    this.renderMonthlyTasks();
+    await this.updateDailySummary();
 };
                 this.monthlyRef.on('value', this.monthlyCallback);
             };
@@ -2237,8 +2235,10 @@ if (window.ceManager?.ceList && window.publishedScheduleResolver) {
         async updateMonthlyTaskActual(yearMonth, taskId, newCount) {
             try {
                 await window.database.ref(`${window.DATA_ROOT}/monthlyTasks/${yearMonth}/${taskId}/actualCount`).set(newCount);
-                window.showMessage('実施件数を更新しました', 'success');
-                console.log(`✅ 月次業務実施件数更新: ${newCount}件`);
+window.showMessage('実施件数を更新しました', 'success');
+console.log(`✅ 月次業務実施件数更新: ${newCount}件`);
+this.renderMonthlyTasks();
+await this.updateDailySummary();
             } catch (error) {
                 console.error('❌ 月次業務実施件数更新エラー:', error);
                 window.showMessage('実施件数の更新に失敗しました', 'error');
@@ -2338,6 +2338,8 @@ if (window.ceManager?.ceList && window.publishedScheduleResolver) {
 
                 window.showMessage(`${ceData.ceName}を月次業務に配置しました`, 'success');
 console.log('✅ 月次業務CE配置完了:', ceData.ceName);
+this.renderMonthlyTasks();
+await this.updateDailySummary();
 // 即座に再描画
 this.renderMonthlyTasks();
 await this.updateDailySummary();
@@ -2374,6 +2376,8 @@ await this.updateDailySummary();
                     });
 
                     window.showMessage('CEの配置を解除しました', 'success');
+this.renderMonthlyTasks();
+await this.updateDailySummary();
                 }
 
             } catch (error) {
@@ -3224,7 +3228,13 @@ this.openSimpleAddEventModal(department);
             modal.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50';
             
             const departmentOptions = this.buildDepartmentOptions();
-            const currentYearMonth = this.formatDate(this.selectedDate).substring(0, 7);
+            // 現在の表示月と同じなら画面を即時再描画
+const currentYearMonth = this.formatDate(this.selectedDate).substring(0, 7);
+if (currentYearMonth === yearMonth) {
+    this.renderMonthlyTasks();
+    await this.updateDailySummary();
+    console.log('✅ 月次業務追加後の即時再描画完了');
+}
             
             modal.innerHTML = `
                 <div class="glass-card p-6 max-w-lg w-full mx-4 max-h-[90vh] overflow-y-auto">
