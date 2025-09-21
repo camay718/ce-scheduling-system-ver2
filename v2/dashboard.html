@@ -2523,8 +2523,890 @@
                 }
             }
             
-            setTimeout(() => {
+                setTimeout(() => {
                 if (window.eventManager && typeof window.eventManager.openAddEventModal === 'function') {
                     window.eventManager.openAddEventModal(department);
                 } else {
-                    // フォールバック：簡易的な業務
+                    // フォールバック：簡易的な業務追加モーダル（部門選択肢対応）
+                    this.openSimpleAddEventModal(department);
+                }
+            }, 100);
+        }
+
+        // 簡易業務追加モーダル（部門選択肢対応）
+        openSimpleAddEventModal(defaultDepartment = '') {
+            const modal = document.createElement('div');
+            modal.id = 'simpleAddEventModal';
+            modal.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50';
+            
+            const departmentOptions = this.buildDepartmentOptions(defaultDepartment);
+            
+            modal.innerHTML = `
+                <div class="glass-card p-6 max-w-lg w-full mx-4 max-h-[90vh] overflow-y-auto">
+                    <div class="flex justify-between items-center mb-4">
+                        <h3 class="text-lg font-bold">業務追加</h3>
+                        <button onclick="this.closest('.fixed').remove()" class="text-gray-500 hover:text-gray-700">
+                            <i class="fas fa-times text-xl"></i>
+                        </button>
+                    </div>
+                    
+                    <form id="simpleAddEventForm" class="space-y-4">
+                        <div>
+                            <label class="block text-sm font-bold mb-2">業務名 *</label>
+                            <input type="text" id="simpleEventName" class="input-unified" required placeholder="業務名を入力">
+                        </div>
+                        
+                        <div>
+                            <label class="block text-sm font-bold mb-2">部門 *</label>
+                            <select id="simpleEventDepartment" class="input-unified" required>
+                                ${departmentOptions}
+                            </select>
+                        </div>
+                        
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-sm font-bold mb-2">開始時間</label>
+                                <input type="time" id="simpleStartTime" class="input-unified">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-bold mb-2">終了時間</label>
+                                <input type="time" id="simpleEndTime" class="input-unified">
+                            </div>
+                        </div>
+                        
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-sm font-bold mb-2">予定件数</label>
+                                <input type="number" id="simpleEventCount" class="input-unified" min="0" max="99" value="0">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-bold mb-2">必要人数</label>
+                                <input type="number" id="simpleRequiredPeople" class="input-unified" min="0" max="20" value="1">
+                            </div>
+                        </div>
+                        
+                        <div>
+                            <label class="block text-sm font-bold mb-2">詳細</label>
+                            <textarea id="simpleDescription" class="input-unified" rows="3" placeholder="詳細説明（任意）"></textarea>
+                        </div>
+                        
+                        <div class="flex space-x-3">
+                            <button type="button" onclick="this.closest('.fixed').remove()" 
+                                    class="btn-unified btn-outline-unified flex-1">
+                                キャンセル
+                            </button>
+                            <button type="submit" class="btn-unified btn-primary-unified flex-1">
+                                <i class="fas fa-plus mr-2"></i>追加
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            `;
+
+            document.body.appendChild(modal);
+
+            document.getElementById('simpleAddEventForm').onsubmit = (e) => {
+                e.preventDefault();
+                this.addSimpleEvent(modal);
+            };
+        }
+
+        async addSimpleEvent(modal) {
+            const name = document.getElementById('simpleEventName')?.value?.trim();
+            const department = document.getElementById('simpleEventDepartment')?.value;
+            const startTime = document.getElementById('simpleStartTime')?.value;
+            const endTime = document.getElementById('simpleEndTime')?.value;
+            const count = parseInt(document.getElementById('simpleEventCount')?.value) || 0;
+            const requiredPeople = parseInt(document.getElementById('simpleRequiredPeople')?.value) || 1;
+            const description = document.getElementById('simpleDescription')?.value?.trim();
+
+            if (!name || !department) {
+                window.showMessage('業務名と部門を選択してください', 'warning');
+                return;
+            }
+
+            try {
+                const dateKey = this.formatDate(this.selectedDate);
+                const eventRef = window.database.ref(`${window.DATA_ROOT}/events/byDate/${dateKey}`).push();
+
+                const eventData = {
+                    id: eventRef.key,
+                    name: name,
+                    department: department,
+                    startTime: startTime || null,
+                    endTime: endTime || null,
+                    count: count,
+                    requiredPeople: requiredPeople,
+                    description: description || null,
+                    assignedCEs: [],
+                    createdAt: firebase.database.ServerValue.TIMESTAMP,
+                    createdBy: window.currentUserData?.displayName || 'user'
+                };
+
+                await eventRef.set(eventData);
+
+                // 監査ログ
+                try {
+                    await window.database.ref(`${window.DATA_ROOT}/auditLogs`).push({
+                        action: 'event-add',
+                        details: { eventName: name, description: `部門:${department} 日付:${dateKey}` },
+                        uid: window.currentUserData?.uid || null,
+                        username: window.currentUserData?.username || 'unknown',
+                        displayName: window.currentUserData?.displayName || 'unknown',
+                        timestamp: firebase.database.ServerValue.TIMESTAMP
+                    });
+                } catch (logErr) {
+                    console.warn('監査ログ記録失敗:', logErr);
+                }
+
+                modal.remove();
+                window.showMessage('業務を追加しました', 'success');
+
+                // 画面を再描画
+                setTimeout(() => {
+                    this.loadAndRenderEventsForSelectedDate();
+                }, 500);
+
+            } catch (error) {
+                console.error('業務追加エラー:', error);
+                window.showMessage('業務の追加に失敗しました', 'error');
+            }
+        }
+
+        // 期間一括業務追加モーダル（祝日除外オプション対応）
+        openBulkAddEventModal() {
+            const modal = document.createElement('div');
+            modal.id = 'bulkAddEventModal';
+            modal.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50';
+            
+            const departmentOptions = this.buildDepartmentOptions();
+            
+            modal.innerHTML = `
+                <div class="glass-card p-6 max-w-lg w-full mx-4 max-h-[90vh] overflow-y-auto">
+                    <div class="flex justify-between items-center mb-4">
+                        <h3 class="text-lg font-bold">期間一括追加</h3>
+                        <button onclick="this.closest('.fixed').remove()" class="text-gray-500 hover:text-gray-700">
+                            <i class="fas fa-times text-xl"></i>
+                        </button>
+                    </div>
+                    
+                    <form id="bulkAddEventForm" class="space-y-4">
+                        <div>
+                            <label class="block text-sm font-bold mb-2">業務名 *</label>
+                            <input type="text" id="bulkEventName" class="input-unified" required placeholder="業務名を入力">
+                        </div>
+                        
+                        <div>
+                            <label class="block text-sm font-bold mb-2">部門 *</label>
+                            <select id="bulkEventDepartment" class="input-unified" required>
+                                ${departmentOptions}
+                            </select>
+                        </div>
+                        
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-sm font-bold mb-2">開始日 *</label>
+                                <input type="date" id="bulkStartDate" class="input-unified" required>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-bold mb-2">終了日 *</label>
+                                <input type="date" id="bulkEndDate" class="input-unified" required>
+                            </div>
+                        </div>
+                        
+                        <div>
+                            <label class="block text-sm font-bold mb-2">実施曜日</label>
+                            <div class="grid grid-cols-4 gap-2">
+                                <label class="flex items-center">
+                                    <input type="checkbox" id="bulkMon" class="mr-1"> 月
+                                </label>
+                                <label class="flex items-center">
+                                    <input type="checkbox" id="bulkTue" class="mr-1"> 火
+                                </label>
+                                <label class="flex items-center">
+                                    <input type="checkbox" id="bulkWed" class="mr-1"> 水
+                                </label>
+                                <label class="flex items-center">
+                                    <input type="checkbox" id="bulkThu" class="mr-1"> 木
+                                </label>
+                                <label class="flex items-center">
+                                    <input type="checkbox" id="bulkFri" class="mr-1"> 金
+                                </label>
+                                <label class="flex items-center">
+                                    <input type="checkbox" id="bulkSat" class="mr-1"> 土
+                                </label>
+                                <label class="flex items-center">
+                                    <input type="checkbox" id="bulkSun" class="mr-1"> 日
+                                </label>
+                                <label class="flex items-center">
+                                    <input type="checkbox" id="excludeHolidays" class="mr-1"> 祝日は除く
+                                </label>
+                            </div>
+                        </div>
+                        
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-sm font-bold mb-2">開始時間</label>
+                                <input type="time" id="bulkStartTime" class="input-unified">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-bold mb-2">終了時間</label>
+                                <input type="time" id="bulkEndTime" class="input-unified">
+                            </div>
+                        </div>
+                        
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-sm font-bold mb-2">予定件数</label>
+                                <input type="number" id="bulkEventCount" class="input-unified" min="0" max="99" value="0">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-bold mb-2">必要人数</label>
+                                <input type="number" id="bulkRequiredPeople" class="input-unified" min="0" max="20" value="1">
+                            </div>
+                        </div>
+                        
+                        <div>
+                            <label class="block text-sm font-bold mb-2">詳細</label>
+                            <textarea id="bulkDescription" class="input-unified" rows="3" placeholder="詳細説明（任意）"></textarea>
+                        </div>
+                        
+                        <div class="flex space-x-3">
+                            <button type="button" onclick="this.closest('.fixed').remove()" 
+                                    class="btn-unified btn-outline-unified flex-1">
+                                キャンセル
+                            </button>
+                            <button type="submit" class="btn-unified btn-primary-unified flex-1">
+                                <i class="fas fa-calendar-plus mr-2"></i>一括追加
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            `;
+
+            document.body.appendChild(modal);
+
+            // デフォルト値設定
+            const today = new Date();
+            const nextWeek = new Date(today.getTime() + 7 * 24 * 60 * 60 * 1000);
+            document.getElementById('bulkStartDate').value = this.formatDate(today);
+            document.getElementById('bulkEndDate').value = this.formatDate(nextWeek);
+
+            document.getElementById('bulkAddEventForm').onsubmit = (e) => {
+                e.preventDefault();
+                this.addBulkEvents(modal);
+            };
+        }
+
+        async addBulkEvents(modal) {
+            const name = document.getElementById('bulkEventName')?.value?.trim();
+            const department = document.getElementById('bulkEventDepartment')?.value;
+            const startDate = document.getElementById('bulkStartDate')?.value;
+            const endDate = document.getElementById('bulkEndDate')?.value;
+            const startTime = document.getElementById('bulkStartTime')?.value;
+            const endTime = document.getElementById('bulkEndTime')?.value;
+            const count = parseInt(document.getElementById('bulkEventCount')?.value) || 0;
+            const requiredPeople = parseInt(document.getElementById('bulkRequiredPeople')?.value) || 1;
+            const description = document.getElementById('bulkDescription')?.value?.trim();
+            const excludeHolidays = document.getElementById('excludeHolidays')?.checked || false;
+
+            if (!name || !department || !startDate || !endDate) {
+                window.showMessage('必須項目を入力してください', 'warning');
+                return;
+            }
+
+            // 選択された曜日の取得
+            const selectedDays = [];
+            const dayCheckboxes = ['bulkMon', 'bulkTue', 'bulkWed', 'bulkThu', 'bulkFri', 'bulkSat', 'bulkSun'];
+            dayCheckboxes.forEach((id, index) => {
+                if (document.getElementById(id)?.checked) {
+                    selectedDays.push((index + 1) % 7); // 月曜=1, 日曜=0に変換
+                }
+            });
+
+            if (selectedDays.length === 0) {
+                window.showMessage('実施曜日を選択してください', 'warning');
+                return;
+            }
+
+            try {
+                const start = new Date(startDate);
+                const end = new Date(endDate);
+                let addedCount = 0;
+
+                for (let current = new Date(start); current <= end; current.setDate(current.getDate() + 1)) {
+                    const dayOfWeek = current.getDay();
+                    
+                    // 選択された曜日でない場合はスキップ
+                    if (!selectedDays.includes(dayOfWeek)) {
+                        continue;
+                    }
+
+                    // 祝日除外オプションがONで祝日の場合はスキップ
+                    if (excludeHolidays && window.isJapaneseHoliday(current)) {
+                        continue;
+                    }
+
+                    const dateKey = this.formatDate(current);
+                    const eventRef = window.database.ref(`${window.DATA_ROOT}/events/byDate/${dateKey}`).push();
+
+                    const eventData = {
+                        id: eventRef.key,
+                        name: name,
+                        department: department,
+                        startTime: startTime || null,
+                        endTime: endTime || null,
+                        count: count,
+                        requiredPeople: requiredPeople,
+                        description: description || null,
+                        assignedCEs: [],
+                        createdAt: firebase.database.ServerValue.TIMESTAMP,
+                        createdBy: window.currentUserData?.displayName || 'user',
+                        bulkCreated: true
+                    };
+
+                    await eventRef.set(eventData);
+                    addedCount++;
+                }
+
+                modal.remove();
+                window.showMessage(`${addedCount}件の業務を一括追加しました`, 'success');
+
+                // 現在の日付が範囲内なら画面を再描画
+                const currentDateKey = this.formatDate(this.selectedDate);
+                if (currentDateKey >= startDate && currentDateKey <= endDate) {
+                    setTimeout(() => {
+                        this.loadAndRenderEventsForSelectedDate();
+                    }, 500);
+                }
+
+            } catch (error) {
+                console.error('一括業務追加エラー:', error);
+                window.showMessage('一括業務追加に失敗しました', 'error');
+            }
+        }
+
+        // 月次業務追加モーダル（目標件数・必要人数を入力式に）
+        openMonthlyTaskModal() {
+            const modal = document.createElement('div');
+            modal.id = 'monthlyTaskModal';
+            modal.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50';
+            
+            const departmentOptions = this.buildDepartmentOptions();
+            const currentYearMonth = this.formatDate(this.selectedDate).substring(0, 7);
+            
+            modal.innerHTML = `
+                <div class="glass-card p-6 max-w-lg w-full mx-4 max-h-[90vh] overflow-y-auto">
+                    <div class="flex justify-between items-center mb-4">
+                        <h3 class="text-lg font-bold">月次業務追加</h3>
+                        <button onclick="this.closest('.fixed').remove()" class="text-gray-500 hover:text-gray-700">
+                            <i class="fas fa-times text-xl"></i>
+                        </button>
+                    </div>
+                    
+                    <form id="monthlyTaskForm" class="space-y-4">
+                        <div>
+                            <label class="block text-sm font-bold mb-2">業務名 *</label>
+                            <input type="text" id="monthlyTaskName" class="input-unified" required placeholder="月次業務名を入力">
+                        </div>
+                        
+                        <div>
+                            <label class="block text-sm font-bold mb-2">部門 *</label>
+                            <select id="monthlyTaskDepartment" class="input-unified" required>
+                                ${departmentOptions}
+                            </select>
+                        </div>
+                        
+                        <div>
+                            <label class="block text-sm font-bold mb-2">実施月 *</label>
+                            <input type="month" id="monthlyTaskMonth" class="input-unified" value="${currentYearMonth}" required>
+                        </div>
+                        
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-sm font-bold mb-2">目標件数</label>
+                                <input type="number" id="monthlyGoalCount" class="input-unified" min="0" max="999" value="10">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-bold mb-2">必要人数</label>
+                                <input type="number" id="monthlyRequiredPeople" class="input-unified" min="0" max="20" value="1">
+                            </div>
+                        </div>
+                        
+                        <div>
+                            <label class="block text-sm font-bold mb-2">詳細</label>
+                            <textarea id="monthlyTaskDescription" class="input-unified" rows="3" placeholder="詳細説明（任意）"></textarea>
+                        </div>
+                        
+                        <div class="flex space-x-3">
+                            <button type="button" onclick="this.closest('.fixed').remove()" 
+                                    class="btn-unified btn-outline-unified flex-1">
+                                キャンセル
+                            </button>
+                            <button type="submit" class="btn-unified btn-primary-unified flex-1">
+                                <i class="fas fa-calendar-alt mr-2"></i>追加
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            `;
+
+            document.body.appendChild(modal);
+
+            document.getElementById('monthlyTaskForm').onsubmit = (e) => {
+                e.preventDefault();
+                this.addMonthlyTask(modal);
+            };
+        }
+
+        async addMonthlyTask(modal) {
+            const name = document.getElementById('monthlyTaskName')?.value?.trim();
+            const department = document.getElementById('monthlyTaskDepartment')?.value;
+            const yearMonth = document.getElementById('monthlyTaskMonth')?.value;
+            const goalCount = parseInt(document.getElementById('monthlyGoalCount')?.value) || 0;
+            const requiredPeople = parseInt(document.getElementById('monthlyRequiredPeople')?.value) || 1;
+            const description = document.getElementById('monthlyTaskDescription')?.value?.trim();
+
+            if (!name || !department || !yearMonth) {
+                window.showMessage('必須項目を入力してください', 'warning');
+                return;
+            }
+
+            try {
+                const taskRef = window.database.ref(`${window.DATA_ROOT}/monthlyTasks/${yearMonth}`).push();
+
+                const taskData = {
+                    id: taskRef.key,
+                    name: name,
+                    department: department,
+                    yearMonth: yearMonth,
+                    goalCount: goalCount,
+                    actualCount: 0,
+                    requiredPeople: requiredPeople,
+                    description: description || null,
+                    assignedCEs: [],
+                    createdAt: firebase.database.ServerValue.TIMESTAMP,
+                    createdBy: window.currentUserData?.displayName || 'user'
+                };
+
+                await taskRef.set(taskData);
+                modal.remove();
+                window.showMessage('月次業務を追加しました', 'success');
+
+                // 現在の表示月と同じなら画面を再描画
+                const currentYearMonth = this.formatDate(this.selectedDate).substring(0, 7);
+                if (currentYearMonth === yearMonth) {
+                    setTimeout(() => {
+                        this.renderMonthlyTasks();
+                        this.updateDailySummary();
+                    }, 500);
+                }
+
+            } catch (error) {
+                console.error('月次業務追加エラー:', error);
+                window.showMessage('月次業務の追加に失敗しました', 'error');
+            }
+        }
+
+        showDashboard() {
+            const loadingEl = document.getElementById('loading');
+            const mainEl = document.getElementById('mainInterface');
+            if (loadingEl) loadingEl.style.display = 'none';
+            if (mainEl) mainEl.style.display = 'block';
+            
+            this.updateUserDisplay();
+            this.setupNavigation();
+            this.setupSidebar();
+            this.setupDailySchedule();
+            this.initializeV2System();
+        }
+
+        updateUserDisplay() {
+            const userData = window.currentUserData;
+            if (!userData) return;
+            document.querySelectorAll('#currentUserDisplay').forEach(el => {
+                el.textContent = userData.displayName || userData.username || 'ユーザー';
+            });
+        }
+
+        setupNavigation() {
+            const navTabs = [
+                { id: 'dailyScheduleTab', content: 'dailyScheduleContent' },
+                { id: 'weeklyScheduleTab', content: 'weeklyScheduleContent' },
+                { id: 'ceWorkScheduleTab', content: 'ceWorkScheduleContent' },
+                { id: 'analysisTab', content: 'analysisContent' },
+                { id: 'settingsTab', content: 'settingsContent' }
+            ];
+
+            navTabs.forEach(tab => {
+                const element = document.getElementById(tab.id);
+                if (element) {
+                    element.onclick = () => {
+                        this.showScreen(tab.content, tab.id);
+                        if (tab.id === 'ceWorkScheduleTab') {
+                            setTimeout(() => {
+                                if (window.workScheduleViewer) {
+                                    window.workScheduleViewer.displayCurrentPeriod();
+                                }
+                            }, 100);
+                        }
+                        if (tab.id === 'settingsTab') {
+                            setTimeout(() => this.setupSettingsScreen(), 100);
+                        }
+                    };
+                }
+            });
+
+            const toggleBtn = document.getElementById('toggleSidebar');
+            const sidebar = document.getElementById('sidebar');
+            if (toggleBtn && sidebar) {
+                toggleBtn.onclick = () => sidebar.classList.toggle('expanded');
+            }
+        }
+
+        showScreen(contentId, tabId) {
+            document.querySelectorAll('.screen-content').forEach(screen => {
+                screen.style.display = 'none';
+            });
+            
+            const contentEl = document.getElementById(contentId);
+            if (contentEl) {
+                contentEl.style.display = 'block';
+            }
+            
+            document.querySelectorAll('.nav-tab').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            
+            const tabEl = document.getElementById(tabId);
+            if (tabEl) {
+                tabEl.classList.add('active');
+            }
+            
+            if (contentId === 'ceWorkScheduleContent' && window.workScheduleViewer) {
+                setTimeout(() => {
+                    window.workScheduleViewer.displayCurrentPeriod();
+                }, 100);
+            } else if (contentId === 'settingsContent') {
+                setTimeout(() => this.setupSettingsScreen(), 100);
+            }
+        }
+
+        setupSidebar() {
+            const saveBtn = document.getElementById('templateSaveButton');
+            const addLoadBtn = document.getElementById('templateAddLoadButton');
+            if (saveBtn) saveBtn.onclick = () => window.showMessage('テンプレート保存機能（実装予定）', 'info');
+            if (addLoadBtn) addLoadBtn.onclick = () => window.showMessage('テンプレート追加読込機能（実装予定）', 'info');
+        }
+
+        setupDailySchedule() {
+            const datePicker = document.getElementById('scheduleDatePicker');
+            if (datePicker) {
+                datePicker.value = this.formatDate(this.selectedDate);
+                datePicker.onchange = (e) => {
+                    this.selectedDate = new Date(e.target.value + 'T00:00:00');
+                    this.renderDailySchedule();
+                };
+            }
+
+            const prev = document.getElementById('prevDayBtn');
+            const next = document.getElementById('nextDayBtn');
+            const today = document.getElementById('todayBtn');
+            if (prev) prev.onclick = () => { 
+                this.selectedDate.setDate(this.selectedDate.getDate() - 1); 
+                if (datePicker) datePicker.value = this.formatDate(this.selectedDate); 
+                this.renderDailySchedule(); 
+            };
+            if (next) next.onclick = () => { 
+                this.selectedDate.setDate(this.selectedDate.getDate() + 1); 
+                if (datePicker) datePicker.value = this.formatDate(this.selectedDate); 
+                this.renderDailySchedule(); 
+            };
+            if (today) today.onclick = () => { 
+                this.selectedDate = new Date(); 
+                if (datePicker) datePicker.value = this.formatDate(this.selectedDate); 
+                this.renderDailySchedule(); 
+            };
+
+            // 業務追加ボタン
+            const quickBtn = document.getElementById('addEventButtonDaily');
+            if (quickBtn) quickBtn.onclick = () => this.openQuickAddEvent();
+
+            const bulkBtn = document.getElementById('addBulkEventBtn');
+            if (bulkBtn) {
+                bulkBtn.onclick = () => {
+                    if (window.userRole === 'viewer') {
+                        window.showMessage('編集権限がありません', 'warning');
+                        return;
+                    }
+                    if (!window.eventManager && window.EventManager) {
+                        try { 
+                            window.eventManager = new window.EventManager(); 
+                        } catch (e) { 
+                            console.warn('EventManager初期化失敗:', e); 
+                        }
+                    }
+                    if (window.eventManager && typeof window.eventManager.openBulkAddModal === 'function') {
+                        window.eventManager.openBulkAddModal();
+                    } else {
+                        // フォールバック：期間一括業務追加モーダル
+                        this.openBulkAddEventModal();
+                    }
+                };
+            }
+
+            const monthlyBtn = document.getElementById('addMonthlyTaskBtn');
+            if (monthlyBtn) {
+                monthlyBtn.onclick = () => {
+                    if (window.userRole === 'viewer') {
+                        window.showMessage('編集権限がありません', 'warning');
+                        return;
+                    }
+                    if (!window.eventManager && window.EventManager) {
+                        try { 
+                            window.eventManager = new window.EventManager(); 
+                        } catch (e) { 
+                            console.warn('EventManager初期化失敗:', e); 
+                        }
+                    }
+                    if (window.eventManager && typeof window.eventManager.openMonthlyTaskModal === 'function') {
+                        window.eventManager.openMonthlyTaskModal();
+                    } else {
+                        // フォールバック：月次業務追加モーダル
+                        this.openMonthlyTaskModal();
+                    }
+                };
+            }
+
+            this.renderDailySchedule();
+        }
+
+        renderDailySchedule() {
+            const title = document.getElementById('dailyScheduleTitle');
+            const grid = document.getElementById('departmentGrid');
+            if (title) {
+                const dateStr = this.selectedDate.toLocaleDateString('ja-JP', { 
+                    year: 'numeric', 
+                    month: 'long', 
+                    day: 'numeric', 
+                    weekday: 'short' 
+                });
+                title.textContent = `日別スケジュール（${dateStr}）`;
+            }
+            if (window.ceManager) {
+                window.ceManager.currentDisplayDate = this.selectedDate;
+                window.ceManager.displayCEList();
+            }
+            if (!grid) return;
+
+            grid.innerHTML = '';
+            grid.className = 'grid grid-cols-3 gap-4 mb-6';
+
+            if (window.DEPARTMENTS) {
+                window.DEPARTMENTS.forEach(dept => {
+                    const section = this.createDepartmentSection(dept);
+                    grid.appendChild(section);
+                });
+            }
+
+            this.updateCEListCount();
+            
+            this.loadAndRenderEventsForSelectedDate();
+
+            // 公開勤務表連動の適用
+            const dateKey = this.formatDate(this.selectedDate);
+            setTimeout(() => {
+                if (window.publishedScheduleResolver) {
+                    window.publishedScheduleResolver.applyCEStatusToList(dateKey);
+                }
+            }, 500);
+        }
+
+        createDepartmentSection(dept) {
+            const section = document.createElement('div');
+            section.className = 'department-section p-4';
+            section.dataset.department = dept;
+            const deptColor = window.DEPARTMENT_COLORS?.[dept] || '#6b7280';
+            
+            section.innerHTML = `
+                <div class="flex items-center justify-between mb-2">
+                    <div class="flex items-center gap-2">
+                        <i class="fas fa-${window.DEPARTMENT_ICONS?.[dept] || 'cog'}" style="color: ${deptColor}"></i>
+                        <h3 class="font-bold text-sm">${dept}</h3>
+                    </div>
+                    ${window.userRole !== 'viewer' ? `
+                    <button class="btn-unified btn-primary-unified btn-small" onclick="window.dashboardAuth.openQuickAddEvent('${dept}')">
+                        <i class="fas fa-plus mr-1"></i>業務追加
+                    </button>` : ''}
+                </div>
+                <!-- 部門別集計バー -->
+                <div class="dept-summary-container">
+                    <span class="text-xs dept-summary-text">0/0名</span>
+                    <div class="dept-ratio-bar">
+                        <div class="dept-ratio-fill" style="background: ${deptColor}; width: 0%"></div>
+                    </div>
+                </div>
+                <div class="task-list min-h-[120px] space-y-2 mt-3" data-department="${dept}">
+                    <!-- 通常業務がここに表示されます -->
+                </div>
+                <div class="monthly-plans mt-2" data-department="${dept}">
+                    <!-- 月次業務がここに表示されます -->
+                </div>
+            `;
+
+            return section;
+        }
+
+        // 設定画面（権限別）
+        setupSettingsScreen() {
+            const settingsContent = document.getElementById('settingsContent');
+            if (!settingsContent) return;
+
+            const isAdmin = (window.userRole === 'admin' && window.currentUserData?.role === 'admin');
+
+            if (isAdmin) {
+                settingsContent.innerHTML = `
+                    <h2 class="text-2xl font-bold mb-6">設定</h2>
+                    <div class="glass-card p-6 mb-6">
+                        <h3 class="text-lg font-semibold mb-4 text-red-600">
+                            <i class="fas fa-shield-alt mr-2"></i>管理者機能
+                        </h3>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <button onclick="window.open('pages/admin-dashboard.html', '_blank')" class="btn-unified btn-primary-unified">
+                                <i class="fas fa-users-cog mr-2"></i>ユーザー管理ダッシュボード
+                            </button>
+                            <button onclick="window.openLoginManagement()" class="btn-unified btn-outline-unified">
+                                <i class="fas fa-sign-in-alt mr-2"></i>ログイン管理
+                            </button>
+                        </div>
+                    </div>
+                    <div class="glass-card p-6">
+                        <h3 class="text-lg font-semibold mb-4">
+                            <i class="fas fa-history mr-2"></i>変更履歴（リアルタイム）
+                        </h3>
+                        <div id="activityLogContainer" class="activity-log">
+                            <div class="text-center py-4 text-gray-500">
+                                <i class="fas fa-spinner fa-spin text-xl mb-2"></i>
+                                <p>履歴を読み込み中...</p>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            } else {
+                settingsContent.innerHTML = `
+                    <h2 class="text-2xl font-bold mb-6">設定</h2>
+                    <div class="glass-card p-6">
+                        <h3 class="text-lg font-semibold mb-4">
+                            <i class="fas fa-history mr-2"></i>変更履歴（リアルタイム）
+                        </h3>
+                        <div id="activityLogContainer" class="activity-log">
+                            <div class="text-center py-4 text-gray-500">
+                                <i class="fas fa-spinner fa-spin text-xl mb-2"></i>
+                                <p>履歴を読み込み中...</p>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }
+
+            // ActivityLoggerの初期化
+            if (!window.activityLogger) {
+                window.activityLogger = new ActivityLogger();
+            }
+            window.activityLogger.init();
+        }
+
+        formatDate(date) {
+            return date.toISOString().slice(0, 10);
+        }
+
+        updateCEListCount() {
+            const el = document.getElementById('ceListCount');
+            if (el) {
+                const count = window.ceManager?.ceList?.length || 0;
+                el.textContent = String(count);
+            }
+        }
+
+        // V2システム初期化
+        initializeV2System() {
+            setTimeout(async () => {
+                try {
+                    let attempts = 0;
+                    while (attempts < 50) {
+                        const allReady = (
+                            typeof window.CalendarView !== 'undefined' &&
+                            typeof window.EventManager !== 'undefined' &&
+                            typeof window.CEManager !== 'undefined' &&
+                            typeof window.showMessage !== 'undefined' &&
+                            typeof window.CEDailyStatusManager !== 'undefined'
+                        );
+                        if (allReady) break;
+                        await new Promise(resolve => setTimeout(resolve, 100));
+                        attempts++;
+                        
+                    }
+
+                    // インスタンス生成（エラー耐性あり）
+                    try {
+                        if (!window.calendarView && window.CalendarView) {
+                            window.calendarView = new window.CalendarView();
+                        }
+                    } catch (e) { console.warn('CalendarView初期化失敗:', e); }
+
+                    try {
+                        if (!window.eventManager && window.EventManager) {
+                            window.eventManager = new window.EventManager();
+                        }
+                    } catch (e) { console.warn('EventManager初期化失敗:', e); }
+
+                    try {
+                        if (!window.ceManager && window.CEManager) {
+                            window.ceManager = new window.CEManager();
+                        }
+                    } catch (e) { console.warn('CEManager初期化失敗:', e); }
+
+                    try {
+                        if (!window.ceDailyStatus && window.CEDailyStatusManager) {
+                            window.ceDailyStatus = new window.CEDailyStatusManager();
+                        }
+                    } catch (e) { console.warn('CEDailyStatusManager初期化失敗:', e); }
+
+                    try {
+                        if (!window.workScheduleViewer) {
+                            window.workScheduleViewer = new WorkScheduleViewer();
+                        }
+                    } catch (e) { console.warn('WorkScheduleViewer初期化失敗:', e); }
+
+                    // 公開勤務表連動システム
+                    try {
+                        if (!window.publishedScheduleResolver) {
+                            window.publishedScheduleResolver = new PublishedScheduleResolver();
+                        }
+                    } catch (e) { console.warn('PublishedScheduleResolver初期化失敗:', e); }
+
+                    this.setupRealtimeUpdates();
+
+                    console.log('✅ V2システム初期化完了（全機能対応）');
+                } catch (error) {
+                    console.error('❌ V2システム初期化エラー:', error);
+                }
+            }, 1500);
+        }
+    }
+
+    // ログイン管理機能（将来の開発用）
+    window.openLoginManagement = function() {
+        window.showMessage('ログイン管理機能は開発中です', 'info');
+    };
+
+    // 初期化
+    if (!window.dashboardAuthInitialized) {
+        window.dashboardAuthInitialized = true;
+        document.addEventListener('DOMContentLoaded', () => {
+            window.dashboardAuth = new DashboardAuth();
+        });
+    }
+    </script>
+</body>
+</html>
