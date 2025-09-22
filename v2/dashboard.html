@@ -680,7 +680,7 @@
                 <button id="dailyScheduleTab" class="nav-tab w-full text-left p-3 rounded-lg hover:bg-green-100 font-medium active">
                     <i class="fas fa-calendar-day mr-2"></i><span class="sidebar-text">日別スケジュール</span>
                 </button>
-                <button id="weeklyScheduleTab" class="nav-tab w-full text-left p-3 rounded-lg hover:bg-green-100 font-medium">
+                <button id="weeklyScheduleTab" class="nav-tab w-full text-left p-3 rounded-lg hover:bg-green-100 font-medium"><button class="analysis-btn" onclick="window.open('department-timeline.html', '_blank')">
                     <i class="fas fa-calendar-week mr-2"></i><span class="sidebar-text">週間スケジュール</span>
                 </button>
                 <button id="ceWorkScheduleTab" class="nav-tab w-full text-left p-3 rounded-lg hover:bg-green-100 font-medium">
@@ -861,11 +861,11 @@
                     <p class="text-gray-600 mb-4">業務配置とCE勤務状況の各種分析機能にアクセスできます。</p>
                     
                     <div class="analysis-grid">
-                        <button class="analysis-btn" onclick="window.openAnalysisPage('department-timeline')">
-                            <i class="fas fa-chart-bar"></i>
-                            <div class="analysis-btn-title">業務別タイムライン</div>
-                            <div class="analysis-btn-desc">部門・業務ごとの時系列分析と配置状況の可視化</div>
-                        </button>
+                        <button class="analysis-btn" onclick="window.open('department-timeline.html', '_blank')">
+    <i class="fas fa-chart-bar"></i>
+    <div class="analysis-btn-title">業務別タイムライン</div>
+    <div class="analysis-btn-desc">部門・業務ごとの時系列分析と配置状況の可視化</div>
+</button>
 
                         <button class="analysis-btn" onclick="window.openAnalysisPage('personal-timeline')">
                             <i class="fas fa-chart-line"></i>
@@ -970,8 +970,12 @@
 
     // 分析ページ開く関数
     window.openAnalysisPage = function(pageType) {
+    if (pageType === 'department-timeline') {
+        window.open('department-timeline.html', '_blank');
+    } else {
         window.showMessage(`${pageType}機能は開発中です`, 'info');
-    };
+    }
+};
 
     // 公開勤務表連動管理クラス
     class PublishedScheduleResolver {
