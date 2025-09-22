@@ -854,51 +854,57 @@
                 </div>
             </div>
 
-            <!-- 集計・分析 -->
-            <div id="analysisContent" class="screen-content" style="display:none;">
-                <h2 class="text-2xl font-bold mb-6">集計・分析</h2>
-                <div class="glass-card p-6">
-                    <p class="text-gray-600 mb-4">業務配置とCE勤務状況の各種分析機能にアクセスできます。</p>
-                    
-                    <div class="analysis-grid">
-                        <button class="analysis-btn" onclick="window.open('department-timeline.html', '_blank')">
-    <i class="fas fa-chart-bar"></i>
-    <div class="analysis-btn-title">業務別タイムライン</div>
-    <div class="analysis-btn-desc">部門・業務ごとの時系列分析と配置状況の可視化</div>
-</button>
+            <!-- 集計・分析 --<!-- 集計・分析 -->
+<div id="analysisContent" class="screen-content" style="display:none;">
+    <h2 class="text-2xl font-bold mb-6">集計・分析</h2>
+    <div class="glass-card p-6">
+        <p class="text-gray-600 mb-4">業務配置とCE勤務状況の各種分析機能にアクセスできます。</p>
+        
+        <div class="analysis-grid">
+            <!-- 業務別タイムライン（フォルダ移動対応） -->
+            <button class="analysis-btn" onclick="window.open('analytics/department-timeline.html', '_blank')">
+                <i class="fas fa-chart-bar"></i>
+                <div class="analysis-btn-title">業務別タイムライン</div>
+                <div class="analysis-btn-desc">部門・業務ごとの時系列分析と配置状況の可視化</div>
+            </button>
 
-                        <button class="analysis-btn" onclick="window.openAnalysisPage('personal-timeline')">
-                            <i class="fas fa-chart-line"></i>
-                            <div class="analysis-btn-title">個人別タイムライン</div>
-                            <div class="analysis-btn-desc">CE個人の勤務パターンと業務配置履歴の分析</div>
-                        </button>
+            <!-- 個人別タイムライン -->
+            <button class="analysis-btn" onclick="openAnalyticsPage('personal-timeline')">
+                <i class="fas fa-chart-line"></i>
+                <div class="analysis-btn-title">個人別タイムライン</div>
+                <div class="analysis-btn-desc">CE個人の勤務パターンと業務配置履歴の分析</div>
+            </button>
 
-                        <button class="analysis-btn" onclick="window.openAnalysisPage('assignment-summary')">
-                            <i class="fas fa-clipboard-list"></i>
-                            <div class="analysis-btn-title">配置サマリ</div>
-                            <div class="analysis-btn-desc">業務配置状況の要約表示と効率性分析</div>
-                        </button>
+            <!-- 配置サマリー -->
+            <button class="analysis-btn" onclick="openAnalyticsPage('assignment-summary')">
+                <i class="fas fa-clipboard-list"></i>
+                <div class="analysis-btn-title">配置サマリ</div>
+                <div class="analysis-btn-desc">業務配置状況の要約表示と効率性分析</div>
+            </button>
 
-                        <button class="analysis-btn" onclick="window.openAnalysisPage('department-fulfillment')">
-                            <i class="fas fa-percentage"></i>
-                            <div class="analysis-btn-title">部門別充足率</div>
-                            <div class="analysis-btn-desc">必要人数に対する充足状況と不足分析</div>
-                        </button>
+            <!-- 部門別充足率 -->
+            <button class="analysis-btn" onclick="openAnalyticsPage('department-coverage')">
+                <i class="fas fa-percentage"></i>
+                <div class="analysis-btn-title">部門別充足率</div>
+                <div class="analysis-btn-desc">必要人数に対する充足状況と不足分析</div>
+            </button>
 
-                        <button class="analysis-btn" onclick="window.openAnalysisPage('working-hours')">
-                            <i class="fas fa-clock"></i>
-                            <div class="analysis-btn-title">業務時間</div>
-                            <div class="analysis-btn-desc">業務時間の集計と勤務負荷の分析</div>
-                        </button>
+            <!-- 業務時間分析 -->
+            <button class="analysis-btn" onclick="openAnalyticsPage('work-hours')">
+                <i class="fas fa-clock"></i>
+                <div class="analysis-btn-title">業務時間</div>
+                <div class="analysis-btn-desc">業務時間の集計と勤務負荷の分析</div>
+            </button>
 
-                        <button class="analysis-btn" onclick="window.openAnalysisPage('time-slot-assignment')">
-                            <i class="fas fa-users"></i>
-                            <div class="analysis-btn-title">時間帯別配置人数</div>
-                            <div class="analysis-btn-desc">時間帯ごとの人員配置状況と最適化提案</div>
-                        </button>
-                    </div>
-                </div>
-            </div>
+            <!-- 時間帯別配置人数 -->
+            <button class="analysis-btn" onclick="openAnalyticsPage('hourly-staffing')">
+                <i class="fas fa-users"></i>
+                <div class="analysis-btn-title">時間帯別配置人数</div>
+                <div class="analysis-btn-desc">時間帯ごとの人員配置状況と最適化提案</div>
+            </button>
+        </div>
+    </div>
+</div>
 
             <!-- 設定 -->
             <div id="settingsContent" class="screen-content" style="display:none;">
@@ -3892,6 +3898,174 @@
             window.dashboardAuth = new DashboardAuth();
             await window.dashboardAuth.init();  // 明示的にinit()を呼び出し
         });
+
+               // ========================================
+        // 集計・分析機能関連の関数群
+        // ========================================
+
+        /**
+         * 分析ページを新しいタブで開く（analytics フォルダ対応）
+         * @param {string} pageName - ページ名（ファイル名から.htmlを除いた部分）
+         */
+        function openAnalyticsPage(pageName) {
+            console.log(`分析ページを開いています: ${pageName}`);
+            
+            // 認証チェック
+            const user = sessionStorage.getItem('currentUser');
+            if (!user) {
+                alert('分析機能を使用するには認証が必要です。ログインしてください。');
+                console.warn('未認証ユーザーが分析機能にアクセスを試みました');
+                return;
+            }
+            
+            try {
+                // analytics フォルダ内のHTMLファイルを新しいタブで開く
+                const url = `analytics/${pageName}.html`;
+                console.log(`開くURL: ${url}`);
+                
+                const newWindow = window.open(url, '_blank', 'noopener,noreferrer');
+                
+                // ポップアップブロッカーの確認
+                if (!newWindow || newWindow.closed || typeof newWindow.closed === 'undefined') {
+                    console.warn('ポップアップがブロックされました。同一タブで開きます。');
+                    // フォールバック：同一タブで開く
+                    if (confirm('ポップアップがブロックされています。同じタブで分析ページを開きますか？')) {
+                        window.location.href = url;
+                    }
+                } else {
+                    console.log('分析ページが正常に開かれました');
+                }
+            } catch (error) {
+                console.error('分析ページを開くときにエラーが発生しました:', error);
+                alert('分析ページを開くことができませんでした。ブラウザの設定を確認してください。');
+            }
+        }
+
+        /**
+         * レガシー対応：既存のコードとの互換性
+         * window.openAnalysisPage() が呼ばれた場合の対応
+         */
+        window.openAnalysisPage = function(pageName) {
+            console.log('レガシー関数経由での呼び出し:', pageName);
+            openAnalyticsPage(pageName);
+        };
+
+        /**
+         * 分析機能の利用可能性チェック
+         * @returns {boolean} アクセス可能かどうか
+         */
+        function checkAnalyticsAccess() {
+            const user = sessionStorage.getItem('currentUser');
+            const role = sessionStorage.getItem('userRole');
+            
+            console.log('分析機能アクセス状況チェック - User:', user, 'Role:', role);
+            
+            // 基本的な認証チェック
+            if (!user) {
+                console.log('認証されていないためアクセス拒否');
+                return false;
+            }
+            
+            // 必要に応じて役割ベースのアクセス制御を追加
+            // 例：管理者のみアクセス可能にする場合
+            // if (role !== 'admin') {
+            //     console.log('管理者権限が必要なためアクセス拒否');
+            //     return false;
+            // }
+            
+            console.log('分析機能へのアクセスが許可されました');
+            return true;
+        }
+
+        /**
+         * 分析ボタンの状態を更新
+         */
+        function updateAnalyticsButtons() {
+            console.log('分析ボタンの状態を更新しています');
+            
+            const analyticsButtons = document.querySelectorAll('.analysis-btn');
+            const hasAccess = checkAnalyticsAccess();
+            
+            console.log(`分析ボタン数: ${analyticsButtons.length}, アクセス権限: ${hasAccess}`);
+            
+            analyticsButtons.forEach((button, index) => {
+                if (hasAccess) {
+                    button.style.opacity = '1';
+                    button.style.pointerEvents = 'auto';
+                    button.removeAttribute('disabled');
+                    button.title = ''; // ツールチップをクリア
+                } else {
+                    button.style.opacity = '0.5';
+                    button.style.pointerEvents = 'none';
+                    button.setAttribute('disabled', 'true');
+                    button.title = 'ログインが必要です';
+                }
+                console.log(`ボタン${index + 1}の状態更新完了`);
+            });
+        }
+
+        /**
+         * 認証状態変更時のハンドラー
+         */
+        function onAuthStateChanged() {
+            console.log('認証状態が変更されました');
+            updateAnalyticsButtons();
+        }
+
+        /**
+         * 分析機能の初期化
+         */
+        function initializeAnalyticsFeatures() {
+            console.log('分析機能を初期化しています');
+            
+            // 初期状態での分析ボタンの更新
+            updateAnalyticsButtons();
+            
+            // 認証状態の監視（既存のログイン/ログアウト処理に連携）
+            const existingLoginHandler = window.login;
+            if (existingLoginHandler) {
+                window.login = function(...args) {
+                    const result = existingLoginHandler.apply(this, args);
+                    setTimeout(onAuthStateChanged, 100); // ログイン後に状態更新
+                    return result;
+                };
+            }
+            
+            const existingLogoutHandler = window.logout;
+            if (existingLogoutHandler) {
+                window.logout = function(...args) {
+                    const result = existingLogoutHandler.apply(this, args);
+                    setTimeout(onAuthStateChanged, 100); // ログアウト後に状態更新
+                    return result;
+                };
+            }
+            
+            console.log('分析機能の初期化が完了しました');
+        }
+
+        // ========================================
+        // 初期化処理の拡張
+        // ========================================
+
+        // 既存のDOMContentLoadedイベントリスナーに追加するか、
+        // 新しいイベントリスナーとして追加
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('分析機能関連の初期化を開始');
+            
+            // 少し遅延させて既存の初期化処理の完了を待つ
+            setTimeout(() => {
+                initializeAnalyticsFeatures();
+            }, 500);
+        });
+
+        // セッションストレージの変更を監視（オプション）
+        window.addEventListener('storage', function(e) {
+            if (e.key === 'currentUser' || e.key === 'userRole') {
+                console.log('セッションストレージの認証情報が変更されました');
+                onAuthStateChanged();
+            }
+        });
+        
     }
     </script>
 </body>
