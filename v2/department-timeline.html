@@ -6,7 +6,6 @@
     <title>業務別タイムライン - CEスケジュール管理システム V2</title>
     <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css">
-    <!-- 🔧 CSS パス修正 -->
     <link rel="stylesheet" href="css/theme-unified.css">
     
     <style>
@@ -126,7 +125,6 @@
             border: 2px dashed #ddd;
         }
 
-        /* 🚨 認証エラー表示スタイル */
         .auth-error {
             background: #fee2e2;
             border: 1px solid #fecaca;
@@ -181,7 +179,6 @@
     </style>
 </head>
 <body>
-    <!-- 🚨 認証チェック用の警告表示 -->
     <div id="authWarning" class="auth-error" style="display: none;">
         <h3><i class="fas fa-exclamation-triangle mr-2"></i>認証エラー</h3>
         <p>このページにアクセスするには、まず<a href="dashboard.html" class="underline font-bold">ダッシュボード</a>からログインしてください。</p>
@@ -282,6 +279,9 @@
                 <button id="resetFiltersBtn" class="bg-gray-500 text-white px-4 py-2 rounded-lg hover:bg-gray-600">
                     <i class="fas fa-undo mr-2"></i>リセット
                 </button>
+                <button id="currentWeekBtn" class="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600">
+                    <i class="fas fa-calendar-week mr-2"></i>今週表示
+                </button>
             </div>
         </div>
 
@@ -313,9 +313,8 @@
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 
     <script>
-        // 🔧 認証チェック機能を追加
+        // 認証チェック機能
         function checkAuthenticationStatus() {
-            // セッションストレージから認証情報を確認
             const targetUID = sessionStorage.getItem('targetUID');
             const currentUsername = sessionStorage.getItem('currentUsername');
             
@@ -328,7 +327,7 @@
             return true;
         }
 
-        // Firebase設定（dashboard.htmlと同じ設定を使用）
+        // Firebase設定
         const firebaseConfig = {
             apiKey: "AIzaSyBpfRTPDFFTEkWtuvksoF_hVkftQ__wH8Q",
             authDomain: "ce-scheduling-system.firebaseapp.com",
@@ -349,6 +348,10 @@
         let currentDateRange = [];
         let displayStartHour = 7;
         let displayEndHour = 19;
+
+        // 🔧 データキー形式の自動判定用変数
+        const WEEKDAY_KEYS = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+        let dataKeyFormat = 'unknown'; // 'weekday' | 'date' | 'mixed'
 
         // 部門設定
         const DEPARTMENTS = [
@@ -378,15 +381,18 @@
         document.addEventListener('DOMContentLoaded', function() {
             console.log('🔄 業務別タイムライン初期化開始');
             
-            // 🔧 認証チェックを追加
             if (!checkAuthenticationStatus()) {
                 return;
             }
             
             initializeFirebase();
             setupEventListeners();
-            setDefaultDateRange();
-            loadTimelineData();
+            setCurrentWeekRange();
+            
+            // 🔧 Firebase接続後に自動的にデータを読み込み
+            setTimeout(() => {
+                loadTimelineData();
+            }, 1000);
         });
 
         function initializeFirebase() {
@@ -396,7 +402,6 @@
                 }
                 database = firebase.database();
                 
-                // 🔧 匿名認証を追加
                 firebase.auth().signInAnonymously()
                     .then(() => {
                         console.log('✅ Firebase接続成功');
@@ -416,6 +421,7 @@
         function setupEventListeners() {
             document.getElementById('applyFiltersBtn').addEventListener('click', loadTimelineData);
             document.getElementById('resetFiltersBtn').addEventListener('click', resetFilters);
+            document.getElementById('currentWeekBtn').addEventListener('click', setCurrentWeekAndLoad);
             document.getElementById('exportBtn').addEventListener('click', exportTimeline);
             
             // 全部門チェックボックスの特別処理
@@ -432,23 +438,68 @@
             });
         }
 
-        function setDefaultDateRange() {
+        // 🔧 当該週の日付範囲を設定（日曜〜土曜）
+        function setCurrentWeekRange() {
             const today = new Date();
-            const monday = new Date(today);
-            const day = today.getDay();
-            const diff = today.getDate() - day + (day === 0 ? -6 : 1);
-            monday.setDate(diff);
+            const currentDay = today.getDay(); // 0=日曜, 1=月曜, ..., 6=土曜
             
-            const sunday = new Date(monday);
-            sunday.setDate(monday.getDate() + 6);
+            // 週の開始日（日曜日）を計算
+            const startDate = new Date(today);
+            startDate.setDate(today.getDate() - currentDay);
             
-            document.getElementById('startDate').value = monday.toISOString().split('T')[0];
-            document.getElementById('endDate').value = sunday.toISOString().split('T')[0];
+            // 週の終了日（土曜日）を計算
+            const endDate = new Date(startDate);
+            endDate.setDate(startDate.getDate() + 6);
+            
+            document.getElementById('startDate').value = startDate.toISOString().split('T')[0];
+            document.getElementById('endDate').value = endDate.toISOString().split('T')[0];
+            
+            console.log(`📅 当該週設定: ${startDate.toISOString().split('T')[0]} ～ ${endDate.toISOString().split('T')[0]}`);
+        }
+
+        // 🔧 今週表示ボタンのハンドラー
+        function setCurrentWeekAndLoad() {
+            setCurrentWeekRange();
+            loadTimelineData();
+        }
+
+        function setDefaultDateRange() {
+            setCurrentWeekRange();
+        }
+
+        // 🔧 データキー形式を自動判定
+        function detectDataKeyFormat(data) {
+            const keys = Object.keys(data || {});
+            if (keys.length === 0) return 'empty';
+            
+            const hasWeekdayKeys = keys.some(key => WEEKDAY_KEYS.includes(key));
+            const hasDateKeys = keys.some(key => /^\d{4}-\d{2}-\d{2}$/.test(key));
+            
+            if (hasDateKeys && !hasWeekdayKeys) return 'date';
+            if (hasWeekdayKeys && !hasDateKeys) return 'weekday';
+            return 'mixed';
+        }
+
+        // 🔧 日付に対応するデータキーを取得
+        function getDataKeyForDate(date) {
+            if (dataKeyFormat === 'date') {
+                return formatDateAsISO(date);
+            } else if (dataKeyFormat === 'weekday') {
+                return WEEKDAY_KEYS[date.getDay()];
+            } else {
+                // mixed または unknown の場合、まず日付キーを試し、なければ曜日キー
+                const dateKey = formatDateAsISO(date);
+                if (globalTasksData[dateKey] !== undefined) {
+                    return dateKey;
+                }
+                return WEEKDAY_KEYS[date.getDay()];
+            }
         }
 
         // ========== データ読み込み ==========
         async function loadTimelineData() {
             showLoading(true);
+            console.log('🔄 タイムライン読み込み開始');
             
             try {
                 const startDate = document.getElementById('startDate').value;
@@ -464,8 +515,11 @@
                     return;
                 }
                 
+                console.log(`📅 期間設定: ${startDate} ～ ${endDate}`);
+                
                 // 日付範囲を生成
                 currentDateRange = generateDateRange(startDate, endDate);
+                console.log('📅 生成された日付範囲:', currentDateRange.map(d => d.toISOString().split('T')[0]));
                 
                 // Firebase からデータ読み込み
                 await loadDataFromFirebase();
@@ -479,8 +533,10 @@
                 // サマリー情報を更新
                 updateSummary();
                 
+                console.log('✅ タイムライン読み込み完了');
+                
             } catch (error) {
-                console.error('タイムライン読み込みエラー:', error);
+                console.error('❌ タイムライン読み込みエラー:', error);
                 showMessage('データの読み込みに失敗しました', 'error');
             } finally {
                 showLoading(false);
@@ -493,15 +549,24 @@
             }
             
             try {
+                console.log('🔄 Firebaseからデータ読み込み中...');
                 const snapshot = await database.ref(`${DATA_ROOT}/state`).once('value');
                 
                 if (snapshot.exists()) {
                     const data = snapshot.val();
                     globalTasksData = data.tasks || {};
                     globalAssignmentsData = data.assignments || {};
+                    
+                    // 🔧 データキー形式を自動判定
+                    dataKeyFormat = detectDataKeyFormat(globalTasksData);
+                    console.log(`🔍 検出されたデータキー形式: ${dataKeyFormat}`);
+                    console.log('📊 読み込まれたタスクデータキー:', Object.keys(globalTasksData));
+                    console.log('👥 読み込まれた配置データキー:', Object.keys(globalAssignmentsData));
                 } else {
+                    console.warn('⚠️ Firebaseにデータが存在しません');
                     globalTasksData = {};
                     globalAssignmentsData = {};
+                    dataKeyFormat = 'empty';
                 }
                 
                 console.log('✅ Firebaseデータ読み込み完了');
@@ -511,12 +576,17 @@
             }
         }
 
-        function generateDateRange(startDate, endDate) {
+        function generateDateRange(startDateStr, endDateStr) {
             const dates = [];
-            const current = new Date(startDate);
-            const end = new Date(endDate);
+            const startDate = new Date(startDateStr);
+            const endDate = new Date(endDateStr);
             
-            while (current <= end) {
+            startDate.setHours(0, 0, 0, 0);
+            endDate.setHours(0, 0, 0, 0);
+            
+            const current = new Date(startDate);
+            
+            while (current <= endDate) {
                 dates.push(new Date(current));
                 current.setDate(current.getDate() + 1);
             }
@@ -530,14 +600,18 @@
             
             displayStartHour = parseInt(startTime.split(':')[0]);
             displayEndHour = parseInt(endTime.split(':')[0]);
+            
+            console.log(`⏰ 表示時間範囲: ${displayStartHour}:00 ～ ${displayEndHour}:00`);
         }
 
         // ========== タイムライン生成 ==========
         function generateTimeline() {
+            console.log('🔄 タイムライン生成開始');
             const container = document.getElementById('timelineContainer');
             container.innerHTML = '';
             
             const selectedDepartments = getSelectedDepartments();
+            console.log('🏥 選択された部門:', selectedDepartments);
             
             if (selectedDepartments.length === 0) {
                 container.innerHTML = `
@@ -550,14 +624,34 @@
                 return;
             }
             
+            let hasAnyData = false;
+            
             selectedDepartments.forEach(department => {
-                generateDepartmentTimeline(department, container);
+                const departmentElement = generateDepartmentTimeline(department, container);
+                if (departmentElement) {
+                    hasAnyData = true;
+                }
             });
+            
+            if (!hasAnyData) {
+                container.innerHTML = `
+                    <div class="no-tasks-message">
+                        <i class="fas fa-calendar-times text-3xl mb-4 block"></i>
+                        <p class="text-lg font-bold mb-2">指定期間内に業務データがありません</p>
+                        <p>期間を変更するか、データが登録されているかご確認ください。</p>
+                        <p class="text-sm mt-2">データキー形式: ${dataKeyFormat}</p>
+                    </div>
+                `;
+            }
+            
+            console.log('✅ タイムライン生成完了');
         }
 
         function generateDepartmentTimeline(department, container) {
-            // 部門の業務データを収集
+            console.log(`🔄 ${department} のタイムライン生成中...`);
+            
             const departmentData = collectDepartmentData(department);
+            console.log(`📊 ${department} のデータ:`, Object.keys(departmentData));
             
             // 部門カードを作成
             const deptCard = document.createElement('div');
@@ -584,23 +678,34 @@
             }
             
             container.appendChild(deptCard);
+            return deptCard;
         }
 
+        // 🔧 部門データ収集関数（柔軟なキー対応）
         function collectDepartmentData(department) {
             const departmentData = {};
             
             currentDateRange.forEach(date => {
-                const dateKey = formatDateKey(date);
-                const dayTasks = (globalTasksData[dateKey] || []).filter(task => 
-                    task.department === department
-                );
+                const dataKey = getDataKeyForDate(date);
+                console.log(`📅 ${department} - ${formatDateAsISO(date)} (キー: ${dataKey}) のデータをチェック中...`);
+                
+                const dayTasks = (globalTasksData[dataKey] || []).filter(task => {
+                    const matches = task.department === department;
+                    if (matches) {
+                        console.log(`✅ マッチした業務: ${task.name} (${task.startTime}-${task.endTime})`);
+                    }
+                    return matches;
+                });
                 
                 if (dayTasks.length > 0) {
-                    departmentData[dateKey] = {
+                    const displayKey = formatDateAsISO(date); // 表示用のユニークキー
+                    departmentData[displayKey] = {
                         date: date,
                         tasks: dayTasks,
-                        assignments: globalAssignmentsData[dateKey] || {}
+                        assignments: globalAssignmentsData[dataKey] || {},
+                        originalDataKey: dataKey // 元のデータキーを保持
                     };
+                    console.log(`📊 ${displayKey} に ${dayTasks.length} 件の業務を追加`);
                 }
             });
             
@@ -637,10 +742,11 @@
             body.appendChild(timeScale);
             
             // 日付順にソート
-            const sortedDates = Object.keys(departmentData).sort();
+            const sortedEntries = Object.entries(departmentData).sort((a, b) => {
+                return a[1].date.getTime() - b[1].date.getTime();
+            });
             
-            sortedDates.forEach(dateKey => {
-                const dayData = departmentData[dateKey];
+            sortedEntries.forEach(([displayKey, dayData]) => {
                 const dayRow = createDayRow(dayData);
                 body.appendChild(dayRow);
             });
@@ -721,10 +827,10 @@
             const left = ((adjustedStart - displayStartMinutes) / totalMinutes) * 100;
             const width = Math.max(2, ((adjustedEnd - adjustedStart) / totalMinutes) * 100);
             
-            // 元のタスクインデックスを取得
-            const dateKey = formatDateKey(dayData.date);
-            const allTasks = globalTasksData[dateKey] || [];
-            const originalTaskIndex = allTasks.findIndex(t => 
+            // 🔧 アサイン情報の取得ロジック（元のデータキーを使用）
+            const originalDataKey = dayData.originalDataKey;
+            const allTasksForDate = globalTasksData[originalDataKey] || [];
+            const originalTaskIndex = allTasksForDate.findIndex(t => 
                 t.name === task.name && 
                 t.department === task.department && 
                 t.startTime === task.startTime && 
@@ -780,9 +886,17 @@
             return hours * 60 + minutes;
         }
 
+        // 🔧 日付を YYYY-MM-DD 形式で返す関数
+        function formatDateAsISO(date) {
+            const year = date.getFullYear();
+            const month = (date.getMonth() + 1).toString().padStart(2, '0');
+            const day = date.getDate().toString().padStart(2, '0');
+            return `${year}-${month}-${day}`;
+        }
+
+        // 🔧 後方互換性のための関数（既存コードとの整合性を保つ）
         function formatDateKey(date) {
-            const days = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
-            return days[date.getDay()];
+            return getDataKeyForDate(date);
         }
 
         function formatDisplayDate(date) {
@@ -814,13 +928,13 @@
         }
 
         function showMessage(message, type = 'info') {
-            // 簡単なアラート（後で改良可能）
+            console.log(`${type.toUpperCase()}: ${message}`);
             alert(message);
         }
 
         // ========== フィルター・操作関数 ==========
         function resetFilters() {
-            setDefaultDateRange();
+            setCurrentWeekRange();
             document.getElementById('displayStartTime').value = '07:00';
             document.getElementById('displayEndTime').value = '19:00';
             
@@ -829,6 +943,7 @@
             loadTimelineData();
         }
 
+        // 🔧 サマリー更新関数（柔軟なキー対応）
         function updateSummary() {
             const summaryContent = document.getElementById('summaryContent');
             const selectedDepartments = getSelectedDepartments();
@@ -838,17 +953,26 @@
             let totalRequired = 0;
             
             currentDateRange.forEach(date => {
-                const dateKey = formatDateKey(date);
-                const dayTasks = (globalTasksData[dateKey] || []).filter(task => 
+                const dataKey = getDataKeyForDate(date);
+                const dayTasks = (globalTasksData[dataKey] || []).filter(task => 
                     selectedDepartments.includes(task.department)
                 );
-                const dayAssignments = globalAssignmentsData[dateKey] || {};
+                const dayAssignments = globalAssignmentsData[dataKey] || {};
                 
-                dayTasks.forEach((task, idx) => {
-                    const originalIndex = (globalTasksData[dateKey] || []).indexOf(task);
+                dayTasks.forEach(task => {
+                    const allTasksForDate = globalTasksData[dataKey] || [];
+                    const originalTaskIndex = allTasksForDate.findIndex(t => 
+                        t.name === task.name && 
+                        t.department === task.department && 
+                        t.startTime === task.startTime && 
+                        t.endTime === task.endTime
+                    );
+                    
                     totalTasks++;
                     totalRequired += task.requiredPeople || 1;
-                    totalAssigned += (dayAssignments[originalIndex] || []).length;
+                    if (originalTaskIndex >= 0) {
+                        totalAssigned += (dayAssignments[originalTaskIndex] || []).length;
+                    }
                 });
             });
             
@@ -872,10 +996,11 @@
                     <div class="text-xs text-gray-600">充足率</div>
                 </div>
             `;
+            
+            console.log(`📊 サマリー更新: ${totalTasks}件の業務, ${totalAssigned}/${totalRequired}名配置, ${fulfillmentRate}%充足率`);
         }
 
         function exportTimeline() {
-            // エクスポート機能（将来実装）
             showMessage('エクスポート機能は開発中です', 'info');
         }
 
