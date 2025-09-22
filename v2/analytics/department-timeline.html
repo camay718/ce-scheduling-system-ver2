@@ -424,45 +424,44 @@
         };
 
         // ========== 初期化 ==========
-        document.addEventListener('DOMContentLoaded', function() {
+        document.addEventListener('DOMContentLoaded', async function() {
             console.log('🔄 業務別タイムライン初期化開始');
             
-            if (!checkAuthenticationStatus()) {
-                return;
-            }
+            if (!checkAuthenticationStatus()) return;
             
             initializeFirebase();
             setupEventListeners();
             setCurrentWeekRange();
             
-            // 🔧 Firebase接続後に自動的にデータを読み込み
-            setTimeout(() => {
-                loadTimelineData();
-            }, 1000);
-        });
-
-        function initializeFirebase() {
             try {
-                if (!firebase.apps.length) {
-                    firebase.initializeApp(firebaseConfig);
-                }
-                database = firebase.database();
+                // 認証完了を確実に待機（最大10秒）
+                let authUser = firebase.auth().currentUser;
+                let attempts = 0;
                 
-                firebase.auth().signInAnonymously()
-                    .then(() => {
-                        console.log('✅ Firebase接続成功');
-                    })
-                    .catch((error) => {
-                        console.error('❌ Firebase認証エラー:', error);
-                        document.getElementById('authWarning').style.display = 'block';
-                    });
-                    
+                while (!authUser && attempts < 50) {
+                    await new Promise(resolve => setTimeout(resolve, 200));
+                    authUser = firebase.auth().currentUser;
+                    attempts++;
+                }
+                
+                if (!authUser) {
+                    throw new Error('Firebase認証がタイムアウトしました');
+                }
+                
+                console.log('🔐 Firebase認証確認完了:', authUser.uid);
+                await loadTimelineData();
+                
             } catch (error) {
-                console.error('❌ Firebase初期化エラー:', error);
-                showMessage('Firebase接続に失敗しました', 'error');
-                document.getElementById('authWarning').style.display = 'block';
+                console.error('❌ 初期読み込みエラー:', error);
+                if (error.message && error.message.includes('permission_denied')) {
+                    showMessage('データアクセス権限がありません。管理者にお問い合わせください。', 'error');
+                } else if (error.message && error.message.includes('タイムアウト')) {
+                    showMessage('認証処理がタイムアウトしました。ページを再読み込みしてください。', 'error');
+                } else {
+                    showMessage('データの読み込みに失敗しました', 'error');
+                }
             }
-        }
+        });
 
         function setupEventListeners() {
             document.getElementById('applyFiltersBtn').addEventListener('click', loadTimelineData);
@@ -595,27 +594,59 @@
             }
             
             try {
-                console.log('🔄 Firebaseからデータ読み込み中...');
-                const snapshot = await database.ref(`${DATA_ROOT}/state`).once('value');
+                console.log('🔄 Firebaseからデータ読み込み中（セキュリティ強化版）...');
                 
-                if (snapshot.exists()) {
-                    const data = snapshot.val();
-                    globalTasksData = data.tasks || {};
-                    globalAssignmentsData = data.assignments || {};
-                    
-                    // 🔧 データキー形式を自動判定
-                    dataKeyFormat = detectDataKeyFormat(globalTasksData);
-                    console.log(`🔍 検出されたデータキー形式: ${dataKeyFormat}`);
-                    console.log('📊 読み込まれたタスクデータキー:', Object.keys(globalTasksData));
-                    console.log('👥 読み込まれた配置データキー:', Object.keys(globalAssignmentsData));
-                } else {
-                    console.warn('⚠️ Firebaseにデータが存在しません');
-                    globalTasksData = {};
-                    globalAssignmentsData = {};
-                    dataKeyFormat = 'empty';
+                // 認証完了確認
+                const currentUser = firebase.auth().currentUser;
+                if (!currentUser) {
+                    throw new Error('Firebase認証が未完了です');
                 }
                 
-                console.log('✅ Firebaseデータ読み込み完了');
+                // 必要最小限のデータのみ個別取得（セキュリティ強化）
+                const [eventsSnapshot, ceListSnapshot] = await Promise.all([
+                    database.ref(`${DATA_ROOT}/events`).once('value'),
+                    database.ref(`${DATA_ROOT}/ceList`).once('value')
+                ]);
+                
+                console.log('📊 個別データ取得完了');
+                
+                // イベントデータの変換処理
+                const eventsData = eventsSnapshot.val() || {};
+                globalTasksData = {};
+                globalAssignmentsData = {};
+                
+                // byDate構造からタイムライン用に変換
+                Object.entries(eventsData.byDate || {}).forEach(([dateKey, dayEvents]) => {
+                    if (dayEvents && typeof dayEvents === 'object') {
+                        const tasksList = Object.values(dayEvents).map(event => ({
+                            name: event.name,
+                            department: event.department,
+                            startTime: event.startTime,
+                            endTime: event.endTime,
+                            count: event.count,
+                            requiredPeople: event.requiredPeople
+                        }));
+                        
+                        globalTasksData[dateKey] = tasksList;
+                        
+                        // 配置情報も変換
+                        globalAssignmentsData[dateKey] = {};
+                        Object.values(dayEvents).forEach((event, index) => {
+                            if (event.assignedCEs && Array.isArray(event.assignedCEs)) {
+                                globalAssignmentsData[dateKey][index] = event.assignedCEs.map(ce => 
+                                    typeof ce === 'string' ? ce : (ce.name || ce.id || ce)
+                                );
+                            }
+                        });
+                    }
+                });
+                
+                // データキー形式を自動判定
+                dataKeyFormat = detectDataKeyFormat(globalTasksData);
+                console.log(`🔍 検出されたデータキー形式: ${dataKeyFormat}`);
+                console.log('📊 変換後のタスクデータキー:', Object.keys(globalTasksData));
+                
+                console.log('✅ Firebaseデータ読み込み完了（セキュリティ強化版）');
             } catch (error) {
                 console.error('❌ Firebase読み込みエラー:', error);
                 throw error;
