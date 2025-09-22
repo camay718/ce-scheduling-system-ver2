@@ -862,7 +862,7 @@
         
         <div class="analysis-grid">
             <!-- 業務別タイムライン（フォルダ移動対応） -->
-            <button class="analysis-btn" onclick="window.open('analytics/department-timeline.html', '_blank')">
+            <button class="analysis-btn" onclick="openAnalyticsPage('department-timeline')">
                 <i class="fas fa-chart-bar"></i>
                 <div class="analysis-btn-title">業務別タイムライン</div>
                 <div class="analysis-btn-desc">部門・業務ごとの時系列分析と配置状況の可視化</div>
@@ -973,15 +973,6 @@
             window.location.href = 'index.html';
         }
     };
-
-    // 分析ページ開く関数
-    window.openAnalysisPage = function(pageType) {
-    if (pageType === 'department-timeline') {
-        window.open('department-timeline.html', '_blank');
-    } else {
-        window.showMessage(`${pageType}機能は開発中です`, 'info');
-    }
-};
 
     // 公開勤務表連動管理クラス
     class PublishedScheduleResolver {
@@ -3524,9 +3515,19 @@
         updateUserDisplay() {
             const userData = window.currentUserData;
             if (!userData) return;
+            
+            const displayName = userData.displayName || userData.username || 'ユーザー';
             document.querySelectorAll('#currentUserDisplay').forEach(el => {
-                el.textContent = userData.displayName || userData.username || 'ユーザー';
+                el.textContent = displayName;
             });
+            
+            // analytics/配下のページの認証チェック用にsessionStorageに保存
+            try {
+                sessionStorage.setItem('currentUser', displayName);
+                sessionStorage.setItem('userRole', window.userRole || 'viewer');
+            } catch (error) {
+                console.warn('sessionStorage保存エラー:', error);
+            }
         }
 
         setupNavigation() {
@@ -3891,6 +3892,48 @@
         window.showMessage('ログイン管理機能は開発中です', 'info');
     };
 
+        // 統一された分析ページ開く関数
+        function openAnalyticsPage(pageName) {
+            console.log(`分析ページを開いています: ${pageName}`);
+            
+            // 認証チェック
+            const targetUID = sessionStorage.getItem('targetUID');
+            const currentUsername = sessionStorage.getItem('currentUsername');
+            
+            if (!targetUID || !currentUsername) {
+                window.showMessage('認証が必要です。ログインしてからアクセスしてください。', 'warning');
+                return;
+            }
+            
+            // 権限チェック
+            if (window.userRole === 'viewer') {
+                window.showMessage('分析機能の利用には編集権限以上が必要です', 'warning');
+                return;
+            }
+            
+            try {
+                // analyticsフォルダ内のHTMLファイルを新しいタブで開く
+                const url = `analytics/${pageName}.html`;
+                
+                const newWindow = window.open(url, '_blank', 'noopener,noreferrer,width=1400,height=900,scrollbars=yes,resizable=yes');
+                
+                // ポップアップブロッカー対応
+                if (!newWindow || newWindow.closed || typeof newWindow.closed === 'undefined') {
+                    console.warn('ポップアップがブロックされました');
+                    if (confirm('ポップアップがブロックされています。同じタブで分析ページを開きますか？')) {
+                        window.location.href = url;
+                    } else {
+                        window.showMessage('分析ページを開くには、ポップアップを許可してください', 'warning');
+                    }
+                } else {
+                    console.log('分析ページが正常に開かれました');
+                }
+            } catch (error) {
+                console.error('分析ページを開くときにエラーが発生しました:', error);
+                window.showMessage('分析ページを開くことができませんでした', 'error');
+            }
+        }
+        
     // 初期化（修正済み）
     if (!window.dashboardAuthInitialized) {
         window.dashboardAuthInitialized = true;
