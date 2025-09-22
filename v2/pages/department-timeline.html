@@ -1,0 +1,836 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>業務別タイムライン - CEスケジュール管理システム V2</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="theme-unified.css">
+    
+    <style>
+        :root {
+            --primary-gradient: linear-gradient(135deg, #E8F5E8 0%, #D4F1D4 100%);
+            --accent-color: #B8E6B8;
+            --text-color: #2C3E50;
+            --shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+
+        body {
+            background: var(--primary-gradient);
+            font-family: 'Segoe UI', 'Hiragino Sans', 'Yu Gothic UI', sans-serif;
+            color: var(--text-color);
+            min-height: 100vh;
+        }
+
+        .glassmorphism {
+            background: rgba(255,255,255,0.7);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255,255,255,0.3);
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #4CAF50, #45a049);
+            color: white;
+            border: none;
+            padding: 10px 18px;
+            border-radius: 20px;
+            font-weight: 600;
+            box-shadow: var(--shadow);
+            transition: all 0.2s ease;
+            cursor: pointer;
+        }
+
+        .btn-primary:hover { 
+            transform: translateY(-1px); 
+            box-shadow: 0 6px 18px rgba(0,0,0,0.15); 
+        }
+
+        .department-area {
+            background: rgba(255,255,255,0.85);
+            border-radius: 14px;
+            padding: 16px;
+            box-shadow: var(--shadow);
+            border-left: 4px solid var(--dept-color);
+            margin-bottom: 20px;
+        }
+
+        .dept-血液浄化 { --dept-color: #FFB6C1; }
+        .dept-人工心肺・補助循環 { --dept-color: #4169E1; }
+        .dept-心・カテーテル { --dept-color: #32CD32; }
+        .dept-手術・麻酔 { --dept-color: #87CEEB; }
+        .dept-不整脈 { --dept-color: #9370DB; }
+        .dept-機器管理・人工呼吸 { --dept-color: #90EE90; }
+
+        .timeline-day-row {
+            padding: 12px;
+            margin-bottom: 8px;
+            background: rgba(255,255,255,0.9);
+            border-radius: 8px;
+            border: 1px solid rgba(0,0,0,0.06);
+        }
+
+        .timeline-track {
+            position: relative;
+            width: 100%;
+            background: #f0f0f0;
+            border-radius: 6px;
+            overflow: hidden;
+            border: 1px solid #ddd;
+            min-height: 30px;
+        }
+
+        .task-bar {
+            position: absolute;
+            height: 24px;
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 11px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .task-bar:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+        }
+
+        .time-scale {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 4px;
+            padding: 0 4px;
+            font-size: 10px;
+            color: #666;
+        }
+
+        .filter-section {
+            background: rgba(255,255,255,0.9);
+            border-radius: 12px;
+            padding: 16px;
+            margin-bottom: 20px;
+            box-shadow: var(--shadow);
+        }
+
+        .no-tasks-message {
+            text-align: center;
+            padding: 40px 20px;
+            color: #999;
+            background: rgba(255,255,255,0.5);
+            border-radius: 8px;
+            border: 2px dashed #ddd;
+        }
+
+        /* 印刷用スタイル */
+        @media print {
+            body { 
+                background: white !important; 
+                color: #000 !important; 
+            }
+            .no-print { 
+                display: none !important; 
+            }
+            .glassmorphism { 
+                background: white !important; 
+                border: 1px solid #ccc !important; 
+            }
+            .department-area {
+                break-inside: avoid;
+                margin-bottom: 15px;
+            }
+        }
+
+        /* レスポンシブ対応 */
+        @media (max-width: 768px) {
+            .filter-section {
+                padding: 12px;
+            }
+            
+            .department-area {
+                padding: 12px;
+            }
+            
+            .timeline-day-row {
+                padding: 8px;
+            }
+            
+            .task-bar {
+                font-size: 10px;
+                height: 20px;
+            }
+            
+            .time-scale {
+                font-size: 9px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container mx-auto p-4 max-w-7xl">
+        <!-- ヘッダー -->
+        <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 no-print">
+            <div>
+                <h1 class="text-3xl font-bold mb-2">
+                    <i class="fas fa-chart-gantt mr-3 text-green-600"></i>業務別タイムライン
+                </h1>
+                <p class="text-gray-600">部門ごとの業務スケジュールを時間軸で可視化</p>
+            </div>
+            <div class="flex gap-3 mt-4 md:mt-0">
+                <button id="exportBtn" class="btn-primary">
+                    <i class="fas fa-download mr-2"></i>エクスポート
+                </button>
+                <button onclick="window.print()" class="btn-primary">
+                    <i class="fas fa-print mr-2"></i>印刷
+                </button>
+                <button onclick="history.back()" class="bg-gray-500 text-white px-4 py-2 rounded-lg hover:bg-gray-600">
+                    <i class="fas fa-arrow-left mr-2"></i>戻る
+                </button>
+            </div>
+        </div>
+
+        <!-- フィルター・設定セクション -->
+        <div class="filter-section no-print">
+            <h3 class="text-lg font-bold mb-4">
+                <i class="fas fa-filter mr-2"></i>表示設定
+            </h3>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
+                <!-- 期間設定 -->
+                <div>
+                    <label class="block text-sm font-medium mb-2">開始日</label>
+                    <input type="date" id="startDate" class="w-full p-3 border border-gray-300 rounded-lg">
+                </div>
+                
+                <div>
+                    <label class="block text-sm font-medium mb-2">終了日</label>
+                    <input type="date" id="endDate" class="w-full p-3 border border-gray-300 rounded-lg">
+                </div>
+
+                <!-- 時間範囲設定 -->
+                <div>
+                    <label class="block text-sm font-medium mb-2">表示開始時刻</label>
+                    <input type="time" id="displayStartTime" value="07:00" class="w-full p-3 border border-gray-300 rounded-lg">
+                </div>
+                
+                <div>
+                    <label class="block text-sm font-medium mb-2">表示終了時刻</label>
+                    <input type="time" id="displayEndTime" value="19:00" class="w-full p-3 border border-gray-300 rounded-lg">
+                </div>
+            </div>
+
+            <!-- 部門フィルター -->
+            <div class="mb-4">
+                <label class="block text-sm font-medium mb-2">表示部門</label>
+                <div class="flex flex-wrap gap-2">
+                    <label class="flex items-center">
+                        <input type="checkbox" class="department-filter" value="all" checked>
+                        <span class="ml-2 font-bold">全部門</span>
+                    </label>
+                    <label class="flex items-center">
+                        <input type="checkbox" class="department-filter" value="血液浄化" checked>
+                        <span class="ml-2">血液浄化</span>
+                    </label>
+                    <label class="flex items-center">
+                        <input type="checkbox" class="department-filter" value="人工心肺・補助循環" checked>
+                        <span class="ml-2">人工心肺・補助循環</span>
+                    </label>
+                    <label class="flex items-center">
+                        <input type="checkbox" class="department-filter" value="心・カテーテル" checked>
+                        <span class="ml-2">心・カテーテル</span>
+                    </label>
+                    <label class="flex items-center">
+                        <input type="checkbox" class="department-filter" value="手術・麻酔" checked>
+                        <span class="ml-2">手術・麻酔</span>
+                    </label>
+                    <label class="flex items-center">
+                        <input type="checkbox" class="department-filter" value="不整脈" checked>
+                        <span class="ml-2">不整脈</span>
+                    </label>
+                    <label class="flex items-center">
+                        <input type="checkbox" class="department-filter" value="機器管理・人工呼吸" checked>
+                        <span class="ml-2">機器管理・人工呼吸</span>
+                    </label>
+                </div>
+            </div>
+
+            <div class="flex gap-3">
+                <button id="applyFiltersBtn" class="btn-primary">
+                    <i class="fas fa-search mr-2"></i>表示更新
+                </button>
+                <button id="resetFiltersBtn" class="bg-gray-500 text-white px-4 py-2 rounded-lg hover:bg-gray-600">
+                    <i class="fas fa-undo mr-2"></i>リセット
+                </button>
+            </div>
+        </div>
+
+        <!-- サマリー情報 -->
+        <div id="summarySection" class="glassmorphism rounded-2xl p-4 mb-6">
+            <h3 class="text-lg font-bold mb-3">
+                <i class="fas fa-info-circle mr-2"></i>表示サマリー
+            </h3>
+            <div id="summaryContent" class="grid grid-cols-1 md:grid-cols-4 gap-4 text-sm">
+                <!-- JavaScriptで動的生成 -->
+            </div>
+        </div>
+
+        <!-- タイムライン表示エリア -->
+        <div id="timelineContainer">
+            <!-- JavaScriptで動的生成 -->
+        </div>
+
+        <!-- ローディング表示 -->
+        <div id="loadingIndicator" class="text-center py-8" style="display: none;">
+            <i class="fas fa-spinner fa-spin text-2xl text-green-600"></i>
+            <p class="mt-2 text-gray-600">データを読み込み中...</p>
+        </div>
+    </div>
+
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+
+    <script>
+        // Firebase設定（dashboard.htmlと同じ設定を使用）
+        const firebaseConfig = {
+            apiKey: "AIzaSyBpfRTPDFFTEkWtuvksoF_hVkftQ__wH8Q",
+            authDomain: "ce-scheduling-system.firebaseapp.com",
+            databaseURL: "https://ce-scheduling-system-default-rtdb.asia-southeast1.firebasedatabase.app",
+            projectId: "ce-scheduling-system",
+            storageBucket: "ce-scheduling-system.firebasestorage.app",
+            messagingSenderId: "401096569342",
+            appId: "1:401096569342:web:03b0a5f5bfd09e34ae90af",
+            measurementId: "G-8C7X5WCED3"
+        };
+
+        const DATA_ROOT = 'ceScheduleSystem/v2';
+
+        // グローバル変数
+        let database = null;
+        let globalTasksData = {};
+        let globalAssignmentsData = {};
+        let currentDateRange = [];
+        let displayStartHour = 7;
+        let displayEndHour = 19;
+
+        // 部門設定
+        const DEPARTMENTS = [
+            '血液浄化', '人工心肺・補助循環', '心・カテーテル', 
+            '手術・麻酔', '不整脈', '機器管理・人工呼吸'
+        ];
+
+        const DEPARTMENT_COLORS = {
+            '血液浄化': '#FFB6C1',
+            '人工心肺・補助循環': '#4169E1',
+            '心・カテーテル': '#32CD32',
+            '手術・麻酔': '#87CEEB',
+            '不整脈': '#9370DB',
+            '機器管理・人工呼吸': '#90EE90'
+        };
+
+        const DEPARTMENT_ICONS = {
+            '血液浄化': 'tint',
+            '人工心肺・補助循環': 'procedures',
+            '心・カテーテル': 'heart',
+            '手術・麻酔': 'user-md',
+            '不整脈': 'heartbeat',
+            '機器管理・人工呼吸': 'lungs'
+        };
+
+        // ========== 初期化 ==========
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('🔄 業務別タイムライン初期化開始');
+            
+            initializeFirebase();
+            setupEventListeners();
+            setDefaultDateRange();
+            loadTimelineData();
+        });
+
+        function initializeFirebase() {
+            try {
+                if (!firebase.apps.length) {
+                    firebase.initializeApp(firebaseConfig);
+                }
+                database = firebase.database();
+                console.log('✅ Firebase接続成功');
+            } catch (error) {
+                console.error('❌ Firebase初期化エラー:', error);
+                showMessage('Firebase接続に失敗しました', 'error');
+            }
+        }
+
+        function setupEventListeners() {
+            document.getElementById('applyFiltersBtn').addEventListener('click', loadTimelineData);
+            document.getElementById('resetFiltersBtn').addEventListener('click', resetFilters);
+            document.getElementById('exportBtn').addEventListener('click', exportTimeline);
+            
+            // 全部門チェックボックスの特別処理
+            document.querySelector('.department-filter[value="all"]').addEventListener('change', function() {
+                const isChecked = this.checked;
+                document.querySelectorAll('.department-filter:not([value="all"])').forEach(cb => {
+                    cb.checked = isChecked;
+                });
+            });
+            
+            // 個別部門チェックボックスの処理
+            document.querySelectorAll('.department-filter:not([value="all"])').forEach(cb => {
+                cb.addEventListener('change', updateAllDepartmentCheckbox);
+            });
+        }
+
+        function setDefaultDateRange() {
+            const today = new Date();
+            const monday = new Date(today);
+            const day = today.getDay();
+            const diff = today.getDate() - day + (day === 0 ? -6 : 1);
+            monday.setDate(diff);
+            
+            const sunday = new Date(monday);
+            sunday.setDate(monday.getDate() + 6);
+            
+            document.getElementById('startDate').value = monday.toISOString().split('T')[0];
+            document.getElementById('endDate').value = sunday.toISOString().split('T')[0];
+        }
+
+        // ========== データ読み込み ==========
+        async function loadTimelineData() {
+            showLoading(true);
+            
+            try {
+                const startDate = document.getElementById('startDate').value;
+                const endDate = document.getElementById('endDate').value;
+                
+                if (!startDate || !endDate) {
+                    showMessage('開始日と終了日を選択してください', 'warning');
+                    return;
+                }
+                
+                if (new Date(startDate) > new Date(endDate)) {
+                    showMessage('開始日は終了日より前に設定してください', 'warning');
+                    return;
+                }
+                
+                // 日付範囲を生成
+                currentDateRange = generateDateRange(startDate, endDate);
+                
+                // Firebase からデータ読み込み
+                await loadDataFromFirebase();
+                
+                // 表示時間範囲を更新
+                updateDisplayTimeRange();
+                
+                // タイムラインを生成・表示
+                generateTimeline();
+                
+                // サマリー情報を更新
+                updateSummary();
+                
+            } catch (error) {
+                console.error('タイムライン読み込みエラー:', error);
+                showMessage('データの読み込みに失敗しました', 'error');
+            } finally {
+                showLoading(false);
+            }
+        }
+
+        async function loadDataFromFirebase() {
+            if (!database) {
+                throw new Error('Firebase未接続');
+            }
+            
+            try {
+                const snapshot = await database.ref(`${DATA_ROOT}/state`).once('value');
+                
+                if (snapshot.exists()) {
+                    const data = snapshot.val();
+                    globalTasksData = data.tasks || {};
+                    globalAssignmentsData = data.assignments || {};
+                } else {
+                    globalTasksData = {};
+                    globalAssignmentsData = {};
+                }
+                
+                console.log('✅ Firebaseデータ読み込み完了');
+            } catch (error) {
+                console.error('❌ Firebase読み込みエラー:', error);
+                throw error;
+            }
+        }
+
+        function generateDateRange(startDate, endDate) {
+            const dates = [];
+            const current = new Date(startDate);
+            const end = new Date(endDate);
+            
+            while (current <= end) {
+                dates.push(new Date(current));
+                current.setDate(current.getDate() + 1);
+            }
+            
+            return dates;
+        }
+
+        function updateDisplayTimeRange() {
+            const startTime = document.getElementById('displayStartTime').value;
+            const endTime = document.getElementById('displayEndTime').value;
+            
+            displayStartHour = parseInt(startTime.split(':')[0]);
+            displayEndHour = parseInt(endTime.split(':')[0]);
+        }
+
+        // ========== タイムライン生成 ==========
+        function generateTimeline() {
+            const container = document.getElementById('timelineContainer');
+            container.innerHTML = '';
+            
+            const selectedDepartments = getSelectedDepartments();
+            
+            if (selectedDepartments.length === 0) {
+                container.innerHTML = `
+                    <div class="no-tasks-message">
+                        <i class="fas fa-info-circle text-3xl mb-4 block"></i>
+                        <p class="text-lg font-bold mb-2">表示する部門を選択してください</p>
+                        <p>上記のフィルターから表示したい部門にチェックを入れてください。</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            selectedDepartments.forEach(department => {
+                generateDepartmentTimeline(department, container);
+            });
+        }
+
+        function generateDepartmentTimeline(department, container) {
+            // 部門の業務データを収集
+            const departmentData = collectDepartmentData(department);
+            
+            // 部門カードを作成
+            const deptCard = document.createElement('div');
+            deptCard.className = `department-area dept-${department}`;
+            deptCard.style.setProperty('--dept-color', DEPARTMENT_COLORS[department]);
+            
+            // ヘッダー
+            const header = createDepartmentHeader(department, departmentData);
+            deptCard.appendChild(header);
+            
+            // 業務が存在しない場合
+            if (Object.keys(departmentData).length === 0) {
+                const noTasksDiv = document.createElement('div');
+                noTasksDiv.className = 'no-tasks-message';
+                noTasksDiv.innerHTML = `
+                    <i class="fas fa-calendar-times text-2xl mb-2 block"></i>
+                    <p>指定期間内に ${department} の業務はありません</p>
+                `;
+                deptCard.appendChild(noTasksDiv);
+            } else {
+                // 日別タイムライン
+                const timelineBody = createTimelineBody(departmentData);
+                deptCard.appendChild(timelineBody);
+            }
+            
+            container.appendChild(deptCard);
+        }
+
+        function collectDepartmentData(department) {
+            const departmentData = {};
+            
+            currentDateRange.forEach(date => {
+                const dateKey = formatDateKey(date);
+                const dayTasks = (globalTasksData[dateKey] || []).filter(task => 
+                    task.department === department
+                );
+                
+                if (dayTasks.length > 0) {
+                    departmentData[dateKey] = {
+                        date: date,
+                        tasks: dayTasks,
+                        assignments: globalAssignmentsData[dateKey] || {}
+                    };
+                }
+            });
+            
+            return departmentData;
+        }
+
+        function createDepartmentHeader(department, departmentData) {
+            const totalTasks = Object.values(departmentData).reduce((sum, day) => sum + day.tasks.length, 0);
+            
+            const header = document.createElement('div');
+            header.className = 'flex items-center justify-between mb-4';
+            header.innerHTML = `
+                <div class="flex items-center">
+                    <i class="fas fa-${DEPARTMENT_ICONS[department]} mr-3 text-2xl" 
+                       style="color: ${DEPARTMENT_COLORS[department]};"></i>
+                    <h3 class="text-xl font-bold">${department}</h3>
+                </div>
+                <div class="text-sm text-gray-600">
+                    <span class="bg-white bg-opacity-70 px-3 py-1 rounded-full">
+                        期間内総業務: ${totalTasks}件
+                    </span>
+                </div>
+            `;
+            
+            return header;
+        }
+
+        function createTimelineBody(departmentData) {
+            const body = document.createElement('div');
+            body.className = 'space-y-3';
+            
+            // 時間軸ラベルを作成
+            const timeScale = createTimeScale();
+            body.appendChild(timeScale);
+            
+            // 日付順にソート
+            const sortedDates = Object.keys(departmentData).sort();
+            
+            sortedDates.forEach(dateKey => {
+                const dayData = departmentData[dateKey];
+                const dayRow = createDayRow(dayData);
+                body.appendChild(dayRow);
+            });
+            
+            return body;
+        }
+
+        function createTimeScale() {
+            const timeScale = document.createElement('div');
+            timeScale.className = 'time-scale';
+            
+            for (let hour = displayStartHour; hour <= displayEndHour; hour += 2) {
+                const timeLabel = document.createElement('div');
+                timeLabel.textContent = `${hour.toString().padStart(2, '0')}:00`;
+                timeLabel.style.flex = '1';
+                timeLabel.style.textAlign = 'center';
+                timeScale.appendChild(timeLabel);
+            }
+            
+            return timeScale;
+        }
+
+        function createDayRow(dayData) {
+            const dayRow = document.createElement('div');
+            dayRow.className = 'timeline-day-row';
+            
+            // 日付ヘッダー
+            const dayHeader = document.createElement('div');
+            dayHeader.className = 'flex justify-between items-center mb-2';
+            dayHeader.innerHTML = `
+                <div class="font-bold text-sm">
+                    ${formatDisplayDate(dayData.date)} (${getJapaneseDayName(dayData.date)})
+                </div>
+                <div class="text-xs text-gray-600">
+                    ${dayData.tasks.length}件の業務
+                </div>
+            `;
+            dayRow.appendChild(dayHeader);
+            
+            // タイムライントラック
+            const track = createTimelineTrack(dayData);
+            dayRow.appendChild(track);
+            
+            return dayRow;
+        }
+
+        function createTimelineTrack(dayData) {
+            const track = document.createElement('div');
+            track.className = 'timeline-track';
+            track.style.height = Math.max(30, dayData.tasks.length * 26 + 6) + 'px';
+            
+            const totalMinutes = (displayEndHour - displayStartHour) * 60;
+            
+            dayData.tasks.forEach((task, taskIdx) => {
+                const taskBar = createTaskBar(task, dayData, taskIdx, totalMinutes);
+                if (taskBar) {
+                    track.appendChild(taskBar);
+                }
+            });
+            
+            return track;
+        }
+
+        function createTaskBar(task, dayData, taskIdx, totalMinutes) {
+            const startMinutes = timeToMinutes(task.startTime);
+            const endMinutes = timeToMinutes(task.endTime);
+            const displayStartMinutes = displayStartHour * 60;
+            const displayEndMinutes = displayEndHour * 60;
+            
+            // 表示範囲外の業務はスキップ
+            if (endMinutes <= displayStartMinutes || startMinutes >= displayEndMinutes) {
+                return null;
+            }
+            
+            const adjustedStart = Math.max(startMinutes, displayStartMinutes);
+            const adjustedEnd = Math.min(endMinutes, displayEndMinutes);
+            
+            const left = ((adjustedStart - displayStartMinutes) / totalMinutes) * 100;
+            const width = Math.max(2, ((adjustedEnd - adjustedStart) / totalMinutes) * 100);
+            
+            // 元のタスクインデックスを取得
+            const dateKey = formatDateKey(dayData.date);
+            const allTasks = globalTasksData[dateKey] || [];
+            const originalTaskIndex = allTasks.findIndex(t => 
+                t.name === task.name && 
+                t.department === task.department && 
+                t.startTime === task.startTime && 
+                t.endTime === task.endTime
+            );
+            
+            const assignedCEs = originalTaskIndex >= 0 ? 
+                (dayData.assignments[originalTaskIndex] || []) : [];
+            
+            const taskBar = document.createElement('div');
+            taskBar.className = 'task-bar';
+            taskBar.style.left = left + '%';
+            taskBar.style.width = width + '%';
+            taskBar.style.top = (taskIdx * 26 + 3) + 'px';
+            taskBar.style.backgroundColor = DEPARTMENT_COLORS[task.department];
+            taskBar.style.opacity = '0.9';
+            
+            // ツールチップ
+            taskBar.title = [
+                `業務: ${task.name}`,
+                `時間: ${task.startTime}-${task.endTime}`,
+                `件数: ${task.count || 1}件`,
+                `必要人数: ${task.requiredPeople || 1}名`,
+                `配置CE: ${assignedCEs.join(', ') || '未配置'}`
+            ].join('\n');
+            
+            // 表示テキスト
+            let displayText = '';
+            if (width > 25) {
+                const ceText = assignedCEs.length > 0 ? ` | ${assignedCEs.join(',')}` : ' | 未配置';
+                displayText = `${task.name}${ceText}`;
+            } else if (width > 15) {
+                displayText = task.name;
+            } else if (width > 8) {
+                displayText = task.name.substring(0, 3) + '...';
+            } else {
+                displayText = '●';
+            }
+            
+            taskBar.innerHTML = `
+                <span style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding: 0 4px;">
+                    ${displayText}
+                </span>
+            `;
+            
+            return taskBar;
+        }
+
+        // ========== ヘルパー関数 ==========
+        function timeToMinutes(timeString) {
+            if (!timeString || !/^\d{1,2}:\d{2}$/.test(timeString)) return 0;
+            const [hours, minutes] = timeString.split(':').map(Number);
+            return hours * 60 + minutes;
+        }
+
+        function formatDateKey(date) {
+            const days = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+            return days[date.getDay()];
+        }
+
+        function formatDisplayDate(date) {
+            const month = date.getMonth() + 1;
+            const day = date.getDate();
+            return `${month}/${day}`;
+        }
+
+        function getJapaneseDayName(date) {
+            const days = ['日', '月', '火', '水', '木', '金', '土'];
+            return days[date.getDay()];
+        }
+
+        function getSelectedDepartments() {
+            const checkboxes = document.querySelectorAll('.department-filter:not([value="all"]):checked');
+            return Array.from(checkboxes).map(cb => cb.value);
+        }
+
+        function updateAllDepartmentCheckbox() {
+            const allCheckbox = document.querySelector('.department-filter[value="all"]');
+            const departmentCheckboxes = document.querySelectorAll('.department-filter:not([value="all"])');
+            const checkedCount = document.querySelectorAll('.department-filter:not([value="all"]):checked').length;
+            
+            allCheckbox.checked = checkedCount === departmentCheckboxes.length;
+        }
+
+        function showLoading(show) {
+            document.getElementById('loadingIndicator').style.display = show ? 'block' : 'none';
+        }
+
+        function showMessage(message, type = 'info') {
+            // 簡単なアラート（後で改良可能）
+            alert(message);
+        }
+
+        // ========== フィルター・操作関数 ==========
+        function resetFilters() {
+            setDefaultDateRange();
+            document.getElementById('displayStartTime').value = '07:00';
+            document.getElementById('displayEndTime').value = '19:00';
+            
+            document.querySelectorAll('.department-filter').forEach(cb => cb.checked = true);
+            
+            loadTimelineData();
+        }
+
+        function updateSummary() {
+            const summaryContent = document.getElementById('summaryContent');
+            const selectedDepartments = getSelectedDepartments();
+            
+            let totalTasks = 0;
+            let totalAssigned = 0;
+            let totalRequired = 0;
+            
+            currentDateRange.forEach(date => {
+                const dateKey = formatDateKey(date);
+                const dayTasks = (globalTasksData[dateKey] || []).filter(task => 
+                    selectedDepartments.includes(task.department)
+                );
+                const dayAssignments = globalAssignmentsData[dateKey] || {};
+                
+                dayTasks.forEach((task, idx) => {
+                    const originalIndex = (globalTasksData[dateKey] || []).indexOf(task);
+                    totalTasks++;
+                    totalRequired += task.requiredPeople || 1;
+                    totalAssigned += (dayAssignments[originalIndex] || []).length;
+                });
+            });
+            
+            const fulfillmentRate = totalRequired > 0 ? Math.round((totalAssigned / totalRequired) * 100) : 0;
+            
+            summaryContent.innerHTML = `
+                <div class="bg-white bg-opacity-70 p-3 rounded-lg text-center">
+                    <div class="font-bold text-lg text-blue-600">${currentDateRange.length}</div>
+                    <div class="text-xs text-gray-600">表示日数</div>
+                </div>
+                <div class="bg-white bg-opacity-70 p-3 rounded-lg text-center">
+                    <div class="font-bold text-lg text-green-600">${totalTasks}</div>
+                    <div class="text-xs text-gray-600">総業務数</div>
+                </div>
+                <div class="bg-white bg-opacity-70 p-3 rounded-lg text-center">
+                    <div class="font-bold text-lg text-purple-600">${totalAssigned}/${totalRequired}</div>
+                    <div class="text-xs text-gray-600">配置状況</div>
+                </div>
+                <div class="bg-white bg-opacity-70 p-3 rounded-lg text-center">
+                    <div class="font-bold text-lg ${fulfillmentRate >= 100 ? 'text-green-600' : fulfillmentRate >= 80 ? 'text-yellow-600' : 'text-red-600'}">${fulfillmentRate}%</div>
+                    <div class="text-xs text-gray-600">充足率</div>
+                </div>
+            `;
+        }
+
+        function exportTimeline() {
+            // エクスポート機能（将来実装）
+            showMessage('エクスポート機能は開発中です', 'info');
+        }
+
+        console.log('✅ 業務別タイムライン V2 読み込み完了');
+    </script>
+</body>
+</html>
