@@ -1837,7 +1837,7 @@
     const data = snapshot.val() || {};
     this.monthlyTasks[yearMonth] = data;
     this.renderMonthlyTasks();
-    await this.updateDailySummary();
+    this.updateDailySummary().catch(console.error);
 };
                 this.monthlyRef.on('value', this.monthlyCallback);
             };
@@ -1971,7 +1971,7 @@
                 this.renderMonthlyTasks();
 
                 // 集計の更新
-                await this.updateDailySummary();
+                this.updateDailySummary().catch(console.error);
                 console.log(`✅ ${dateKey} のイベント表示完了: ${events.length}件`);
 
             } catch (error) {
@@ -2238,7 +2238,7 @@ if (window.ceManager?.ceList && window.publishedScheduleResolver) {
 window.showMessage('実施件数を更新しました', 'success');
 console.log(`✅ 月次業務実施件数更新: ${newCount}件`);
 this.renderMonthlyTasks();
-await this.updateDailySummary();
+this.updateDailySummary().catch(console.error);
             } catch (error) {
                 console.error('❌ 月次業務実施件数更新エラー:', error);
                 window.showMessage('実施件数の更新に失敗しました', 'error');
@@ -2358,10 +2358,10 @@ await this.updateDailySummary();
                 window.showMessage(`${ceData.ceName}を月次業務に配置しました`, 'success');
 console.log('✅ 月次業務CE配置完了:', ceData.ceName);
 this.renderMonthlyTasks();
-await this.updateDailySummary();
+this.updateDailySummary().catch(console.error);
 // 即座に再描画
 this.renderMonthlyTasks();
-await this.updateDailySummary();
+this.updateDailySummary().catch(console.error);
 
             } catch (error) {
                 console.error('❌ 月次業務CE配置エラー:', error);
@@ -2396,7 +2396,7 @@ await this.updateDailySummary();
 
                     window.showMessage('CEの配置を解除しました', 'success');
 this.renderMonthlyTasks();
-await this.updateDailySummary();
+this.updateDailySummary().catch(console.error);
                 }
 
             } catch (error) {
@@ -3410,7 +3410,7 @@ this.openSimpleAddEventModal(department);
 const currentYearMonth = this.formatDate(this.selectedDate).substring(0, 7);
 if (currentYearMonth === yearMonth) {
     this.renderMonthlyTasks();
-    await this.updateDailySummary();
+    this.updateDailySummary().catch(console.error);
     console.log('✅ 月次業務追加後の即時再描画完了');
 }
             
@@ -3517,7 +3517,7 @@ window.showMessage('月次業務を追加しました', 'success');
 
 // 即座に再描画
 this.renderMonthlyTasks();
-await this.updateDailySummary();
+this.updateDailySummary().catch(console.error);
 console.log('✅ 月次業務追加後の再描画完了');
 
             } catch (error) {
