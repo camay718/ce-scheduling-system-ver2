@@ -2259,32 +2259,51 @@ await this.updateDailySummary();
             }
         }
 
-        async handleMonthlyTaskDrop(e) {
-            e.preventDefault();
-            e.currentTarget.classList.remove('drag-over');
+ async handleMonthlyTaskDrop(e) {
+    e.preventDefault();
+    e.currentTarget.classList.remove('drag-over');
 
-            if (window.userRole === 'viewer') {
-                window.showMessage('編集権限がありません', 'warning');
-                return;
-            }
+    if (window.userRole === 'viewer') {
+        window.showMessage('編集権限がありません', 'warning');
+        return;
+    }
 
-            try {
-                const ceDataStr = e.dataTransfer.getData('application/json');
-                if (!ceDataStr) return;
-
-                const ceData = JSON.parse(ceDataStr);
-                const taskId = e.currentTarget.dataset.taskId;
-                const yearMonth = e.currentTarget.dataset.yearMonth;
-
-                console.log('📥 月次業務ドロップ処理:', { ceData, taskId, yearMonth });
-                await this.assignCEToMonthlyTask(yearMonth, taskId, ceData);
-
-            } catch (error) {
-                console.error('❌ 月次業務ドロップ処理エラー:', error);
-                window.showMessage('CE配置に失敗しました', 'error');
-            }
+    try {
+        // V1版準拠：複数の形式でデータ取得を試行
+        let ceDataStr = e.dataTransfer.getData('application/json') || 
+                        e.dataTransfer.getData('text/plain');
+        
+        if (!ceDataStr) {
+            console.warn('⚠️ 月次業務ドラッグデータが見つかりません');
+            return;
         }
 
+        let ceData;
+        try {
+            ceData = JSON.parse(ceDataStr);
+        } catch (parseError) {
+            console.error('❌ 月次業務CEデータのパースに失敗:', parseError);
+            return;
+        }
+
+        const taskId = e.currentTarget.dataset.taskId;
+        const yearMonth = e.currentTarget.dataset.yearMonth;
+
+        // 必須データの検証
+        if (!ceData.ceId || !ceData.ceName || !taskId || !yearMonth) {
+            console.error('❌ 月次業務必須データが不足:', { ceData, taskId, yearMonth });
+            window.showMessage('データが不完全です', 'error');
+            return;
+        }
+
+        console.log('📥 V1準拠月次業務ドロップ処理:', { ceData, taskId, yearMonth });
+        await this.assignCEToMonthlyTask(yearMonth, taskId, ceData);
+
+    } catch (error) {
+        console.error('❌ 月次業務ドロップ処理エラー:', error);
+        window.showMessage(`月次業務CE配置に失敗しました: ${error.message}`, 'error');
+    }
+}
         async assignCEToMonthlyTask(yearMonth, taskId, ceData) {
             try {
                 const taskRef = window.database.ref(`${window.DATA_ROOT}/monthlyTasks/${yearMonth}/${taskId}`);
@@ -2386,52 +2405,75 @@ await this.updateDailySummary();
             }
         }
 
-        enableCEDragging() {
-            const ceItems = document.querySelectorAll('.ce-item:not([draggable])');
-            const ceList = window.ceManager?.ceList || [];
+ enableCEDragging() {
+    const ceItems = document.querySelectorAll('.ce-item');
+    const ceList = window.ceManager?.ceList || [];
 
-            ceItems.forEach((item, index) => {
-                item.draggable = true;
+    ceItems.forEach((item, index) => {
+        // 既存のイベントリスナーをクリア
+        const newItem = item.cloneNode(true);
+        item.parentNode.replaceChild(newItem, item);
+        
+        newItem.draggable = true;
+        newItem.style.cursor = 'grab';
 
-                const ce = ceList[index];
-                if (ce) {
-                    item.dataset.ceId = ce.id;
-                    item.dataset.ceName = ce.iconName || ce.displayName || ce.name;
-                    item.dataset.workType = ce.workType;
-                } else {
-                    const displayName = item.textContent.trim();
-                    const matchedCE = ceList.find(c => 
-                        c.iconName === displayName || 
-                        c.displayName === displayName || 
-                        c.name === displayName
-                    );
-                    if (matchedCE) {
-                        item.dataset.ceId = matchedCE.id;
-                        item.dataset.ceName = matchedCE.iconName || matchedCE.displayName || matchedCE.name;
-                        item.dataset.workType = matchedCE.workType;
-                    }
-                }
-
-                item.addEventListener('dragstart', (e) => {
-                    const ceData = {
-                        ceId: item.dataset.ceId,
-                        ceName: item.dataset.ceName,
-                        workType: item.dataset.workType || 'ME'
-                    };
-
-                    e.dataTransfer.setData('application/json', JSON.stringify(ceData));
-                    e.dataTransfer.effectAllowed = 'copy';
-                    item.classList.add('dragging');
-                    console.log('🎯 CEドラッグ開始:', ceData);
-                });
-
-                item.addEventListener('dragend', () => {
-                    item.classList.remove('dragging');
-                });
-            });
-
-            console.log('✅ CEドラッグ機能有効化完了');
+        const ce = ceList[index];
+        if (ce) {
+            newItem.dataset.ceId = ce.id;
+            newItem.dataset.ceName = ce.iconName || ce.displayName || ce.name;
+            newItem.dataset.workType = ce.workType || 'ME';
+        } else {
+            const displayName = newItem.textContent.trim();
+            const matchedCE = ceList.find(c => 
+                c.iconName === displayName || 
+                c.displayName === displayName || 
+                c.name === displayName
+            );
+            if (matchedCE) {
+                newItem.dataset.ceId = matchedCE.id;
+                newItem.dataset.ceName = matchedCE.iconName || matchedCE.displayName || matchedCE.name;
+                newItem.dataset.workType = matchedCE.workType || 'ME';
+            }
         }
+
+        // V1版準拠のドラッグイベント
+        newItem.addEventListener('dragstart', (e) => {
+            if (window.userRole === 'viewer') {
+                e.preventDefault();
+                return;
+            }
+
+            const ceData = {
+                ceId: newItem.dataset.ceId,
+                ceName: newItem.dataset.ceName,
+                workType: newItem.dataset.workType || 'ME'
+            };
+
+            // 複数の形式でデータを設定（互換性向上）
+            e.dataTransfer.setData('text/plain', JSON.stringify(ceData));
+            e.dataTransfer.setData('application/json', JSON.stringify(ceData));
+            e.dataTransfer.effectAllowed = 'copy';
+            
+            newItem.classList.add('dragging');
+            newItem.style.opacity = '0.5';
+            
+            console.log('🎯 V1準拠CEドラッグ開始:', ceData);
+        });
+
+        newItem.addEventListener('dragend', () => {
+            newItem.classList.remove('dragging');
+            newItem.style.opacity = '';
+            newItem.style.cursor = 'grab';
+        });
+
+        // ドラッグ中のスタイル
+        newItem.addEventListener('drag', () => {
+            newItem.style.cursor = 'grabbing';
+        });
+    });
+
+    console.log('✅ V1準拠CEドラッグ機能有効化完了:', ceItems.length);
+}
 
         handleEventDragOver(e) {
             if (window.userRole === 'viewer') return;
@@ -2447,31 +2489,53 @@ await this.updateDailySummary();
             }
         }
 
-        async handleEventDrop(e) {
-            e.preventDefault();
-            e.currentTarget.classList.remove('drag-over');
+ async handleEventDrop(e) {
+    e.preventDefault();
+    e.currentTarget.classList.remove('drag-over');
 
-            if (window.userRole === 'viewer') {
-                window.showMessage('編集権限がありません', 'warning');
-                return;
-            }
+    if (window.userRole === 'viewer') {
+        window.showMessage('編集権限がありません', 'warning');
+        return;
+    }
 
-            try {
-                const ceDataStr = e.dataTransfer.getData('application/json');
-                if (!ceDataStr) return;
-
-                const ceData = JSON.parse(ceDataStr);
-                const eventId = e.currentTarget.dataset.eventId;
-                const dateKey = e.currentTarget.dataset.dateKey;
-
-                console.log('📥 ドロップ処理:', { ceData, eventId, dateKey });
-                await this.assignCEToEvent(dateKey, eventId, ceData);
-
-            } catch (error) {
-                console.error('❌ ドロップ処理エラー:', error);
-                window.showMessage('CE配置に失敗しました', 'error');
-            }
+    try {
+        // V1版準拠：複数の形式でデータ取得を試行
+        let ceDataStr = e.dataTransfer.getData('application/json') || 
+                        e.dataTransfer.getData('text/plain');
+        
+        if (!ceDataStr) {
+            console.warn('⚠️ ドラッグデータが見つかりません');
+            return;
         }
+
+        let ceData;
+        try {
+            ceData = JSON.parse(ceDataStr);
+        } catch (parseError) {
+            console.error('❌ CEデータのパースに失敗:', parseError);
+            return;
+        }
+
+        const eventId = e.currentTarget.dataset.eventId;
+        const dateKey = e.currentTarget.dataset.dateKey;
+
+        // 必須データの検証
+        if (!ceData.ceId || !ceData.ceName || !eventId || !dateKey) {
+            console.error('❌ 必須データが不足:', { ceData, eventId, dateKey });
+            window.showMessage('データが不完全です', 'error');
+            return;
+        }
+
+        console.log('📥 V1準拠ドロップ処理:', { ceData, eventId, dateKey });
+        
+        // V1版準拠のCE配置処理を呼び出し
+        await this.assignCEToEventV1Style(dateKey, eventId, ceData);
+
+    } catch (error) {
+        console.error('❌ ドロップ処理エラー:', error);
+        window.showMessage(`CE配置に失敗しました: ${error.message}`, 'error');
+    }
+}
 
         async assignCEToEvent(dateKey, eventId, ceData) {
             try {
@@ -2537,6 +2601,120 @@ await this.updateDailySummary();
                 window.showMessage('CE配置処理でエラーが発生しました', 'error');
             }
         }
+
+        // V1版準拠のCE配置処理（確実性重視）
+async assignCEToEventV1Style(dateKey, eventId, ceData) {
+    try {
+        console.log('🎯 V1版準拠CE配置開始:', { dateKey, eventId, ceData });
+
+        // 段階1: イベントデータの取得と検証
+        const eventRef = window.database.ref(`${window.DATA_ROOT}/events/byDate/${dateKey}/${eventId}`);
+        const snapshot = await eventRef.once('value');
+        const eventData = snapshot.val();
+
+        if (!eventData) {
+            throw new Error('業務データが見つかりません');
+        }
+
+        // 段階2: 既存配置の確認（V1版準拠）
+        let currentAssigned = eventData.assignedCEs || [];
+        
+        // V1版互換性：文字列配列として処理
+        if (!Array.isArray(currentAssigned)) {
+            currentAssigned = [];
+        }
+
+        // 重複チェック（ID基準）
+        const isDuplicate = currentAssigned.some(assigned => {
+            if (typeof assigned === 'string') {
+                return assigned === ceData.ceId;
+            } else if (assigned && typeof assigned === 'object') {
+                return assigned.id === ceData.ceId;
+            }
+            return false;
+        });
+
+        if (isDuplicate) {
+            window.showMessage(`${ceData.ceName}は既に配置済みです`, 'warning');
+            return;
+        }
+
+        // 段階3: 勤務状態チェック（V2版機能）
+        if (window.publishedScheduleResolver) {
+            try {
+                const workStatus = await window.publishedScheduleResolver.getCEWorkStatusForDate(ceData.ceId, dateKey);
+                if (workStatus && workStatus.status && !['A', 'A1', 'B', '非'].includes(workStatus.status)) {
+                    const proceed = confirm(`${ceData.ceName}は${workStatus.status}ですが、配置しますか？`);
+                    if (!proceed) {
+                        return;
+                    }
+                }
+            } catch (statusError) {
+                console.warn('⚠️ 勤務状態チェックスキップ:', statusError);
+            }
+        }
+
+        // 段階4: V1版準拠の配置実行
+        const ceEntry = {
+            id: ceData.ceId,
+            name: ceData.ceName,
+            workType: ceData.workType || 'ME'
+        };
+
+        // 既存の文字列エントリをオブジェクト化（後方互換性）
+        const upgradedAssigned = currentAssigned.map(entry => {
+            if (typeof entry === 'string') {
+                const ce = window.ceManager?.ceList?.find(c => c.id === entry);
+                return {
+                    id: entry,
+                    name: ce?.iconName || ce?.displayName || ce?.name || entry,
+                    workType: ce?.workType || 'ME'
+                };
+            }
+            return entry;
+        });
+
+        upgradedAssigned.push(ceEntry);
+
+        // 段階5: データベース更新
+        await eventRef.update({
+            assignedCEs: upgradedAssigned,
+            updatedAt: firebase.database.ServerValue.TIMESTAMP,
+            updatedBy: window.currentUserData?.displayName || 'user'
+        });
+
+        // 段階6: 成功通知と画面更新
+        window.showMessage(`${ceData.ceName}を配置しました`, 'success');
+        console.log('✅ V1準拠CE配置完了:', ceData.ceName);
+
+        // 監査ログ記録
+        try {
+            await window.database.ref(`${window.DATA_ROOT}/auditLogs`).push({
+                action: 'ce-assign',
+                details: { 
+                    ceName: ceData.ceName, 
+                    eventName: eventData.name,
+                    description: `${dateKey}の${eventData.name}に${ceData.ceName}を配置`
+                },
+                uid: window.currentUserData?.uid || null,
+                username: window.currentUserData?.username || 'unknown',
+                displayName: window.currentUserData?.displayName || 'unknown',
+                timestamp: firebase.database.ServerValue.TIMESTAMP
+            });
+        } catch (logError) {
+            console.warn('監査ログ記録失敗:', logError);
+        }
+
+        // 即座に画面を更新（V1版準拠）
+        setTimeout(() => {
+            this.loadAndRenderEventsForSelectedDate();
+        }, 200);
+
+    } catch (error) {
+        console.error('❌ V1準拠CE配置エラー:', error);
+        throw new Error(`CE配置処理でエラーが発生しました: ${error.message}`);
+    }
+}
 
         async unassignCE(dateKey, eventId, ceId) {
             if (!confirm('このCEの配置を解除しますか？')) return;
