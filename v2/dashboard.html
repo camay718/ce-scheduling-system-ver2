@@ -1911,8 +1911,9 @@ this.monthlyCallback = async (snapshot) => {
                     const assignedCount = normalizedAssigned.length;
                     const need = Number.isFinite(ev.requiredPeople) ? ev.requiredPeople : 0;
 
- // 配置済みCEチップの生成（勤務区分連動）
-const assignedCEChips = await Promise.all(normalizedAssigned.map(async assigned => {
+// 配置済みCEチップの生成（勤務区分連動）
+const assignedCEChips = [];
+for (const assigned of normalizedAssigned) {
     let effectiveWorkType = assigned.workType || 'ME';
     
     // 勤務表連動で実際の勤務区分を取得
@@ -1927,15 +1928,15 @@ const assignedCEChips = await Promise.all(normalizedAssigned.map(async assigned 
         }
     }
     
-    return `
+    assignedCEChips.push(`
         <span class="ce-chip worktype-${effectiveWorkType.toLowerCase()}" data-ce-id="${assigned.id}" title="${assigned.name}">
             ${assigned.name}
             ${window.userRole !== 'viewer' ? `<i class="fas fa-times remove-ce" title="配置解除"></i>` : ''}
         </span>
-    `;
-}));
+    `);
+}
 
-const assignedCEChipsHtml = (await Promise.all(assignedCEChips)).join('');
+const assignedCEChipsHtml = assignedCEChips.join('');
 
                     // 予定件数の表示
                     const countDisplay = Number.isFinite(ev.count) && ev.count > 0 ? 
@@ -2002,7 +2003,7 @@ const assignedCEChipsHtml = (await Promise.all(assignedCEChips)).join('');
             }
         }
 
-renderMonthlyTasks() {
+async renderMonthlyTasks() {
     const grid = document.getElementById('departmentGrid');
     if (!grid) return;
 
@@ -2067,7 +2068,8 @@ renderMonthlyTasks() {
                 const deptColor = window.DEPARTMENT_COLORS?.[task.department] || '#6b7280';
 
 // 月次業務のCEチップも勤務区分連動
-const assignedCEChips = await Promise.all(normalizedAssigned.map(async assigned => {
+const assignedCEChips = [];
+for (const assigned of normalizedAssigned) {
     let effectiveWorkType = assigned.workType || 'ME';
     
     // 勤務表連動で実際の勤務区分を取得
@@ -2082,15 +2084,15 @@ const assignedCEChips = await Promise.all(normalizedAssigned.map(async assigned 
         }
     }
     
-    return `
+    assignedCEChips.push(`
         <span class="ce-chip worktype-${effectiveWorkType.toLowerCase()}" data-ce-id="${assigned.id}" title="${assigned.name}">
             ${assigned.name}
             ${window.userRole !== 'viewer' ? `<i class="fas fa-times remove-ce" title="配置解除"></i>` : ''}
         </span>
-    `;
-}));
+    `);
+}
 
-const assignedCEChipsHtml = (await assignedCEChips).join('');
+const assignedCEChipsHtml = assignedCEChips.join('');
 
                 const monthlyCard = document.createElement('div');
                 monthlyCard.className = 'monthly-task-card';
