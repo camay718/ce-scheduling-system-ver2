@@ -22,13 +22,14 @@
         import { getAuth, signInAnonymously } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';
         
         const firebaseConfig = {
-            apiKey: "AIzaSyCsSiWe1wfeY2Q63Nbda9gYhBzRm8c7OQ8",
-            authDomain: "ce-schedule-system.firebaseapp.com",
-            databaseURL: "https://ce-schedule-system-default-rtdb.firebaseio.com",
-            projectId: "ce-schedule-system",
-            storageBucket: "ce-schedule-system.appspot.com",
-            messagingSenderId: "123456789",
-            appId: "1:123456789:web:abcdef123456"
+            apiKey: "AIzaSyCRUvvs0OSz_9L9bXtqteVFIIze1OaZObE",
+            authDomain: "ce-scheduling-system-v2.firebaseapp.com",
+            databaseURL: "https://ce-scheduling-system-v2-default-rtdb.asia-southeast1.firebasedatabase.app",
+            projectId: "ce-scheduling-system-v2",
+            storageBucket: "ce-scheduling-system-v2.firebasestorage.app",
+            messagingSenderId: "288279598010",
+            appId: "1:288279598010:web:d545ee1d4d854513084383",
+            measurementId: "G-LSEEMJE2R0"
         };
         
         const app = initializeApp(firebaseConfig);
@@ -472,15 +473,55 @@
         const NIGHT_SHIFT_END = 5;
         
         // Authentication check
-        function checkAuth() {
-            const user = sessionStorage.getItem('currentUser');
+       function checkAuth() {
+            let user = sessionStorage.getItem('currentUser') || sessionStorage.getItem('currentUsername');
+
+            // URLパラメータから取得
             if (!user) {
-                alert('認証が必要です。ログインページにリダイレクトします。');
-                window.location.href = 'login.html';
+                const params = new URLSearchParams(location.search);
+                const qpUser = params.get('user') || params.get('username');
+                const qpUid = params.get('uid');
+                const qpRole = params.get('role');
+                if (qpUser) {
+                    user = qpUser;
+                    try {
+                        sessionStorage.setItem('currentUser', qpUser);
+                        sessionStorage.setItem('currentUsername', qpUser);
+                        if (qpUid) sessionStorage.setItem('targetUID', qpUid);
+                        if (qpRole) sessionStorage.setItem('userRole', qpRole);
+                    } catch (e) {
+                        console.warn('sessionStorage保存エラー:', e);
+                    }
+                }
+            }
+
+            // localStorageから取得
+            if (!user) {
+                try {
+                    const authData = localStorage.getItem('analyticsAuth');
+                    if (authData) {
+                        const parsed = JSON.parse(authData);
+                        if (Date.now() - parsed.timestamp < 5 * 60 * 1000) {
+                            user = parsed.displayName;
+                            sessionStorage.setItem('currentUser', parsed.displayName);
+                            sessionStorage.setItem('currentUsername', parsed.username);
+                            sessionStorage.setItem('targetUID', parsed.uid);
+                            sessionStorage.setItem('userRole', parsed.role);
+                        }
+                    }
+                } catch (e) {
+                    console.warn('localStorage読み込みエラー:', e);
+                }
+            }
+
+            if (!user) {
+                alert('認証が必要です。ダッシュボードからアクセスしてください。');
+                window.location.href = '../dashboard.html';
                 return false;
             }
-            
-            document.getElementById('currentUser').textContent = user;
+
+            const headerUserEl = document.getElementById('currentUser');
+            if (headerUserEl) headerUserEl.textContent = user;
             return true;
         }
         
