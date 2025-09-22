@@ -430,7 +430,6 @@
         const DATA_ROOT = 'ceScheduleV2';
 
         // グローバル変数
-        let database = null;
         let globalTasksData = {};
         let globalAssignmentsData = {};
         let currentDateRange = [];
@@ -536,23 +535,26 @@
         }
 
         // 🔧 当該週の日付範囲を設定（日曜〜土曜）
-        function setCurrentWeekRange() {
-            const today = new Date();
-            const currentDay = today.getDay(); // 0=日曜, 1=月曜, ..., 6=土曜
-            
-            // 週の開始日（日曜日）を計算
-            const startDate = new Date(today);
-            startDate.setDate(today.getDate() - currentDay);
-            
-            // 週の終了日（土曜日）を計算
-            const endDate = new Date(startDate);
-            endDate.setDate(startDate.getDate() + 6);
-            
-            document.getElementById('startDate').value = startDate.toISOString().split('T')[0];
-            document.getElementById('endDate').value = endDate.toISOString().split('T')[0];
-            
-            console.log(`📅 当該週設定: ${startDate.toISOString().split('T')[0]} ～ ${endDate.toISOString().split('T')[0]}`);
-        }
+function setCurrentWeekRange() {
+    const today = new Date();
+    // 月曜=0, 火曜=1, ... 日曜=6 になるように変換
+    const dayFromMonday = (today.getDay() + 6) % 7;
+
+    // 週の開始日（月曜）
+    const startDate = new Date(today);
+    startDate.setHours(0, 0, 0, 0);
+    startDate.setDate(today.getDate() - dayFromMonday);
+
+    // 週の終了日（日曜）
+    const endDate = new Date(startDate);
+    endDate.setDate(startDate.getDate() + 6);
+    endDate.setHours(0, 0, 0, 0);
+
+    document.getElementById('startDate').value = startDate.toISOString().split('T')[0];
+    document.getElementById('endDate').value = endDate.toISOString().split('T')[0];
+
+    console.log(`📅 当該週設定（月曜〜日曜）: ${startDate.toISOString().split('T')[0]} ～ ${endDate.toISOString().split('T')[0]}`);
+}
 
         // 🔧 今週表示ボタンのハンドラー
         function setCurrentWeekAndLoad() {
