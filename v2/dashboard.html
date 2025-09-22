@@ -3512,7 +3512,7 @@
             this.initializeV2System();
         }
 
-        updateUserDisplay() {
+       updateUserDisplay() {
             const userData = window.currentUserData;
             if (!userData) return;
             
@@ -3524,10 +3524,24 @@
             // analytics/配下のページの認証チェック用にsessionStorageに保存
             try {
                 sessionStorage.setItem('currentUser', displayName);
-                sessionStorage.setItem('userRole', window.userRole || 'viewer');
+                sessionStorage.setItem('currentUsername', userData.username || displayName);
+                sessionStorage.setItem('userRole', window.userRole || userData.role || 'viewer');
+                
+                console.log('認証情報をsessionStorageに保存:', {
+                    user: displayName,
+                    role: window.userRole || userData.role || 'viewer'
+                });
             } catch (error) {
                 console.warn('sessionStorage保存エラー:', error);
             }
+
+            // 認証情報設定完了後に分析ボタンの状態を即座に更新
+            setTimeout(() => {
+                if (typeof updateAnalyticsButtons === 'function') {
+                    console.log('認証完了後の分析ボタン状態更新を実行');
+                    updateAnalyticsButtons();
+                }
+            }, 100);
         }
 
         setupNavigation() {
@@ -3994,28 +4008,32 @@
         };
 
         /**
-         * 分析機能の利用可能性チェック
+         * 分析機能の利用可能性チェック（堅牢化版）
          * @returns {boolean} アクセス可能かどうか
          */
         function checkAnalyticsAccess() {
-            const user = sessionStorage.getItem('currentUser');
-            const role = sessionStorage.getItem('userRole');
-            
+            // 複数の情報源から安全に取得（初期化タイミング差異に対応）
+            const user = 
+                sessionStorage.getItem('currentUser') ||
+                sessionStorage.getItem('currentUsername') ||
+                (window.currentUserData && (window.currentUserData.displayName || window.currentUserData.username)) ||
+                null;
+
+            const role = 
+                sessionStorage.getItem('userRole') ||
+                window.userRole ||
+                (window.currentUserData && window.currentUserData.role) ||
+                'viewer';
+
             console.log('分析機能アクセス状況チェック - User:', user, 'Role:', role);
-            
+
             // 基本的な認証チェック
-            if (!user) {
+            if (!user || user === 'null') {
                 console.log('認証されていないためアクセス拒否');
                 return false;
             }
             
-            // 必要に応じて役割ベースのアクセス制御を追加
-            // 例：管理者のみアクセス可能にする場合
-            // if (role !== 'admin') {
-            //     console.log('管理者権限が必要なためアクセス拒否');
-            //     return false;
-            // }
-            
+            // 認証済みユーザーは分析機能を利用可能
             console.log('分析機能へのアクセスが許可されました');
             return true;
         }
@@ -4055,14 +4073,43 @@
             updateAnalyticsButtons();
         }
 
-        /**
-         * 分析機能の初期化
+                // 統一された分析ページ開く関数
+        function openAnalyticsPage(pageName) {
+            console.log(`分析ページを開いています: ${pageName}`);
+            
+            // 認証チェック
+            const user = sessionStorage.getItem('currentUser') || sessionStorage.getItem('currentUsername');
+            if (!user) {
+                window.showMessage('認証が必要です。ログインしてからアクセスしてください。', 'warning');
+                return;
+            }
+            
+            try {
+                const url = `analytics/${pageName}.html`;
+                const newWindow = window.open(url, '_blank', 'noopener,noreferrer,width=1400,height=900,scrollbars=yes,resizable=yes');
+                
+                if (!newWindow || newWindow.closed || typeof newWindow.closed === 'undefined') {
+                    if (confirm('ポップアップがブロックされています。同じタブで分析ページを開きますか？')) {
+                        window.location.href = url;
+                    } else {
+                        window.showMessage('分析ページを開くには、ポップアップを許可してください', 'warning');
+                    }
+                } else {
+                    console.log('分析ページが正常に開かれました');
+                }
+            } catch (error) {
+                console.error('分析ページを開くときにエラーが発生しました:', error);
+                window.showMessage('分析ページを開くことができませんでした', 'error');
+            }
+        }
+
+      /**
+         * 分析機能の初期化（認証完了後実行版）
          */
         function initializeAnalyticsFeatures() {
             console.log('分析機能を初期化しています');
             
-            // 初期状態での分析ボタンの更新
-            updateAnalyticsButtons();
+            // 初期状態での分析ボタンの更新は削除（認証完了後にupdateUserDisplayから実行）
             
             // 認証状態の監視（既存のログイン/ログアウト処理に連携）
             const existingLoginHandler = window.login;
@@ -4083,7 +4130,7 @@
                 };
             }
             
-            console.log('分析機能の初期化が完了しました');
+            console.log('分析機能の初期化が完了しました（ボタン有効化は認証完了後に実行）');
         }
 
         // ========================================
