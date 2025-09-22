@@ -385,6 +385,48 @@
             measurementId: "G-LSEEMJE2R0"
         };
 
+                // グローバル変数
+        let database = null;
+        let authReadyPromise = null;
+
+        // グローバル関数として定義（DOMから確実に呼べるように）
+        function initializeFirebase() {
+            try {
+                if (!firebase.apps.length) {
+                    firebase.initializeApp(firebaseConfig);
+                }
+                database = firebase.database();
+
+                // 認証完了を待つPromise
+                authReadyPromise = new Promise((resolve, reject) => {
+                    firebase.auth().onAuthStateChanged(user => {
+                        if (user) {
+                            console.log('✅ Firebase認証完了:', user.uid);
+                            resolve(user);
+                        }
+                    }, err => {
+                        console.error('❌ Firebase認証エラー:', err);
+                        reject(err);
+                    });
+                });
+
+                // 匿名認証開始
+                firebase.auth().signInAnonymously().catch((error) => {
+                    console.error('❌ Firebase匿名認証エラー:', error);
+                    const authWarning = document.getElementById('authWarning');
+                    if (authWarning) authWarning.style.display = 'block';
+                });
+                    
+            } catch (error) {
+                console.error('❌ Firebase初期化エラー:', error);
+                if (typeof showMessage === 'function') {
+                    showMessage('Firebase接続に失敗しました', 'error');
+                }
+                const authWarning = document.getElementById('authWarning');
+                if (authWarning) authWarning.style.display = 'block';
+            }
+        }
+
         const DATA_ROOT = 'ceScheduleV2';
 
         // グローバル変数
@@ -434,31 +476,41 @@
             setCurrentWeekRange();
             
             try {
-                // 認証完了を確実に待機（最大10秒）
-                let authUser = firebase.auth().currentUser;
-                let attempts = 0;
+                console.log('⏳ Firebase認証完了待機中...');
                 
-                while (!authUser && attempts < 50) {
-                    await new Promise(resolve => setTimeout(resolve, 200));
-                    authUser = firebase.auth().currentUser;
-                    attempts++;
+                // authReadyPromiseが利用可能な場合はそれを使用
+                if (authReadyPromise) {
+                    await authReadyPromise;
+                    console.log('🔐 Promise経由でFirebase認証確認完了');
+                } else {
+                    // フォールバック: ポーリングで認証完了を待機
+                    let authUser = firebase.auth().currentUser;
+                    let attempts = 0;
+                    
+                    while (!authUser && attempts < 30) {
+                        await new Promise(resolve => setTimeout(resolve, 500));
+                        authUser = firebase.auth().currentUser;
+                        attempts++;
+                    }
+                    
+                    if (!authUser) {
+                        throw new Error('Firebase認証がタイムアウトしました（15秒）');
+                    }
+                    console.log('🔐 ポーリング経由でFirebase認証確認完了:', authUser.uid);
                 }
                 
-                if (!authUser) {
-                    throw new Error('Firebase認証がタイムアウトしました');
-                }
-                
-                console.log('🔐 Firebase認証確認完了:', authUser.uid);
                 await loadTimelineData();
                 
             } catch (error) {
                 console.error('❌ 初期読み込みエラー:', error);
-                if (error.message && error.message.includes('permission_denied')) {
-                    showMessage('データアクセス権限がありません。管理者にお問い合わせください。', 'error');
-                } else if (error.message && error.message.includes('タイムアウト')) {
+                const errorMessage = error.message || error.toString();
+                
+                if (errorMessage.includes('permission_denied')) {
+                    showMessage('データアクセス権限がありません。Firebase設定を確認してください。', 'error');
+                } else if (errorMessage.includes('タイムアウト')) {
                     showMessage('認証処理がタイムアウトしました。ページを再読み込みしてください。', 'error');
                 } else {
-                    showMessage('データの読み込みに失敗しました', 'error');
+                    showMessage(`データの読み込みに失敗しました: ${errorMessage}`, 'error');
                 }
             }
         });
@@ -588,65 +640,91 @@
             }
         }
 
-        async function loadDataFromFirebase() {
+         async function loadDataFromFirebase() {
             if (!database) {
                 throw new Error('Firebase未接続');
             }
             
             try {
-                console.log('🔄 Firebaseからデータ読み込み中（セキュリティ強化版）...');
+                console.log('🔄 Firebaseからデータ読み込み中（既存パス使用）...');
                 
                 // 認証完了確認
                 const currentUser = firebase.auth().currentUser;
                 if (!currentUser) {
                     throw new Error('Firebase認証が未完了です');
                 }
+                console.log('🔐 認証確認完了:', currentUser.uid);
                 
-                // 必要最小限のデータのみ個別取得（セキュリティ強化）
-                const [eventsSnapshot, ceListSnapshot] = await Promise.all([
-                    database.ref(`${DATA_ROOT}/events`).once('value'),
+                // 既存の定義済みパスから必要最小限のデータを取得
+                const [eventsByDateSnapshot, ceListSnapshot] = await Promise.all([
+                    database.ref(`${DATA_ROOT}/events/byDate`).once('value'),
                     database.ref(`${DATA_ROOT}/ceList`).once('value')
                 ]);
                 
-                console.log('📊 個別データ取得完了');
+                const eventsByDate = eventsByDateSnapshot.val() || {};
+                const ceList = ceListSnapshot.val() || {};
                 
-                // イベントデータの変換処理
-                const eventsData = eventsSnapshot.val() || {};
+                console.log('📊 取得データ確認:');
+                console.log('  - events/byDate キー:', Object.keys(eventsByDate));
+                console.log('  - ceList 件数:', Object.keys(ceList).length);
+                
+                // タイムライン用データ構造に変換
                 globalTasksData = {};
                 globalAssignmentsData = {};
                 
-                // byDate構造からタイムライン用に変換
-                Object.entries(eventsData.byDate || {}).forEach(([dateKey, dayEvents]) => {
+                Object.entries(eventsByDate).forEach(([dateKey, dayEvents]) => {
                     if (dayEvents && typeof dayEvents === 'object') {
-                        const tasksList = Object.values(dayEvents).map(event => ({
-                            name: event.name,
-                            department: event.department,
-                            startTime: event.startTime,
-                            endTime: event.endTime,
-                            count: event.count,
-                            requiredPeople: event.requiredPeople
-                        }));
+                        const tasksForDay = [];
+                        const assignmentsForDay = {};
                         
-                        globalTasksData[dateKey] = tasksList;
+                        // イベントキーでソートして順序を安定化
+                        const sortedEventKeys = Object.keys(dayEvents).sort();
                         
-                        // 配置情報も変換
-                        globalAssignmentsData[dateKey] = {};
-                        Object.values(dayEvents).forEach((event, index) => {
+                        sortedEventKeys.forEach((eventKey, index) => {
+                            const event = dayEvents[eventKey];
+                            
+                            // 業務データの変換
+                            tasksForDay.push({
+                                id: event.id || eventKey,
+                                name: event.name || '名称不明',
+                                department: event.department || '部門不明',
+                                startTime: event.startTime || '09:00',
+                                endTime: event.endTime || '17:00',
+                                count: event.count || 1,
+                                requiredPeople: event.requiredPeople || 1
+                            });
+                            
+                            // 配置情報の変換（CE名前解決含む）
                             if (event.assignedCEs && Array.isArray(event.assignedCEs)) {
-                                globalAssignmentsData[dateKey][index] = event.assignedCEs.map(ce => 
-                                    typeof ce === 'string' ? ce : (ce.name || ce.id || ce)
-                                );
+                                assignmentsForDay[index] = event.assignedCEs.map(assignedCE => {
+                                    if (typeof assignedCE === 'object' && assignedCE !== null) {
+                                        return assignedCE.name || assignedCE.id || '不明CE';
+                                    } else if (typeof assignedCE === 'string') {
+                                        // ceListから名前を解決
+                                        const foundCE = Object.values(ceList).find(ce => ce.id === assignedCE);
+                                        return foundCE?.iconName || foundCE?.displayName || foundCE?.name || assignedCE;
+                                    }
+                                    return '不明CE';
+                                });
+                            } else {
+                                assignmentsForDay[index] = [];
                             }
                         });
+                        
+                        globalTasksData[dateKey] = tasksForDay;
+                        globalAssignmentsData[dateKey] = assignmentsForDay;
+                        
+                        console.log(`📊 ${dateKey}: ${tasksForDay.length}件の業務を変換完了`);
                     }
                 });
                 
                 // データキー形式を自動判定
                 dataKeyFormat = detectDataKeyFormat(globalTasksData);
                 console.log(`🔍 検出されたデータキー形式: ${dataKeyFormat}`);
-                console.log('📊 変換後のタスクデータキー:', Object.keys(globalTasksData));
+                console.log('📊 最終的なタスクデータキー:', Object.keys(globalTasksData));
                 
-                console.log('✅ Firebaseデータ読み込み完了（セキュリティ強化版）');
+                console.log('✅ Firebaseデータ読み込み完了（既存パス使用）');
+                
             } catch (error) {
                 console.error('❌ Firebase読み込みエラー:', error);
                 throw error;
@@ -758,15 +836,15 @@
             return deptCard;
         }
 
-        // 🔧 部門データ収集関数（柔軟なキー対応）
+        // 部門データ収集関数（データ構造統一版）
         function collectDepartmentData(department) {
             const departmentData = {};
             
             currentDateRange.forEach(date => {
-                const dataKey = getDataKeyForDate(date);
-                console.log(`📅 ${department} - ${formatDateAsISO(date)} (キー: ${dataKey}) のデータをチェック中...`);
+                const dateKey = formatDateAsISO(date); // ISO形式で統一
+                console.log(`📅 ${department} - ${dateKey} のデータをチェック中...`);
                 
-                const dayTasks = (globalTasksData[dataKey] || []).filter(task => {
+                const dayTasks = (globalTasksData[dateKey] || []).filter(task => {
                     const matches = task.department === department;
                     if (matches) {
                         console.log(`✅ マッチした業務: ${task.name} (${task.startTime}-${task.endTime})`);
@@ -775,14 +853,13 @@
                 });
                 
                 if (dayTasks.length > 0) {
-                    const displayKey = formatDateAsISO(date); // 表示用のユニークキー
-                    departmentData[displayKey] = {
+                    departmentData[dateKey] = {
                         date: date,
                         tasks: dayTasks,
-                        assignments: globalAssignmentsData[dataKey] || {},
-                        originalDataKey: dataKey // 元のデータキーを保持
+                        assignments: globalAssignmentsData[dateKey] || {},
+                        originalDataKey: dateKey
                     };
-                    console.log(`📊 ${displayKey} に ${dayTasks.length} 件の業務を追加`);
+                    console.log(`📊 ${dateKey} に ${dayTasks.length} 件の業務を追加`);
                 }
             });
             
@@ -904,18 +981,8 @@
             const left = ((adjustedStart - displayStartMinutes) / totalMinutes) * 100;
             const width = Math.max(2, ((adjustedEnd - adjustedStart) / totalMinutes) * 100);
             
-            // 🔧 アサイン情報の取得ロジック（元のデータキーを使用）
-            const originalDataKey = dayData.originalDataKey;
-            const allTasksForDate = globalTasksData[originalDataKey] || [];
-            const originalTaskIndex = allTasksForDate.findIndex(t => 
-                t.name === task.name && 
-                t.department === task.department && 
-                t.startTime === task.startTime && 
-                t.endTime === task.endTime
-            );
-            
-            const assignedCEs = originalTaskIndex >= 0 ? 
-                (dayData.assignments[originalTaskIndex] || []) : [];
+            // 配置情報の取得（インデックス直接使用）
+            const assignedCEs = dayData.assignments[taskIdx] || [];
             
             const taskBar = document.createElement('div');
             taskBar.className = 'task-bar';
@@ -1030,26 +1097,19 @@
             let totalRequired = 0;
             
             currentDateRange.forEach(date => {
-                const dataKey = getDataKeyForDate(date);
-                const dayTasks = (globalTasksData[dataKey] || []).filter(task => 
+                const dateKey = formatDateAsISO(date);
+                const dayTasks = (globalTasksData[dateKey] || []).filter(task => 
                     selectedDepartments.includes(task.department)
                 );
-                const dayAssignments = globalAssignmentsData[dataKey] || {};
+                const dayAssignments = globalAssignmentsData[dateKey] || {};
                 
-                dayTasks.forEach(task => {
-                    const allTasksForDate = globalTasksData[dataKey] || [];
-                    const originalTaskIndex = allTasksForDate.findIndex(t => 
-                        t.name === task.name && 
-                        t.department === task.department && 
-                        t.startTime === task.startTime && 
-                        t.endTime === task.endTime
-                    );
-                    
+                dayTasks.forEach((task, taskIndex) => {
                     totalTasks++;
                     totalRequired += task.requiredPeople || 1;
-                    if (originalTaskIndex >= 0) {
-                        totalAssigned += (dayAssignments[originalTaskIndex] || []).length;
-                    }
+                    
+                    // インデックス直接使用で配置数を集計
+                    const assignedList = dayAssignments[taskIndex] || [];
+                    totalAssigned += assignedList.length;
                 });
             });
             
