@@ -195,10 +195,7 @@
                 <p class="text-gray-600">部門ごとの業務スケジュールを時間軸で可視化</p>
             </div>
             <div class="flex gap-3 mt-4 md:mt-0">
-                <button id="exportBtn" class="btn-primary">
-                    <i class="fas fa-download mr-2"></i>エクスポート
-                </button>
-                <button onclick="window.print()" class="btn-primary">
+    <button onclick="window.print()" class="btn-primary">
                     <i class="fas fa-print mr-2"></i>印刷
                 </button>
                 <button onclick="history.back()" class="bg-gray-500 text-white px-4 py-2 rounded-lg hover:bg-gray-600">
@@ -518,7 +515,6 @@
             document.getElementById('applyFiltersBtn').addEventListener('click', loadTimelineData);
             document.getElementById('resetFiltersBtn').addEventListener('click', resetFilters);
             document.getElementById('currentWeekBtn').addEventListener('click', setCurrentWeekAndLoad);
-            document.getElementById('exportBtn').addEventListener('click', exportTimeline);
             
             // 全部門チェックボックスの特別処理
             document.querySelector('.department-filter[value="all"]').addEventListener('change', function() {
@@ -1141,9 +1137,6 @@ function updateSummary() {
     console.log(`📊 サマリー更新（ID紐付け版）: ${totalTasks}件の業務, ${totalAssigned}/${totalRequired}名配置, ${fulfillmentRate}%充足率`);
 }
 
-        function exportTimeline() {
-            showMessage('エクスポート機能は開発中です', 'info');
-        }
 
         console.log('✅ 業務別タイムライン V2 読み込み完了');
     </script>
