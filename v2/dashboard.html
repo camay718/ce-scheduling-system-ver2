@@ -4074,29 +4074,68 @@
         }
 
                 // 統一された分析ページ開く関数
+        // 統一された分析ページ開く関数（認証情報確実受け渡し版）
         function openAnalyticsPage(pageName) {
             console.log(`分析ページを開いています: ${pageName}`);
-            
-            // 認証チェック
-            const user = sessionStorage.getItem('currentUser') || sessionStorage.getItem('currentUsername');
-            if (!user) {
-                window.showMessage('認証が必要です。ログインしてからアクセスしてください。', 'warning');
+
+            // 認証情報の取得
+            const userData = window.currentUserData || {};
+            const displayName = userData.displayName || userData.username || sessionStorage.getItem('currentUser') || 'user';
+            const username = userData.username || sessionStorage.getItem('currentUsername') || displayName;
+            const uid = sessionStorage.getItem('targetUID') || userData.uid || '';
+            const role = window.userRole || userData.role || sessionStorage.getItem('userRole') || 'viewer';
+
+            if (!uid || !username) {
+                window.showMessage('認証情報が不完全です。ページを再読み込みしてください。', 'warning');
                 return;
             }
-            
+
+            // URLパラメータに認証情報を付与（新しいタブでsessionStorageが無い問題を回避）
+            const params = new URLSearchParams({
+                uid: uid,
+                username: username,
+                user: displayName,
+                role: role,
+                timestamp: Date.now() // キャッシュ回避
+            });
+
+            const url = `analytics/${pageName}.html?${params.toString()}`;
+
+            // localStorage にもミラー保存（タブ間共有用）
             try {
-                const url = `analytics/${pageName}.html`;
-                const newWindow = window.open(url, '_blank', 'noopener,noreferrer,width=1400,height=900,scrollbars=yes,resizable=yes');
+                localStorage.setItem('analyticsAuth', JSON.stringify({
+                    uid: uid,
+                    username: username,
+                    displayName: displayName,
+                    role: role,
+                    timestamp: Date.now()
+                }));
+                console.log('認証情報をlocalStorageに保存:', { username, role });
+            } catch (e) {
+                console.warn('localStorage保存エラー:', e);
+            }
+
+            try {
+                // 新しいタブで開く（ポップアップブロック誤検知を修正）
+                const newWindow = window.open(url, '_blank', 'width=1400,height=900,scrollbars=yes,resizable=yes');
                 
-                if (!newWindow || newWindow.closed || typeof newWindow.closed === 'undefined') {
-                    if (confirm('ポップアップがブロックされています。同じタブで分析ページを開きますか？')) {
-                        window.location.href = url;
-                    } else {
-                        window.showMessage('分析ページを開くには、ポップアップを許可してください', 'warning');
+                // ポップアップブロック検知を遅延実行（誤検知防止）
+                setTimeout(() => {
+                    try {
+                        if (!newWindow || newWindow.closed) {
+                            console.warn('ポップアップがブロックされました');
+                            if (confirm('ポップアップがブロックされています。同じタブで分析ページを開きますか？')) {
+                                window.location.href = url;
+                            }
+                        } else {
+                            console.log('分析ページが正常に開かれました');
+                        }
+                    } catch (checkError) {
+                        // クロスオリジンエラーは正常動作とみなす
+                        console.log('分析ページが正常に開かれました（詳細確認不可）');
                     }
-                } else {
-                    console.log('分析ページが正常に開かれました');
-                }
+                }, 1000);
+
             } catch (error) {
                 console.error('分析ページを開くときにエラーが発生しました:', error);
                 window.showMessage('分析ページを開くことができませんでした', 'error');
