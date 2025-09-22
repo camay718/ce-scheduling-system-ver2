@@ -642,96 +642,93 @@ function setCurrentWeekRange() {
             }
         }
 
-         async function loadDataFromFirebase() {
-            if (!database) {
-                throw new Error('Firebase未接続');
-            }
-            
-            try {
-                console.log('🔄 Firebaseからデータ読み込み中（既存パス使用）...');
+async function loadDataFromFirebase() {
+    if (!database) {
+        throw new Error('Firebase未接続');
+    }
+    
+    try {
+        console.log('🔄 Firebaseからデータ読み込み中（ID紐付け版）...');
+        
+        const currentUser = firebase.auth().currentUser;
+        if (!currentUser) {
+            throw new Error('Firebase認証が未完了です');
+        }
+        console.log('🔐 認証確認完了:', currentUser.uid);
+        
+        const [eventsByDateSnapshot, ceListSnapshot] = await Promise.all([
+            database.ref(`${DATA_ROOT}/events/byDate`).once('value'),
+            database.ref(`${DATA_ROOT}/ceList`).once('value')
+        ]);
+        
+        const eventsByDate = eventsByDateSnapshot.val() || {};
+        const ceList = ceListSnapshot.val() || {};
+        
+        console.log('📊 取得データ確認:');
+        console.log('  - events/byDate キー:', Object.keys(eventsByDate));
+        console.log('  - ceList 件数:', Object.keys(ceList).length);
+        
+        globalTasksData = {};
+        globalAssignmentsData = {};
+        
+        Object.entries(eventsByDate).forEach(([dateKey, dayEvents]) => {
+            if (dayEvents && typeof dayEvents === 'object') {
+                const tasksForDay = [];
+                const assignmentsForDay = {}; // ★IDベースに変更
                 
-                // 認証完了確認
-                const currentUser = firebase.auth().currentUser;
-                if (!currentUser) {
-                    throw new Error('Firebase認証が未完了です');
-                }
-                console.log('🔐 認証確認完了:', currentUser.uid);
-                
-                // 既存の定義済みパスから必要最小限のデータを取得
-                const [eventsByDateSnapshot, ceListSnapshot] = await Promise.all([
-                    database.ref(`${DATA_ROOT}/events/byDate`).once('value'),
-                    database.ref(`${DATA_ROOT}/ceList`).once('value')
-                ]);
-                
-                const eventsByDate = eventsByDateSnapshot.val() || {};
-                const ceList = ceListSnapshot.val() || {};
-                
-                console.log('📊 取得データ確認:');
-                console.log('  - events/byDate キー:', Object.keys(eventsByDate));
-                console.log('  - ceList 件数:', Object.keys(ceList).length);
-                
-                // タイムライン用データ構造に変換
-                globalTasksData = {};
-                globalAssignmentsData = {};
-                
-                Object.entries(eventsByDate).forEach(([dateKey, dayEvents]) => {
-                    if (dayEvents && typeof dayEvents === 'object') {
-                        const tasksForDay = [];
-                        const assignmentsForDay = {};
-                        
-                        // イベントキーでソートして順序を安定化
-                        const sortedEventKeys = Object.keys(dayEvents).sort();
-                        
-                        sortedEventKeys.forEach((eventKey, index) => {
-                            const event = dayEvents[eventKey];
-                            
-                            // 業務データの変換
-                            tasksForDay.push({
-                                id: event.id || eventKey,
-                                name: event.name || '名称不明',
-                                department: event.department || '部門不明',
-                                startTime: event.startTime || '09:00',
-                                endTime: event.endTime || '17:00',
-                                count: event.count || 1,
-                                requiredPeople: event.requiredPeople || 1
-                            });
-                            
-                            // 配置情報の変換（CE名前解決含む）
-                            if (event.assignedCEs && Array.isArray(event.assignedCEs)) {
-                                assignmentsForDay[index] = event.assignedCEs.map(assignedCE => {
-                                    if (typeof assignedCE === 'object' && assignedCE !== null) {
-                                        return assignedCE.name || assignedCE.id || '不明CE';
-                                    } else if (typeof assignedCE === 'string') {
-                                        // ceListから名前を解決
-                                        const foundCE = Object.values(ceList).find(ce => ce.id === assignedCE);
-                                        return foundCE?.iconName || foundCE?.displayName || foundCE?.name || assignedCE;
-                                    }
-                                    return '不明CE';
-                                });
-                            } else {
-                                assignmentsForDay[index] = [];
+                Object.entries(dayEvents).forEach(([eventKey, event]) => {
+                    const taskId = event.id || eventKey;
+                    
+                    // 業務データの変換
+                    const taskData = {
+                        id: taskId,
+                        name: event.name || '名称不明',
+                        department: event.department || '部門不明',
+                        startTime: event.startTime || '09:00',
+                        endTime: event.endTime || '17:00',
+                        count: event.count || 1,
+                        requiredPeople: event.requiredPeople || 1
+                    };
+                    
+                    tasksForDay.push(taskData);
+                    
+                    // ★修正: IDベースで配置情報を格納
+                    if (event.assignedCEs && Array.isArray(event.assignedCEs)) {
+                        assignmentsForDay[taskId] = event.assignedCEs.map(assignedCE => {
+                            if (typeof assignedCE === 'object' && assignedCE !== null) {
+                                return assignedCE.name || assignedCE.id || '不明CE';
+                            } else if (typeof assignedCE === 'string') {
+                                const foundCE = Object.values(ceList).find(ce => ce.id === assignedCE);
+                                return foundCE?.iconName || foundCE?.displayName || foundCE?.name || assignedCE;
                             }
+                            return '不明CE';
                         });
-                        
-                        globalTasksData[dateKey] = tasksForDay;
-                        globalAssignmentsData[dateKey] = assignmentsForDay;
-                        
-                        console.log(`📊 ${dateKey}: ${tasksForDay.length}件の業務を変換完了`);
+                    } else {
+                        assignmentsForDay[taskId] = [];
                     }
+                    
+                    console.log(`🔗 ${dateKey} - ${taskData.name} (${taskData.department}): ${assignmentsForDay[taskId].length}名配置`);
                 });
                 
-                // データキー形式を自動判定
-                dataKeyFormat = detectDataKeyFormat(globalTasksData);
-                console.log(`🔍 検出されたデータキー形式: ${dataKeyFormat}`);
-                console.log('📊 最終的なタスクデータキー:', Object.keys(globalTasksData));
+                // 時間順でソート（表示順序の安定化）
+                tasksForDay.sort((a, b) => a.startTime.localeCompare(b.startTime));
                 
-                console.log('✅ Firebaseデータ読み込み完了（既存パス使用）');
+                globalTasksData[dateKey] = tasksForDay;
+                globalAssignmentsData[dateKey] = assignmentsForDay; // IDベースの配置情報
                 
-            } catch (error) {
-                console.error('❌ Firebase読み込みエラー:', error);
-                throw error;
+                console.log(`📊 ${dateKey}: ${tasksForDay.length}件の業務を変換完了（ID紐付け版）`);
             }
-        }
+        });
+        
+        dataKeyFormat = detectDataKeyFormat(globalTasksData);
+        console.log(`🔍 検出されたデータキー形式: ${dataKeyFormat}`);
+        console.log('✅ Firebaseデータ読み込み完了（ID紐付け版）');
+        
+    } catch (error) {
+        console.error('❌ Firebase読み込みエラー:', error);
+        throw error;
+    }
+}
 
         function generateDateRange(startDateStr, endDateStr) {
             const dates = [];
@@ -966,64 +963,67 @@ function setCurrentWeekRange() {
             return track;
         }
 
-        function createTaskBar(task, dayData, taskIdx, totalMinutes) {
-            const startMinutes = timeToMinutes(task.startTime);
-            const endMinutes = timeToMinutes(task.endTime);
-            const displayStartMinutes = displayStartHour * 60;
-            const displayEndMinutes = displayEndHour * 60;
-            
-            // 表示範囲外の業務はスキップ
-            if (endMinutes <= displayStartMinutes || startMinutes >= displayEndMinutes) {
-                return null;
-            }
-            
-            const adjustedStart = Math.max(startMinutes, displayStartMinutes);
-            const adjustedEnd = Math.min(endMinutes, displayEndMinutes);
-            
-            const left = ((adjustedStart - displayStartMinutes) / totalMinutes) * 100;
-            const width = Math.max(2, ((adjustedEnd - adjustedStart) / totalMinutes) * 100);
-            
-            // 配置情報の取得（インデックス直接使用）
-            const assignedCEs = dayData.assignments[taskIdx] || [];
-            
-            const taskBar = document.createElement('div');
-            taskBar.className = 'task-bar';
-            taskBar.style.left = left + '%';
-            taskBar.style.width = width + '%';
-            taskBar.style.top = (taskIdx * 26 + 3) + 'px';
-            taskBar.style.backgroundColor = DEPARTMENT_COLORS[task.department];
-            taskBar.style.opacity = '0.9';
-            
-            // ツールチップ
-            taskBar.title = [
-                `業務: ${task.name}`,
-                `時間: ${task.startTime}-${task.endTime}`,
-                `件数: ${task.count || 1}件`,
-                `必要人数: ${task.requiredPeople || 1}名`,
-                `配置CE: ${assignedCEs.join(', ') || '未配置'}`
-            ].join('\n');
-            
-            // 表示テキスト
-            let displayText = '';
-            if (width > 25) {
-                const ceText = assignedCEs.length > 0 ? ` | ${assignedCEs.join(',')}` : ' | 未配置';
-                displayText = `${task.name}${ceText}`;
-            } else if (width > 15) {
-                displayText = task.name;
-            } else if (width > 8) {
-                displayText = task.name.substring(0, 3) + '...';
-            } else {
-                displayText = '●';
-            }
-            
-            taskBar.innerHTML = `
-                <span style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding: 0 4px;">
-                    ${displayText}
-                </span>
-            `;
-            
-            return taskBar;
-        }
+function createTaskBar(task, dayData, taskIdx, totalMinutes) {
+    const startMinutes = timeToMinutes(task.startTime);
+    const endMinutes = timeToMinutes(task.endTime);
+    const displayStartMinutes = displayStartHour * 60;
+    const displayEndMinutes = displayEndHour * 60;
+    
+    if (endMinutes <= displayStartMinutes || startMinutes >= displayEndMinutes) {
+        return null;
+    }
+    
+    const adjustedStart = Math.max(startMinutes, displayStartMinutes);
+    const adjustedEnd = Math.min(endMinutes, displayEndMinutes);
+    
+    const left = ((adjustedStart - displayStartMinutes) / totalMinutes) * 100;
+    const width = Math.max(2, ((adjustedEnd - adjustedStart) / totalMinutes) * 100);
+    
+    // ★修正: IDベースで配置情報を取得
+    const taskId = task.id;
+    const dateKey = formatDateAsISO(dayData.date);
+    const assignedCEs = (globalAssignmentsData[dateKey] && globalAssignmentsData[dateKey][taskId]) || [];
+    
+    console.log(`🔗 配置情報取得: ${task.name} (ID: ${taskId}) → ${assignedCEs.join(', ')}`);
+    
+    const taskBar = document.createElement('div');
+    taskBar.className = 'task-bar';
+    taskBar.style.left = left + '%';
+    taskBar.style.width = width + '%';
+    taskBar.style.top = (taskIdx * 26 + 3) + 'px';
+    taskBar.style.backgroundColor = DEPARTMENT_COLORS[task.department];
+    taskBar.style.opacity = '0.9';
+    
+    taskBar.title = [
+        `業務: ${task.name}`,
+        `部門: ${task.department}`,
+        `時間: ${task.startTime}-${task.endTime}`,
+        `件数: ${task.count || 1}件`,
+        `必要人数: ${task.requiredPeople || 1}名`,
+        `配置CE: ${assignedCEs.join(', ') || '未配置'}`,
+        `業務ID: ${taskId}`
+    ].join('\n');
+    
+    let displayText = '';
+    if (width > 25) {
+        const ceText = assignedCEs.length > 0 ? ` | ${assignedCEs.join(',')}` : ' | 未配置';
+        displayText = `${task.name}${ceText}`;
+    } else if (width > 15) {
+        displayText = task.name;
+    } else if (width > 8) {
+        displayText = task.name.substring(0, 3) + '...';
+    } else {
+        displayText = '●';
+    }
+    
+    taskBar.innerHTML = `
+        <span style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding: 0 4px;">
+            ${displayText}
+        </span>
+    `;
+    
+    return taskBar;
+}
 
         // ========== ヘルパー関数 ==========
         function timeToMinutes(timeString) {
@@ -1090,54 +1090,56 @@ function setCurrentWeekRange() {
         }
 
         // 🔧 サマリー更新関数（柔軟なキー対応）
-        function updateSummary() {
-            const summaryContent = document.getElementById('summaryContent');
-            const selectedDepartments = getSelectedDepartments();
+function updateSummary() {
+    const summaryContent = document.getElementById('summaryContent');
+    const selectedDepartments = getSelectedDepartments();
+    
+    let totalTasks = 0;
+    let totalAssigned = 0;
+    let totalRequired = 0;
+    
+    currentDateRange.forEach(date => {
+        const dateKey = formatDateAsISO(date);
+        const dayTasks = (globalTasksData[dateKey] || []).filter(task => 
+            selectedDepartments.includes(task.department)
+        );
+        const dayAssignments = globalAssignmentsData[dateKey] || {};
+        
+        dayTasks.forEach((task) => {
+            totalTasks++;
+            totalRequired += task.requiredPeople || 1;
             
-            let totalTasks = 0;
-            let totalAssigned = 0;
-            let totalRequired = 0;
+            // ★修正: IDベースで配置数を集計
+            const assignedList = dayAssignments[task.id] || [];
+            totalAssigned += assignedList.length;
             
-            currentDateRange.forEach(date => {
-                const dateKey = formatDateAsISO(date);
-                const dayTasks = (globalTasksData[dateKey] || []).filter(task => 
-                    selectedDepartments.includes(task.department)
-                );
-                const dayAssignments = globalAssignmentsData[dateKey] || {};
-                
-                dayTasks.forEach((task, taskIndex) => {
-                    totalTasks++;
-                    totalRequired += task.requiredPeople || 1;
-                    
-                    // インデックス直接使用で配置数を集計
-                    const assignedList = dayAssignments[taskIndex] || [];
-                    totalAssigned += assignedList.length;
-                });
-            });
-            
-            const fulfillmentRate = totalRequired > 0 ? Math.round((totalAssigned / totalRequired) * 100) : 0;
-            
-            summaryContent.innerHTML = `
-                <div class="bg-white bg-opacity-70 p-3 rounded-lg text-center">
-                    <div class="font-bold text-lg text-blue-600">${currentDateRange.length}</div>
-                    <div class="text-xs text-gray-600">表示日数</div>
-                </div>
-                <div class="bg-white bg-opacity-70 p-3 rounded-lg text-center">
-                    <div class="font-bold text-lg text-green-600">${totalTasks}</div>
-                    <div class="text-xs text-gray-600">総業務数</div>
-                </div>
-                <div class="bg-white bg-opacity-70 p-3 rounded-lg text-center">
-                    <div class="font-bold text-lg text-purple-600">${totalAssigned}/${totalRequired}</div>
-                    <div class="text-xs text-gray-600">配置状況</div>
-                </div>
-                <div class="bg-white bg-opacity-70 p-3 rounded-lg text-center">
-                    <div class="font-bold text-lg ${fulfillmentRate >= 100 ? 'text-green-600' : fulfillmentRate >= 80 ? 'text-yellow-600' : 'text-red-600'}">${fulfillmentRate}%</div>
-                    <div class="text-xs text-gray-600">充足率</div>
-                </div>
-            `;
-            
-            console.log(`📊 サマリー更新: ${totalTasks}件の業務, ${totalAssigned}/${totalRequired}名配置, ${fulfillmentRate}%充足率`);
-        }
+            console.log(`📊 集計: ${task.name} → 必要${task.requiredPeople}名, 配置${assignedList.length}名`);
+        });
+    });
+    
+    const fulfillmentRate = totalRequired > 0 ? Math.round((totalAssigned / totalRequired) * 100) : 0;
+    
+    summaryContent.innerHTML = `
+        <div class="bg-white bg-opacity-70 p-3 rounded-lg text-center">
+            <div class="font-bold text-lg text-blue-600">${currentDateRange.length}</div>
+            <div class="text-xs text-gray-600">表示日数</div>
+        </div>
+        <div class="bg-white bg-opacity-70 p-3 rounded-lg text-center">
+            <div class="font-bold text-lg text-green-600">${totalTasks}</div>
+            <div class="text-xs text-gray-600">総業務数</div>
+        </div>
+        <div class="bg-white bg-opacity-70 p-3 rounded-lg text-center">
+            <div class="font-bold text-lg text-purple-600">${totalAssigned}/${totalRequired}</div>
+            <div class="text-xs text-gray-600">配置状況</div>
+        </div>
+        <div class="bg-white bg-opacity-70 p-3 rounded-lg text-center">
+            <div class="font-bold text-lg ${fulfillmentRate >= 100 ? 'text-green-600' : fulfillmentRate >= 80 ? 'text-yellow-600' : 'text-red-600'}">${fulfillmentRate}%</div>
+            <div class="text-xs text-gray-600">充足率</div>
+        </div>
+    `;
+    
+    console.log(`📊 サマリー更新（ID紐付け版）: ${totalTasks}件の業務, ${totalAssigned}/${totalRequired}名配置, ${fulfillmentRate}%充足率`);
+}
 
         function exportTimeline() {
             showMessage('エクスポート機能は開発中です', 'info');
