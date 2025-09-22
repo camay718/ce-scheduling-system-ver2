@@ -313,33 +313,79 @@
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 
     <script>
-        // 認証チェック機能
+        // 認証チェック機能（多重フォールバック版）
         function checkAuthenticationStatus() {
-            const targetUID = sessionStorage.getItem('targetUID');
-            const currentUsername = sessionStorage.getItem('currentUsername');
-            
+            let targetUID = sessionStorage.getItem('targetUID');
+            let currentUsername = sessionStorage.getItem('currentUsername');
+
+            // 1) URLパラメータから取得
+            if (!targetUID || !currentUsername) {
+                const params = new URLSearchParams(location.search);
+                const qpUid = params.get('uid');
+                const qpUsername = params.get('username') || params.get('user');
+                const qpRole = params.get('role');
+
+                if (qpUid && qpUsername) {
+                    targetUID = qpUid;
+                    currentUsername = qpUsername;
+                    try {
+                        sessionStorage.setItem('targetUID', qpUid);
+                        sessionStorage.setItem('currentUsername', qpUsername);
+                        sessionStorage.setItem('currentUser', qpUsername);
+                        if (qpRole) sessionStorage.setItem('userRole', qpRole);
+                        console.log('✅ URLパラメータから認証情報を復元');
+                    } catch (e) {
+                        console.warn('sessionStorage保存エラー:', e);
+                    }
+                }
+            }
+
+            // 2) localStorageから取得
+            if (!targetUID || !currentUsername) {
+                try {
+                    const authData = localStorage.getItem('analyticsAuth');
+                    if (authData) {
+                        const parsed = JSON.parse(authData);
+                        // 5分以内の認証情報のみ有効
+                        if (Date.now() - parsed.timestamp < 5 * 60 * 1000) {
+                            targetUID = parsed.uid;
+                            currentUsername = parsed.username;
+                            sessionStorage.setItem('targetUID', parsed.uid);
+                            sessionStorage.setItem('currentUsername', parsed.username);
+                            sessionStorage.setItem('currentUser', parsed.displayName);
+                            sessionStorage.setItem('userRole', parsed.role);
+                            console.log('✅ localStorageから認証情報を復元');
+                        }
+                    }
+                } catch (e) {
+                    console.warn('localStorage読み込みエラー:', e);
+                }
+            }
+
             if (!targetUID || !currentUsername) {
                 console.warn('⚠️ 認証情報が見つかりません。ダッシュボードからアクセスしてください。');
                 document.getElementById('authWarning').style.display = 'block';
                 return false;
             }
-            
+
+            console.log('✅ 認証情報確認完了:', { targetUID: '存在', currentUsername: '存在' });
+            document.getElementById('authWarning').style.display = 'none';
             return true;
         }
 
-        // Firebase設定
+        // Firebase設定（dashboard.htmlと完全統一）
         const firebaseConfig = {
-            apiKey: "AIzaSyBpfRTPDFFTEkWtuvksoF_hVkftQ__wH8Q",
-            authDomain: "ce-scheduling-system.firebaseapp.com",
-            databaseURL: "https://ce-scheduling-system-default-rtdb.asia-southeast1.firebasedatabase.app",
-            projectId: "ce-scheduling-system",
-            storageBucket: "ce-scheduling-system.firebasestorage.app",
-            messagingSenderId: "401096569342",
-            appId: "1:401096569342:web:03b0a5f5bfd09e34ae90af",
-            measurementId: "G-8C7X5WCED3"
+            apiKey: "AIzaSyCRUvvs0OSz_9L9bXtqteVFIIze1OaZObE",
+            authDomain: "ce-scheduling-system-v2.firebaseapp.com",
+            databaseURL: "https://ce-scheduling-system-v2-default-rtdb.asia-southeast1.firebasedatabase.app",
+            projectId: "ce-scheduling-system-v2",
+            storageBucket: "ce-scheduling-system-v2.firebasestorage.app",
+            messagingSenderId: "288279598010",
+            appId: "1:288279598010:web:d545ee1d4d854513084383",
+            measurementId: "G-LSEEMJE2R0"
         };
 
-        const DATA_ROOT = 'ceScheduleSystem/v2';
+        const DATA_ROOT = 'ceScheduleV2';
 
         // グローバル変数
         let database = null;
