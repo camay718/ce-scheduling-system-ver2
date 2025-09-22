@@ -427,7 +427,7 @@
     }
     
     /* アクションボタン行の調整 */
-    action-buttons-row {
+    .action-buttons-row {
     display: grid;
     grid-template-columns: auto 1fr auto auto;
     gap: 4px;
@@ -2418,9 +2418,6 @@ this.updateDailySummary().catch(console.error);
 console.log('✅ 月次業務CE配置完了:', ceData.ceName);
 this.renderMonthlyTasks();
 this.updateDailySummary().catch(console.error);
-// 即座に再描画
-this.renderMonthlyTasks();
-this.updateDailySummary().catch(console.error);
 
             } catch (error) {
                 console.error('❌ 月次業務CE配置エラー:', error);
@@ -3459,19 +3456,13 @@ this.openSimpleAddEventModal(department);
         }
 
         // 月次業務追加モーダル（目標件数・必要人数を入力式に）
-        openMonthlyTaskModal() {
-            const modal = document.createElement('div');
-            modal.id = 'monthlyTaskModal';
-            modal.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50';
-            
-            const departmentOptions = this.buildDepartmentOptions();
-            // 現在の表示月と同じなら画面を即時再描画
-const currentYearMonth = this.formatDate(this.selectedDate).substring(0, 7);
-if (currentYearMonth === yearMonth) {
-    this.renderMonthlyTasks();
-    this.updateDailySummary().catch(console.error);
-    console.log('✅ 月次業務追加後の即時再描画完了');
-}
+openMonthlyTaskModal() {
+    const modal = document.createElement('div');
+    modal.id = 'monthlyTaskModal';
+    modal.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50';
+    
+    const departmentOptions = this.buildDepartmentOptions();
+    const currentYearMonth = this.formatDate(this.selectedDate).substring(0, 7);
             
             modal.innerHTML = `
                 <div class="glass-card p-6 max-w-lg w-full mx-4 max-h-[90vh] overflow-y-auto">
