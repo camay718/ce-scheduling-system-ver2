@@ -3,25 +3,433 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>個人別タイムライン - CEスケジュール管理システムV2</title>
+    <title>個人別タイムライン - CEスケジュール管理システム V2</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="../css/theme-unified.css">
     
-    <!-- Tailwind CSS -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    
-    <!-- Font Awesome -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-    
-    <!-- Chart.js -->
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@3.0.0/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
-    
-    <!-- Firebase -->
-    <script type="module">
-        import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
-        import { getDatabase } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js';
-        import { getAuth, signInAnonymously } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';
-        
-      const firebaseConfig = {
+    <style>
+        :root {
+            --primary-gradient: linear-gradient(135deg, #E8F5E8 0%, #D4F1D4 100%);
+            --accent-color: #B8E6B8;
+            --text-color: #2C3E50;
+            --shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+
+        body {
+            background: var(--primary-gradient);
+            font-family: 'Segoe UI', 'Hiragino Sans', 'Yu Gothic UI', sans-serif;
+            color: var(--text-color);
+            min-height: 100vh;
+        }
+
+        .glassmorphism {
+            background: rgba(255,255,255,0.7);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255,255,255,0.3);
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #4CAF50, #45a049);
+            color: white;
+            border: none;
+            padding: 10px 18px;
+            border-radius: 20px;
+            font-weight: 600;
+            box-shadow: var(--shadow);
+            transition: all 0.2s ease;
+            cursor: pointer;
+        }
+
+        .btn-primary:hover { 
+            transform: translateY(-1px); 
+            box-shadow: 0 6px 18px rgba(0,0,0,0.15); 
+        }
+
+        .ce-card {
+            background: rgba(255,255,255,0.85);
+            border-radius: 14px;
+            padding: 16px;
+            box-shadow: var(--shadow);
+            border-left: 4px solid var(--ce-color);
+            margin-bottom: 20px;
+            transition: all 0.2s ease;
+        }
+
+        .ce-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+        }
+
+        .ce-ope { --ce-color: #87CEEB; }
+        .ce-me { --ce-color: #90EE90; }
+        .ce-hd { --ce-color: #FFB6C1; }
+        .ce-flex { --ce-color: #FFFF99; }
+
+        .worktype-badge {
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: 600;
+            color: white;
+        }
+
+        .worktype-ope { background: #87CEEB; color: #1E3A8A; }
+        .worktype-me { background: #90EE90; color: #006400; }
+        .worktype-hd { background: #FFB6C1; color: #8B008B; }
+        .worktype-flex { background: #FFFF99; color: #B8860B; }
+
+        .status-badge {
+            display: inline-block;
+            padding: 2px 6px;
+            border-radius: 12px;
+            font-size: 10px;
+            font-weight: bold;
+            color: white;
+            margin-left: 8px;
+        }
+
+        .status-早 { background: #FF9800; }
+        .status-当 { background: #9C27B0; }
+        .status-非 { background: #607D8B; }
+        .status-休 { background: #F44336; }
+        .status-出 { background: #2196F3; }
+
+        .timeline-day-row {
+            padding: 12px;
+            margin-bottom: 8px;
+            background: rgba(255,255,255,0.9);
+            border-radius: 8px;
+            border: 1px solid rgba(0,0,0,0.06);
+        }
+
+        .timeline-track {
+            position: relative;
+            width: 100%;
+            background: #f0f0f0;
+            border-radius: 6px;
+            overflow: hidden;
+            border: 1px solid #ddd;
+            min-height: 30px;
+        }
+
+        .task-bar {
+            position: absolute;
+            height: 24px;
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 11px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .task-bar:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+        }
+
+        .time-scale {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 4px;
+            padding: 0 4px;
+            font-size: 10px;
+            color: #666;
+        }
+
+        .filter-section {
+            background: rgba(255,255,255,0.9);
+            border-radius: 12px;
+            padding: 16px;
+            margin-bottom: 20px;
+            box-shadow: var(--shadow);
+        }
+
+        .workload-summary {
+            background: linear-gradient(135deg, rgba(255,255,255,0.9), rgba(248,255,248,0.8));
+            border-radius: 8px;
+            padding: 12px;
+            margin-bottom: 12px;
+            border: 1px solid rgba(0,0,0,0.05);
+        }
+
+        .task-chip {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 6px;
+            font-size: 11px;
+            font-weight: 500;
+            margin: 2px 4px 2px 0;
+            border-left: 4px solid var(--dept-color);
+            background: rgba(255,255,255,0.8);
+        }
+
+        .no-tasks-message {
+            text-align: center;
+            padding: 40px 20px;
+            color: #999;
+            background: rgba(255,255,255,0.5);
+            border-radius: 8px;
+            border: 2px dashed #ddd;
+        }
+
+        .auth-error {
+            background: #fee2e2;
+            border: 1px solid #fecaca;
+            border-radius: 8px;
+            padding: 16px;
+            margin: 20px;
+            color: #991b1b;
+        }
+
+        /* 印刷用スタイル */
+        @media print {
+            body { 
+                background: white !important; 
+                color: #000 !important; 
+            }
+            .no-print { 
+                display: none !important; 
+            }
+            .glassmorphism { 
+                background: white !important; 
+                border: 1px solid #ccc !important; 
+            }
+            .ce-card {
+                break-inside: avoid;
+                margin-bottom: 15px;
+            }
+        }
+
+        /* レスポンシブ対応 */
+        @media (max-width: 768px) {
+            .filter-section {
+                padding: 12px;
+            }
+            
+            .ce-card {
+                padding: 12px;
+            }
+            
+            .timeline-day-row {
+                padding: 8px;
+            }
+            
+            .task-bar {
+                font-size: 10px;
+                height: 20px;
+            }
+            
+            .time-scale {
+                font-size: 9px;
+            }
+
+            .ce-filter-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+    </style>
+</head>
+<body>
+    <div id="authWarning" class="auth-error" style="display: none;">
+        <h3><i class="fas fa-exclamation-triangle mr-2"></i>認証エラー</h3>
+        <p>このページにアクセスするには、まず<a href="../dashboard.html" class="underline font-bold">ダッシュボード</a>からログインしてください。</p>
+        <p class="text-sm mt-2">または、ダッシュボードの「集計・分析」メニューからアクセスしてください。</p>
+    </div>
+
+    <div class="container mx-auto p-4 max-w-7xl">
+        <!-- ヘッダー -->
+        <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 no-print">
+            <div>
+                <h1 class="text-3xl font-bold mb-2">
+                    <i class="fas fa-user-clock mr-3 text-blue-600"></i>個人別タイムライン
+                </h1>
+                <p class="text-gray-600">CE個人ごとの業務スケジュールと勤務パターンを時間軸で可視化</p>
+            </div>
+            <div class="flex gap-3 mt-4 md:mt-0">
+                <button onclick="window.print()" class="btn-primary">
+                    <i class="fas fa-print mr-2"></i>印刷
+                </button>
+                <button onclick="history.back()" class="bg-gray-500 text-white px-4 py-2 rounded-lg hover:bg-gray-600">
+                    <i class="fas fa-arrow-left mr-2"></i>戻る
+                </button>
+            </div>
+        </div>
+
+        <!-- フィルター・設定セクション -->
+        <div class="filter-section no-print">
+            <h3 class="text-lg font-bold mb-4">
+                <i class="fas fa-filter mr-2"></i>表示設定
+            </h3>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
+                <!-- 期間設定 -->
+                <div>
+                    <label class="block text-sm font-medium mb-2">開始日</label>
+                    <input type="date" id="startDate" class="w-full p-3 border border-gray-300 rounded-lg">
+                </div>
+                
+                <div>
+                    <label class="block text-sm font-medium mb-2">終了日</label>
+                    <input type="date" id="endDate" class="w-full p-3 border border-gray-300 rounded-lg">
+                </div>
+
+                <!-- 時間範囲設定 -->
+                <div>
+                    <label class="block text-sm font-medium mb-2">表示開始時刻</label>
+                    <input type="time" id="displayStartTime" value="07:00" class="w-full p-3 border border-gray-300 rounded-lg">
+                </div>
+                
+                <div>
+                    <label class="block text-sm font-medium mb-2">表示終了時刻</label>
+                    <input type="time" id="displayEndTime" value="19:00" class="w-full p-3 border border-gray-300 rounded-lg">
+                </div>
+            </div>
+
+            <!-- CE・勤務区分フィルター -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                <div>
+                    <label class="block text-sm font-medium mb-2">表示CE</label>
+                    <div class="flex flex-wrap gap-2 mb-2">
+                        <label class="flex items-center">
+                            <input type="checkbox" id="selectAllCEs" checked>
+                            <span class="ml-2 font-bold">全CE選択</span>
+                        </label>
+                    </div>
+                    <div id="ceFilterContainer" class="max-h-32 overflow-y-auto grid grid-cols-2 md:grid-cols-3 gap-1 ce-filter-grid">
+                        <!-- CEリストは動的生成 -->
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium mb-2">勤務区分フィルター</label>
+                    <div class="flex flex-wrap gap-2">
+                        <label class="flex items-center">
+                            <input type="checkbox" class="worktype-filter" value="OPE" checked>
+                            <span class="ml-2">OPE</span>
+                        </label>
+                        <label class="flex items-center">
+                            <input type="checkbox" class="worktype-filter" value="ME" checked>
+                            <span class="ml-2">ME</span>
+                        </label>
+                        <label class="flex items-center">
+                            <input type="checkbox" class="worktype-filter" value="HD" checked>
+                            <span class="ml-2">HD</span>
+                        </label>
+                        <label class="flex items-center">
+                            <input type="checkbox" class="worktype-filter" value="FLEX" checked>
+                            <span class="ml-2">FLEX</span>
+                        </label>
+                    </div>
+                </div>
+            </div>
+
+            <div class="flex gap-3">
+                <button id="applyFiltersBtn" class="btn-primary">
+                    <i class="fas fa-search mr-2"></i>表示更新
+                </button>
+                <button id="resetFiltersBtn" class="bg-gray-500 text-white px-4 py-2 rounded-lg hover:bg-gray-600">
+                    <i class="fas fa-undo mr-2"></i>リセット
+                </button>
+                <button id="currentWeekBtn" class="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600">
+                    <i class="fas fa-calendar-week mr-2"></i>今週表示
+                </button>
+            </div>
+        </div>
+
+        <!-- サマリー情報 -->
+        <div id="summarySection" class="glassmorphism rounded-2xl p-4 mb-6">
+            <h3 class="text-lg font-bold mb-3">
+                <i class="fas fa-info-circle mr-2"></i>表示サマリー
+            </h3>
+            <div id="summaryContent" class="grid grid-cols-1 md:grid-cols-4 gap-4 text-sm">
+                <!-- JavaScriptで動的生成 -->
+            </div>
+        </div>
+
+        <!-- タイムライン表示エリア -->
+        <div id="timelineContainer" class="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-4">
+            <!-- JavaScriptで動的生成 -->
+        </div>
+
+        <!-- ローディング表示 -->
+        <div id="loadingIndicator" class="text-center py-8" style="display: none;">
+            <i class="fas fa-spinner fa-spin text-2xl text-blue-600"></i>
+            <p class="mt-2 text-gray-600">データを読み込み中...</p>
+        </div>
+    </div>
+
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+
+    <script>
+        // 認証チェック機能（多重フォールバック版）
+        function checkAuthenticationStatus() {
+            let targetUID = sessionStorage.getItem('targetUID');
+            let currentUsername = sessionStorage.getItem('currentUsername');
+
+            // URLパラメータから取得
+            if (!targetUID || !currentUsername) {
+                const params = new URLSearchParams(location.search);
+                const qpUid = params.get('uid');
+                const qpUsername = params.get('username') || params.get('user');
+                const qpRole = params.get('role');
+
+                if (qpUid && qpUsername) {
+                    targetUID = qpUid;
+                    currentUsername = qpUsername;
+                    try {
+                        sessionStorage.setItem('targetUID', qpUid);
+                        sessionStorage.setItem('currentUsername', qpUsername);
+                        sessionStorage.setItem('currentUser', qpUsername);
+                        if (qpRole) sessionStorage.setItem('userRole', qpRole);
+                        console.log('✅ URLパラメータから認証情報を復元');
+                    } catch (e) {
+                        console.warn('sessionStorage保存エラー:', e);
+                    }
+                }
+            }
+
+            // localStorageから取得
+            if (!targetUID || !currentUsername) {
+                try {
+                    const authData = localStorage.getItem('analyticsAuth');
+                    if (authData) {
+                        const parsed = JSON.parse(authData);
+                        if (Date.now() - parsed.timestamp < 5 * 60 * 1000) {
+                            targetUID = parsed.uid;
+                            currentUsername = parsed.username;
+                            sessionStorage.setItem('targetUID', parsed.uid);
+                            sessionStorage.setItem('currentUsername', parsed.username);
+                            sessionStorage.setItem('currentUser', parsed.displayName);
+                            sessionStorage.setItem('userRole', parsed.role);
+                            console.log('✅ localStorageから認証情報を復元');
+                        }
+                    }
+                } catch (e) {
+                    console.warn('localStorage読み込みエラー:', e);
+                }
+            }
+
+            if (!targetUID || !currentUsername) {
+                console.warn('⚠️ 認証情報が見つかりません。ダッシュボードからアクセスしてください。');
+                document.getElementById('authWarning').style.display = 'block';
+                return false;
+            }
+
+            console.log('✅ 認証情報確認完了:', { targetUID: '存在', currentUsername: '存在' });
+            document.getElementById('authWarning').style.display = 'none';
+            return true;
+        }
+
+        // Firebase設定（dashboard.htmlと完全統一）
+        const firebaseConfig = {
             apiKey: "AIzaSyCRUvvs0OSz_9L9bXtqteVFIIze1OaZObE",
             authDomain: "ce-scheduling-system-v2.firebaseapp.com",
             databaseURL: "https://ce-scheduling-system-v2-default-rtdb.asia-southeast1.firebasedatabase.app",
@@ -31,841 +439,861 @@
             appId: "1:288279598010:web:d545ee1d4d854513084383",
             measurementId: "G-LSEEMJE2R0"
         };
-        
-        const app = initializeApp(firebaseConfig);
-        window.database = getDatabase(app);
-        window.auth = getAuth(app);
-        
-        // Anonymous authentication
-        signInAnonymously(window.auth).catch(console.error);
-    </script>
-    
-    <style>
-        @media print {
-            .no-print { display: none !important; }
-            body { background: white !important; }
-            .bg-gradient-to-br { background: white !important; }
-            .shadow-lg { box-shadow: none !important; }
-        }
-        
-        .timeline-chart {
-            background: white;
-            border-radius: 0.5rem;
-            padding: 1rem;
-        }
-        
-        .stats-card {
-            transition: transform 0.2s;
-        }
-        
-        .stats-card:hover {
-            transform: translateY(-2px);
-        }
-        
-        .employee-select {
-            background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='m6 8 4 4 4-4'/%3e%3c/svg%3e");
-            background-position: right 0.5rem center;
-            background-repeat: no-repeat;
-            background-size: 1.5em 1.5em;
-            padding-right: 2.5rem;
-        }
-    </style>
-</head>
-<body class="bg-gradient-to-br from-blue-50 to-indigo-100 min-h-screen">
-    <!-- Header -->
-    <header class="bg-white shadow-sm border-b no-print">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div class="flex justify-between items-center py-4">
-                <div class="flex items-center space-x-4">
-                    <i class="fas fa-user-clock text-2xl text-blue-600"></i>
-                    <div>
-                        <h1 class="text-2xl font-bold text-gray-900">個人別タイムライン</h1>
-                        <p class="text-sm text-gray-600">CEスケジュール管理システムV2</p>
-                    </div>
-                </div>
-                <div class="flex items-center space-x-4">
-                    <div class="flex items-center space-x-2 text-sm text-gray-600">
-                        <i class="fas fa-user-circle"></i>
-                        <span id="currentUser">読み込み中...</span>
-                    </div>
-                    <button onclick="window.location.href='../dashboard.html'" 
-        class="bg-gray-100 hover:bg-gray-200 px-4 py-2 rounded-lg text-gray-700 transition-colors">
-    <i class="fas fa-arrow-left mr-2"></i>ダッシュボードに戻る
-</button>
-                </div>
-            </div>
-        </div>
-    </header>
 
-    <!-- Main Content -->
-    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-        <!-- Filter Section -->
-        <div class="bg-white rounded-lg shadow-lg p-6 mb-6 no-print">
-            <h2 class="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-                <i class="fas fa-filter mr-2 text-blue-600"></i>フィルター設定
-            </h2>
-            
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                <!-- Employee Selection -->
-                <div>
-                    <label for="employeeSelect" class="block text-sm font-medium text-gray-700 mb-2">
-                        <i class="fas fa-user mr-1"></i>従業員選択
-                    </label>
-                    <select id="employeeSelect" 
-                            class="employee-select w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
-                        <option value="">従業員を選択してください</option>
-                    </select>
-                </div>
-                
-                <!-- Date Range -->
-                <div>
-                    <label for="startDate" class="block text-sm font-medium text-gray-700 mb-2">
-                        <i class="fas fa-calendar-alt mr-1"></i>開始日
-                    </label>
-                    <input type="date" id="startDate" 
-                           class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
-                </div>
-                
-                <div>
-                    <label for="endDate" class="block text-sm font-medium text-gray-700 mb-2">
-                        <i class="fas fa-calendar-alt mr-1"></i>終了日
-                    </label>
-                    <input type="date" id="endDate" 
-                           class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
-                </div>
-                
-                <!-- Work Type Filter -->
-                <div>
-                    <label for="workTypeFilter" class="block text-sm font-medium text-gray-700 mb-2">
-                        <i class="fas fa-briefcase mr-1"></i>業務タイプ
-                    </label>
-                    <select id="workTypeFilter" 
-                            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
-                        <option value="">すべての業務</option>
-                        <option value="通常勤務">通常勤務</option>
-                        <option value="残業">残業</option>
-                        <option value="夜勤">夜勤</option>
-                        <option value="休日出勤">休日出勤</option>
-                    </select>
-                </div>
-            </div>
-            
-            <div class="flex flex-wrap gap-2 mt-4">
-                <button onclick="applyFilters()" 
-                        class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors">
-                    <i class="fas fa-search mr-2"></i>分析実行
-                </button>
-                <button onclick="resetFilters()" 
-                        class="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded-lg transition-colors">
-                    <i class="fas fa-undo mr-2"></i>リセット
-                </button>
-                <button onclick="exportData()" 
-                        class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg transition-colors">
-                    <i class="fas fa-download mr-2"></i>データ出力
-                </button>
-                <button onclick="window.print()" 
-                        class="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg transition-colors">
-                    <i class="fas fa-print mr-2"></i>印刷
-                </button>
-            </div>
-        </div>
+        // グローバル変数
+        let database = null;
+        let authReadyPromise = null;
 
-        <!-- Statistics Cards -->
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
-            <div class="stats-card bg-white rounded-lg shadow-lg p-6">
-                <div class="flex items-center justify-between">
-                    <div>
-                        <p class="text-sm font-medium text-gray-600">総勤務時間</p>
-                        <p class="text-2xl font-bold text-blue-600" id="totalWorkHours">0時間</p>
-                    </div>
-                    <div class="bg-blue-100 p-3 rounded-full">
-                        <i class="fas fa-clock text-blue-600 text-xl"></i>
-                    </div>
-                </div>
-            </div>
-            
-            <div class="stats-card bg-white rounded-lg shadow-lg p-6">
-                <div class="flex items-center justify-between">
-                    <div>
-                        <p class="text-sm font-medium text-gray-600">シフト数</p>
-                        <p class="text-2xl font-bold text-green-600" id="totalShifts">0</p>
-                    </div>
-                    <div class="bg-green-100 p-3 rounded-full">
-                        <i class="fas fa-calendar-check text-green-600 text-xl"></i>
-                    </div>
-                </div>
-            </div>
-            
-            <div class="stats-card bg-white rounded-lg shadow-lg p-6">
-                <div class="flex items-center justify-between">
-                    <div>
-                        <p class="text-sm font-medium text-gray-600">平均勤務時間</p>
-                        <p class="text-2xl font-bold text-yellow-600" id="avgWorkHours">0時間</p>
-                    </div>
-                    <div class="bg-yellow-100 p-3 rounded-full">
-                        <i class="fas fa-chart-line text-yellow-600 text-xl"></i>
-                    </div>
-                </div>
-            </div>
-            
-            <div class="stats-card bg-white rounded-lg shadow-lg p-6">
-                <div class="flex items-center justify-between">
-                    <div>
-                        <p class="text-sm font-medium text-gray-600">所属部門</p>
-                        <p class="text-lg font-bold text-purple-600" id="employeeDepartment">-</p>
-                    </div>
-                    <div class="bg-purple-100 p-3 rounded-full">
-                        <i class="fas fa-building text-purple-600 text-xl"></i>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Timeline Chart -->
-        <div class="bg-white rounded-lg shadow-lg p-6 mb-6">
-            <div class="flex justify-between items-center mb-4">
-                <h2 class="text-lg font-semibold text-gray-900 flex items-center">
-                    <i class="fas fa-chart-gantt mr-2 text-blue-600"></i>個人別勤務タイムライン
-                </h2>
-                <div class="text-sm text-gray-600" id="selectedEmployee">従業員を選択してください</div>
-            </div>
-            
-            <div class="timeline-chart" style="height: 400px;">
-                <canvas id="timelineChart"></canvas>
-            </div>
-        </div>
-
-        <!-- Work Pattern Analysis -->
-        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-            <div class="bg-white rounded-lg shadow-lg p-6">
-                <h3 class="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-                    <i class="fas fa-pie-chart mr-2 text-blue-600"></i>業務タイプ分布
-                </h3>
-                <canvas id="workTypeChart" style="height: 300px;"></canvas>
-            </div>
-            
-            <div class="bg-white rounded-lg shadow-lg p-6">
-                <h3 class="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-                    <i class="fas fa-chart-bar mr-2 text-blue-600"></i>時間帯別勤務頻度
-                </h3>
-                <canvas id="hourlyChart" style="height: 300px;"></canvas>
-            </div>
-        </div>
-
-        <!-- Weekly Pattern -->
-        <div class="bg-white rounded-lg shadow-lg p-6 mb-6">
-            <h3 class="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-                <i class="fas fa-calendar-week mr-2 text-blue-600"></i>週間勤務パターン
-            </h3>
-            <canvas id="weeklyChart" style="height: 250px;"></canvas>
-        </div>
-    </main>
-
-    <!-- Loading Modal -->
-    <div id="loadingModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 hidden items-center justify-center z-50">
-        <div class="bg-white rounded-lg p-6 max-w-sm w-full mx-4">
-            <div class="flex items-center">
-                <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mr-4"></div>
-                <span class="text-gray-700">データを読み込み中...</span>
-            </div>
-        </div>
-    </div>
-
-    <script>
-        // Global variables
-        let timelineChart = null;
-        let workTypeChart = null;
-        let hourlyChart = null;
-        let weeklyChart = null;
-        let allSchedules = [];
-        let allEmployees = [];
-        let allDepartments = [];
-        
-        // Authentication check
-        function checkAuth() {
-            let user = sessionStorage.getItem('currentUser') || sessionStorage.getItem('currentUsername');
-
-            // URLパラメータから取得
-            if (!user) {
-                const params = new URLSearchParams(location.search);
-                const qpUser = params.get('user') || params.get('username');
-                const qpUid = params.get('uid');
-                const qpRole = params.get('role');
-                if (qpUser) {
-                    user = qpUser;
-                    try {
-                        sessionStorage.setItem('currentUser', qpUser);
-                        sessionStorage.setItem('currentUsername', qpUser);
-                        if (qpUid) sessionStorage.setItem('targetUID', qpUid);
-                        if (qpRole) sessionStorage.setItem('userRole', qpRole);
-                    } catch (e) {
-                        console.warn('sessionStorage保存エラー:', e);
-                    }
+        function initializeFirebase() {
+            try {
+                if (!firebase.apps.length) {
+                    firebase.initializeApp(firebaseConfig);
                 }
-            }
+                database = firebase.database();
 
-            // localStorageから取得
-            if (!user) {
-                try {
-                    const authData = localStorage.getItem('analyticsAuth');
-                    if (authData) {
-                        const parsed = JSON.parse(authData);
-                        if (Date.now() - parsed.timestamp < 5 * 60 * 1000) {
-                            user = parsed.displayName;
-                            sessionStorage.setItem('currentUser', parsed.displayName);
-                            sessionStorage.setItem('currentUsername', parsed.username);
-                            sessionStorage.setItem('targetUID', parsed.uid);
-                            sessionStorage.setItem('userRole', parsed.role);
+                authReadyPromise = new Promise((resolve, reject) => {
+                    firebase.auth().onAuthStateChanged(user => {
+                        if (user) {
+                            console.log('✅ Firebase認証完了:', user.uid);
+                            resolve(user);
                         }
-                    }
-                } catch (e) {
-                    console.warn('localStorage読み込みエラー:', e);
-                }
-            }
+                    }, err => {
+                        console.error('❌ Firebase認証エラー:', err);
+                        reject(err);
+                    });
+                });
 
-            if (!user) {
-                alert('認証が必要です。ダッシュボードからアクセスしてください。');
-                window.location.href = '../dashboard.html';
-                return false;
+                firebase.auth().signInAnonymously().catch((error) => {
+                    console.error('❌ Firebase匿名認証エラー:', error);
+                    const authWarning = document.getElementById('authWarning');
+                    if (authWarning) authWarning.style.display = 'block';
+                });
+                    
+            } catch (error) {
+                console.error('❌ Firebase初期化エラー:', error);
+                const authWarning = document.getElementById('authWarning');
+                if (authWarning) authWarning.style.display = 'block';
             }
-
-            const headerUserEl = document.getElementById('currentUser');
-            if (headerUserEl) headerUserEl.textContent = user;
-            return true;
         }
-        
-        // Initialize application
-        async function init() {
-            if (!checkAuth()) return;
+
+        const DATA_ROOT = 'ceScheduleV2';
+
+        // グローバル変数
+        let globalTasksData = {};
+        let globalAssignmentsData = {};
+        let globalCEList = [];
+        let currentDateRange = [];
+        let displayStartHour = 7;
+        let displayEndHour = 19;
+
+        // 部門設定
+        const DEPARTMENTS = [
+            '血液浄化', '人工心肺・補助循環', '心・カテーテル', 
+            '手術・麻酔', '不整脈', '機器管理・人工呼吸'
+        ];
+
+        const DEPARTMENT_COLORS = {
+            '血液浄化': '#FFB6C1',
+            '人工心肺・補助循環': '#4169E1',
+            '心・カテーテル': '#32CD32',
+            '手術・麻酔': '#87CEEB',
+            '不整脈': '#9370DB',
+            '機器管理・人工呼吸': '#90EE90'
+        };
+
+        // ========== 初期化 ==========
+        document.addEventListener('DOMContentLoaded', async function() {
+            console.log('🔄 個人別タイムライン初期化開始');
             
-            showLoading(true);
+            if (!checkAuthenticationStatus()) return;
+            
+            initializeFirebase();
+            setupEventListeners();
+            setCurrentWeekRange();
             
             try {
-                await Promise.all([
-                    loadEmployees(),
-                    loadDepartments(),
-                    loadSchedules()
+                console.log('⏳ Firebase認証完了待機中...');
+                
+                if (authReadyPromise) {
+                    await authReadyPromise;
+                    console.log('🔐 Promise経由でFirebase認証確認完了');
+                } else {
+                    let authUser = firebase.auth().currentUser;
+                    let attempts = 0;
+                    
+                    while (!authUser && attempts < 30) {
+                        await new Promise(resolve => setTimeout(resolve, 500));
+                        authUser = firebase.auth().currentUser;
+                        attempts++;
+                    }
+                    
+                    if (!authUser) {
+                        throw new Error('Firebase認証がタイムアウトしました（15秒）');
+                    }
+                    console.log('🔐 ポーリング経由でFirebase認証確認完了:', authUser.uid);
+                }
+                
+                await loadTimelineData();
+                
+            } catch (error) {
+                console.error('❌ 初期読み込みエラー:', error);
+                const errorMessage = error.message || error.toString();
+                
+                if (errorMessage.includes('permission_denied')) {
+                    showMessage('データアクセス権限がありません。Firebase設定を確認してください。', 'error');
+                } else if (errorMessage.includes('タイムアウト')) {
+                    showMessage('認証処理がタイムアウトしました。ページを再読み込みしてください。', 'error');
+                } else {
+                    showMessage(`データの読み込みに失敗しました: ${errorMessage}`, 'error');
+                }
+            }
+        });
+
+        function setupEventListeners() {
+            document.getElementById('applyFiltersBtn').addEventListener('click', loadTimelineData);
+            document.getElementById('resetFiltersBtn').addEventListener('click', resetFilters);
+            document.getElementById('currentWeekBtn').addEventListener('click', setCurrentWeekAndLoad);
+            
+            // 全CEチェックボックスの処理は、CEリスト生成後に設定
+        }
+
+        function setCurrentWeekRange() {
+            const today = new Date();
+            const dayFromMonday = (today.getDay() + 6) % 7;
+
+            const startDate = new Date(today);
+            startDate.setHours(0, 0, 0, 0);
+            startDate.setDate(today.getDate() - dayFromMonday);
+
+            const endDate = new Date(startDate);
+            endDate.setDate(startDate.getDate() + 6);
+            endDate.setHours(0, 0, 0, 0);
+
+            document.getElementById('startDate').value = startDate.toISOString().split('T')[0];
+            document.getElementById('endDate').value = endDate.toISOString().split('T')[0];
+
+            console.log(`📅 当該週設定（月曜〜日曜）: ${startDate.toISOString().split('T')[0]} ～ ${endDate.toISOString().split('T')[0]}`);
+        }
+
+        function setCurrentWeekAndLoad() {
+            setCurrentWeekRange();
+            loadTimelineData();
+        }
+
+        // ========== データ読み込み ==========
+        async function loadTimelineData() {
+            showLoading(true);
+            console.log('🔄 個人別タイムライン読み込み開始');
+            
+            try {
+                const startDate = document.getElementById('startDate').value;
+                const endDate = document.getElementById('endDate').value;
+                
+                if (!startDate || !endDate) {
+                    showMessage('開始日と終了日を選択してください', 'warning');
+                    return;
+                }
+                
+                if (new Date(startDate) > new Date(endDate)) {
+                    showMessage('開始日は終了日より前に設定してください', 'warning');
+                    return;
+                }
+                
+                console.log(`📅 期間設定: ${startDate} ～ ${endDate}`);
+                
+                currentDateRange = generateDateRange(startDate, endDate);
+                console.log('📅 生成された日付範囲:', currentDateRange.map(d => d.toISOString().split('T')[0]));
+                
+                await loadDataFromFirebase();
+                updateDisplayTimeRange();
+                generateCEFilterList();
+                generateTimeline();
+                updateSummary();
+                
+                console.log('✅ 個人別タイムライン読み込み完了');
+                
+            } catch (error) {
+                console.error('❌ タイムライン読み込みエラー:', error);
+                showMessage('データの読み込みに失敗しました', 'error');
+            } finally {
+                showLoading(false);
+            }
+        }
+
+        async function loadDataFromFirebase() {
+            if (!database) {
+                throw new Error('Firebase未接続');
+            }
+            
+            try {
+                console.log('🔄 Firebaseからデータ読み込み中...');
+                
+                const currentUser = firebase.auth().currentUser;
+                if (!currentUser) {
+                    throw new Error('Firebase認証が未完了です');
+                }
+                console.log('🔐 認証確認完了:', currentUser.uid);
+                
+                const [eventsByDateSnapshot, ceListSnapshot, workSchedulesSnapshot] = await Promise.all([
+                    database.ref(`${DATA_ROOT}/events/byDate`).once('value'),
+                    database.ref(`${DATA_ROOT}/ceList`).once('value'),
+                    database.ref(`${DATA_ROOT}/workSchedules`).once('value')
                 ]);
                 
-                setupDateInputs();
-                initializeCharts();
-            } catch (error) {
-                console.error('初期化エラー:', error);
-                alert('データの読み込みに失敗しました。ページをリロードしてください。');
-            } finally {
-                showLoading(false);
-            }
-        }
-        
-        // Load employees
-        async function loadEmployees() {
-            try {
-                const { ref, get } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js');
-                const snapshot = await get(ref(window.database, 'employees'));
-                
-                if (snapshot.exists()) {
-                    allEmployees = Object.entries(snapshot.val()).map(([id, data]) => ({
-                        id,
-                        ...data
-                    }));
-                    
-                    populateEmployeeSelect();
-                }
-            } catch (error) {
-                console.error('従業員データの読み込みエラー:', error);
-            }
-        }
-        
-        // Load departments
-        async function loadDepartments() {
-            try {
-                const { ref, get } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js');
-                const snapshot = await get(ref(window.database, 'departments'));
-                
-                if (snapshot.exists()) {
-                    allDepartments = Object.entries(snapshot.val()).map(([id, data]) => ({
-                        id,
-                        ...data
-                    }));
-                }
-            } catch (error) {
-                console.error('部門データの読み込みエラー:', error);
-            }
-        }
-        
-        // Load schedules
-        async function loadSchedules() {
-            try {
-                const { ref, get } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js');
-                const snapshot = await get(ref(window.database, 'schedules'));
-                
-                if (snapshot.exists()) {
-                    allSchedules = Object.entries(snapshot.val()).map(([id, data]) => ({
-                        id,
-                        ...data
-                    }));
-                }
-            } catch (error) {
-                console.error('スケジュールデータの読み込みエラー:', error);
-            }
-        }
-        
-        // Populate employee select
-        function populateEmployeeSelect() {
-            const select = document.getElementById('employeeSelect');
-            select.innerHTML = '<option value="">従業員を選択してください</option>';
-            
-            allEmployees.forEach(employee => {
-                const option = document.createElement('option');
-                option.value = employee.id;
-                option.textContent = `${employee.name} (${employee.employeeId})`;
-                select.appendChild(option);
-            });
-        }
-        
-        // Setup date inputs
-        function setupDateInputs() {
-            const startDate = document.getElementById('startDate');
-            const endDate = document.getElementById('endDate');
-            const today = new Date();
-            const oneWeekAgo = new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000);
-            
-            startDate.value = oneWeekAgo.toISOString().split('T')[0];
-            endDate.value = today.toISOString().split('T')[0];
-        }
-        
-        // Show/hide loading
-        function showLoading(show) {
-            const modal = document.getElementById('loadingModal');
-            if (show) {
-                modal.classList.remove('hidden');
-                modal.classList.add('flex');
-            } else {
-                modal.classList.add('hidden');
-                modal.classList.remove('flex');
-            }
-        }
-        
-        // Initialize charts
-        function initializeCharts() {
-            initializeTimelineChart();
-            initializeWorkTypeChart();
-            initializeHourlyChart();
-            initializeWeeklyChart();
-        }
-        
-        // Initialize timeline chart
-        function initializeTimelineChart() {
-            const ctx = document.getElementById('timelineChart').getContext('2d');
-            
-            timelineChart = new Chart(ctx, {
-                type: 'bar',
-                data: {
-                    datasets: []
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    indexAxis: 'y',
-                    scales: {
-                        x: {
-                            type: 'time',
-                            time: {
-                                unit: 'hour',
-                                displayFormats: {
-                                    hour: 'HH:mm'
-                                }
-                            },
-                            title: {
-                                display: true,
-                                text: '時間'
+                const eventsByDate = eventsByDateSnapshot.val() || {};
+                const ceListRaw = ceListSnapshot.val() || {};
+                const workSchedulesRaw = workSchedulesSnapshot.val() || {};
+
+                // CEリストの処理（勤務表データと統合）
+                globalCEList = Object.values(ceListRaw).map(ce => ({
+                    id: ce.id || ce.name,
+                    name: ce.iconName || ce.displayName || ce.name,
+                    fullName: ce.fullName || ce.name,
+                    workType: ce.workType || 'ME',
+                    status: ce.status || { monday: '', tuesday: '', wednesday: '', thursday: '', friday: '', saturday: '', sunday: '' }
+                }));
+
+                // 勤務表データの統合
+                const publishedSchedules = Object.values(workSchedulesRaw)
+                    .filter(s => s.metadata && s.metadata.isVisible !== false)
+                    .sort((a, b) => (b.metadata.publishedAt || 0) - (a.metadata.publishedAt || 0));
+
+                if (publishedSchedules.length > 0) {
+                    const latestSchedule = publishedSchedules[0];
+                    const scheduleData = latestSchedule.scheduleData || {};
+
+                    globalCEList.forEach(ce => {
+                        currentDateRange.forEach(date => {
+                            const dateKey = formatDateAsISO(date);
+                            const dayOfWeek = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'][date.getDay()];
+                            
+                            const workData = scheduleData[ce.id]?.[dateKey];
+                            if (workData && workData.status) {
+                                ce.status[dayOfWeek] = workData.status;
                             }
-                        },
-                        y: {
-                            title: {
-                                display: true,
-                                text: '日付'
+                        });
+                    });
+                }
+                
+                console.log('📊 取得データ確認:');
+                console.log('  - events/byDate キー:', Object.keys(eventsByDate));
+                console.log('  - ceList 件数:', globalCEList.length);
+                
+                // タイムライン用データ構造に変換
+                globalTasksData = {};
+                globalAssignmentsData = {};
+                
+                Object.entries(eventsByDate).forEach(([dateKey, dayEvents]) => {
+                    if (dayEvents && typeof dayEvents === 'object') {
+                        const tasksForDay = [];
+                        const assignmentsForDay = {};
+                        
+                        Object.entries(dayEvents).forEach(([eventKey, event]) => {
+                            const taskId = event.id || eventKey;
+                            
+                            const taskData = {
+                                id: taskId,
+                                name: event.name || '名称不明',
+                                department: event.department || '部門不明',
+                                startTime: event.startTime || '09:00',
+                                endTime: event.endTime || '17:00',
+                                count: event.count || 1,
+                                requiredPeople: event.requiredPeople || 1
+                            };
+                            
+                            tasksForDay.push(taskData);
+                            
+                            // IDベースで配置情報を格納
+                            if (event.assignedCEs && Array.isArray(event.assignedCEs)) {
+                                assignmentsForDay[taskId] = event.assignedCEs.map(assignedCE => {
+                                    if (typeof assignedCE === 'object' && assignedCE !== null) {
+                                        return {
+                                            id: assignedCE.id,
+                                            name: assignedCE.name || assignedCE.id || '不明CE',
+                                            workType: assignedCE.workType || 'ME'
+                                        };
+                                    } else if (typeof assignedCE === 'string') {
+                                        const foundCE = globalCEList.find(ce => ce.id === assignedCE);
+                                        return {
+                                            id: assignedCE,
+                                            name: foundCE?.name || assignedCE,
+                                            workType: foundCE?.workType || 'ME'
+                                        };
+                                    }
+                                    return { id: '不明', name: '不明CE', workType: 'ME' };
+                                });
+                            } else {
+                                assignmentsForDay[taskId] = [];
                             }
-                        }
-                    },
-                    plugins: {
-                        legend: {
-                            display: true,
-                            position: 'top'
-                        },
-                        tooltip: {
-                            callbacks: {
-                                title: function(context) {
-                                    const point = context[0];
-                                    return point.label;
-                                },
-                                label: function(context) {
-                                    const start = new Date(context.parsed.x);
-                                    const end = new Date(start.getTime() + context.raw._custom.barEnd - context.raw._custom.barStart);
-                                    return `${context.dataset.label}: ${start.toLocaleTimeString('ja-JP', {hour: '2-digit', minute: '2-digit'})} - ${end.toLocaleTimeString('ja-JP', {hour: '2-digit', minute: '2-digit'})}`;
-                                }
-                            }
-                        }
+                        });
+                        
+                        tasksForDay.sort((a, b) => a.startTime.localeCompare(b.startTime));
+                        
+                        globalTasksData[dateKey] = tasksForDay;
+                        globalAssignmentsData[dateKey] = assignmentsForDay;
+                        
+                        console.log(`📊 ${dateKey}: ${tasksForDay.length}件の業務を変換完了`);
                     }
-                }
-            });
-        }
-        
-        // Initialize work type chart
-        function initializeWorkTypeChart() {
-            const ctx = document.getElementById('workTypeChart').getContext('2d');
-            
-            workTypeChart = new Chart(ctx, {
-                type: 'doughnut',
-                data: {
-                    labels: [],
-                    datasets: [{
-                        data: [],
-                        backgroundColor: [
-                            '#3B82F6',
-                            '#10B981',
-                            '#F59E0B',
-                            '#EF4444',
-                            '#8B5CF6'
-                        ]
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                        legend: {
-                            position: 'bottom'
-                        }
-                    }
-                }
-            });
-        }
-        
-        // Initialize hourly chart
-        function initializeHourlyChart() {
-            const ctx = document.getElementById('hourlyChart').getContext('2d');
-            
-            hourlyChart = new Chart(ctx, {
-                type: 'bar',
-                data: {
-                    labels: Array.from({length: 24}, (_, i) => `${i}:00`),
-                    datasets: [{
-                        label: '勤務頻度',
-                        data: new Array(24).fill(0),
-                        backgroundColor: '#3B82F6',
-                        borderColor: '#1E40AF',
-                        borderWidth: 1
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    scales: {
-                        y: {
-                            beginAtZero: true,
-                            title: {
-                                display: true,
-                                text: '勤務回数'
-                            }
-                        },
-                        x: {
-                            title: {
-                                display: true,
-                                text: '時間帯'
-                            }
-                        }
-                    }
-                }
-            });
-        }
-        
-        // Initialize weekly chart
-        function initializeWeeklyChart() {
-            const ctx = document.getElementById('weeklyChart').getContext('2d');
-            
-            weeklyChart = new Chart(ctx, {
-                type: 'radar',
-                data: {
-                    labels: ['月曜日', '火曜日', '水曜日', '木曜日', '金曜日', '土曜日', '日曜日'],
-                    datasets: [{
-                        label: '勤務時間 (時間)',
-                        data: new Array(7).fill(0),
-                        backgroundColor: 'rgba(59, 130, 246, 0.2)',
-                        borderColor: '#3B82F6',
-                        pointBackgroundColor: '#3B82F6'
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    scales: {
-                        r: {
-                            beginAtZero: true,
-                            title: {
-                                display: true,
-                                text: '勤務時間 (時間)'
-                            }
-                        }
-                    }
-                }
-            });
-        }
-        
-        // Apply filters
-        function applyFilters() {
-            const employeeId = document.getElementById('employeeSelect').value;
-            const startDate = document.getElementById('startDate').value;
-            const endDate = document.getElementById('endDate').value;
-            const workType = document.getElementById('workTypeFilter').value;
-            
-            if (!employeeId) {
-                alert('従業員を選択してください。');
-                return;
-            }
-            
-            showLoading(true);
-            
-            try {
-                const filteredSchedules = filterSchedules(employeeId, startDate, endDate, workType);
-                updateCharts(filteredSchedules, employeeId);
-                updateStatistics(filteredSchedules, employeeId);
+                });
+                
+                console.log('✅ Firebaseデータ読み込み完了');
+                
             } catch (error) {
-                console.error('フィルタ適用エラー:', error);
-                alert('データの処理中にエラーが発生しました。');
-            } finally {
-                showLoading(false);
+                console.error('❌ Firebase読み込みエラー:', error);
+                throw error;
             }
         }
-        
-        // Filter schedules
-        function filterSchedules(employeeId, startDate, endDate, workType) {
-            return allSchedules.filter(schedule => {
-                // Employee filter
-                if (schedule.employeeId !== employeeId) return false;
-                
-                // Date range filter
-                if (startDate && schedule.date < startDate) return false;
-                if (endDate && schedule.date > endDate) return false;
-                
-                // Work type filter
-                if (workType && schedule.workType !== workType) return false;
-                
-                return true;
+
+        function generateCEFilterList() {
+            const container = document.getElementById('ceFilterContainer');
+            if (!container || !globalCEList) return;
+            
+            container.innerHTML = '';
+            
+            globalCEList.forEach(ce => {
+                const label = document.createElement('label');
+                label.className = 'flex items-center text-sm';
+                label.innerHTML = `
+                    <input type="checkbox" class="ce-filter" value="${ce.id}" checked>
+                    <span class="ml-1 truncate" title="${ce.fullName}">${ce.name}</span>
+                `;
+                container.appendChild(label);
             });
-        }
-        
-        // Update charts
-        function updateCharts(schedules, employeeId) {
-            updateTimelineChart(schedules);
-            updateWorkTypeChart(schedules);
-            updateHourlyChart(schedules);
-            updateWeeklyChart(schedules);
             
-            // Update selected employee display
-            const employee = allEmployees.find(e => e.id === employeeId);
-            document.getElementById('selectedEmployee').textContent = 
-                employee ? `${employee.name} (${employee.employeeId})` : '';
-        }
-        
-        // Update timeline chart
-        function updateTimelineChart(schedules) {
-            const datasets = [];
-            const workTypeColors = {
-                '通常勤務': '#3B82F6',
-                '残業': '#F59E0B',
-                '夜勤': '#6366F1',
-                '休日出勤': '#EF4444'
-            };
-            
-            schedules.forEach(schedule => {
-                const startTime = new Date(`${schedule.date}T${schedule.startTime}`);
-                const endTime = new Date(`${schedule.date}T${schedule.endTime}`);
-                
-                datasets.push({
-                    label: schedule.workType || '通常勤務',
-                    data: [{
-                        x: startTime,
-                        y: schedule.date,
-                        _custom: {
-                            barStart: startTime.getTime(),
-                            barEnd: endTime.getTime()
-                        }
-                    }],
-                    backgroundColor: workTypeColors[schedule.workType] || '#3B82F6',
-                    borderColor: workTypeColors[schedule.workType] || '#1E40AF',
-                    borderWidth: 1,
-                    barThickness: 20
+            // イベントリスナー設定
+            document.getElementById('selectAllCEs').addEventListener('change', function() {
+                const isChecked = this.checked;
+                document.querySelectorAll('.ce-filter').forEach(cb => {
+                    cb.checked = isChecked;
                 });
             });
             
-            timelineChart.data.datasets = datasets;
-            timelineChart.update();
-        }
-        
-        // Update work type chart
-        function updateWorkTypeChart(schedules) {
-            const workTypeCounts = {};
-            
-            schedules.forEach(schedule => {
-                const workType = schedule.workType || '通常勤務';
-                workTypeCounts[workType] = (workTypeCounts[workType] || 0) + 1;
+            container.querySelectorAll('.ce-filter').forEach(cb => {
+                cb.addEventListener('change', updateAllCECheckbox);
             });
-            
-            workTypeChart.data.labels = Object.keys(workTypeCounts);
-            workTypeChart.data.datasets[0].data = Object.values(workTypeCounts);
-            workTypeChart.update();
         }
-        
-        // Update hourly chart
-        function updateHourlyChart(schedules) {
-            const hourlyCounts = new Array(24).fill(0);
+
+        function updateAllCECheckbox() {
+            const allCheckbox = document.getElementById('selectAllCEs');
+            const ceCheckboxes = document.querySelectorAll('.ce-filter');
+            const checkedCount = document.querySelectorAll('.ce-filter:checked').length;
             
-            schedules.forEach(schedule => {
-                const startHour = parseInt(schedule.startTime.split(':')[0]);
-                const endHour = parseInt(schedule.endTime.split(':')[0]);
-                
-                for (let hour = startHour; hour <= endHour; hour++) {
-                    if (hour < 24) hourlyCounts[hour]++;
-                }
-            });
-            
-            hourlyChart.data.datasets[0].data = hourlyCounts;
-            hourlyChart.update();
+            allCheckbox.checked = checkedCount === ceCheckboxes.length;
         }
-        
-        // Update weekly chart
-        function updateWeeklyChart(schedules) {
-            const weeklyHours = new Array(7).fill(0);
+
+        function generateDateRange(startDateStr, endDateStr) {
+            const dates = [];
+            const startDate = new Date(startDateStr);
+            const endDate = new Date(endDateStr);
             
-            schedules.forEach(schedule => {
-                const date = new Date(schedule.date);
-                const dayOfWeek = date.getDay();
-                const mondayIndex = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
-                
-                const workHours = calculateWorkHours(schedule.startTime, schedule.endTime);
-                weeklyHours[mondayIndex] += workHours;
-            });
+            startDate.setHours(0, 0, 0, 0);
+            endDate.setHours(0, 0, 0, 0);
             
-            weeklyChart.data.datasets[0].data = weeklyHours;
-            weeklyChart.update();
-        }
-        
-        // Update statistics
-        function updateStatistics(schedules, employeeId) {
-            const totalHours = schedules.reduce((sum, schedule) => {
-                return sum + calculateWorkHours(schedule.startTime, schedule.endTime);
-            }, 0);
+            const current = new Date(startDate);
             
-            const totalShifts = schedules.length;
-            const avgHours = totalShifts > 0 ? (totalHours / totalShifts).toFixed(1) : 0;
-            
-            // Get employee department
-            const employee = allEmployees.find(e => e.id === employeeId);
-            const department = employee ? 
-                (allDepartments.find(d => d.id === employee.departmentId)?.name || '不明') : 
-                '-';
-            
-            document.getElementById('totalWorkHours').textContent = `${totalHours.toFixed(1)}時間`;
-            document.getElementById('totalShifts').textContent = totalShifts;
-            document.getElementById('avgWorkHours').textContent = `${avgHours}時間`;
-            document.getElementById('employeeDepartment').textContent = department;
-        }
-        
-        // Calculate work hours
-        function calculateWorkHours(startTime, endTime) {
-            const [startHour, startMin] = startTime.split(':').map(Number);
-            const [endHour, endMin] = endTime.split(':').map(Number);
-            
-            const startMinutes = startHour * 60 + startMin;
-            const endMinutes = endHour * 60 + endMin;
-            
-            let diffMinutes = endMinutes - startMinutes;
-            if (diffMinutes < 0) {
-                diffMinutes += 24 * 60; // Handle next day
+            while (current <= endDate) {
+                dates.push(new Date(current));
+                current.setDate(current.getDate() + 1);
             }
             
-            return diffMinutes / 60;
+            return dates;
         }
-        
-        // Reset filters
-        function resetFilters() {
-            document.getElementById('employeeSelect').value = '';
-            document.getElementById('workTypeFilter').value = '';
-            setupDateInputs();
+
+        function updateDisplayTimeRange() {
+            const startTime = document.getElementById('displayStartTime').value;
+            const endTime = document.getElementById('displayEndTime').value;
             
-            // Clear charts
-            if (timelineChart) {
-                timelineChart.data.datasets = [];
-                timelineChart.update();
-            }
+            displayStartHour = parseInt(startTime.split(':')[0]);
+            displayEndHour = parseInt(endTime.split(':')[0]);
             
-            if (workTypeChart) {
-                workTypeChart.data.labels = [];
-                workTypeChart.data.datasets[0].data = [];
-                workTypeChart.update();
-            }
-            
-            if (hourlyChart) {
-                hourlyChart.data.datasets[0].data = new Array(24).fill(0);
-                hourlyChart.update();
-            }
-            
-            if (weeklyChart) {
-                weeklyChart.data.datasets[0].data = new Array(7).fill(0);
-                weeklyChart.update();
-            }
-            
-            // Reset statistics
-            document.getElementById('totalWorkHours').textContent = '0時間';
-            document.getElementById('totalShifts').textContent = '0';
-            document.getElementById('avgWorkHours').textContent = '0時間';
-            document.getElementById('employeeDepartment').textContent = '-';
-            document.getElementById('selectedEmployee').textContent = '従業員を選択してください';
+            console.log(`⏰ 表示時間範囲: ${displayStartHour}:00 ～ ${displayEndHour}:00`);
         }
-        
-        // Export data
-        function exportData() {
-            const employeeId = document.getElementById('employeeSelect').value;
-            if (!employeeId) {
-                alert('従業員を選択してから出力してください。');
+
+        // ========== タイムライン生成 ==========
+        function generateTimeline() {
+            console.log('🔄 個人別タイムライン生成開始');
+            const container = document.getElementById('timelineContainer');
+            container.innerHTML = '';
+            
+            const selectedCEs = getSelectedCEs();
+            const selectedWorkTypes = getSelectedWorkTypes();
+            
+            console.log('👤 選択されたCE:', selectedCEs.length);
+            console.log('🔧 選択された勤務区分:', selectedWorkTypes);
+            
+            if (selectedCEs.length === 0) {
+                container.innerHTML = `
+                    <div class="no-tasks-message col-span-full">
+                        <i class="fas fa-user-times text-3xl mb-4 block"></i>
+                        <p class="text-lg font-bold mb-2">表示するCEを選択してください</p>
+                        <p>上記のフィルターから表示したいCEにチェックを入れてください。</p>
+                    </div>
+                `;
                 return;
             }
             
-            const startDate = document.getElementById('startDate').value;
-            const endDate = document.getElementById('endDate').value;
-            const workType = document.getElementById('workTypeFilter').value;
+            // 勤務区分でフィルタリング
+            const filteredCEs = globalCEList.filter(ce => 
+                selectedCEs.includes(ce.id) && 
+                (selectedWorkTypes.length === 0 || selectedWorkTypes.includes(ce.workType))
+            );
             
-            const filteredSchedules = filterSchedules(employeeId, startDate, endDate, workType);
-            const employee = allEmployees.find(e => e.id === employeeId);
+            if (filteredCEs.length === 0) {
+                container.innerHTML = `
+                    <div class="no-tasks-message col-span-full">
+                        <i class="fas fa-filter text-3xl mb-4 block"></i>
+                        <p class="text-lg font-bold mb-2">選択した条件に該当するCEがいません</p>
+                        <p>勤務区分フィルターを確認してください。</p>
+                    </div>
+                `;
+                return;
+            }
             
-            // Create CSV content
-            let csvContent = '\uFEFF'; // BOM for UTF-8
-            csvContent += '個人別タイムライン分析結果\n';
-            csvContent += `従業員: ${employee ? employee.name : '不明'}\n`;
-            csvContent += `期間: ${startDate} - ${endDate}\n`;
-            csvContent += `業務タイプフィルター: ${workType || 'すべて'}\n\n`;
-            csvContent += '日付,開始時間,終了時間,業務タイプ,勤務時間\n';
+            let hasAnyData = false;
             
-            filteredSchedules.forEach(schedule => {
-                const workHours = calculateWorkHours(schedule.startTime, schedule.endTime);
-                csvContent += `${schedule.date},${schedule.startTime},${schedule.endTime},${schedule.workType || '通常勤務'},${workHours.toFixed(1)}\n`;
+            // 勤務区分別にグループ化して表示
+            const cesByWorkType = {};
+            filteredCEs.forEach(ce => {
+                if (!cesByWorkType[ce.workType]) {
+                    cesByWorkType[ce.workType] = [];
+                }
+                cesByWorkType[ce.workType].push(ce);
             });
             
-            // Download CSV
-            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-            const link = document.createElement('a');
-            const url = URL.createObjectURL(blob);
-            link.setAttribute('href', url);
-            link.setAttribute('download', `個人別タイムライン_${employee ? employee.name : 'unknown'}_${new Date().toISOString().split('T')[0]}.csv`);
-            link.style.visibility = 'hidden';
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
+            const workTypeOrder = ['OPE', 'ME', 'HD', 'FLEX'];
+            workTypeOrder.forEach(workType => {
+                if (!cesByWorkType[workType]) return;
+                
+                cesByWorkType[workType].forEach(ce => {
+                    const ceElement = generateCETimeline(ce, container);
+                    if (ceElement) {
+                        hasAnyData = true;
+                    }
+                });
+            });
+            
+            if (!hasAnyData) {
+                container.innerHTML = `
+                    <div class="no-tasks-message col-span-full">
+                        <i class="fas fa-calendar-times text-3xl mb-4 block"></i>
+                        <p class="text-lg font-bold mb-2">指定期間内に業務配置がありません</p>
+                        <p>期間を変更するか、業務が配置されているかご確認ください。</p>
+                    </div>
+                `;
+            }
+            
+            console.log('✅ 個人別タイムライン生成完了');
         }
-        
-        // Initialize when page loads
-        document.addEventListener('DOMContentLoaded', init);
+
+        function generateCETimeline(ce, container) {
+            console.log(`🔄 ${ce.name} のタイムライン生成中...`);
+            
+            const ceData = collectCEData(ce);
+            console.log(`📊 ${ce.name} のデータ:`, Object.keys(ceData));
+            
+            // CEカードを作成
+            const ceCard = document.createElement('div');
+            ceCard.className = `ce-card ce-${ce.workType.toLowerCase()}`;
+            ceCard.style.setProperty('--ce-color', getCEColor(ce.workType));
+            
+            // ヘッダー
+            const header = createCEHeader(ce, ceData);
+            ceCard.appendChild(header);
+            
+            // 業務が存在しない場合
+            if (Object.keys(ceData).length === 0) {
+                const noTasksDiv = document.createElement('div');
+                noTasksDiv.className = 'no-tasks-message';
+                noTasksDiv.innerHTML = `
+                    <i class="fas fa-user-clock text-2xl mb-2 block"></i>
+                    <p>指定期間内に ${ce.name} の業務配置はありません</p>
+                `;
+                ceCard.appendChild(noTasksDiv);
+            } else {
+                // 勤務負荷サマリー
+                const workloadSummary = createWorkloadSummary(ceData);
+                ceCard.appendChild(workloadSummary);
+                
+                // 日別タイムライン
+                const timelineBody = createTimelineBody(ceData, ce);
+                ceCard.appendChild(timelineBody);
+            }
+            
+            container.appendChild(ceCard);
+            return ceCard;
+        }
+
+        function collectCEData(ce) {
+            const ceData = {};
+            
+            currentDateRange.forEach(date => {
+                const dateKey = formatDateAsISO(date);
+                const dayTasks = [];
+                
+                // その日の全業務を確認
+                const allTasks = globalTasksData[dateKey] || [];
+                const allAssignments = globalAssignmentsData[dateKey] || {};
+                
+                allTasks.forEach(task => {
+                    const assignedCEs = allAssignments[task.id] || [];
+                    const isAssigned = assignedCEs.some(assigned => assigned.id === ce.id);
+                    
+                    if (isAssigned) {
+                        dayTasks.push(task);
+                    }
+                });
+                
+                if (dayTasks.length > 0) {
+                    ceData[dateKey] = {
+                        date: date,
+                        tasks: dayTasks
+                    };
+                    console.log(`📊 ${dateKey} に ${dayTasks.length} 件の業務を追加`);
+                }
+            });
+            
+            return ceData;
+        }
+
+        function createCEHeader(ce, ceData) {
+            const totalTasks = Object.values(ceData).reduce((sum, day) => sum + day.tasks.length, 0);
+            const totalWorkHours = calculateTotalWorkHours(ceData);
+            
+            const header = document.createElement('div');
+            header.className = 'flex items-center justify-between mb-4';
+            header.innerHTML = `
+                <div class="flex items-center">
+                    <i class="fas fa-user mr-3 text-2xl" style="color: ${getCEColor(ce.workType)};"></i>
+                    <div>
+                        <h3 class="text-xl font-bold">${ce.name}</h3>
+                        <span class="worktype-badge worktype-${ce.workType.toLowerCase()}">${ce.workType}</span>
+                    </div>
+                </div>
+                <div class="text-right text-sm text-gray-600">
+                    <div class="bg-white bg-opacity-70 px-3 py-1 rounded-full mb-1">
+                        期間内総業務: ${totalTasks}件
+                    </div>
+                    <div class="bg-white bg-opacity-70 px-3 py-1 rounded-full">
+                        実労働時間: ${totalWorkHours}時間
+                    </div>
+                </div>
+            `;
+            
+            return header;
+        }
+
+        function createWorkloadSummary(ceData) {
+            const summary = document.createElement('div');
+            summary.className = 'workload-summary';
+            
+            // 部門別業務数を集計
+            const deptStats = {};
+            let totalHours = 0;
+            
+            Object.values(ceData).forEach(dayData => {
+                dayData.tasks.forEach(task => {
+                    if (!deptStats[task.department]) {
+                        deptStats[task.department] = { count: 0, hours: 0 };
+                    }
+                    deptStats[task.department].count++;
+                    
+                    const startMinutes = timeToMinutes(task.startTime);
+                    const endMinutes = timeToMinutes(task.endTime);
+                    const taskHours = (endMinutes - startMinutes) / 60;
+                    deptStats[task.department].hours += taskHours;
+                    totalHours += taskHours;
+                });
+            });
+            
+            const deptStatsHtml = Object.entries(deptStats)
+                .sort(([,a], [,b]) => b.count - a.count)
+                .map(([dept, stats]) => `
+                    <span class="task-chip" style="--dept-color: ${DEPARTMENT_COLORS[dept]}">
+                        ${dept}: ${stats.count}件 (${Math.round(stats.hours * 10) / 10}h)
+                    </span>
+                `).join('');
+            
+            summary.innerHTML = `
+                <div class="flex justify-between items-center mb-2">
+                    <h4 class="font-bold text-sm">勤務負荷サマリー</h4>
+                    <span class="text-sm font-bold">合計: ${Math.round(totalHours * 10) / 10}時間</span>
+                </div>
+                <div class="flex flex-wrap">
+                    ${deptStatsHtml}
+                </div>
+            `;
+            
+            return summary;
+        }
+
+        function createTimelineBody(ceData, ce) {
+            const body = document.createElement('div');
+            body.className = 'space-y-3';
+            
+            // 時間軸ラベルを作成
+            const timeScale = createTimeScale();
+            body.appendChild(timeScale);
+            
+            // 日付順にソート
+            const sortedEntries = Object.entries(ceData).sort((a, b) => {
+                return a[1].date.getTime() - b[1].date.getTime();
+            });
+            
+            sortedEntries.forEach(([dateKey, dayData]) => {
+                const dayRow = createDayRow(dayData, ce);
+                body.appendChild(dayRow);
+            });
+            
+            return body;
+        }
+
+        function createTimeScale() {
+            const timeScale = document.createElement('div');
+            timeScale.className = 'time-scale';
+            
+            for (let hour = displayStartHour; hour <= displayEndHour; hour += 2) {
+                const timeLabel = document.createElement('div');
+                timeLabel.textContent = `${hour.toString().padStart(2, '0')}:00`;
+                timeLabel.style.flex = '1';
+                timeLabel.style.textAlign = 'center';
+                timeScale.appendChild(timeLabel);
+            }
+            
+            return timeScale;
+        }
+
+        function createDayRow(dayData, ce) {
+            const dayRow = document.createElement('div');
+            dayRow.className = 'timeline-day-row';
+            
+            // 日付ヘッダー
+            const dayOfWeek = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'][dayData.date.getDay()];
+            const statusForDay = ce.status[dayOfWeek] || '';
+            const statusBadgeHtml = statusForDay ? `<span class="status-badge status-${statusForDay}">${statusForDay}</span>` : '';
+
+            const dayHeader = document.createElement('div');
+            dayHeader.className = 'flex justify-between items-center mb-2';
+            dayHeader.innerHTML = `
+                <div class="font-bold text-sm">
+                    ${formatDisplayDate(dayData.date)} (${getJapaneseDayName(dayData.date)}) ${statusBadgeHtml}
+                </div>
+                <div class="text-xs text-gray-600">
+                    ${dayData.tasks.length}件の業務
+                </div>
+            `;
+            dayRow.appendChild(dayHeader);
+            
+            // タイムライントラック
+            const track = createTimelineTrack(dayData);
+            dayRow.appendChild(track);
+            
+            return dayRow;
+        }
+
+        function createTimelineTrack(dayData) {
+            const track = document.createElement('div');
+            track.className = 'timeline-track';
+            track.style.height = Math.max(30, dayData.tasks.length * 26 + 6) + 'px';
+            
+            const totalMinutes = (displayEndHour - displayStartHour) * 60;
+            
+            dayData.tasks.forEach((task, taskIdx) => {
+                const taskBar = createTaskBar(task, taskIdx, totalMinutes);
+                if (taskBar) {
+                    track.appendChild(taskBar);
+                }
+            });
+            
+            return track;
+        }
+
+        function createTaskBar(task, taskIdx, totalMinutes) {
+            const startMinutes = timeToMinutes(task.startTime);
+            const endMinutes = timeToMinutes(task.endTime);
+            const displayStartMinutes = displayStartHour * 60;
+            const displayEndMinutes = displayEndHour * 60;
+            
+            if (endMinutes <= displayStartMinutes || startMinutes >= displayEndMinutes) {
+                return null;
+            }
+            
+            const adjustedStart = Math.max(startMinutes, displayStartMinutes);
+            const adjustedEnd = Math.min(endMinutes, displayEndMinutes);
+            
+            const left = ((adjustedStart - displayStartMinutes) / totalMinutes) * 100;
+            const width = Math.max(2, ((adjustedEnd - adjustedStart) / totalMinutes) * 100);
+            
+            const taskBar = document.createElement('div');
+            taskBar.className = 'task-bar';
+            taskBar.style.left = left + '%';
+            taskBar.style.width = width + '%';
+            taskBar.style.top = (taskIdx * 26 + 3) + 'px';
+            taskBar.style.backgroundColor = DEPARTMENT_COLORS[task.department];
+            taskBar.style.opacity = '0.9';
+            
+            taskBar.title = [
+                `業務: ${task.name}`,
+                `部門: ${task.department}`,
+                `時間: ${task.startTime}-${task.endTime}`,
+                `件数: ${task.count || 1}件`,
+                `必要人数: ${task.requiredPeople || 1}名`
+            ].join('\n');
+            
+            let displayText = '';
+            if (width > 25) {
+                displayText = `${task.name} (${task.department})`;
+            } else if (width > 15) {
+                displayText = task.name;
+            } else if (width > 8) {
+                displayText = task.name.substring(0, 3) + '...';
+            } else {
+                displayText = '●';
+            }
+            
+            taskBar.innerHTML = `
+                <span style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding: 0 4px;">
+                    ${displayText}
+                </span>
+            `;
+            
+            return taskBar;
+        }
+
+        // ========== ヘルパー関数 ==========
+        function timeToMinutes(timeString) {
+            if (!timeString || !/^\d{1,2}:\d{2}$/.test(timeString)) return 0;
+            const [hours, minutes] = timeString.split(':').map(Number);
+            return hours * 60 + minutes;
+        }
+
+        function formatDateAsISO(date) {
+            const year = date.getFullYear();
+            const month = (date.getMonth() + 1).toString().padStart(2, '0');
+            const day = date.getDate().toString().padStart(2, '0');
+            return `${year}-${month}-${day}`;
+        }
+
+        function formatDisplayDate(date) {
+            const month = date.getMonth() + 1;
+            const day = date.getDate();
+            return `${month}/${day}`;
+        }
+
+        function getJapaneseDayName(date) {
+            const days = ['日', '月', '火', '水', '木', '金', '土'];
+            return days[date.getDay()];
+        }
+
+        function getSelectedCEs() {
+            const checkboxes = document.querySelectorAll('.ce-filter:checked');
+            return Array.from(checkboxes).map(cb => cb.value);
+        }
+
+        function getSelectedWorkTypes() {
+            const checkboxes = document.querySelectorAll('.worktype-filter:checked');
+            return Array.from(checkboxes).map(cb => cb.value);
+        }
+
+        function getCEColor(workType) {
+            const colors = {
+                'OPE': '#87CEEB',
+                'ME': '#90EE90',
+                'HD': '#FFB6C1',
+                'FLEX': '#FFFF99'
+            };
+            return colors[workType] || '#cccccc';
+        }
+
+        function calculateTotalWorkHours(ceData) {
+            let totalMinutes = 0;
+            const timeSlots = new Set();
+            
+            Object.values(ceData).forEach(dayData => {
+                const daySlots = new Set();
+                
+                dayData.tasks.forEach(task => {
+                    const startMinutes = timeToMinutes(task.startTime);
+                    const endMinutes = timeToMinutes(task.endTime);
+                    
+                    for (let minute = startMinutes; minute < endMinutes; minute++) {
+                        daySlots.add(minute);
+                    }
+                });
+                
+                totalMinutes += daySlots.size;
+            });
+            
+            return Math.round((totalMinutes / 60) * 10) / 10;
+        }
+
+        function showLoading(show) {
+            document.getElementById('loadingIndicator').style.display = show ? 'block' : 'none';
+        }
+
+        function showMessage(message, type = 'info') {
+            console.log(`${type.toUpperCase()}: ${message}`);
+            alert(message);
+        }
+
+        // ========== フィルター・操作関数 ==========
+        function resetFilters() {
+            setCurrentWeekRange();
+            document.getElementById('displayStartTime').value = '07:00';
+            document.getElementById('displayEndTime').value = '19:00';
+            
+            document.querySelectorAll('.ce-filter, .worktype-filter').forEach(cb => cb.checked = true);
+            document.getElementById('selectAllCEs').checked = true;
+            
+            loadTimelineData();
+        }
+
+        function updateSummary() {
+            const summaryContent = document.getElementById('summaryContent');
+            const selectedCEs = getSelectedCEs();
+            const selectedWorkTypes = getSelectedWorkTypes();
+            
+            const filteredCEs = globalCEList.filter(ce => 
+                selectedCEs.includes(ce.id) && 
+                (selectedWorkTypes.length === 0 || selectedWorkTypes.includes(ce.workType))
+            );
+            
+            let totalTasks = 0;
+            let totalWorkHours = 0;
+            let activeCEs = 0;
+            
+            filteredCEs.forEach(ce => {
+                const ceData = collectCEData(ce);
+                if (Object.keys(ceData).length > 0) {
+                    activeCEs++;
+                    const ceTasks = Object.values(ceData).reduce((sum, day) => sum + day.tasks.length, 0);
+                    totalTasks += ceTasks;
+                    totalWorkHours += calculateTotalWorkHours(ceData);
+                }
+            });
+            
+            summaryContent.innerHTML = `
+                <div class="bg-white bg-opacity-70 p-3 rounded-lg text-center">
+                    <div class="font-bold text-lg text-blue-600">${filteredCEs.length}</div>
+                    <div class="text-xs text-gray-600">表示CE数</div>
+                </div>
+                <div class="bg-white bg-opacity-70 p-3 rounded-lg text-center">
+                    <div class="font-bold text-lg text-green-600">${activeCEs}</div>
+                    <div class="text-xs text-gray-600">配置済みCE数</div>
+                </div>
+                <div class="bg-white bg-opacity-70 p-3 rounded-lg text-center">
+                    <div class="font-bold text-lg text-purple-600">${totalTasks}</div>
+                    <div class="text-xs text-gray-600">総業務配置数</div>
+                </div>
+                <div class="bg-white bg-opacity-70 p-3 rounded-lg text-center">
+                    <div class="font-bold text-lg text-orange-600">${Math.round(totalWorkHours * 10) / 10}h</div>
+                    <div class="text-xs text-gray-600">総実労働時間</div>
+                </div>
+            `;
+            
+            console.log(`📊 サマリー更新: ${filteredCEs.length}名表示, ${activeCEs}名配置済み, ${totalTasks}件業務, ${Math.round(totalWorkHours * 10) / 10}時間`);
+        }
+
+        console.log('✅ 個人別タイムライン V2 読み込み完了');
     </script>
 </body>
 </html>
