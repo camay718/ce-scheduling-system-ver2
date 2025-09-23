@@ -47,137 +47,12 @@
             box-shadow: 0 6px 18px rgba(0,0,0,0.15); 
         }
 
-        .ce-card {
-            background: rgba(255,255,255,0.85);
-            border-radius: 14px;
-            padding: 16px;
-            box-shadow: var(--shadow);
-            border-left: 4px solid var(--ce-color);
-            margin-bottom: 20px;
-            transition: all 0.2s ease;
-        }
-
-        .ce-card:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 8px 25px rgba(0,0,0,0.15);
-        }
-
-        .ce-ope { --ce-color: #87CEEB; }
-        .ce-me { --ce-color: #90EE90; }
-        .ce-hd { --ce-color: #FFB6C1; }
-        .ce-flex { --ce-color: #FFFF99; }
-
-        .worktype-badge {
-            padding: 4px 8px;
-            border-radius: 12px;
-            font-size: 11px;
-            font-weight: 600;
-        }
-
-        .worktype-ope { background: #87CEEB; color: #1E3A8A; }
-        .worktype-me { background: #90EE90; color: #006400; }
-        .worktype-hd { background: #FFB6C1; color: #8B008B; }
-        .worktype-flex { background: #FFFF99; color: #B8860B; }
-
-        .status-badge {
-            display: inline-block;
-            padding: 2px 6px;
-            border-radius: 12px;
-            font-size: 10px;
-            font-weight: bold;
-            color: white;
-            margin-left: 8px;
-        }
-
-        .status-A { background: #4CAF50; }
-        .status-A1 { background: #FF9800; }
-        .status-B { background: #9C27B0; }
-        .status-非 { background: #607D8B; }
-        .status-× { background: #F44336; }
-        .status-年 { background: #2196F3; }
-        .status-出 { background: #2196F3; }
-        .status-研 { background: #795548; }
-
-        .timeline-day-row {
-            padding: 12px;
-            margin-bottom: 8px;
-            background: rgba(255,255,255,0.9);
-            border-radius: 8px;
-            border: 1px solid rgba(0,0,0,0.06);
-        }
-
-        .timeline-track {
-            position: relative;
-            width: 100%;
-            background: #f0f0f0;
-            border-radius: 6px;
-            overflow: hidden;
-            border: 1px solid #ddd;
-            min-height: 30px;
-        }
-
-        .task-bar {
-            position: absolute;
-            height: 24px;
-            border-radius: 4px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: white;
-            font-size: 11px;
-            font-weight: bold;
-            cursor: pointer;
-            transition: all 0.2s ease;
-        }
-
-        .task-bar:hover {
-            transform: translateY(-1px);
-            box-shadow: 0 2px 8px rgba(0,0,0,0.2);
-        }
-
-        .time-scale {
-            display: flex;
-            justify-content: space-between;
-            margin-bottom: 4px;
-            padding: 0 4px;
-            font-size: 10px;
-            color: #666;
-        }
-
         .filter-section {
             background: rgba(255,255,255,0.9);
             border-radius: 12px;
             padding: 16px;
             margin-bottom: 20px;
             box-shadow: var(--shadow);
-        }
-
-        .workload-summary {
-            background: linear-gradient(135deg, rgba(255,255,255,0.9), rgba(248,255,248,0.8));
-            border-radius: 8px;
-            padding: 12px;
-            margin-bottom: 12px;
-            border: 1px solid rgba(0,0,0,0.05);
-        }
-
-        .task-chip {
-            display: inline-block;
-            padding: 4px 8px;
-            border-radius: 6px;
-            font-size: 11px;
-            font-weight: 500;
-            margin: 2px 4px 2px 0;
-            border-left: 4px solid var(--dept-color);
-            background: rgba(255,255,255,0.8);
-        }
-
-        .no-tasks-message {
-            text-align: center;
-            padding: 40px 20px;
-            color: #999;
-            background: rgba(255,255,255,0.5);
-            border-radius: 8px;
-            border: 2px dashed #ddd;
         }
 
         .auth-error {
@@ -189,7 +64,6 @@
             color: #991b1b;
         }
 
-        /* 印刷用スタイル */
         @media print {
             body { 
                 background: white !important; 
@@ -202,41 +76,14 @@
                 background: white !important; 
                 border: 1px solid #ccc !important; 
             }
-            .ce-card {
-                break-inside: avoid;
-                margin-bottom: 15px;
-            }
         }
 
-        /* レスポンシブ対応 */
         @media (max-width: 768px) {
             .filter-section {
                 padding: 12px;
             }
-            
-            .ce-card {
-                padding: 12px;
-            }
-            
-            .timeline-day-row {
-                padding: 8px;
-            }
-            
-            .task-bar {
-                font-size: 10px;
-                height: 20px;
-            }
-            
-            .time-scale {
-                font-size: 9px;
-            }
-
             .ce-filter-grid {
                 grid-template-columns: repeat(2, 1fr);
-            }
-
-            .charts-grid {
-                grid-template-columns: 1fr;
             }
         }
     </style>
@@ -245,7 +92,6 @@
     <div id="authWarning" class="auth-error" style="display: none;">
         <h3><i class="fas fa-exclamation-triangle mr-2"></i>認証エラー</h3>
         <p>このページにアクセスするには、まず<a href="../dashboard.html" class="underline font-bold">ダッシュボード</a>からログインしてください。</p>
-        <p class="text-sm mt-2">または、ダッシュボードの「集計・分析」メニューからアクセスしてください。</p>
     </div>
 
     <div class="container mx-auto p-4 max-w-7xl">
@@ -255,7 +101,7 @@
                 <h1 class="text-3xl font-bold mb-2">
                     <i class="fas fa-user-clock mr-3 text-blue-600"></i>個人別タイムライン
                 </h1>
-                <p class="text-gray-600">CE個人ごとの業務スケジュールと勤務パターンを時間軸で可視化</p>
+                <p class="text-gray-600">CE個人ごとの業務時間分析（V1版準拠・重複除外）</p>
             </div>
             <div class="flex gap-3 mt-4 md:mt-0">
                 <button onclick="window.print()" class="btn-primary">
@@ -273,31 +119,17 @@
                 <i class="fas fa-filter mr-2"></i>表示設定
             </h3>
             
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
-                <!-- 期間設定 -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                 <div>
                     <label class="block text-sm font-medium mb-2">開始日</label>
                     <input type="date" id="startDate" class="w-full p-3 border border-gray-300 rounded-lg">
                 </div>
-                
                 <div>
                     <label class="block text-sm font-medium mb-2">終了日</label>
                     <input type="date" id="endDate" class="w-full p-3 border border-gray-300 rounded-lg">
                 </div>
-
-                <!-- 時間範囲設定 -->
-                <div>
-                    <label class="block text-sm font-medium mb-2">表示開始時刻</label>
-                    <input type="time" id="displayStartTime" value="07:00" class="w-full p-3 border border-gray-300 rounded-lg">
-                </div>
-                
-                <div>
-                    <label class="block text-sm font-medium mb-2">表示終了時刻</label>
-                    <input type="time" id="displayEndTime" value="19:00" class="w-full p-3 border border-gray-300 rounded-lg">
-                </div>
             </div>
 
-            <!-- CE・部門フィルター -->
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                 <div>
                     <label class="block text-sm font-medium mb-2">表示CE</label>
@@ -364,40 +196,29 @@
             </div>
         </div>
 
+        <!-- V1版準拠の個人別業務時間グラフ -->
+        <div class="glassmorphism rounded-2xl p-6 mb-6">
+            <div class="flex items-center justify-between mb-3">
+                <h3 class="text-lg font-bold">
+                    <i class="fas fa-chart-bar mr-2"></i>個人別業務時間（時間）- V1版準拠
+                </h3>
+                <button class="btn-primary text-sm" onclick="printCanvas('individualChart')">
+                    <i class="fas fa-print mr-1"></i>印刷
+                </button>
+            </div>
+            <div class="h-96">
+                <canvas id="individualChart"></canvas>
+            </div>
+        </div>
+
         <!-- サマリー情報 -->
         <div id="summarySection" class="glassmorphism rounded-2xl p-4 mb-6">
             <h3 class="text-lg font-bold mb-3">
-                <i class="fas fa-info-circle mr-2"></i>表示サマリー
+                <i class="fas fa-info-circle mr-2"></i>集計サマリー
             </h3>
-            <div id="summaryContent" class="grid grid-cols-1 md:grid-cols-5 gap-4 text-sm">
+            <div id="summaryContent" class="grid grid-cols-1 md:grid-cols-4 gap-4 text-sm">
                 <!-- JavaScriptで動的生成 -->
             </div>
-        </div>
-
-        <!-- グラフ表示セクション -->
-        <div id="chartsSection" class="glassmorphism rounded-2xl p-4 mb-6">
-            <h3 class="text-lg font-bold mb-3">
-                <i class="fas fa-chart-pie mr-2"></i>可視化分析
-            </h3>
-            <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 charts-grid">
-                <div class="bg-white bg-opacity-50 rounded-lg p-3">
-                    <h4 class="font-bold text-sm mb-2 text-center">CE×部門別業務時間</h4>
-                    <div class="h-64"><canvas id="byCEDeptChart"></canvas></div>
-                </div>
-                <div class="bg-white bg-opacity-50 rounded-lg p-3">
-                    <h4 class="font-bold text-sm mb-2 text-center">勤務状態分布</h4>
-                    <div class="h-64"><canvas id="statusDonutChart"></canvas></div>
-                </div>
-                <div class="bg-white bg-opacity-50 rounded-lg p-3">
-                    <h4 class="font-bold text-sm mb-2 text-center">CE別総実労働時間</h4>
-                    <div class="h-64"><canvas id="totalHoursBarChart"></canvas></div>
-                </div>
-            </div>
-        </div>
-
-        <!-- タイムライン表示エリア -->
-        <div id="timelineContainer" class="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-4">
-            <!-- JavaScriptで動的生成 -->
         </div>
 
         <!-- ローディング表示 -->
@@ -440,32 +261,12 @@
             }
 
             if (!targetUID || !currentUsername) {
-                try {
-                    const authData = localStorage.getItem('analyticsAuth');
-                    if (authData) {
-                        const parsed = JSON.parse(authData);
-                        if (Date.now() - parsed.timestamp < 5 * 60 * 1000) {
-                            targetUID = parsed.uid;
-                            currentUsername = parsed.username;
-                            sessionStorage.setItem('targetUID', parsed.uid);
-                            sessionStorage.setItem('currentUsername', parsed.username);
-                            sessionStorage.setItem('currentUser', parsed.displayName);
-                            sessionStorage.setItem('userRole', parsed.role);
-                            console.log('✅ localStorageから認証情報を復元');
-                        }
-                    }
-                } catch (e) {
-                    console.warn('localStorage読み込みエラー:', e);
-                }
-            }
-
-            if (!targetUID || !currentUsername) {
                 console.warn('⚠️ 認証情報が見つかりません。ダッシュボードからアクセスしてください。');
                 document.getElementById('authWarning').style.display = 'block';
                 return false;
             }
 
-            console.log('✅ 認証情報確認完了:', { targetUID: '存在', currentUsername: '存在' });
+            console.log('✅ 認証情報確認完了');
             document.getElementById('authWarning').style.display = 'none';
             return true;
         }
@@ -485,16 +286,9 @@
         // グローバル変数
         let database = null;
         let authReadyPromise = null;
-        let globalTasksData = {};
-        let globalAssignmentsData = {};
         let globalCEList = [];
-        let globalDayStatus = {};
         let currentDateRange = [];
-        let displayStartHour = 7;
-        let displayEndHour = 19;
-        let chartInstances = {};
-
-        // CE名前解決マップ（統合版）
+        let chartInstance = null;
         let CE_UNIFIED_MAP = new Map();
 
         const DATA_ROOT = 'ceScheduleV2';
@@ -506,51 +300,191 @@
             '会議・ミーティング・勉強会・打ち合わせ'
         ];
 
-        const DEPARTMENT_COLORS = {
-            '血液浄化': '#FFB6C1',
-            '人工心肺・補助循環': '#4169E1',
-            '心・カテーテル': '#32CD32',
-            '手術・麻酔': '#87CEEB',
-            '不整脈': '#9370DB',
-            '機器管理・人工呼吸': '#90EE90',
-            '会議・ミーティング・勉強会・打ち合わせ': '#9E9E9E'
-        };
+        // V1版準拠の重複除外計算（分単位タイムスロット方式）
+        function collectMinuteMapV1Style(filteredCEs, selectedDepartments, eventsByDate) {
+            const ceKeys = new Set(filteredCEs.map(c => c.key));
+            const minuteMap = new Map();
 
-        const DEPARTMENT_ICONS = {
-            '血液浄化': 'tint',
-            '人工心肺・補助循環': 'procedures',
-            '心・カテーテル': 'heart',
-            '手術・麻酔': 'user-md',
-            '不整脈': 'heartbeat',
-            '機器管理・人工呼吸': 'lungs',
-            '会議・ミーティング・勉強会・打ち合わせ': 'handshake'
-        };
+            currentDateRange.forEach(date => {
+                const dateKey = formatDateAsISO(date);
+                const dayEvents = eventsByDate[dateKey] || {};
 
-        // 勤務時間定義
-        const WORK_TIME_DEFINITIONS = {
-            'A': { workHours: 7.75, breakMinutes: 45, isDuty: false },
-            'A1': { workHours: 7.75, breakMinutes: 45, isDuty: false },
-            'B': { workHours: 22, breakMinutes: 120, isDuty: true },
-            '非': { workHours: 0, breakMinutes: 0, isDuty: false },
-            '×': { workHours: 0, breakMinutes: 0, isDuty: false },
-            '年': { workHours: 0, breakMinutes: 0, isDuty: false },
-            '出': { workHours: 0, breakMinutes: 0, isDuty: false },
-            '研': { workHours: 0, breakMinutes: 0, isDuty: false }
-        };
+                Object.values(dayEvents).forEach(event => {
+                    // 部門絞り込み
+                    if (selectedDepartments.length && !selectedDepartments.includes(event.department)) return;
 
-        // CEキー正規化（改良版）
-        function normalizeCEKey(ceData) {
-            if (!ceData) return '';
-            const raw = (ceData.id || ceData.name || ceData.fullName || ceData.iconName || ceData.displayName || '').toString();
-            return raw.trim(); // 大文字小文字は区別する（日本語名のため）
+                    // 時刻未設定は集計対象外
+                    if (!event.startTime || !event.endTime) return;
+
+                    const startMinutes = timeToMinutes(event.startTime);
+                    const endMinutes = timeToMinutes(event.endTime);
+                    if (!(Number.isFinite(startMinutes) && Number.isFinite(endMinutes)) || endMinutes <= startMinutes) return;
+
+                    const assignedCEs = event.assignedCEs || [];
+                    if (!assignedCEs.length) return;
+
+                    assignedCEs.forEach(assignedCE => {
+                        let ceKey = '';
+                        if (typeof assignedCE === 'string') {
+                            ceKey = normalizeCEKey({ name: assignedCE });
+                        } else if (assignedCE && typeof assignedCE === 'object') {
+                            ceKey = assignedCE.key || normalizeCEKey(assignedCE);
+                        }
+
+                        if (!ceKey || !ceKeys.has(ceKey)) return;
+
+                        if (!minuteMap.has(ceKey)) minuteMap.set(ceKey, new Map());
+                        const dayMap = minuteMap.get(ceKey);
+                        if (!dayMap.has(dateKey)) dayMap.set(dateKey, new Map());
+                        const minuteSet = dayMap.get(dateKey);
+
+                        // V1版準拠：分単位で重複除外
+                        for (let minute = startMinutes; minute < endMinutes; minute++) {
+                            if (!minuteSet.has(minute)) minuteSet.set(minute, new Set());
+                            minuteSet.get(minute).add(event.department);
+                        }
+                    });
+                });
+            });
+
+            return minuteMap;
+        }
+
+        // V1版準拠の総実労働時間計算
+        function computeTotalHoursV1Style(minuteMap, filteredCEs) {
+            const totalHoursByCE = [];
+            const dayWiseData = {};
+
+            filteredCEs.forEach(ce => {
+                const ceKey = ce.key;
+                const dayMap = minuteMap.get(ceKey) || new Map();
+
+                let uniqueMinutes = 0;
+                const daySchedules = {};
+
+                // 日別業務数の集計（V1版ツールチップ用）
+                currentDateRange.forEach(date => {
+                    const dateKey = formatDateAsISO(date);
+                    const minuteSet = dayMap.get(dateKey) || new Map();
+                    
+                    daySchedules[dateKey] = minuteSet.size > 0 ? Array.from(minuteSet.keys()).length : 0;
+                    uniqueMinutes += minuteSet.size;
+                });
+
+                const totalHours = Math.round((uniqueMinutes / 60) * 10) / 10;
+                totalHoursByCE.push({ 
+                    key: ceKey, 
+                    name: ce.name, 
+                    hours: totalHours,
+                    daySchedules: daySchedules
+                });
+            });
+
+            // V1版準拠：時間降順ソート
+            totalHoursByCE.sort((a, b) => b.hours - a.hours);
+
+            return totalHoursByCE;
+        }
+
+        // V1版準拠のChart.js個人別業務時間グラフ生成
+        function generateIndividualChartV1Style(filteredCEs, selectedDepartments, eventsByDate) {
+            const ctx = document.getElementById('individualChart');
+            if (!ctx) return;
+
+            // 既存チャートを破棄
+            if (chartInstance) {
+                chartInstance.destroy();
+            }
+
+            const minuteMap = collectMinuteMapV1Style(filteredCEs, selectedDepartments, eventsByDate);
+            const totalHoursByCE = computeTotalHoursV1Style(minuteMap, filteredCEs);
+
+            const labels = totalHoursByCE.map(item => item.name);
+            const data = totalHoursByCE.map(item => item.hours);
+
+            chartInstance = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: '実労働時間(時間)',
+                        data: data,
+                        backgroundColor: 'rgba(76, 175, 80, 0.6)',
+                        borderColor: 'rgba(76, 175, 80, 1)',
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    indexAxis: 'y', // V1版準拠：横棒グラフ
+                    scales: {
+                        x: { 
+                            beginAtZero: true,
+                            title: {
+                                display: true,
+                                text: '時間（重複除外済み）'
+                            }
+                        },
+                        y: {
+                            ticks: {
+                                autoSkip: false,
+                                maxRotation: 0,
+                                minRotation: 0,
+                                font: { size: 11 }
+                            }
+                        }
+                    },
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    const ceName = context.label;
+                                    const hours = context.parsed.x;
+                                    const ceInfo = totalHoursByCE.find(item => item.name === ceName);
+                                    
+                                    let tooltip = `実労働時間: ${hours}時間`;
+                                    
+                                    if (ceInfo && ceInfo.daySchedules) {
+                                        const dayLabels = ['日', '月', '火', '水', '木', '金', '土'];
+                                        const dayTaskCounts = [];
+                                        let totalTasks = 0;
+                                        
+                                        currentDateRange.forEach(date => {
+                                            const dateKey = formatDateAsISO(date);
+                                            const tasksOnDay = ceInfo.daySchedules[dateKey] || 0;
+                                            dayTaskCounts.push(tasksOnDay);
+                                            totalTasks += tasksOnDay;
+                                        });
+                                        
+                                        if (totalTasks > 0) {
+                                            tooltip += `\n総業務数: ${totalTasks}件`;
+                                            const dayTaskSummary = currentDateRange.map((date, idx) => {
+                                                const dayShortName = dayLabels[date.getDay()];
+                                                return `${dayShortName}${dayTaskCounts[idx]}`;
+                                            }).join(' ');
+                                            tooltip += `\n曜日別: ${dayTaskSummary}`;
+                                        }
+                                    }
+                                    
+                                    return tooltip;
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+
+            console.log('✅ V1版準拠個人別業務時間チャート生成完了');
         }
 
         // 統合CEリスト構築
-        function buildUnifiedCEList(eventsByDate, workSchedulesRaw, ceListRaw) {
+        function buildUnifiedCEList(eventsByDate, ceListRaw) {
             CE_UNIFIED_MAP.clear();
             const ceMap = new Map();
 
-            // 1) ceListから（基本情報）
+            // 1) ceListから基本情報を取得
             if (ceListRaw && typeof ceListRaw === 'object') {
                 Object.entries(ceListRaw).forEach(([key, ce]) => {
                     const normalizedKey = normalizeCEKey({ id: ce.id || key, name: ce.iconName || ce.displayName || ce.name });
@@ -569,17 +503,17 @@
                 });
             }
 
-            // 2) events.assignedCEsから（配置情報）
+            // 2) events.assignedCEsから配置情報を取得
             Object.values(eventsByDate || {}).forEach(dayEvents => {
                 Object.values(dayEvents || {}).forEach(ev => {
-                    (ev.assignedCEs || []).forEach(a => {
+                    (ev.assignedCEs || []).forEach(assigned => {
                         let id = '', name = '', workType = 'ME';
-                        if (typeof a === 'string') {
-                            id = a; name = a;
-                        } else if (a && typeof a === 'object') {
-                            id = a.id || a.name || '';
-                            name = a.name || a.id || '';
-                            workType = a.workType || 'ME';
+                        if (typeof assigned === 'string') {
+                            id = assigned; name = assigned;
+                        } else if (assigned && typeof assigned === 'object') {
+                            id = assigned.id || assigned.name || '';
+                            name = assigned.name || assigned.id || '';
+                            workType = assigned.workType || 'ME';
                         }
                         
                         const key = normalizeCEKey({ id, name });
@@ -600,50 +534,14 @@
                 });
             });
 
-            // 3) 勤務表scheduleDataから（勤務情報）
-            const schedules = Object.values(workSchedulesRaw || {}).filter(s => s.metadata && s.metadata.isVisible !== false);
-            schedules.forEach(s => {
-                const scheduleData = s.scheduleData || {};
-                Object.keys(scheduleData).forEach(rawId => {
-                    const key = normalizeCEKey({ id: rawId });
-                    if (!key) return;
-                    
-                    if (!ceMap.has(key)) {
-                        const ceData = {
-                            key: key,
-                            id: rawId,
-                            name: rawId,
-                            fullName: rawId,
-                            workType: 'ME'
-                        };
-                        ceMap.set(key, ceData);
-                        CE_UNIFIED_MAP.set(key, ceData.name);
-                    }
-                });
-            });
-
             return Array.from(ceMap.values()).sort((a, b) => (a.name || '').localeCompare(b.name || ''));
         }
 
-        // CE配置判定（統合版）
-        function isAssignedToCE(assignedEntry, ce) {
-            if (!assignedEntry || !ce) return false;
-            
-            const ceNormalizedKey = ce.key || normalizeCEKey(ce);
-            
-            if (typeof assignedEntry === 'object' && assignedEntry !== null) {
-                const assignedKey = assignedEntry.key || normalizeCEKey(assignedEntry);
-                return assignedKey === ceNormalizedKey;
-            } else if (typeof assignedEntry === 'string') {
-                // 文字列の場合、複数パターンで照合
-                const assignedName = assignedEntry.toString();
-                return assignedName === ceNormalizedKey || 
-                       assignedName === ce.name || 
-                       assignedName === ce.fullName ||
-                       assignedName === ce.id;
-            }
-            
-            return false;
+        // CEキー正規化
+        function normalizeCEKey(ceData) {
+            if (!ceData) return '';
+            const raw = (ceData.id || ceData.name || ceData.fullName || ceData.iconName || ceData.displayName || '').toString();
+            return raw.trim();
         }
 
         function initializeFirebase() {
@@ -667,20 +565,18 @@
 
                 firebase.auth().signInAnonymously().catch((error) => {
                     console.error('❌ Firebase匿名認証エラー:', error);
-                    const authWarning = document.getElementById('authWarning');
-                    if (authWarning) authWarning.style.display = 'block';
+                    document.getElementById('authWarning').style.display = 'block';
                 });
                     
             } catch (error) {
                 console.error('❌ Firebase初期化エラー:', error);
-                const authWarning = document.getElementById('authWarning');
-                if (authWarning) authWarning.style.display = 'block';
+                document.getElementById('authWarning').style.display = 'block';
             }
         }
 
-        // ========== 初期化 ==========
+        // 初期化
         document.addEventListener('DOMContentLoaded', async function() {
-            console.log('🔄 個人別タイムライン初期化開始');
+            console.log('🔄 個人別タイムライン初期化開始（V1版準拠）');
             
             if (!checkAuthenticationStatus()) return;
             
@@ -689,11 +585,8 @@
             setCurrentWeekRange();
             
             try {
-                console.log('⏳ Firebase認証完了待機中...');
-                
                 if (authReadyPromise) {
                     await authReadyPromise;
-                    console.log('🔐 Promise経由でFirebase認証確認完了');
                 } else {
                     let authUser = firebase.auth().currentUser;
                     let attempts = 0;
@@ -705,24 +598,15 @@
                     }
                     
                     if (!authUser) {
-                        throw new Error('Firebase認証がタイムアウトしました（15秒）');
+                        throw new Error('Firebase認証がタイムアウトしました');
                     }
-                    console.log('🔐 ポーリング経由でFirebase認証確認完了:', authUser.uid);
                 }
                 
                 await loadTimelineData();
                 
             } catch (error) {
                 console.error('❌ 初期読み込みエラー:', error);
-                const errorMessage = error.message || error.toString();
-                
-                if (errorMessage.includes('permission_denied')) {
-                    showMessage('データアクセス権限がありません。Firebase設定を確認してください。', 'error');
-                } else if (errorMessage.includes('タイムアウト')) {
-                    showMessage('認証処理がタイムアウトしました。ページを再読み込みしてください。', 'error');
-                } else {
-                    showMessage(`データの読み込みに失敗しました: ${errorMessage}`, 'error');
-                }
+                showMessage(`データの読み込みに失敗しました: ${error.message}`, 'error');
             }
         });
 
@@ -759,12 +643,9 @@
 
             const endDate = new Date(startDate);
             endDate.setDate(startDate.getDate() + 6);
-            endDate.setHours(0, 0, 0, 0);
 
             document.getElementById('startDate').value = startDate.toISOString().split('T')[0];
             document.getElementById('endDate').value = endDate.toISOString().split('T')[0];
-
-            console.log(`📅 当該週設定（月曜〜日曜）: ${startDate.toISOString().split('T')[0]} ～ ${endDate.toISOString().split('T')[0]}`);
         }
 
         function setCurrentWeekAndLoad() {
@@ -772,10 +653,9 @@
             loadTimelineData();
         }
 
-        // ========== データ読み込み ==========
         async function loadTimelineData() {
             showLoading(true);
-            console.log('🔄 個人別タイムライン読み込み開始');
+            console.log('🔄 個人別タイムライン読み込み開始（V1版準拠）');
             
             try {
                 const startDate = document.getElementById('startDate').value;
@@ -786,23 +666,12 @@
                     return;
                 }
                 
-                if (new Date(startDate) > new Date(endDate)) {
-                    showMessage('開始日は終了日より前に設定してください', 'warning');
-                    return;
-                }
-                
-                console.log(`📅 期間設定: ${startDate} ～ ${endDate}`);
-                
                 currentDateRange = generateDateRange(startDate, endDate);
-                console.log('📅 生成された日付範囲:', currentDateRange.map(d => d.toISOString().split('T')[0]));
                 
                 await loadDataFromFirebase();
-                updateDisplayTimeRange();
                 generateCEFilterList();
-                generateTimeline();
-                updateSummary();
                 
-                console.log('✅ 個人別タイムライン読み込み完了');
+                console.log('✅ 個人別タイムライン読み込み完了（V1版準拠）');
                 
             } catch (error) {
                 console.error('❌ タイムライン読み込みエラー:', error);
@@ -818,121 +687,25 @@
             }
             
             try {
-                console.log('🔄 Firebaseからデータ読み込み中（統合CE版）...');
-                
-                const currentUser = firebase.auth().currentUser;
-                if (!currentUser) {
-                    throw new Error('Firebase認証が未完了です');
-                }
-                console.log('🔐 認証確認完了:', currentUser.uid);
-                
-                const [eventsByDateSnapshot, ceListSnapshot, workSchedulesSnapshot] = await Promise.all([
+                const [eventsByDateSnapshot, ceListSnapshot] = await Promise.all([
                     database.ref(`${DATA_ROOT}/events/byDate`).once('value'),
-                    database.ref(`${DATA_ROOT}/ceList`).once('value'),
-                    database.ref(`${DATA_ROOT}/workSchedules`).once('value')
+                    database.ref(`${DATA_ROOT}/ceList`).once('value')
                 ]);
                 
                 const eventsByDate = eventsByDateSnapshot.val() || {};
                 const ceListRaw = ceListSnapshot.val() || {};
-                const workSchedulesRaw = workSchedulesSnapshot.val() || {};
-
-                console.log('📊 取得データ確認:');
-                console.log('  - events/byDate キー:', Object.keys(eventsByDate));
-                console.log('  - ceList RAW:', ceListRaw);
-                console.log('  - workSchedules 件数:', Object.keys(workSchedulesRaw).length);
 
                 // 統合CEリスト構築
-                globalCEList = buildUnifiedCEList(eventsByDate, workSchedulesRaw, ceListRaw);
+                globalCEList = buildUnifiedCEList(eventsByDate, ceListRaw);
                 console.log('📊 統合CEリスト:', globalCEList.length, '件');
-                console.log('📊 統合CEリスト詳細:', globalCEList);
                 
-                // 勤務表データの統合
-                globalDayStatus = {};
-                const publishedSchedules = Object.values(workSchedulesRaw)
-                    .filter(s => s.metadata && s.metadata.isVisible !== false)
-                    .sort((a, b) => (b.metadata?.publishedAt || 0) - (a.metadata?.publishedAt || 0));
-
-                if (publishedSchedules.length > 0) {
-                    const latestSchedule = publishedSchedules[0];
-                    const scheduleData = latestSchedule.scheduleData || {};
-                    
-                    currentDateRange.forEach(date => {
-                        const dateKey = formatDateAsISO(date);
-                        globalCEList.forEach(ce => {
-                            const workData = scheduleData[ce.id]?.[dateKey] || scheduleData[ce.key]?.[dateKey];
-                            const status = workData ? (workData.customText?.trim() || workData.status || '') : '';
-                            
-                            if (!globalDayStatus[ce.key]) globalDayStatus[ce.key] = {};
-                            globalDayStatus[ce.key][dateKey] = status;
-                        });
-                    });
-                    console.log('✅ 勤務表データ統合完了');
-                }
+                // 初期表示
+                const selectedCEs = getSelectedCEs();
+                const selectedDepartments = getSelectedDepartments();
+                const filteredCEs = globalCEList.filter(ce => selectedCEs.includes(ce.key));
                 
-                // タイムライン用データ構造に変換
-                globalTasksData = {};
-                globalAssignmentsData = {};
-                
-                Object.entries(eventsByDate).forEach(([dateKey, dayEvents]) => {
-                    if (dayEvents && typeof dayEvents === 'object') {
-                        const tasksForDay = [];
-                        const assignmentsForDay = {};
-                        
-                        Object.entries(dayEvents).forEach(([eventKey, event]) => {
-                            const taskId = event.id || eventKey;
-                            
-                            const taskData = {
-                                id: taskId,
-                                name: event.name || '名称不明',
-                                department: event.department || '部門不明',
-                                startTime: event.startTime || '09:00',
-                                endTime: event.endTime || '17:00',
-                                count: event.count || 1,
-                                requiredPeople: event.requiredPeople || 1
-                            };
-                            
-                            tasksForDay.push(taskData);
-                            
-                            // 統合キーベースで配置情報を格納
-                            if (event.assignedCEs && Array.isArray(event.assignedCEs)) {
-                                assignmentsForDay[taskId] = event.assignedCEs.map(assignedCE => {
-                                    let id = '', name = '', workType = 'ME';
-                                    
-                                    if (typeof assignedCE === 'string') {
-                                        id = assignedCE; name = assignedCE;
-                                        const foundCE = globalCEList.find(c => c.key === normalizeCEKey({name: assignedCE}) || c.name === assignedCE);
-                                        if (foundCE) {
-                                            workType = foundCE.workType;
-                                            name = foundCE.name;
-                                        }
-                                    } else if (assignedCE && typeof assignedCE === 'object') {
-                                        id = assignedCE.id || assignedCE.name || '';
-                                        name = assignedCE.name || assignedCE.id || '';
-                                        workType = assignedCE.workType || 'ME';
-                                    }
-                                    
-                                    const key = normalizeCEKey({ id, name });
-                                    const displayName = CE_UNIFIED_MAP.get(key) || name || id || '不明CE';
-                                    
-                                    return { key, id, name: displayName, workType };
-                                });
-                            } else {
-                                assignmentsForDay[taskId] = [];
-                            }
-                            
-                            console.log(`🔗 ${dateKey} - ${taskData.name} (${taskData.department}): ${assignmentsForDay[taskId].length}名配置`);
-                        });
-                        
-                        tasksForDay.sort((a, b) => a.startTime.localeCompare(b.startTime));
-                        
-                        globalTasksData[dateKey] = tasksForDay;
-                        globalAssignmentsData[dateKey] = assignmentsForDay;
-                        
-                        console.log(`📊 ${dateKey}: ${tasksForDay.length}件の業務を変換完了（統合CE版）`);
-                    }
-                });
-                
-                console.log('✅ Firebaseデータ読み込み完了（統合CE版）');
+                generateIndividualChartV1Style(filteredCEs, selectedDepartments, eventsByDate);
+                updateSummary(filteredCEs, selectedDepartments, eventsByDate);
                 
             } catch (error) {
                 console.error('❌ Firebase読み込みエラー:', error);
@@ -1006,461 +779,15 @@
             return dates;
         }
 
-        function updateDisplayTimeRange() {
-            const startTime = document.getElementById('displayStartTime').value;
-            const endTime = document.getElementById('displayEndTime').value;
-            
-            displayStartHour = parseInt(startTime.split(':')[0]);
-            displayEndHour = parseInt(endTime.split(':')[0]);
-            
-            console.log(`⏰ 表示時間範囲: ${displayStartHour}:00 ～ ${displayEndHour}:00`);
+        function getSelectedCEs() {
+            return Array.from(document.querySelectorAll('.ce-filter:checked')).map(cb => cb.value);
         }
 
-        // ========== タイムライン生成 ==========
-        function generateTimeline() {
-            console.log('🔄 個人別タイムライン生成開始');
-            const container = document.getElementById('timelineContainer');
-            container.innerHTML = '';
-            
-            const selectedCEs = getSelectedCEs();
-            const selectedDepartments = getSelectedDepartments();
-            
-            console.log('👤 選択されたCE:', selectedCEs.length);
-            console.log('🏥 選択された部門:', selectedDepartments);
-            
-            const filteredCEs = globalCEList.filter(ce => selectedCEs.includes(ce.key));
-            
-            if (filteredCEs.length === 0) {
-                container.innerHTML = `
-                    <div class="no-tasks-message col-span-full">
-                        <i class="fas fa-user-times text-3xl mb-4 block"></i>
-                        <p class="text-lg font-bold mb-2">表示するCEを選択してください</p>
-                        <p>上部の「全CE選択」または個別CEにチェックを入れてください。</p>
-                        <p class="text-sm mt-2">統合CE数: ${globalCEList.length}名</p>
-                    </div>
-                `;
-                return;
-            }
-
-            let hasAnyData = false;
-
-            filteredCEs.forEach(ce => {
-                const ceData = collectCEData(ce, selectedDepartments);
-                if (Object.keys(ceData).length > 0) {
-                    generateCETimeline(ce, container, ceData);
-                    hasAnyData = true;
-                }
-            });
-
-            if (!hasAnyData) {
-                container.innerHTML = `
-                    <div class="no-tasks-message col-span-full">
-                        <i class="fas fa-calendar-times text-3xl mb-4 block"></i>
-                        <p class="text-lg font-bold mb-2">指定条件に該当する配置がありません</p>
-                        <p>期間・部門・CE選択を見直してください。</p>
-                    </div>
-                `;
-            } else {
-                // グラフ生成
-                buildCharts(filteredCEs, selectedDepartments);
-            }
-
-            console.log('✅ 個人別タイムライン生成完了');
+        function getSelectedDepartments() {
+            const list = Array.from(document.querySelectorAll('.department-filter:not([value="all"]):checked')).map(cb => cb.value);
+            return list.length > 0 ? list : DEPARTMENTS;
         }
 
-        function generateCETimeline(ce, container, ceData) {
-            const ceCard = document.createElement('div');
-            ceCard.className = `ce-card ce-${(ce.workType || '').toLowerCase()}`;
-            ceCard.style.setProperty('--ce-color', getCEColor(ce.workType));
-
-            const totalTasks = Object.values(ceData).reduce((sum, d) => sum + d.tasks.length, 0);
-            const totalWorkHours = calculateTotalWorkHours(ceData);
-            const statusSummary = computeStatusSummary(ce, ceData);
-
-            const header = document.createElement('div');
-            header.className = 'flex items-center justify-between mb-4';
-            header.innerHTML = `
-                <div class="flex items-center">
-                    <i class="fas fa-user mr-3 text-2xl" style="color: ${getCEColor(ce.workType)};"></i>
-                    <div>
-                        <h3 class="font-bold text-lg">${ce.name}</h3>
-                        <span class="worktype-badge worktype-${(ce.workType||'').toLowerCase()}">${ce.workType}</span>
-                    </div>
-                </div>
-                <div class="text-right text-sm text-gray-600">
-                    <div class="bg-white bg-opacity-70 px-3 py-1 rounded-full mb-1">総業務: ${totalTasks}件</div>
-                    <div class="bg-white bg-opacity-70 px-3 py-1 rounded-full">実労働: ${totalWorkHours}時間</div>
-                    <div class="text-xs text-gray-500 mt-1">
-                        当直:${statusSummary.counts.B} 非番:${statusSummary.counts.非} 休:${statusSummary.counts.×} 出:${statusSummary.counts.出}
-                    </div>
-                </div>
-            `;
-            ceCard.appendChild(header);
-
-            // 勤務負荷サマリー（部門別）
-            ceCard.appendChild(createWorkloadSummary(ceData));
-
-            // タイムライン本体
-            ceCard.appendChild(createTimelineBody(ceData, ce));
-
-            container.appendChild(ceCard);
-            return ceCard;
-        }
-
-        function collectCEData(ce, selectedDepartments = []) {
-            const ceData = {};
-
-            currentDateRange.forEach(date => {
-                const dateKey = formatDateAsISO(date);
-                const allTasks = globalTasksData[dateKey] || [];
-                const allAssignments = globalAssignmentsData[dateKey] || {};
-
-                const dayTasks = [];
-                allTasks.forEach(task => {
-                    if (selectedDepartments.length && !selectedDepartments.includes(task.department)) return;
-                    
-                    const assignedCEs = allAssignments[task.id] || [];
-                    const isAssigned = assignedCEs.some(a => isAssignedToCE(a, ce));
-                    if (isAssigned) {
-                        dayTasks.push(task);
-                        console.log(`🎯 ${ce.name} → ${task.name} (${task.department}) マッチ成功`);
-                    }
-                });
-
-                if (dayTasks.length) {
-                    ceData[dateKey] = { date, tasks: dayTasks };
-                }
-            });
-
-            return ceData;
-        }
-
-        function computeStatusSummary(ce, ceData) {
-            const counts = { A:0, A1:0, B:0, 非:0, ×:0, 年:0, 出:0, 研:0, 稼働日:0 };
-            let totalBreakMin = 0;
-
-            currentDateRange.forEach(d => {
-                const dateKey = formatDateAsISO(d);
-                const status = (globalDayStatus[ce.key] && globalDayStatus[ce.key][dateKey]) || '';
-
-                const hasTasks = !!(ceData[dateKey] && ceData[dateKey].tasks && ceData[dateKey].tasks.length);
-                if (hasTasks) counts.稼働日++;
-
-                // 状態カウント
-                Object.keys(counts).forEach(s => {
-                    if (status === s) counts[s]++;
-                });
-
-                // 休憩時間計算
-                const workDef = WORK_TIME_DEFINITIONS[status];
-                if (workDef) {
-                    totalBreakMin += workDef.breakMinutes || 0;
-                }
-            });
-
-            return { counts, totalBreakMin };
-        }
-
-        function createWorkloadSummary(ceData) {
-            const summary = document.createElement('div');
-            summary.className = 'workload-summary';
-            
-            const deptStats = {};
-            let totalHours = 0;
-            
-            Object.values(ceData).forEach(dayData => {
-                dayData.tasks.forEach(task => {
-                    if (!deptStats[task.department]) {
-                        deptStats[task.department] = { count: 0, hours: 0 };
-                    }
-                    deptStats[task.department].count++;
-                    
-                    const startMinutes = timeToMinutes(task.startTime);
-                    const endMinutes = timeToMinutes(task.endTime);
-                    const taskHours = (endMinutes - startMinutes) / 60;
-                    deptStats[task.department].hours += taskHours;
-                    totalHours += taskHours;
-                });
-            });
-            
-            const deptStatsHtml = Object.entries(deptStats)
-                .sort(([,a], [,b]) => b.count - a.count)
-                .map(([dept, stats]) => `
-                    <span class="task-chip" style="--dept-color: ${DEPARTMENT_COLORS[dept]}">
-                        ${dept}: ${stats.count}件 (${Math.round(stats.hours * 10) / 10}h)
-                    </span>
-                `).join('');
-            
-            summary.innerHTML = `
-                <div class="flex justify-between items-center mb-2">
-                    <h4 class="font-bold text-sm">業務別勤務負荷</h4>
-                    <span class="text-sm font-bold">合計: ${Math.round(totalHours * 10) / 10}時間</span>
-                </div>
-                <div class="flex flex-wrap">
-                    ${deptStatsHtml || '<span class="text-gray-500 text-xs">期間内に配置された業務がありません</span>'}
-                </div>
-            `;
-            
-            return summary;
-        }
-
-        function createTimelineBody(ceData, ce) {
-            const body = document.createElement('div');
-            body.className = 'space-y-3';
-            
-            const timeScale = createTimeScale();
-            body.appendChild(timeScale);
-            
-            const sortedEntries = Object.entries(ceData).sort((a, b) => {
-                return a[1].date.getTime() - b[1].date.getTime();
-            });
-            
-            sortedEntries.forEach(([dateKey, dayData]) => {
-                const dayRow = createDayRow(dayData, ce);
-                body.appendChild(dayRow);
-            });
-            
-            return body;
-        }
-
-        function createTimeScale() {
-            const timeScale = document.createElement('div');
-            timeScale.className = 'time-scale';
-            
-            for (let hour = displayStartHour; hour <= displayEndHour; hour += 2) {
-                const timeLabel = document.createElement('div');
-                timeLabel.textContent = `${hour.toString().padStart(2, '0')}:00`;
-                timeLabel.style.flex = '1';
-                timeLabel.style.textAlign = 'center';
-                timeScale.appendChild(timeLabel);
-            }
-            
-            return timeScale;
-        }
-
-        function createDayRow(dayData, ce) {
-            const dayRow = document.createElement('div');
-            dayRow.className = 'timeline-day-row';
-
-            const dateKey = formatDateAsISO(dayData.date);
-            const status = (globalDayStatus[ce.key] && globalDayStatus[ce.key][dateKey]) || '';
-            const statusBadgeHtml = status ? `<span class="status-badge status-${status}">${status}</span>` : '';
-
-            const dayHeader = document.createElement('div');
-            dayHeader.className = 'flex justify-between items-center mb-2';
-            dayHeader.innerHTML = `
-                <div class="font-bold text-sm">
-                    ${formatDisplayDate(dayData.date)} (${getJapaneseDayName(dayData.date)}) ${statusBadgeHtml}
-                </div>
-                <div class="text-xs text-gray-600">
-                    ${dayData.tasks.length}件の業務
-                </div>
-            `;
-            dayRow.appendChild(dayHeader);
-
-            const track = createTimelineTrack(dayData);
-            dayRow.appendChild(track);
-            return dayRow;
-        }
-
-        function createTimelineTrack(dayData) {
-            const track = document.createElement('div');
-            track.className = 'timeline-track';
-            track.style.height = Math.max(30, dayData.tasks.length * 26 + 6) + 'px';
-            
-            const totalMinutes = (displayEndHour - displayStartHour) * 60;
-            
-            dayData.tasks.forEach((task, taskIdx) => {
-                const taskBar = createTaskBar(task, taskIdx, totalMinutes);
-                if (taskBar) {
-                    track.appendChild(taskBar);
-                }
-            });
-            
-            return track;
-        }
-
-        function createTaskBar(task, taskIdx, totalMinutes) {
-            const startMinutes = timeToMinutes(task.startTime);
-            const endMinutes = timeToMinutes(task.endTime);
-            const displayStartMinutes = displayStartHour * 60;
-            const displayEndMinutes = displayEndHour * 60;
-            
-            if (endMinutes <= displayStartMinutes || startMinutes >= displayEndMinutes) {
-                return null;
-            }
-            
-            const adjustedStart = Math.max(startMinutes, displayStartMinutes);
-            const adjustedEnd = Math.min(endMinutes, displayEndMinutes);
-            
-            const left = ((adjustedStart - displayStartMinutes) / totalMinutes) * 100;
-            const width = Math.max(2, ((adjustedEnd - adjustedStart) / totalMinutes) * 100);
-            
-            const taskBar = document.createElement('div');
-            taskBar.className = 'task-bar';
-            taskBar.style.left = left + '%';
-            taskBar.style.width = width + '%';
-            taskBar.style.top = (taskIdx * 26 + 3) + 'px';
-            taskBar.style.backgroundColor = DEPARTMENT_COLORS[task.department];
-            taskBar.style.opacity = '0.9';
-            
-            taskBar.title = [
-                `業務: ${task.name}`,
-                `部門: ${task.department}`,
-                `時間: ${task.startTime}-${task.endTime}`,
-                `件数: ${task.count || 1}件`,
-                `必要人数: ${task.requiredPeople || 1}名`
-            ].join('\n');
-            
-            let displayText = '';
-            if (width > 25) {
-                displayText = `${task.name} (${task.department})`;
-            } else if (width > 15) {
-                displayText = task.name;
-            } else if (width > 8) {
-                displayText = task.name.substring(0, 3) + '...';
-            } else {
-                displayText = '●';
-            }
-            
-            taskBar.innerHTML = `
-                <span style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding: 0 4px;">
-                    ${displayText}
-                </span>
-            `;
-            
-            return taskBar;
-        }
-
-        // ========== Chart.js可視化 ==========
-        function destroyChart(id) {
-            if (chartInstances[id]) {
-                chartInstances[id].destroy();
-                chartInstances[id] = null;
-            }
-        }
-
-        function buildCharts(filteredCEs, selectedDepartments) {
-            // 1) CE×部門の業務時間（積み上げ棒グラフ）
-            const labels = filteredCEs.map(ce => ce.name);
-            const deptList = selectedDepartments.length ? selectedDepartments : DEPARTMENTS;
-            
-            const hoursByCEDept = filteredCEs.map(ce => {
-                const ceData = collectCEData(ce, selectedDepartments);
-                const hours = Object.fromEntries(deptList.map(d => [d, 0]));
-                
-                Object.values(ceData).forEach(dayData => {
-                    dayData.tasks.forEach(task => {
-                        const taskHours = (timeToMinutes(task.endTime) - timeToMinutes(task.startTime)) / 60;
-                        hours[task.department] = (hours[task.department] || 0) + Math.max(0, taskHours);
-                    });
-                });
-                
-                return hours;
-            });
-
-            const datasetsStacked = deptList.map(dept => ({
-                label: dept,
-                data: hoursByCEDept.map(h => Math.round((h[dept] || 0) * 10) / 10),
-                backgroundColor: (DEPARTMENT_COLORS[dept] || '#999') + 'CC',
-                borderColor: DEPARTMENT_COLORS[dept] || '#999',
-                borderWidth: 1
-            }));
-
-            const byCEDeptCtx = document.getElementById('byCEDeptChart');
-            if (byCEDeptCtx) {
-                destroyChart('byCEDeptChart');
-                chartInstances.byCEDeptChart = new Chart(byCEDeptCtx, {
-                    type: 'bar',
-                    data: { labels, datasets: datasetsStacked },
-                    options: {
-                        responsive: true,
-                        maintainAspectRatio: false,
-                        scales: {
-                            x: { stacked: true },
-                            y: { stacked: true, beginAtZero: true }
-                        },
-                        plugins: {
-                            legend: { position: 'bottom', labels: { boxWidth: 12, font: { size: 10 } } }
-                        }
-                    }
-                });
-            }
-
-            // 2) 勤務状態ドーナツグラフ
-            const STATUS_LIST = ['A','A1','B','非','×','年','出','研'];
-            const STATUS_COLORS = {
-                'A':'#4CAF50','A1':'#FF9800','B':'#9C27B0','非':'#607D8B',
-                '×':'#F44336','年':'#2196F3','出':'#2196F3','研':'#795548'
-            };
-            const statusCounts = Object.fromEntries(STATUS_LIST.map(s => [s, 0]));
-
-            currentDateRange.forEach(date => {
-                const dateKey = formatDateAsISO(date);
-                filteredCEs.forEach(ce => {
-                    const status = (globalDayStatus[ce.key] && globalDayStatus[ce.key][dateKey]) || '';
-                    if (STATUS_LIST.includes(status)) {
-                        statusCounts[status]++;
-                    }
-                });
-            });
-
-            const statusCtx = document.getElementById('statusDonutChart');
-            if (statusCtx) {
-                destroyChart('statusDonutChart');
-                chartInstances.statusDonutChart = new Chart(statusCtx, {
-                    type: 'doughnut',
-                    data: {
-                        labels: STATUS_LIST,
-                        datasets: [{
-                            data: STATUS_LIST.map(s => statusCounts[s]),
-                            backgroundColor: STATUS_LIST.map(s => (STATUS_COLORS[s] || '#bbb') + 'CC'),
-                            borderColor: STATUS_LIST.map(s => STATUS_COLORS[s] || '#bbb'),
-                            borderWidth: 1
-                        }]
-                    },
-                    options: {
-                        responsive: true,
-                        maintainAspectRatio: false,
-                        plugins: {
-                            legend: { position: 'bottom', labels: { boxWidth: 12, font: { size: 10 } } }
-                        }
-                    }
-                });
-            }
-
-            // 3) CE別総実労働時間
-            const totalHours = filteredCEs.map(ce => {
-                const ceData = collectCEData(ce, selectedDepartments);
-                return calculateTotalWorkHours(ceData);
-            });
-
-            const totalHoursCtx = document.getElementById('totalHoursBarChart');
-            if (totalHoursCtx) {
-                destroyChart('totalHoursBarChart');
-                chartInstances.totalHoursBarChart = new Chart(totalHoursCtx, {
-                    type: 'bar',
-                    data: {
-                        labels,
-                        datasets: [{
-                            label: '実労働時間(h)',
-                            data: totalHours,
-                            backgroundColor: '#10B981CC',
-                            borderColor: '#10B981',
-                            borderWidth: 1
-                        }]
-                    },
-                    options: {
-                        responsive: true,
-                        maintainAspectRatio: false,
-                        scales: { y: { beginAtZero: true } },
-                        plugins: { legend: { display: false } }
-                    }
-                });
-            }
-        }
-
-        // ========== ヘルパー関数 ==========
         function timeToMinutes(timeString) {
             if (!timeString || !/^\d{1,2}:\d{2}$/.test(timeString)) return 0;
             const [hours, minutes] = timeString.split(':').map(Number);
@@ -1474,57 +801,6 @@
             return `${year}-${month}-${day}`;
         }
 
-        function formatDisplayDate(date) {
-            const month = date.getMonth() + 1;
-            const day = date.getDate();
-            return `${month}/${day}`;
-        }
-
-        function getJapaneseDayName(date) {
-            const days = ['日', '月', '火', '水', '木', '金', '土'];
-            return days[date.getDay()];
-        }
-
-        function getSelectedCEs() {
-            return Array.from(document.querySelectorAll('.ce-filter:checked')).map(cb => cb.value);
-        }
-
-        function getSelectedDepartments() {
-            const list = Array.from(document.querySelectorAll('.department-filter:not([value="all"]):checked')).map(cb => cb.value);
-            return list.length > 0 ? list : DEPARTMENTS;
-        }
-
-        function getCEColor(workType) {
-            const colors = {
-                'OPE': '#87CEEB',
-                'ME': '#90EE90',
-                'HD': '#FFB6C1',
-                'FLEX': '#FFFF99'
-            };
-            return colors[workType] || '#cccccc';
-        }
-
-        function calculateTotalWorkHours(ceData) {
-            const timeSlots = new Set();
-            
-            Object.values(ceData).forEach(dayData => {
-                const daySlots = new Set();
-                
-                dayData.tasks.forEach(task => {
-                    const startMinutes = timeToMinutes(task.startTime);
-                    const endMinutes = timeToMinutes(task.endTime);
-                    
-                    for (let minute = startMinutes; minute < endMinutes; minute++) {
-                        daySlots.add(`${formatDateAsISO(dayData.date)}_${minute}`);
-                    }
-                });
-                
-                daySlots.forEach(slot => timeSlots.add(slot));
-            });
-            
-            return Math.round((timeSlots.size / 60) * 10) / 10;
-        }
-
         function showLoading(show) {
             document.getElementById('loadingIndicator').style.display = show ? 'block' : 'none';
         }
@@ -1534,40 +810,31 @@
             alert(message);
         }
 
-        // ========== フィルター・操作関数 ==========
         function resetFilters() {
             setCurrentWeekRange();
-            document.getElementById('displayStartTime').value = '07:00';
-            document.getElementById('displayEndTime').value = '19:00';
-            
             document.querySelectorAll('.ce-filter, .department-filter').forEach(cb => cb.checked = true);
             document.getElementById('selectAllCEs').checked = true;
-            
             loadTimelineData();
         }
 
-        function updateSummary() {
+        function updateSummary(filteredCEs, selectedDepartments, eventsByDate) {
             const summaryContent = document.getElementById('summaryContent');
-            const selectedCEs = getSelectedCEs();
-            const selectedDepartments = getSelectedDepartments();
-
-            const filteredCEs = globalCEList.filter(ce => selectedCEs.includes(ce.key));
+            
+            const minuteMap = collectMinuteMapV1Style(filteredCEs, selectedDepartments, eventsByDate);
+            const totalHoursByCE = computeTotalHoursV1Style(minuteMap, filteredCEs);
 
             let totalTasks = 0;
             let totalWorkHours = 0;
             let activeCEs = 0;
-            let totalB = 0, totalNon = 0, totalRest = 0;
 
-            filteredCEs.forEach(ce => {
-                const ceData = collectCEData(ce, selectedDepartments);
-                if (Object.keys(ceData).length) {
+            totalHoursByCE.forEach(item => {
+                if (item.hours > 0) {
                     activeCEs++;
-                    totalTasks += Object.values(ceData).reduce((s,d) => s + d.tasks.length, 0);
-                    totalWorkHours += calculateTotalWorkHours(ceData);
-                    const statusSummary = computeStatusSummary(ce, ceData);
-                    totalB += statusSummary.counts.B;
-                    totalNon += statusSummary.counts.非;
-                    totalRest += statusSummary.totalBreakMin;
+                    totalWorkHours += item.hours;
+                    
+                    Object.values(item.daySchedules).forEach(dayTasks => {
+                        totalTasks += dayTasks;
+                    });
                 }
             });
 
@@ -1586,18 +853,34 @@
                 </div>
                 <div class="bg-white bg-opacity-70 p-3 rounded-lg text-center">
                     <div class="font-bold text-lg text-orange-600">${Math.round(totalWorkHours*10)/10}h</div>
-                    <div class="text-xs text-gray-600">総実労働時間</div>
-                </div>
-                <div class="bg-white bg-opacity-70 p-3 rounded-lg text-center">
-                    <div class="font-bold text-lg text-pink-600">当直:${totalB} 非番:${totalNon}</div>
-                    <div class="text-xs text-gray-600">休憩:${Math.round(totalRest/60*10)/10}h</div>
+                    <div class="text-xs text-gray-600">総実労働時間（重複除外）</div>
                 </div>
             `;
-
-            console.log(`📊 サマリー更新（統合CE版）: ${filteredCEs.length}名表示, ${activeCEs}名配置済み, ${totalTasks}件業務, ${Math.round(totalWorkHours*10)/10}時間`);
         }
 
-        console.log('✅ 個人別タイムライン V2 読み込み完了');
+        // キャンバス印刷機能
+        function printCanvas(canvasId) {
+            const canvas = document.getElementById(canvasId);
+            if (!canvas) return;
+            
+            const printWindow = window.open('', 'printCanvas');
+            if (!printWindow) return;
+            
+            printWindow.document.write(`
+                <html>
+                    <head><title>個人別業務時間グラフ</title></head>
+                    <body style="margin: 20px; text-align: center;">
+                        <h2>個人別業務時間（V1版準拠・重複除外）</h2>
+                        <img src="${canvas.toDataURL('image/png')}" style="max-width: 100%; height: auto;"/>
+                    </body>
+                </html>
+            `);
+            printWindow.document.close();
+            printWindow.focus();
+            printWindow.print();
+        }
+
+        console.log('✅ 個人別タイムライン V2（V1版準拠） 読み込み完了');
     </script>
 </body>
 </html>
