@@ -71,7 +71,6 @@
             border-radius: 12px;
             font-size: 11px;
             font-weight: 600;
-            color: white;
         }
 
         .worktype-ope { background: #87CEEB; color: #1E3A8A; }
@@ -89,11 +88,14 @@
             margin-left: 8px;
         }
 
-        .status-早 { background: #FF9800; }
-        .status-当 { background: #9C27B0; }
+        .status-A { background: #4CAF50; }
+        .status-A1 { background: #FF9800; }
+        .status-B { background: #9C27B0; }
         .status-非 { background: #607D8B; }
-        .status-休 { background: #F44336; }
+        .status-× { background: #F44336; }
+        .status-年 { background: #2196F3; }
         .status-出 { background: #2196F3; }
+        .status-研 { background: #795548; }
 
         .timeline-day-row {
             padding: 12px;
@@ -290,7 +292,7 @@
                 </div>
             </div>
 
-            <!-- CE・勤務区分フィルター -->
+            <!-- CE・部門フィルター -->
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                 <div>
                     <label class="block text-sm font-medium mb-2">表示CE</label>
@@ -306,23 +308,35 @@
                 </div>
 
                 <div>
-                    <label class="block text-sm font-medium mb-2">勤務区分フィルター</label>
+                    <label class="block text-sm font-medium mb-2">表示部門</label>
                     <div class="flex flex-wrap gap-2">
                         <label class="flex items-center">
-                            <input type="checkbox" class="worktype-filter" value="OPE" checked>
-                            <span class="ml-2">OPE</span>
+                            <input type="checkbox" class="department-filter" value="all" checked>
+                            <span class="ml-2 font-bold">全部門</span>
                         </label>
                         <label class="flex items-center">
-                            <input type="checkbox" class="worktype-filter" value="ME" checked>
-                            <span class="ml-2">ME</span>
+                            <input type="checkbox" class="department-filter" value="血液浄化" checked>
+                            <span class="ml-2">血液浄化</span>
                         </label>
                         <label class="flex items-center">
-                            <input type="checkbox" class="worktype-filter" value="HD" checked>
-                            <span class="ml-2">HD</span>
+                            <input type="checkbox" class="department-filter" value="人工心肺・補助循環" checked>
+                            <span class="ml-2">人工心肺・補助循環</span>
                         </label>
                         <label class="flex items-center">
-                            <input type="checkbox" class="worktype-filter" value="FLEX" checked>
-                            <span class="ml-2">FLEX</span>
+                            <input type="checkbox" class="department-filter" value="心・カテーテル" checked>
+                            <span class="ml-2">心・カテーテル</span>
+                        </label>
+                        <label class="flex items-center">
+                            <input type="checkbox" class="department-filter" value="手術・麻酔" checked>
+                            <span class="ml-2">手術・麻酔</span>
+                        </label>
+                        <label class="flex items-center">
+                            <input type="checkbox" class="department-filter" value="不整脈" checked>
+                            <span class="ml-2">不整脈</span>
+                        </label>
+                        <label class="flex items-center">
+                            <input type="checkbox" class="department-filter" value="機器管理・人工呼吸" checked>
+                            <span class="ml-2">機器管理・人工呼吸</span>
                         </label>
                     </div>
                 </div>
@@ -346,7 +360,7 @@
             <h3 class="text-lg font-bold mb-3">
                 <i class="fas fa-info-circle mr-2"></i>表示サマリー
             </h3>
-            <div id="summaryContent" class="grid grid-cols-1 md:grid-cols-4 gap-4 text-sm">
+            <div id="summaryContent" class="grid grid-cols-1 md:grid-cols-5 gap-4 text-sm">
                 <!-- JavaScriptで動的生成 -->
             </div>
         </div>
@@ -369,12 +383,11 @@
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 
     <script>
-        // 認証チェック機能（多重フォールバック版）
+        // 認証チェック機能
         function checkAuthenticationStatus() {
             let targetUID = sessionStorage.getItem('targetUID');
             let currentUsername = sessionStorage.getItem('currentUsername');
 
-            // URLパラメータから取得
             if (!targetUID || !currentUsername) {
                 const params = new URLSearchParams(location.search);
                 const qpUid = params.get('uid');
@@ -396,7 +409,6 @@
                 }
             }
 
-            // localStorageから取得
             if (!targetUID || !currentUsername) {
                 try {
                     const authData = localStorage.getItem('analyticsAuth');
@@ -428,7 +440,7 @@
             return true;
         }
 
-        // Firebase設定（dashboard.htmlと完全統一）
+        // Firebase設定
         const firebaseConfig = {
             apiKey: "AIzaSyCRUvvs0OSz_9L9bXtqteVFIIze1OaZObE",
             authDomain: "ce-scheduling-system-v2.firebaseapp.com",
@@ -443,6 +455,64 @@
         // グローバル変数
         let database = null;
         let authReadyPromise = null;
+        let globalTasksData = {};
+        let globalAssignmentsData = {};
+        let globalCEList = [];
+        let globalDayStatus = {}; // CE別の日別勤務状態
+        let currentDateRange = [];
+        let displayStartHour = 7;
+        let displayEndHour = 19;
+
+        const DATA_ROOT = 'ceScheduleV2';
+
+        // 部門設定
+        const DEPARTMENTS = [
+            '血液浄化', '人工心肺・補助循環', '心・カテーテル', 
+            '手術・麻酔', '不整脈', '機器管理・人工呼吸'
+        ];
+
+        const DEPARTMENT_COLORS = {
+            '血液浄化': '#FFB6C1',
+            '人工心肺・補助循環': '#4169E1',
+            '心・カテーテル': '#32CD32',
+            '手術・麻酔': '#87CEEB',
+            '不整脈': '#9370DB',
+            '機器管理・人工呼吸': '#90EE90'
+        };
+
+        const DEPARTMENT_ICONS = {
+            '血液浄化': 'tint',
+            '人工心肺・補助循環': 'procedures',
+            '心・カテーテル': 'heart',
+            '手術・麻酔': 'user-md',
+            '不整脈': 'heartbeat',
+            '機器管理・人工呼吸': 'lungs'
+        };
+
+        // 勤務時間定義（休憩時間含む）
+        const WORK_TIME_DEFINITIONS = {
+            'A': { workHours: 7.75, breakMinutes: 45, isDuty: false },
+            'A1': { workHours: 7.75, breakMinutes: 45, isDuty: false },
+            'B': { workHours: 22, breakMinutes: 120, isDuty: true },
+            '非': { workHours: 0, breakMinutes: 0, isDuty: false },
+            '×': { workHours: 0, breakMinutes: 0, isDuty: false },
+            '年': { workHours: 0, breakMinutes: 0, isDuty: false },
+            '出': { workHours: 0, breakMinutes: 0, isDuty: false },
+            '研': { workHours: 0, breakMinutes: 0, isDuty: false }
+        };
+
+        // CEキー取得ヘルパー関数
+        function ceKey(ce) {
+            return (ce && (ce.id || ce.name || ce.fullName || '')).toString();
+        }
+
+        // CE配置判定ヘルパー関数
+        function isAssignedToCE(assignedEntry, ce) {
+            const aId = (assignedEntry && (assignedEntry.id || assignedEntry.name || '')).toString();
+            const cId = ceKey(ce);
+            const cAlt = (ce.name || '').toString();
+            return aId === cId || aId === cAlt;
+        }
 
         function initializeFirebase() {
             try {
@@ -475,31 +545,6 @@
                 if (authWarning) authWarning.style.display = 'block';
             }
         }
-
-        const DATA_ROOT = 'ceScheduleV2';
-
-        // グローバル変数
-        let globalTasksData = {};
-        let globalAssignmentsData = {};
-        let globalCEList = [];
-        let currentDateRange = [];
-        let displayStartHour = 7;
-        let displayEndHour = 19;
-
-        // 部門設定
-        const DEPARTMENTS = [
-            '血液浄化', '人工心肺・補助循環', '心・カテーテル', 
-            '手術・麻酔', '不整脈', '機器管理・人工呼吸'
-        ];
-
-        const DEPARTMENT_COLORS = {
-            '血液浄化': '#FFB6C1',
-            '人工心肺・補助循環': '#4169E1',
-            '心・カテーテル': '#32CD32',
-            '手術・麻酔': '#87CEEB',
-            '不整脈': '#9370DB',
-            '機器管理・人工呼吸': '#90EE90'
-        };
 
         // ========== 初期化 ==========
         document.addEventListener('DOMContentLoaded', async function() {
@@ -554,7 +599,22 @@
             document.getElementById('resetFiltersBtn').addEventListener('click', resetFilters);
             document.getElementById('currentWeekBtn').addEventListener('click', setCurrentWeekAndLoad);
             
-            // 全CEチェックボックスの処理は、CEリスト生成後に設定
+            // 部門フィルターのイベントリスナー
+            setTimeout(() => {
+                const allDeptCheckbox = document.querySelector('.department-filter[value="all"]');
+                if (allDeptCheckbox) {
+                    allDeptCheckbox.addEventListener('change', function() {
+                        const isChecked = this.checked;
+                        document.querySelectorAll('.department-filter:not([value="all"])').forEach(cb => {
+                            cb.checked = isChecked;
+                        });
+                    });
+                }
+                
+                document.querySelectorAll('.department-filter:not([value="all"])').forEach(cb => {
+                    cb.addEventListener('change', updateAllDepartmentCheckbox);
+                });
+            }, 100);
         }
 
         function setCurrentWeekRange() {
@@ -626,7 +686,7 @@
             }
             
             try {
-                console.log('🔄 Firebaseからデータ読み込み中...');
+                console.log('🔄 Firebaseからデータ読み込み中（個人別タイムライン版）...');
                 
                 const currentUser = firebase.auth().currentUser;
                 if (!currentUser) {
@@ -644,40 +704,43 @@
                 const ceListRaw = ceListSnapshot.val() || {};
                 const workSchedulesRaw = workSchedulesSnapshot.val() || {};
 
-                // CEリストの処理（勤務表データと統合）
+                // CEリストの処理（修正版）
                 globalCEList = Object.values(ceListRaw).map(ce => ({
                     id: ce.id || ce.name,
                     name: ce.iconName || ce.displayName || ce.name,
                     fullName: ce.fullName || ce.name,
                     workType: ce.workType || 'ME',
-                    status: ce.status || { monday: '', tuesday: '', wednesday: '', thursday: '', friday: '', saturday: '', sunday: '' }
+                    status: {}
                 }));
 
+                console.log('📊 取得データ確認:');
+                console.log('  - events/byDate キー:', Object.keys(eventsByDate));
+                console.log('  - ceList 件数:', globalCEList.length);
+                console.log('  - workSchedules 件数:', Object.keys(workSchedulesRaw).length);
+                
                 // 勤務表データの統合
+                globalDayStatus = {};
                 const publishedSchedules = Object.values(workSchedulesRaw)
                     .filter(s => s.metadata && s.metadata.isVisible !== false)
-                    .sort((a, b) => (b.metadata.publishedAt || 0) - (a.metadata.publishedAt || 0));
+                    .sort((a, b) => (b.metadata?.publishedAt || 0) - (a.metadata?.publishedAt || 0));
 
                 if (publishedSchedules.length > 0) {
                     const latestSchedule = publishedSchedules[0];
                     const scheduleData = latestSchedule.scheduleData || {};
-
-                    globalCEList.forEach(ce => {
-                        currentDateRange.forEach(date => {
-                            const dateKey = formatDateAsISO(date);
-                            const dayOfWeek = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'][date.getDay()];
+                    
+                    currentDateRange.forEach(date => {
+                        const dateKey = formatDateAsISO(date);
+                        globalCEList.forEach(ce => {
+                            const ceId = ceKey(ce);
+                            const workData = scheduleData[ce.id]?.[dateKey] || scheduleData[ceId]?.[dateKey];
+                            const status = workData ? (workData.customText?.trim() || workData.status || '') : '';
                             
-                            const workData = scheduleData[ce.id]?.[dateKey];
-                            if (workData && workData.status) {
-                                ce.status[dayOfWeek] = workData.status;
-                            }
+                            if (!globalDayStatus[ceId]) globalDayStatus[ceId] = {};
+                            globalDayStatus[ceId][dateKey] = status;
                         });
                     });
+                    console.log('✅ 勤務表データ統合完了');
                 }
-                
-                console.log('📊 取得データ確認:');
-                console.log('  - events/byDate キー:', Object.keys(eventsByDate));
-                console.log('  - ceList 件数:', globalCEList.length);
                 
                 // タイムライン用データ構造に変換
                 globalTasksData = {};
@@ -725,6 +788,8 @@
                             } else {
                                 assignmentsForDay[taskId] = [];
                             }
+                            
+                            console.log(`🔗 ${dateKey} - ${taskData.name} (${taskData.department}): ${assignmentsForDay[taskId].length}名配置`);
                         });
                         
                         tasksForDay.sort((a, b) => a.startTime.localeCompare(b.startTime));
@@ -732,11 +797,11 @@
                         globalTasksData[dateKey] = tasksForDay;
                         globalAssignmentsData[dateKey] = assignmentsForDay;
                         
-                        console.log(`📊 ${dateKey}: ${tasksForDay.length}件の業務を変換完了`);
+                        console.log(`📊 ${dateKey}: ${tasksForDay.length}件の業務を変換完了（ID紐付け版）`);
                     }
                 });
                 
-                console.log('✅ Firebaseデータ読み込み完了');
+                console.log('✅ Firebaseデータ読み込み完了（個人別タイムライン版）');
                 
             } catch (error) {
                 console.error('❌ Firebase読み込みエラー:', error);
@@ -751,22 +816,25 @@
             container.innerHTML = '';
             
             globalCEList.forEach(ce => {
+                const value = ceKey(ce);
                 const label = document.createElement('label');
                 label.className = 'flex items-center text-sm';
+                label.title = ce.fullName || ce.name || value;
                 label.innerHTML = `
-                    <input type="checkbox" class="ce-filter" value="${ce.id}" checked>
-                    <span class="ml-1 truncate" title="${ce.fullName}">${ce.name}</span>
+                    <input type="checkbox" class="ce-filter" value="${value}" checked>
+                    <span class="ml-1 truncate">${ce.name || ce.fullName || value}</span>
                 `;
                 container.appendChild(label);
             });
-            
+
             // イベントリスナー設定
-            document.getElementById('selectAllCEs').addEventListener('change', function() {
-                const isChecked = this.checked;
-                document.querySelectorAll('.ce-filter').forEach(cb => {
-                    cb.checked = isChecked;
+            const selectAllCEs = document.getElementById('selectAllCEs');
+            if (selectAllCEs) {
+                selectAllCEs.addEventListener('change', function() {
+                    const isChecked = this.checked;
+                    container.querySelectorAll('.ce-filter').forEach(cb => cb.checked = isChecked);
                 });
-            });
+            }
             
             container.querySelectorAll('.ce-filter').forEach(cb => {
                 cb.addEventListener('change', updateAllCECheckbox);
@@ -778,16 +846,25 @@
             const ceCheckboxes = document.querySelectorAll('.ce-filter');
             const checkedCount = document.querySelectorAll('.ce-filter:checked').length;
             
-            allCheckbox.checked = checkedCount === ceCheckboxes.length;
+            if (allCheckbox) {
+                allCheckbox.checked = checkedCount === ceCheckboxes.length;
+            }
+        }
+
+        function updateAllDepartmentCheckbox() {
+            const allCheckbox = document.querySelector('.department-filter[value="all"]');
+            const deptCheckboxes = document.querySelectorAll('.department-filter:not([value="all"])');
+            const checkedCount = document.querySelectorAll('.department-filter:not([value="all"]):checked').length;
+            
+            if (allCheckbox) {
+                allCheckbox.checked = checkedCount === deptCheckboxes.length;
+            }
         }
 
         function generateDateRange(startDateStr, endDateStr) {
             const dates = [];
-            const startDate = new Date(startDateStr);
-            const endDate = new Date(endDateStr);
-            
-            startDate.setHours(0, 0, 0, 0);
-            endDate.setHours(0, 0, 0, 0);
+            const startDate = new Date(startDateStr + 'T00:00:00');
+            const endDate = new Date(endDateStr + 'T00:00:00');
             
             const current = new Date(startDate);
             
@@ -816,149 +893,56 @@
             container.innerHTML = '';
             
             const selectedCEs = getSelectedCEs();
-            const selectedWorkTypes = getSelectedWorkTypes();
+            const selectedDepartments = getSelectedDepartments();
             
             console.log('👤 選択されたCE:', selectedCEs.length);
-            console.log('🔧 選択された勤務区分:', selectedWorkTypes);
+            console.log('🏥 選択された部門:', selectedDepartments);
             
-            if (selectedCEs.length === 0) {
-                container.innerHTML = `
-                    <div class="no-tasks-message col-span-full">
-                        <i class="fas fa-user-times text-3xl mb-4 block"></i>
-                        <p class="text-lg font-bold mb-2">表示するCEを選択してください</p>
-                        <p>上記のフィルターから表示したいCEにチェックを入れてください。</p>
-                    </div>
-                `;
-                return;
-            }
-            
-            // 勤務区分でフィルタリング
-            const filteredCEs = globalCEList.filter(ce => 
-                selectedCEs.includes(ce.id) && 
-                (selectedWorkTypes.length === 0 || selectedWorkTypes.includes(ce.workType))
-            );
+            const filteredCEs = globalCEList.filter(ce => selectedCEs.includes(ceKey(ce)));
             
             if (filteredCEs.length === 0) {
                 container.innerHTML = `
                     <div class="no-tasks-message col-span-full">
-                        <i class="fas fa-filter text-3xl mb-4 block"></i>
-                        <p class="text-lg font-bold mb-2">選択した条件に該当するCEがいません</p>
-                        <p>勤務区分フィルターを確認してください。</p>
+                        <i class="fas fa-user-times text-3xl mb-4 block"></i>
+                        <p class="text-lg font-bold mb-2">表示するCEを選択してください</p>
+                        <p>上部の「全CE選択」または個別CEにチェックを入れてください。</p>
                     </div>
                 `;
                 return;
             }
-            
+
             let hasAnyData = false;
-            
-            // 勤務区分別にグループ化して表示
-            const cesByWorkType = {};
+
             filteredCEs.forEach(ce => {
-                if (!cesByWorkType[ce.workType]) {
-                    cesByWorkType[ce.workType] = [];
+                const ceData = collectCEData(ce, selectedDepartments);
+                if (Object.keys(ceData).length > 0) {
+                    generateCETimeline(ce, container, ceData);
+                    hasAnyData = true;
                 }
-                cesByWorkType[ce.workType].push(ce);
             });
-            
-            const workTypeOrder = ['OPE', 'ME', 'HD', 'FLEX'];
-            workTypeOrder.forEach(workType => {
-                if (!cesByWorkType[workType]) return;
-                
-                cesByWorkType[workType].forEach(ce => {
-                    const ceElement = generateCETimeline(ce, container);
-                    if (ceElement) {
-                        hasAnyData = true;
-                    }
-                });
-            });
-            
+
             if (!hasAnyData) {
                 container.innerHTML = `
                     <div class="no-tasks-message col-span-full">
                         <i class="fas fa-calendar-times text-3xl mb-4 block"></i>
-                        <p class="text-lg font-bold mb-2">指定期間内に業務配置がありません</p>
-                        <p>期間を変更するか、業務が配置されているかご確認ください。</p>
+                        <p class="text-lg font-bold mb-2">指定条件に該当する配置がありません</p>
+                        <p>期間・部門・CE選択を見直してください。</p>
                     </div>
                 `;
             }
-            
+
             console.log('✅ 個人別タイムライン生成完了');
         }
 
-        function generateCETimeline(ce, container) {
-            console.log(`🔄 ${ce.name} のタイムライン生成中...`);
-            
-            const ceData = collectCEData(ce);
-            console.log(`📊 ${ce.name} のデータ:`, Object.keys(ceData));
-            
-            // CEカードを作成
+        function generateCETimeline(ce, container, ceData) {
             const ceCard = document.createElement('div');
-            ceCard.className = `ce-card ce-${ce.workType.toLowerCase()}`;
+            ceCard.className = `ce-card ce-${(ce.workType || '').toLowerCase()}`;
             ceCard.style.setProperty('--ce-color', getCEColor(ce.workType));
-            
-            // ヘッダー
-            const header = createCEHeader(ce, ceData);
-            ceCard.appendChild(header);
-            
-            // 業務が存在しない場合
-            if (Object.keys(ceData).length === 0) {
-                const noTasksDiv = document.createElement('div');
-                noTasksDiv.className = 'no-tasks-message';
-                noTasksDiv.innerHTML = `
-                    <i class="fas fa-user-clock text-2xl mb-2 block"></i>
-                    <p>指定期間内に ${ce.name} の業務配置はありません</p>
-                `;
-                ceCard.appendChild(noTasksDiv);
-            } else {
-                // 勤務負荷サマリー
-                const workloadSummary = createWorkloadSummary(ceData);
-                ceCard.appendChild(workloadSummary);
-                
-                // 日別タイムライン
-                const timelineBody = createTimelineBody(ceData, ce);
-                ceCard.appendChild(timelineBody);
-            }
-            
-            container.appendChild(ceCard);
-            return ceCard;
-        }
 
-        function collectCEData(ce) {
-            const ceData = {};
-            
-            currentDateRange.forEach(date => {
-                const dateKey = formatDateAsISO(date);
-                const dayTasks = [];
-                
-                // その日の全業務を確認
-                const allTasks = globalTasksData[dateKey] || [];
-                const allAssignments = globalAssignmentsData[dateKey] || {};
-                
-                allTasks.forEach(task => {
-                    const assignedCEs = allAssignments[task.id] || [];
-                    const isAssigned = assignedCEs.some(assigned => assigned.id === ce.id);
-                    
-                    if (isAssigned) {
-                        dayTasks.push(task);
-                    }
-                });
-                
-                if (dayTasks.length > 0) {
-                    ceData[dateKey] = {
-                        date: date,
-                        tasks: dayTasks
-                    };
-                    console.log(`📊 ${dateKey} に ${dayTasks.length} 件の業務を追加`);
-                }
-            });
-            
-            return ceData;
-        }
-
-        function createCEHeader(ce, ceData) {
-            const totalTasks = Object.values(ceData).reduce((sum, day) => sum + day.tasks.length, 0);
+            const totalTasks = Object.values(ceData).reduce((sum, d) => sum + d.tasks.length, 0);
             const totalWorkHours = calculateTotalWorkHours(ceData);
-            
+            const statusSummary = computeStatusSummary(ce, ceData);
+
             const header = document.createElement('div');
             header.className = 'flex items-center justify-between mb-4';
             header.innerHTML = `
@@ -966,27 +950,89 @@
                     <i class="fas fa-user mr-3 text-2xl" style="color: ${getCEColor(ce.workType)};"></i>
                     <div>
                         <h3 class="text-xl font-bold">${ce.name}</h3>
-                        <span class="worktype-badge worktype-${ce.workType.toLowerCase()}">${ce.workType}</span>
+                        <span class="worktype-badge worktype-${(ce.workType||'').toLowerCase()}">${ce.workType || ''}</span>
                     </div>
                 </div>
                 <div class="text-right text-sm text-gray-600">
-                    <div class="bg-white bg-opacity-70 px-3 py-1 rounded-full mb-1">
-                        期間内総業務: ${totalTasks}件
-                    </div>
-                    <div class="bg-white bg-opacity-70 px-3 py-1 rounded-full">
-                        実労働時間: ${totalWorkHours}時間
+                    <div class="bg-white bg-opacity-70 px-3 py-1 rounded-full mb-1">総業務: ${totalTasks}件</div>
+                    <div class="bg-white bg-opacity-70 px-3 py-1 rounded-full">実労働: ${totalWorkHours}時間 / 休憩: ${Math.round(statusSummary.totalBreakMin/6)/10}時間</div>
+                    <div class="text-xs text-gray-500 mt-1">
+                        当直:${statusSummary.counts.B} 非番:${statusSummary.counts.非} 休:${statusSummary.counts.休} 出:${statusSummary.counts.出} 研:${statusSummary.counts.研} 年:${statusSummary.counts.年}
                     </div>
                 </div>
             `;
-            
-            return header;
+            ceCard.appendChild(header);
+
+            // 勤務負荷サマリー（部門別）
+            ceCard.appendChild(createWorkloadSummary(ceData));
+
+            // タイムライン本体
+            ceCard.appendChild(createTimelineBody(ceData, ce));
+
+            container.appendChild(ceCard);
+            return ceCard;
+        }
+
+        function collectCEData(ce, selectedDepartments = []) {
+            const ceData = {};
+            const ceId = ceKey(ce);
+
+            currentDateRange.forEach(date => {
+                const dateKey = formatDateAsISO(date);
+                const allTasks = globalTasksData[dateKey] || [];
+                const allAssignments = globalAssignmentsData[dateKey] || {};
+
+                const dayTasks = [];
+                allTasks.forEach(task => {
+                    if (selectedDepartments.length && !selectedDepartments.includes(task.department)) return;
+                    const assignedCEs = allAssignments[task.id] || [];
+                    const assigned = assignedCEs.some(a => isAssignedToCE(a, ce));
+                    if (assigned) dayTasks.push(task);
+                });
+
+                if (dayTasks.length) {
+                    ceData[dateKey] = { date, tasks: dayTasks };
+                }
+            });
+
+            return ceData;
+        }
+
+        function computeStatusSummary(ce, ceData) {
+            const ceId = ceKey(ce);
+            const counts = { B:0, 非:0, 休:0, 出:0, 研:0, 年:0, 稼働日:0 };
+            let totalBreakMin = 0;
+
+            currentDateRange.forEach(d => {
+                const dateKey = formatDateAsISO(d);
+                const status = (globalDayStatus[ceId] && globalDayStatus[ceId][dateKey]) || '';
+
+                // 稼働日: 当該日で何かしら業務があるか
+                const hasTasks = !!(ceData[dateKey] && ceData[dateKey].tasks && ceData[dateKey].tasks.length);
+                if (hasTasks) counts.稼働日++;
+
+                // 状態カウント
+                if (status === 'B') counts.B++;
+                if (status === '非') counts.非++;
+                if (status === '×') counts.休++;
+                if (status === '出') counts.出++;
+                if (status === '研') counts.研++;
+                if (status === '年') counts.年++;
+
+                // 休憩時間計算
+                const workDef = WORK_TIME_DEFINITIONS[status];
+                if (workDef) {
+                    totalBreakMin += workDef.breakMinutes || 0;
+                }
+            });
+
+            return { counts, totalBreakMin };
         }
 
         function createWorkloadSummary(ceData) {
             const summary = document.createElement('div');
             summary.className = 'workload-summary';
             
-            // 部門別業務数を集計
             const deptStats = {};
             let totalHours = 0;
             
@@ -1015,11 +1061,11 @@
             
             summary.innerHTML = `
                 <div class="flex justify-between items-center mb-2">
-                    <h4 class="font-bold text-sm">勤務負荷サマリー</h4>
+                    <h4 class="font-bold text-sm">業務別勤務負荷</h4>
                     <span class="text-sm font-bold">合計: ${Math.round(totalHours * 10) / 10}時間</span>
                 </div>
                 <div class="flex flex-wrap">
-                    ${deptStatsHtml}
+                    ${deptStatsHtml || '<span class="text-gray-500 text-xs">期間内に配置された業務がありません</span>'}
                 </div>
             `;
             
@@ -1030,11 +1076,9 @@
             const body = document.createElement('div');
             body.className = 'space-y-3';
             
-            // 時間軸ラベルを作成
             const timeScale = createTimeScale();
             body.appendChild(timeScale);
             
-            // 日付順にソート
             const sortedEntries = Object.entries(ceData).sort((a, b) => {
                 return a[1].date.getTime() - b[1].date.getTime();
             });
@@ -1065,11 +1109,11 @@
         function createDayRow(dayData, ce) {
             const dayRow = document.createElement('div');
             dayRow.className = 'timeline-day-row';
-            
-            // 日付ヘッダー
-            const dayOfWeek = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'][dayData.date.getDay()];
-            const statusForDay = ce.status[dayOfWeek] || '';
-            const statusBadgeHtml = statusForDay ? `<span class="status-badge status-${statusForDay}">${statusForDay}</span>` : '';
+
+            const ceId = ceKey(ce);
+            const dateKey = formatDateAsISO(dayData.date);
+            const status = (globalDayStatus[ceId] && globalDayStatus[ceId][dateKey]) || '';
+            const statusBadgeHtml = status ? `<span class="status-badge status-${status}">${status}</span>` : '';
 
             const dayHeader = document.createElement('div');
             dayHeader.className = 'flex justify-between items-center mb-2';
@@ -1082,11 +1126,9 @@
                 </div>
             `;
             dayRow.appendChild(dayHeader);
-            
-            // タイムライントラック
+
             const track = createTimelineTrack(dayData);
             dayRow.appendChild(track);
-            
             return dayRow;
         }
 
@@ -1185,13 +1227,12 @@
         }
 
         function getSelectedCEs() {
-            const checkboxes = document.querySelectorAll('.ce-filter:checked');
-            return Array.from(checkboxes).map(cb => cb.value);
+            return Array.from(document.querySelectorAll('.ce-filter:checked')).map(cb => cb.value);
         }
 
-        function getSelectedWorkTypes() {
-            const checkboxes = document.querySelectorAll('.worktype-filter:checked');
-            return Array.from(checkboxes).map(cb => cb.value);
+        function getSelectedDepartments() {
+            const list = Array.from(document.querySelectorAll('.department-filter:not([value="all"]):checked')).map(cb => cb.value);
+            return list.length ? list : DEPARTMENTS; // 0件のときは全部門扱い
         }
 
         function getCEColor(workType) {
@@ -1202,6 +1243,18 @@
                 'FLEX': '#FFFF99'
             };
             return colors[workType] || '#cccccc';
+        }
+
+        function getDepartmentIcon(dept) {
+            const icons = {
+                '血液浄化': 'tint',
+                '人工心肺・補助循環': 'procedures',
+                '心・カテーテル': 'heart',
+                '手術・麻酔': 'user-md',
+                '不整脈': 'heartbeat',
+                '機器管理・人工呼吸': 'lungs'
+            };
+            return icons[dept] || 'cog';
         }
 
         function calculateTotalWorkHours(ceData) {
@@ -1241,8 +1294,7 @@
             document.getElementById('displayStartTime').value = '07:00';
             document.getElementById('displayEndTime').value = '19:00';
             
-            document.querySelectorAll('.ce-filter, .worktype-filter').forEach(cb => cb.checked = true);
-            document.getElementById('selectAllCEs').checked = true;
+            document.querySelectorAll('.ce-filter, .department-filter').forEach(cb => cb.checked = true);
             
             loadTimelineData();
         }
@@ -1250,27 +1302,28 @@
         function updateSummary() {
             const summaryContent = document.getElementById('summaryContent');
             const selectedCEs = getSelectedCEs();
-            const selectedWorkTypes = getSelectedWorkTypes();
-            
-            const filteredCEs = globalCEList.filter(ce => 
-                selectedCEs.includes(ce.id) && 
-                (selectedWorkTypes.length === 0 || selectedWorkTypes.includes(ce.workType))
-            );
-            
+            const selectedDepartments = getSelectedDepartments();
+
+            const filteredCEs = globalCEList.filter(ce => selectedCEs.includes(ceKey(ce)));
+
             let totalTasks = 0;
             let totalWorkHours = 0;
             let activeCEs = 0;
-            
+            let totalB=0, totalHi=0, totalRest=0;
+
             filteredCEs.forEach(ce => {
-                const ceData = collectCEData(ce);
-                if (Object.keys(ceData).length > 0) {
+                const ceData = collectCEData(ce, selectedDepartments);
+                if (Object.keys(ceData).length) {
                     activeCEs++;
-                    const ceTasks = Object.values(ceData).reduce((sum, day) => sum + day.tasks.length, 0);
-                    totalTasks += ceTasks;
+                    totalTasks += Object.values(ceData).reduce((s,d)=>s+d.tasks.length,0);
                     totalWorkHours += calculateTotalWorkHours(ceData);
+                    const statusSummary = computeStatusSummary(ce, ceData);
+                    totalB += statusSummary.counts.B;
+                    totalHi += statusSummary.counts.非;
+                    totalRest += statusSummary.totalBreakMin;
                 }
             });
-            
+
             summaryContent.innerHTML = `
                 <div class="bg-white bg-opacity-70 p-3 rounded-lg text-center">
                     <div class="font-bold text-lg text-blue-600">${filteredCEs.length}</div>
@@ -1278,19 +1331,23 @@
                 </div>
                 <div class="bg-white bg-opacity-70 p-3 rounded-lg text-center">
                     <div class="font-bold text-lg text-green-600">${activeCEs}</div>
-                    <div class="text-xs text-gray-600">配置済みCE数</div>
+                    <div class="text-xs text-gray-600">配置ありCE</div>
                 </div>
                 <div class="bg-white bg-opacity-70 p-3 rounded-lg text-center">
                     <div class="font-bold text-lg text-purple-600">${totalTasks}</div>
                     <div class="text-xs text-gray-600">総業務配置数</div>
                 </div>
                 <div class="bg-white bg-opacity-70 p-3 rounded-lg text-center">
-                    <div class="font-bold text-lg text-orange-600">${Math.round(totalWorkHours * 10) / 10}h</div>
+                    <div class="font-bold text-lg text-orange-600">${Math.round(totalWorkHours*10)/10}h</div>
                     <div class="text-xs text-gray-600">総実労働時間</div>
                 </div>
+                <div class="bg-white bg-opacity-70 p-3 rounded-lg text-center">
+                    <div class="font-bold text-lg text-pink-600">当直:${totalB} 非番:${totalHi}</div>
+                    <div class="text-xs text-gray-600">休憩:${Math.round(totalRest/6)/10}h</div>
+                </div>
             `;
-            
-            console.log(`📊 サマリー更新: ${filteredCEs.length}名表示, ${activeCEs}名配置済み, ${totalTasks}件業務, ${Math.round(totalWorkHours * 10) / 10}時間`);
+
+            console.log(`📊 サマリー更新（ID紐付け版）: ${filteredCEs.length}名表示, ${activeCEs}名配置済み, ${totalTasks}件業務, ${Math.round(totalWorkHours*10)/10}時間`);
         }
 
         console.log('✅ 個人別タイムライン V2 読み込み完了');
