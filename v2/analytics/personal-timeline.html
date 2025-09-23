@@ -47,15 +47,15 @@
             box-shadow: 0 6px 18px rgba(0,0,0,0.15); 
         }
 
-        .ce-area {
-            background: rgba(255,255,255,0.85);
-            border-radius: 14px;
-            padding: 16px;
-            box-shadow: var(--shadow);
-            border-left: 4px solid #3b82f6;
-            margin-bottom: 20px;
-        }
-
+.ce-area {
+    background: rgba(255,255,255,0.85);
+    border-radius: 14px;
+    padding: 16px;
+    box-shadow: var(--shadow);
+    border-left: 4px solid #3b82f6;
+    margin-bottom: 20px;
+    break-inside: avoid; /* 印刷時の改ページ防止 */
+}
         .timeline-day-row {
             padding: 12px;
             margin-bottom: 8px;
@@ -111,14 +111,15 @@
             box-shadow: var(--shadow);
         }
 
-        .no-tasks-message {
-            text-align: center;
-            padding: 40px 20px;
-            color: #999;
-            background: rgba(255,255,255,0.5);
-            border-radius: 8px;
-            border: 2px dashed #ddd;
-        }
+.no-tasks-message {
+    text-align: center;
+    padding: 40px 20px;
+    color: #999;
+    background: rgba(255,255,255,0.5);
+    border-radius: 8px;
+    border: 2px dashed #ddd;
+    grid-column: 1 / -1; /* 全列にまたがって表示 */
+}
 
         .auth-error {
             background: #fee2e2;
@@ -146,6 +147,11 @@
 
         /* 印刷用スタイル */
         @media print {
+               #timelineContainer {
+        grid-template-columns: repeat(2, 1fr) !important;
+        gap: 15px !important;
+    }
+}
             body { 
                 background: white !important; 
                 color: #000 !important; 
@@ -346,10 +352,10 @@
             </div>
         </div>
 
-        <!-- 個人別タイムライン表示エリア -->
-        <div id="timelineContainer">
-            <!-- JavaScriptで動的生成 -->
-        </div>
+<!-- 個人別タイムライン表示エリア（3列グリッドレイアウト） -->
+<div id="timelineContainer" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+    <!-- JavaScriptで動的生成 -->
+</div>
 
         <!-- ローディング表示 -->
         <div id="loadingIndicator" class="text-center py-8" style="display: none;">
@@ -487,25 +493,26 @@
             }
         }
 
-        function buildCEListFromWorkSchedule(schedule) {
-            if (!schedule || !schedule.ceList || !Array.isArray(schedule.ceList)) {
-                return [];
-            }
-            
-            return schedule.ceList
-                .filter(ce => ce && typeof ce === 'object')
-                .filter(ce => {
-                    const id = ce.id || '';
-                    const name = ce.iconName || ce.displayName || ce.fullName || ce.name || '';
-                    return !CE_DENY_NAMES.has(id) && !CE_DENY_NAMES.has(name) && name.trim() !== '';
-                })
-                .map(ce => ({
-                    id: ce.id,
-                    name: ce.iconName || ce.displayName || ce.fullName || ce.name, // iconNameを最優先
-                    fullName: ce.fullName || ce.name,
-                    workType: ce.workType || 'ME'
-                }));
-        }
+function buildCEListFromWorkSchedule(schedule) {
+    if (!schedule || !schedule.ceList || !Array.isArray(schedule.ceList)) {
+        return [];
+    }
+    
+    return schedule.ceList
+        .filter(ce => ce && typeof ce === 'object')
+        .filter(ce => {
+            const id = ce.id || '';
+            const name = ce.fullName || ce.name || '';  // fullName優先に変更
+            return !CE_DENY_NAMES.has(id) && !CE_DENY_NAMES.has(name) && name.trim() !== '';
+        })
+        .map(ce => ({
+            id: ce.id,
+            name: ce.fullName || ce.name,  // fullName（氏名）を最優先
+            fullName: ce.fullName || ce.name,
+            iconName: ce.iconName || ce.displayName,  // 参考情報として保持
+            workType: ce.workType || 'ME'
+        }));
+}
 
         function buildWorkStatusMap(schedule, ceList, dateRange) {
             const statusMap = {};
@@ -1030,43 +1037,43 @@
             return ceEvents;
         }
 
-        function createCEHeader(ce, ceEvents) {
-            const totalTasks = Object.values(ceEvents).reduce((sum, day) => sum + day.events.length, 0);
-            
-            // 勤務状態の集計
-            const statusCounts = {};
-            currentDateRange.forEach(date => {
-                const dateKey = formatDateAsISO(date);
-                const status = globalWorkStatusData[ce.id]?.[dateKey];
-                if (status && status !== '') {
-                    statusCounts[status] = (statusCounts[status] || 0) + 1;
-                }
-            });
-
-            const statusSummaryHtml = Object.entries(statusCounts).map(([status, count]) => {
-                const def = WORK_STATUS_DEFINITIONS[status] || { label: status, color: '#B0BEC5' };
-                return `<span class="status-badge" style="background:${def.color}">${def.label}:${count}</span>`;
-            }).join('');
-
-            const header = document.createElement('div');
-            header.className = 'flex items-center justify-between mb-4';
-            header.innerHTML = `
-                <div class="flex items-center">
-                    <i class="fas fa-user mr-3 text-2xl" style="color: #3b82f6;"></i>
-                    <div>
-                        <h3 class="text-xl font-bold">${ce.name}</h3>
-                    </div>
-                </div>
-                <div class="text-sm text-gray-600 flex items-center">
-                    <span class="bg-white bg-opacity-70 px-3 py-1 rounded-full mr-2">
-                        期間内総業務: ${totalTasks}件
-                    </span>
-                    ${statusSummaryHtml}
-                </div>
-            `;
-            
-            return header;
+function createCEHeader(ce, ceEvents) {
+    const totalTasks = Object.values(ceEvents).reduce((sum, day) => sum + day.events.length, 0);
+    
+    // 勤務状態の集計
+    const statusCounts = {};
+    currentDateRange.forEach(date => {
+        const dateKey = formatDateAsISO(date);
+        const status = globalWorkStatusData[ce.id]?.[dateKey];
+        if (status && status !== '') {
+            statusCounts[status] = (statusCounts[status] || 0) + 1;
         }
+    });
+
+    const statusSummaryHtml = Object.entries(statusCounts).map(([status, count]) => {
+        const def = WORK_STATUS_DEFINITIONS[status] || { label: status, color: '#B0BEC5' };
+        return `<span class="status-badge" style="background:${def.color}">${def.label}:${count}</span>`;
+    }).join('');
+
+    const header = document.createElement('div');
+    header.className = 'flex items-center justify-between mb-4';
+    header.innerHTML = `
+        <div class="flex items-center">
+            <i class="fas fa-user mr-3 text-2xl" style="color: #3b82f6;"></i>
+            <div>
+                <h3 class="text-xl font-bold">${ce.name}</h3>
+            </div>
+        </div>
+        <div class="text-sm text-gray-600 flex items-center flex-wrap">
+            <span class="bg-white bg-opacity-70 px-3 py-1 rounded-full mr-2 mb-1">
+                期間内総業務: ${totalTasks}件
+            </span>
+            ${statusSummaryHtml}
+        </div>
+    `;
+    
+    return header;
+}
 
         function createTimelineBody(ceEvents, ceId) {
             const body = document.createElement('div');
