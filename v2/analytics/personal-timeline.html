@@ -47,15 +47,39 @@
             box-shadow: 0 6px 18px rgba(0,0,0,0.15); 
         }
 
-.ce-area {
-    background: rgba(255,255,255,0.85);
-    border-radius: 14px;
-    padding: 16px;
-    box-shadow: var(--shadow);
-    border-left: 4px solid #3b82f6;
-    margin-bottom: 20px;
-    break-inside: avoid; /* 印刷時の改ページ防止 */
-}
+        .btn-secondary {
+            background: linear-gradient(135deg, #2196F3, #1976D2);
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 16px;
+            font-weight: 500;
+            box-shadow: var(--shadow);
+            transition: all 0.2s ease;
+            cursor: pointer;
+            font-size: 14px;
+        }
+
+        .btn-secondary:hover { 
+            transform: translateY(-1px); 
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15); 
+        }
+
+        .btn-secondary.active {
+            background: linear-gradient(135deg, #FF5722, #E64A19);
+            transform: translateY(-1px);
+        }
+
+        .ce-area {
+            background: rgba(255,255,255,0.85);
+            border-radius: 14px;
+            padding: 16px;
+            box-shadow: var(--shadow);
+            border-left: 4px solid #3b82f6;
+            margin-bottom: 20px;
+            break-inside: avoid;
+        }
+
         .timeline-day-row {
             padding: 12px;
             margin-bottom: 8px;
@@ -111,15 +135,15 @@
             box-shadow: var(--shadow);
         }
 
-.no-tasks-message {
-    text-align: center;
-    padding: 40px 20px;
-    color: #999;
-    background: rgba(255,255,255,0.5);
-    border-radius: 8px;
-    border: 2px dashed #ddd;
-    grid-column: 1 / -1; /* 全列にまたがって表示 */
-}
+        .no-tasks-message {
+            text-align: center;
+            padding: 40px 20px;
+            color: #999;
+            background: rgba(255,255,255,0.5);
+            border-radius: 8px;
+            border: 2px dashed #ddd;
+            grid-column: 1 / -1;
+        }
 
         .auth-error {
             background: #fee2e2;
@@ -145,13 +169,26 @@
             margin-right: 4px;
         }
 
+        .period-buttons {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            margin-bottom: 16px;
+        }
+
+        .custom-period {
+            display: none;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+            margin-top: 12px;
+        }
+
+        .custom-period.active {
+            display: grid;
+        }
+
         /* 印刷用スタイル */
         @media print {
-               #timelineContainer {
-        grid-template-columns: repeat(2, 1fr) !important;
-        gap: 15px !important;
-    }
-}
             body { 
                 background: white !important; 
                 color: #000 !important; 
@@ -166,6 +203,10 @@
             .ce-area {
                 break-inside: avoid;
                 margin-bottom: 15px;
+            }
+            #timelineContainer {
+                grid-template-columns: repeat(2, 1fr) !important;
+                gap: 15px !important;
             }
         }
 
@@ -194,6 +235,20 @@
 
             .ce-filter-grid {
                 grid-template-columns: repeat(2, 1fr);
+            }
+
+            .period-buttons {
+                gap: 4px;
+            }
+
+            .btn-secondary {
+                padding: 6px 12px;
+                font-size: 12px;
+            }
+
+            .custom-period {
+                grid-template-columns: 1fr;
+                gap: 12px;
             }
         }
     </style>
@@ -233,19 +288,39 @@
                 <i class="fas fa-filter mr-2"></i>表示設定
             </h3>
             
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
-                <!-- 期間設定 -->
-                <div>
-                    <label class="block text-sm font-medium mb-2">開始日</label>
-                    <input type="date" id="startDate" class="w-full p-3 border border-gray-300 rounded-lg">
+            <!-- 期間設定（業務別タイムラインと統一） -->
+            <div class="mb-4">
+                <label class="block text-sm font-medium mb-2">集計期間</label>
+                <div class="period-buttons">
+                    <button id="todayBtn" class="btn-secondary">
+                        <i class="fas fa-calendar-day mr-1"></i>今日
+                    </button>
+                    <button id="thisWeekBtn" class="btn-secondary active">
+                        <i class="fas fa-calendar-week mr-1"></i>今週
+                    </button>
+                    <button id="thisMonthBtn" class="btn-secondary">
+                        <i class="fas fa-calendar-alt mr-1"></i>今月
+                    </button>
+                    <button id="customPeriodBtn" class="btn-secondary">
+                        <i class="fas fa-calendar mr-1"></i>カスタム期間
+                    </button>
                 </div>
                 
-                <div>
-                    <label class="block text-sm font-medium mb-2">終了日</label>
-                    <input type="date" id="endDate" class="w-full p-3 border border-gray-300 rounded-lg">
+                <!-- カスタム期間設定 -->
+                <div id="customPeriodSection" class="custom-period">
+                    <div>
+                        <label class="block text-sm font-medium mb-2">開始日</label>
+                        <input type="date" id="startDate" class="w-full p-3 border border-gray-300 rounded-lg">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium mb-2">終了日</label>
+                        <input type="date" id="endDate" class="w-full p-3 border border-gray-300 rounded-lg">
+                    </div>
                 </div>
+            </div>
 
-                <!-- 時間範囲設定 -->
+            <!-- 時間範囲設定 -->
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
                 <div>
                     <label class="block text-sm font-medium mb-2">表示開始時刻</label>
                     <input type="time" id="displayStartTime" value="07:00" class="w-full p-3 border border-gray-300 rounded-lg">
@@ -255,6 +330,10 @@
                     <label class="block text-sm font-medium mb-2">表示終了時刻</label>
                     <input type="time" id="displayEndTime" value="19:00" class="w-full p-3 border border-gray-300 rounded-lg">
                 </div>
+
+                <!-- 空白のスペース -->
+                <div></div>
+                <div></div>
             </div>
 
             <!-- CEフィルターと部門フィルター -->
@@ -318,9 +397,6 @@
                 <button id="resetFiltersBtn" class="bg-gray-500 text-white px-4 py-2 rounded-lg hover:bg-gray-600">
                     <i class="fas fa-undo mr-2"></i>リセット
                 </button>
-                <button id="currentWeekBtn" class="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600">
-                    <i class="fas fa-calendar-week mr-2"></i>今週表示
-                </button>
             </div>
         </div>
 
@@ -352,10 +428,10 @@
             </div>
         </div>
 
-<!-- 個人別タイムライン表示エリア（3列グリッドレイアウト） -->
-<div id="timelineContainer" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-    <!-- JavaScriptで動的生成 -->
-</div>
+        <!-- 個人別タイムライン表示エリア（3列グリッドレイアウト） -->
+        <div id="timelineContainer" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+            <!-- JavaScriptで動的生成 -->
+        </div>
 
         <!-- ローディング表示 -->
         <div id="loadingIndicator" class="text-center py-8" style="display: none;">
@@ -431,6 +507,7 @@
         let displayStartHour = 7;
         let displayEndHour = 19;
         let chartInstances = {};
+        let currentPeriodType = 'thisWeek';
 
         // 無効データ除外リスト
         const CE_DENY_NAMES = new Set(['list', 'updatedAt', 'lastUpdated', 'timestamp', 'ceList', 'state', 'templates', 'metadata', 'default', 'scheduleData', 'workTypeOverrides']);
@@ -473,6 +550,75 @@
             return `rgba(${r}, ${g}, ${b}, ${alpha})`;
         }
 
+        // ========== 期間設定機能 ==========
+        function setPeriod(type) {
+            currentPeriodType = type;
+            updatePeriodButtons();
+            
+            const today = new Date();
+            let startDate, endDate;
+            
+            switch (type) {
+                case 'today':
+                    startDate = endDate = new Date(today);
+                    break;
+                    
+                case 'thisWeek':
+                    const dayFromMonday = (today.getDay() + 6) % 7; // 月曜日を起点とした計算
+                    startDate = new Date(today);
+                    startDate.setDate(today.getDate() - dayFromMonday);
+                    endDate = new Date(startDate);
+                    endDate.setDate(startDate.getDate() + 6);
+                    break;
+                    
+                case 'thisMonth':
+                    startDate = new Date(today.getFullYear(), today.getMonth(), 1);
+                    endDate = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+                    break;
+                    
+                case 'custom':
+                    document.getElementById('customPeriodSection').classList.add('active');
+                    return; // カスタム期間は手動設定のため、ここでは日付設定しない
+                    
+                default:
+                    return;
+            }
+            
+            // カスタム期間以外は自動で日付設定
+            if (type !== 'custom') {
+                document.getElementById('customPeriodSection').classList.remove('active');
+                document.getElementById('startDate').value = formatDateForInput(startDate);
+                document.getElementById('endDate').value = formatDateForInput(endDate);
+                
+                // 自動実行
+                loadTimelineData();
+            }
+        }
+
+        function updatePeriodButtons() {
+            document.querySelectorAll('.btn-secondary').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            
+            const activeBtn = {
+                'today': 'todayBtn',
+                'thisWeek': 'thisWeekBtn', 
+                'thisMonth': 'thisMonthBtn',
+                'custom': 'customPeriodBtn'
+            }[currentPeriodType];
+            
+            if (activeBtn) {
+                document.getElementById(activeBtn).classList.add('active');
+            }
+        }
+
+        function formatDateForInput(date) {
+            const year = date.getFullYear();
+            const month = (date.getMonth() + 1).toString().padStart(2, '0');
+            const day = date.getDate().toString().padStart(2, '0');
+            return `${year}-${month}-${day}`;
+        }
+
         // ========== 勤務表からのCEリスト取得 ==========
         async function loadLatestWorkSchedule() {
             try {
@@ -493,26 +639,26 @@
             }
         }
 
-function buildCEListFromWorkSchedule(schedule) {
-    if (!schedule || !schedule.ceList || !Array.isArray(schedule.ceList)) {
-        return [];
-    }
-    
-    return schedule.ceList
-        .filter(ce => ce && typeof ce === 'object')
-        .filter(ce => {
-            const id = ce.id || '';
-            const name = ce.fullName || ce.name || '';  // fullName優先に変更
-            return !CE_DENY_NAMES.has(id) && !CE_DENY_NAMES.has(name) && name.trim() !== '';
-        })
-        .map(ce => ({
-            id: ce.id,
-            name: ce.fullName || ce.name,  // fullName（氏名）を最優先
-            fullName: ce.fullName || ce.name,
-            iconName: ce.iconName || ce.displayName,  // 参考情報として保持
-            workType: ce.workType || 'ME'
-        }));
-}
+        function buildCEListFromWorkSchedule(schedule) {
+            if (!schedule || !schedule.ceList || !Array.isArray(schedule.ceList)) {
+                return [];
+            }
+            
+            return schedule.ceList
+                .filter(ce => ce && typeof ce === 'object')
+                .filter(ce => {
+                    const id = ce.id || '';
+                    const name = ce.fullName || ce.name || '';
+                    return !CE_DENY_NAMES.has(id) && !CE_DENY_NAMES.has(name) && name.trim() !== '';
+                })
+                .map(ce => ({
+                    id: ce.id,
+                    name: ce.fullName || ce.name, // fullName（氏名）を最優先
+                    fullName: ce.fullName || ce.name,
+                    iconName: ce.iconName || ce.displayName,
+                    workType: ce.workType || 'ME'
+                }));
+        }
 
         function buildWorkStatusMap(schedule, ceList, dateRange) {
             const statusMap = {};
@@ -620,7 +766,10 @@ function buildCEListFromWorkSchedule(schedule) {
             
             initializeFirebase();
             setupEventListeners();
-            setCurrentWeekRange();
+            
+            // 初期表示は今週に設定（自動実行）
+            console.log('🔄 今週のデータを自動設定・読み込み開始');
+            setPeriod('thisWeek');
             
             try {
                 if (authReadyPromise) {
@@ -640,7 +789,7 @@ function buildCEListFromWorkSchedule(schedule) {
                     }
                 }
                 
-                await loadTimelineData();
+                console.log('✅ 個人別タイムライン初期化完了（今週データ表示済み）');
                 
             } catch (error) {
                 console.error('❌ 初期読み込みエラー:', error);
@@ -679,9 +828,15 @@ function buildCEListFromWorkSchedule(schedule) {
         }
 
         function setupEventListeners() {
+            // 期間設定ボタン（業務別タイムラインと統一）
+            document.getElementById('todayBtn').addEventListener('click', () => setPeriod('today'));
+            document.getElementById('thisWeekBtn').addEventListener('click', () => setPeriod('thisWeek'));
+            document.getElementById('thisMonthBtn').addEventListener('click', () => setPeriod('thisMonth'));
+            document.getElementById('customPeriodBtn').addEventListener('click', () => setPeriod('custom'));
+            
+            // その他のイベントリスナー
             document.getElementById('applyFiltersBtn').addEventListener('click', loadTimelineData);
             document.getElementById('resetFiltersBtn').addEventListener('click', resetFilters);
-            document.getElementById('currentWeekBtn').addEventListener('click', setCurrentWeekAndLoad);
             document.getElementById('exportBtn').addEventListener('click', exportTimeline);
             
             setTimeout(() => {
@@ -699,26 +854,6 @@ function buildCEListFromWorkSchedule(schedule) {
                     cb.addEventListener('change', updateAllDepartmentCheckbox);
                 });
             }, 100);
-        }
-
-        function setCurrentWeekRange() {
-            const today = new Date();
-            const dayFromMonday = (today.getDay() + 6) % 7;
-
-            const startDate = new Date(today);
-            startDate.setHours(0, 0, 0, 0);
-            startDate.setDate(today.getDate() - dayFromMonday);
-
-            const endDate = new Date(startDate);
-            endDate.setDate(startDate.getDate() + 6);
-
-            document.getElementById('startDate').value = startDate.toISOString().split('T')[0];
-            document.getElementById('endDate').value = endDate.toISOString().split('T')[0];
-        }
-
-        function setCurrentWeekAndLoad() {
-            setCurrentWeekRange();
-            loadTimelineData();
         }
 
         // ========== データ読み込み ==========
@@ -1037,43 +1172,43 @@ function buildCEListFromWorkSchedule(schedule) {
             return ceEvents;
         }
 
-function createCEHeader(ce, ceEvents) {
-    const totalTasks = Object.values(ceEvents).reduce((sum, day) => sum + day.events.length, 0);
-    
-    // 勤務状態の集計
-    const statusCounts = {};
-    currentDateRange.forEach(date => {
-        const dateKey = formatDateAsISO(date);
-        const status = globalWorkStatusData[ce.id]?.[dateKey];
-        if (status && status !== '') {
-            statusCounts[status] = (statusCounts[status] || 0) + 1;
+        function createCEHeader(ce, ceEvents) {
+            const totalTasks = Object.values(ceEvents).reduce((sum, day) => sum + day.events.length, 0);
+            
+            // 勤務状態の集計
+            const statusCounts = {};
+            currentDateRange.forEach(date => {
+                const dateKey = formatDateAsISO(date);
+                const status = globalWorkStatusData[ce.id]?.[dateKey];
+                if (status && status !== '') {
+                    statusCounts[status] = (statusCounts[status] || 0) + 1;
+                }
+            });
+
+            const statusSummaryHtml = Object.entries(statusCounts).map(([status, count]) => {
+                const def = WORK_STATUS_DEFINITIONS[status] || { label: status, color: '#B0BEC5' };
+                return `<span class="status-badge" style="background:${def.color}">${def.label}:${count}</span>`;
+            }).join('');
+
+            const header = document.createElement('div');
+            header.className = 'flex items-center justify-between mb-4';
+            header.innerHTML = `
+                <div class="flex items-center">
+                    <i class="fas fa-user mr-3 text-2xl" style="color: #3b82f6;"></i>
+                    <div>
+                        <h3 class="text-xl font-bold">${ce.name}</h3>
+                    </div>
+                </div>
+                <div class="text-sm text-gray-600 flex items-center flex-wrap">
+                    <span class="bg-white bg-opacity-70 px-3 py-1 rounded-full mr-2 mb-1">
+                        期間内総業務: ${totalTasks}件
+                    </span>
+                    ${statusSummaryHtml}
+                </div>
+            `;
+            
+            return header;
         }
-    });
-
-    const statusSummaryHtml = Object.entries(statusCounts).map(([status, count]) => {
-        const def = WORK_STATUS_DEFINITIONS[status] || { label: status, color: '#B0BEC5' };
-        return `<span class="status-badge" style="background:${def.color}">${def.label}:${count}</span>`;
-    }).join('');
-
-    const header = document.createElement('div');
-    header.className = 'flex items-center justify-between mb-4';
-    header.innerHTML = `
-        <div class="flex items-center">
-            <i class="fas fa-user mr-3 text-2xl" style="color: #3b82f6;"></i>
-            <div>
-                <h3 class="text-xl font-bold">${ce.name}</h3>
-            </div>
-        </div>
-        <div class="text-sm text-gray-600 flex items-center flex-wrap">
-            <span class="bg-white bg-opacity-70 px-3 py-1 rounded-full mr-2 mb-1">
-                期間内総業務: ${totalTasks}件
-            </span>
-            ${statusSummaryHtml}
-        </div>
-    `;
-    
-    return header;
-}
 
         function createTimelineBody(ceEvents, ceId) {
             const body = document.createElement('div');
@@ -1273,14 +1408,12 @@ function createCEHeader(ce, ceEvents) {
         }
 
         function resetFilters() {
-            setCurrentWeekRange();
+            setPeriod('thisWeek');
             document.getElementById('displayStartTime').value = '07:00';
             document.getElementById('displayEndTime').value = '19:00';
             
             document.querySelectorAll('.ce-filter, .department-filter').forEach(cb => cb.checked = true);
             document.getElementById('selectAllCEs').checked = true;
-            
-            loadTimelineData();
         }
 
         function updateSummary() {
