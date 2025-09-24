@@ -220,25 +220,24 @@
         }
     }
     
-    // ログイン画面表示
-    function showLogin() {
-        debugLog('ログイン画面表示');
-        
-        const loginContainer = document.getElementById('login-container');
-        const dashboardContainer = document.getElementById('dashboard-container');
-        
-        if (loginContainer) {
-            loginContainer.style.display = 'flex';
+// ログイン画面表示（即座にリダイレクト）
+function showLogin() {
+    debugLog('認証なし - ログイン画面にリダイレクト');
+    
+    // ローディング画面を表示したまま即座にリダイレクト
+    const loadingScreen = document.getElementById('loading-screen');
+    if (loadingScreen) {
+        const loadingContent = loadingScreen.querySelector('.loading-content p');
+        if (loadingContent) {
+            loadingContent.innerHTML = '<i class="fas fa-exclamation-triangle"></i> 認証が必要です。ログイン画面に移動します...';
         }
-        if (dashboardContainer) {
-            dashboardContainer.style.display = 'none';
-        }
-        
-        // 最終的にindex.htmlにリダイレクト
-        setTimeout(() => {
-            redirectToLogin();
-        }, 2000);
     }
+    
+    // 即座にリダイレクト（2秒待機を削除）
+    setTimeout(() => {
+        redirectToLogin();
+    }, 1000);
+}
     
     // ダッシュボード表示
     function showDashboard(userData) {
