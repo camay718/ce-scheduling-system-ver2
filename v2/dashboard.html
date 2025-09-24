@@ -3,560 +3,925 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CEスケジュール管理システム V2</title>
-    <link rel="icon" href="data:image/x-icon;base64,AAABAAEAEBAAAAEAIABoBAAAFgAAACgAAAAQAAAAIAAAAAEAIAAAAAAAAAQAABILAAASCwAAAAAAAAAAAAA=">
+    <title>CEスケジュール管理システム V2 - ダッシュボード</title>
+    
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     
     <!-- 外部ライブラリ -->
     <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css">
     
-    <!-- 統一テーマ（既存システムとの整合性） -->
-    <link rel="stylesheet" href="css/theme-unified.css">
+    <!-- 統一テーマ -->
+    <link rel="stylesheet" href="css/theme-unified.css?v=20241217">
     
+    <!-- 追加スタイル -->
     <style>
-        /* 基本レイアウト */
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
+    /* 月次業務強化スタイル */
+    .monthly-task-badge {
+        position: absolute;
+        top: -4px;
+        right: 4px;
+        background: #f97316;
+        color: white;
+        font-size: 8px;
+        padding: 1px 4px;
+        border-radius: 3px;
+        font-weight: bold;
+    }
 
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            min-height: 100vh;
-            color: #333;
-        }
+    .assignment-dropzone {
+        min-height: 20px;
+        padding: 4px;
+        margin-top: 4px;
+    }
 
-        .container {
-            max-width: 1400px;
-            margin: 0 auto;
-            padding: 20px;
-        }
+    .assignment-dropzone.drag-over {
+        background: #fef3c7 !important;
+        border-color: #f59e0b !important;
+    }
 
-        /* ローディング画面 */
-        .loading-screen {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100vw;
-            height: 100vh;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            z-index: 9999;
-            backdrop-filter: blur(10px);
-        }
+    .monthly-event-item {
+        font-size: 11px;
+        line-height: 1.2;
+    }
 
-        .loading-content {
-            text-align: center;
-            color: white;
-            background: rgba(255, 255, 255, 0.1);
-            padding: 40px;
-            border-radius: 20px;
-            backdrop-filter: blur(15px);
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.2);
-        }
+    /* 業務カード改良 - 予定件数表示 */
+    .event-card {
+        position: relative;
+        transition: all 0.2s ease;
+    }
 
-        .loading-spinner {
-            border: 4px solid rgba(255, 255, 255, 0.3);
-            border-top: 4px solid white;
-            border-radius: 50%;
-            width: 60px;
-            height: 60px;
-            animation: spin 1s linear infinite;
-            margin: 0 auto 20px;
-        }
+    .event-card.drag-over {
+        background: #fff7ed !important;
+        border: 2px dashed #f59e0b !important;
+        transform: scale(1.02);
+    }
 
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
+    .event-count-display {
+        font-size: 11px;
+        color: #6b7280;
+        margin-top: 4px;
+        font-weight: 500;
+    }
 
-        .loading-text {
-            font-size: 18px;
-            font-weight: 600;
-            margin-bottom: 10px;
-        }
+    /* CEチップスタイル */
+    .assigned-ces {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 4px;
+        margin-top: 8px;
+    }
 
-        .loading-subtext {
-            font-size: 14px;
-            opacity: 0.9;
-        }
+    .ce-chip {
+        display: inline-flex;
+        align-items: center;
+        padding: 2px 6px;
+        border-radius: 12px;
+        font-size: 10px;
+        font-weight: 500;
+        white-space: nowrap;
+        position: relative;
+    }
 
-        /* ヘッダー */
-        .header {
-            background: rgba(255, 255, 255, 0.95);
-            padding: 15px 0;
-            margin-bottom: 20px;
-            border-radius: 15px;
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
-            backdrop-filter: blur(20px);
-            border: 1px solid rgba(255, 255, 255, 0.2);
-        }
+    .ce-chip .remove-ce {
+        margin-left: 4px;
+        cursor: pointer;
+        opacity: 0.7;
+        font-size: 8px;
+    }
 
-        .header-content {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            max-width: 1400px;
-            margin: 0 auto;
-            padding: 0 30px;
-        }
+    .ce-chip .remove-ce:hover {
+        opacity: 1;
+        color: #ef4444;
+    }
 
-        .logo {
-            font-size: 28px;
-            font-weight: bold;
-            color: #667eea;
-            display: flex;
-            align-items: center;
-            gap: 12px;
-        }
+    /* 勤務区分別色分け */
+    .ce-chip.worktype-ope { background: #dbeafe; color: #1e40af; }
+    .ce-chip.worktype-me { background: #dcfce7; color: #166534; }
+    .ce-chip.worktype-hd { background: #fce7f3; color: #be185d; }
+    .ce-chip.worktype-flex { background: #fef3c7; color: #a16207; }
+    .ce-chip.worktype-error { background: #fee2e2; color: #dc2626; }
 
-        .logo i {
-            font-size: 32px;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-        }
+    /* 部門別集計バー */
+    .dept-summary-container {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin-top: 8px;
+        font-size: 11px;
+    }
 
-        .user-info {
-            display: flex;
-            align-items: center;
-            gap: 20px;
-            font-weight: 500;
-        }
+    .dept-ratio-bar {
+        flex: 1;
+        height: 6px;
+        background: rgba(0,0,0,0.1);
+        border-radius: 3px;
+        overflow: hidden;
+        position: relative;
+    }
 
-        .user-avatar {
-            width: 40px;
-            height: 40px;
-            border-radius: 50%;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: white;
-            font-size: 18px;
-        }
+    .dept-ratio-fill {
+        height: 100%;
+        transition: width 0.3s ease;
+        border-radius: 3px;
+    }
 
-        /* ダッシュボードレイアウト */
-        .dashboard-grid {
+    /* 日別集計表示 */
+    .daily-summary-stats {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        font-size: 14px;
+        color: #4b5563;
+        margin-left: 16px;
+    }
+
+    .daily-summary-item {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+    }
+
+    .progress-bar-mini {
+        width: 80px;
+        height: 8px;
+        background: rgba(0,0,0,0.1);
+        border-radius: 4px;
+        overflow: hidden;
+    }
+
+    .progress-fill-mini {
+        height: 100%;
+        background: linear-gradient(90deg, #10b981, #059669);
+        transition: width 0.3s ease;
+        border-radius: 4px;
+    }
+
+    /* 月次業務カード */
+    .monthly-task-card {
+        margin-top: 8px;
+        padding: 12px;
+        border-radius: 8px;
+        font-size: 12px;
+        position: relative;
+        transition: all 0.2s ease;
+    }
+
+    .monthly-task-card.drag-over {
+        transform: scale(1.02);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    }
+
+    .monthly-progress-bar {
+        width: 100%;
+        height: 4px;
+        background: rgba(0,0,0,0.1);
+        border-radius: 2px;
+        margin: 8px 0;
+        overflow: hidden;
+    }
+
+    .monthly-progress-fill {
+        height: 100%;
+        background: linear-gradient(90deg, #10b981, #059669);
+        transition: width 0.3s ease;
+        border-radius: 2px;
+    }
+
+    .monthly-input-section {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin-top: 8px;
+        font-size: 11px;
+    }
+
+    .monthly-input-section input {
+        width: 60px;
+        padding: 4px 6px;
+        border: 1px solid #d1d5db;
+        border-radius: 4px;
+        text-align: center;
+        font-size: 11px;
+    }
+
+    .monthly-input-section button {
+        padding: 4px 8px;
+        font-size: 10px;
+        border-radius: 4px;
+    }
+
+    /* 変更履歴ウィンドウ */
+    .activity-log {
+        background: #f8f9fa;
+        border: 1px solid #e9ecef;
+        border-radius: 8px;
+        padding: 15px;
+        max-height: 400px;
+        overflow-y: auto;
+        font-family: 'Courier New', monospace;
+    }
+
+    .activity-item {
+        padding: 8px 12px;
+        margin-bottom: 6px;
+        background: white;
+        border-radius: 6px;
+        border-left: 4px solid #007bff;
+        font-size: 12px;
+        line-height: 1.4;
+        transition: all 0.2s ease;
+    }
+
+    .activity-item:hover {
+        background: #f0f8ff;
+        transform: translateX(2px);
+    }
+
+    .activity-item.login { border-left-color: #28a745; }
+    .activity-item.event-add { border-left-color: #17a2b8; }
+    .activity-item.ce-assign { border-left-color: #ffc107; }
+    .activity-item.schedule-edit { border-left-color: #dc3545; }
+
+    .activity-timestamp {
+        color: #6c757d;
+        font-size: 10px;
+        margin-top: 4px;
+    }
+
+    /* 集計・分析ボタングリッド */
+    .analysis-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: 20px;
+        margin-top: 20px;
+    }
+
+    .analysis-btn {
+        padding: 25px;
+        background: linear-gradient(135deg, var(--glass-bg), rgba(255,255,255,0.9));
+        border: 2px solid var(--glass-border);
+        border-radius: 16px;
+        text-align: center;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        text-decoration: none;
+        color: #495057;
+        backdrop-filter: blur(5px);
+    }
+
+    .analysis-btn:hover {
+        background: linear-gradient(135deg, rgba(76,175,80,0.1), rgba(76,175,80,0.05));
+        border-color: var(--brand-primary);
+        color: var(--brand-primary);
+        transform: translateY(-3px);
+        box-shadow: var(--shadow-hover);
+    }
+
+    .analysis-btn i {
+        font-size: 28px;
+        margin-bottom: 12px;
+        display: block;
+        color: var(--brand-primary);
+    }
+
+    .analysis-btn-title {
+        font-weight: 600;
+        font-size: 16px;
+        margin-bottom: 8px;
+    }
+
+    .analysis-btn-desc {
+        font-size: 12px;
+        color: #6c757d;
+        line-height: 1.3;
+    }
+
+    /* ボタン配置調整 */
+    .action-buttons-row {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        flex-wrap: wrap;
+    }
+
+    @media (max-width: 768px) {
+        .daily-summary-stats {
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 8px;
+            margin-left: 0;
+            margin-top: 8px;
+        }
+        
+        .action-buttons-row {
             display: grid;
-            grid-template-columns: 320px 1fr;
-            gap: 25px;
-            min-height: calc(100vh - 200px);
-        }
-
-        .sidebar {
-            background: rgba(255, 255, 255, 0.95);
-            border-radius: 15px;
-            padding: 25px;
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
-            backdrop-filter: blur(20px);
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            height: fit-content;
-        }
-
-        .sidebar h3 {
-            color: #667eea;
-            margin-bottom: 25px;
-            font-size: 20px;
-            font-weight: 600;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-
-        .main-content {
-            background: rgba(255, 255, 255, 0.95);
-            border-radius: 15px;
-            padding: 30px;
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
-            backdrop-filter: blur(20px);
-            border: 1px solid rgba(255, 255, 255, 0.2);
-        }
-
-        /* ボタンスタイル（統一テーマ準拠） */
-        .btn {
-            padding: 12px 20px;
-            border: none;
-            border-radius: 10px;
-            cursor: pointer;
-            font-size: 14px;
-            font-weight: 500;
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            display: inline-flex;
-            align-items: center;
-            gap: 10px;
-            text-decoration: none;
-            border: 2px solid transparent;
-            position: relative;
-            overflow: hidden;
-        }
-
-        .btn::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: -100%;
+            grid-template-columns: auto 1fr auto auto;
+            gap: 4px;
             width: 100%;
-            height: 100%;
-            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
-            transition: left 0.5s;
+            margin-bottom: 8px;
         }
 
-        .btn:hover::before {
-            left: 100%;
-        }
+        #prevDayBtn { grid-column: 1; }
+        #scheduleDatePicker { grid-column: 2; min-width: 120px; }
+        #nextDayBtn { grid-column: 3; }
+        #todayBtn { grid-column: 4; }
 
-        .btn-primary {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+        #addEventButtonDaily, #addBulkEventBtn, #addMonthlyTaskBtn {
+            grid-column: 1 / -1;
+            margin-top: 4px;
         }
-
-        .btn-primary:hover {
-            transform: translateY(-3px);
-            box-shadow: 0 8px 25px rgba(102, 126, 234, 0.4);
-        }
-
-        .btn-secondary {
-            background: linear-gradient(135deg, #6c757d 0%, #495057 100%);
-            color: white;
-            box-shadow: 0 4px 15px rgba(108, 117, 125, 0.3);
-        }
-
-        .btn-secondary:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 6px 20px rgba(108, 117, 125, 0.4);
-        }
-
-        .menu-item {
-            width: 100%;
-            margin-bottom: 12px;
-            text-align: left;
-            justify-content: flex-start;
-        }
-
-        /* カードスタイル */
-        .welcome-card {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            padding: 30px;
-            border-radius: 15px;
-            margin-bottom: 30px;
-            box-shadow: 0 8px 32px rgba(102, 126, 234, 0.3);
-            position: relative;
-            overflow: hidden;
-        }
-
-        .welcome-card::before {
-            content: '';
-            position: absolute;
-            top: -50%;
-            right: -50%;
-            width: 100%;
-            height: 100%;
-            background: radial-gradient(circle, rgba(255, 255, 255, 0.1) 0%, transparent 70%);
-            animation: float 6s ease-in-out infinite;
-        }
-
-        @keyframes float {
-            0%, 100% { transform: translateY(0px) rotate(0deg); }
-            50% { transform: translateY(-20px) rotate(5deg); }
-        }
-
-        .stats-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-            gap: 20px;
-            margin-top: 30px;
-        }
-
-        .stat-card {
-            background: rgba(248, 249, 250, 0.8);
-            padding: 25px;
-            border-radius: 15px;
-            text-align: center;
-            border-left: 5px solid #667eea;
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            backdrop-filter: blur(10px);
-            position: relative;
-            overflow: hidden;
-        }
-
-        .stat-card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1);
-        }
-
-        .stat-card::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 5px;
-            background: linear-gradient(90deg, #667eea, #764ba2, #667eea);
-            background-size: 200% 100%;
-            animation: shimmer 3s ease-in-out infinite;
-        }
-
-        @keyframes shimmer {
-            0% { background-position: -200% 0; }
-            100% { background-position: 200% 0; }
-        }
-
-        /* レスポンシブデザイン */
-        @media (max-width: 1024px) {
-            .dashboard-grid {
-                grid-template-columns: 280px 1fr;
-                gap: 20px;
-            }
-            
-            .container {
-                padding: 15px;
-            }
-        }
-
-        @media (max-width: 768px) {
-            .dashboard-grid {
-                grid-template-columns: 1fr;
-            }
-            
-            .sidebar {
-                order: 2;
-                margin-top: 20px;
-            }
-            
-            .header-content {
-                flex-direction: column;
-                gap: 15px;
-                text-align: center;
-                padding: 0 20px;
-            }
-            
-            .logo {
-                font-size: 24px;
-            }
-            
-            .stats-grid {
-                grid-template-columns: 1fr;
-            }
-        }
-
-        @media (max-width: 480px) {
-            .container {
-                padding: 10px;
-            }
-            
-            .main-content,
-            .sidebar {
-                padding: 20px;
-            }
-            
-            .welcome-card {
-                padding: 20px;
-            }
-        }
-
-        /* アニメーション */
-        .fade-in {
-            animation: fadeIn 0.6s ease-out;
-        }
-
-        @keyframes fadeIn {
-            from { 
-                opacity: 0; 
-                transform: translateY(30px); 
-            }
-            to { 
-                opacity: 1; 
-                transform: translateY(0); 
-            }
-        }
-
-        /* ダークモード対応（将来の拡張用） */
-        @media (prefers-color-scheme: dark) {
-            .header,
-            .sidebar,
-            .main-content {
-                background: rgba(30, 30, 30, 0.95);
-                color: #e0e0e0;
-            }
-            
-            .stat-card {
-                background: rgba(40, 40, 40, 0.8);
-                color: #e0e0e0;
-            }
-        }
-
-        /* スクロールバーカスタマイズ */
-        ::-webkit-scrollbar {
-            width: 8px;
-        }
-
-        ::-webkit-scrollbar-track {
-            background: rgba(0, 0, 0, 0.1);
-            border-radius: 10px;
-        }
-
-        ::-webkit-scrollbar-thumb {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            border-radius: 10px;
-        }
-
-        ::-webkit-scrollbar-thumb:hover {
-            background: linear-gradient(135deg, #764ba2 0%, #667eea 100%);
-        }
+    }
     </style>
-</head>
-<body class="theme-unified">
-    <!-- ローディング画面 -->
-    <div id="loading-screen" class="loading-screen">
-        <div class="loading-content">
-            <div class="loading-spinner"></div>
-            <div class="loading-text">
-                <i class="fas fa-calendar-check"></i>
-                CEスケジュール管理システム V2
-            </div>
-            <div class="loading-subtext">
-                <i class="fas fa-shield-alt"></i>
-                認証状態を確認しています...
-            </div>
-        </div>
-    </div>
 
-    <!-- メインダッシュボード -->
-    <div id="dashboard-container" style="display: none;" class="fade-in">
-        <header class="header">
-            <div class="header-content">
-                <div class="logo">
-                    <i class="fas fa-calendar-check"></i>
-                    CEスケジュール管理システム V2
-                </div>
-                <div class="user-info">
-                    <div class="user-avatar">
-                        <i class="fas fa-user"></i>
-                    </div>
-                    <span id="user-name">読み込み中...</span>
-                    <button id="logout-btn" class="btn btn-secondary">
-                        <i class="fas fa-sign-out-alt"></i>
-                        ログアウト
-                    </button>
-                </div>
-            </div>
-        </header>
-
-        <div class="container">
-            <div class="dashboard-grid">
-                <aside class="sidebar">
-                    <h3>
-                        <i class="fas fa-bars"></i>
-                        メニュー
-                    </h3>
-                    <nav id="sidebar-nav">
-                        <!-- サイドバーメニューが動的生成される -->
-                        <div style="text-align: center; color: #667eea; padding: 20px;">
-                            <i class="fas fa-spinner fa-spin"></i>
-                            <p style="margin-top: 10px;">メニューを読み込み中...</p>
-                        </div>
-                    </nav>
-                </aside>
-
-                <main class="main-content">
-                    <div id="main-content-area">
-                        <!-- メインコンテンツが動的生成される -->
-                        <div style="text-align: center; color: #667eea; padding: 40px;">
-                            <i class="fas fa-spinner fa-spin fa-2x"></i>
-                            <p style="margin-top: 15px; font-size: 16px;">コンテンツを読み込み中...</p>
-                        </div>
-                    </div>
-                </main>
-            </div>
-        </div>
-    </div>
-
-    <!-- Firebase Scripts -->
+    <!-- Firebase SDK -->
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
     
     <!-- Firebase設定 -->
-    <script src="js/config/firebase-config.js"></script>
-    
-    <!-- 統一メッセージシステム -->
-    <script>
-        // 統一メッセージシステム（既存システムとの整合性）
-        window.showMessage = (msg, type = 'info') => {
-            let cont = document.getElementById('messageContainer');
-            if (!cont) {
-                cont = document.createElement('div');
-                cont.id = 'messageContainer';
-                cont.style.cssText = 'position:fixed;top:20px;left:50%;transform:translateX(-50%);z-index:9999;width:min(92vw,480px);';
-                document.body.appendChild(cont);
-            }
-            const div = document.createElement('div');
-            div.className = `status-unified ${type}`;
-            div.style.cssText = 'margin-bottom:8px;padding:12px 16px;border-radius:8px;backdrop-filter:blur(10px);box-shadow:0 4px 12px rgba(0,0,0,0.15);';
-            
-            // メッセージタイプ別スタイル
-            switch(type) {
-                case 'success':
-                    div.style.background = 'linear-gradient(135deg, #28a745, #20c997)';
-                    div.style.color = 'white';
-                    break;
-                case 'error':
-                    div.style.background = 'linear-gradient(135deg, #dc3545, #fd7e14)';
-                    div.style.color = 'white';
-                    break;
-                case 'warning':
-                    div.style.background = 'linear-gradient(135deg, #ffc107, #fd7e14)';
-                    div.style.color = '#212529';
-                    break;
-                default:
-                    div.style.background = 'linear-gradient(135deg, #667eea, #764ba2)';
-                    div.style.color = 'white';
-            }
-            
-            div.innerHTML = `<i class="fas fa-${type === 'success' ? 'check-circle' : type === 'error' ? 'exclamation-triangle' : type === 'warning' ? 'exclamation-circle' : 'info-circle'}"></i> ${msg}`;
-            
-            cont.appendChild(div);
-            
-            // アニメーション
-            div.style.opacity = '0';
-            div.style.transform = 'translateY(-20px)';
-            setTimeout(() => {
-                div.style.transition = 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)';
-                div.style.opacity = '1';
-                div.style.transform = 'translateY(0)';
-            }, 10);
-            
-            // 自動削除
-            setTimeout(() => {
-                div.style.opacity = '0';
-                div.style.transform = 'translateY(-20px)';
-                setTimeout(() => div.remove(), 300);
-            }, 5000);
-        };
+    <script src="js/config/firebase-config.js?v=20241213"></script>
+
+    <!-- スマホ専用レスポンシブデザイン -->
+    <style>
+    @media (max-width: 768px) {
+        body {
+            font-size: 14px;
+            line-height: 1.4;
+        }
         
-        // エラーハンドリング
-        window.addEventListener('error', (event) => {
-            console.error('Global error:', event.error);
-        });
+        /* サイドバーを左側スライドイン方式に変更 */
+        .sidebar {
+            position: fixed !important;
+            top: 0 !important;
+            bottom: 0 !important;
+            left: -280px !important;
+            width: 280px !important;
+            height: 100vh !important;
+            transform: translateX(0) !important;
+            transition: left 0.3s ease !important;
+            z-index: 1000;
+            background: rgba(255, 255, 255, 0.98);
+            backdrop-filter: blur(10px);
+            border-radius: 0 8px 8px 0;
+            border-right: 2px solid #e5e7eb;
+            overflow-y: auto;
+            box-shadow: 2px 0 20px rgba(0, 0, 0, 0.15);
+        }
         
-        window.addEventListener('unhandledrejection', (event) => {
-            console.error('Unhandled promise rejection:', event.reason);
-        });
-    </script>
+        .sidebar.expanded {
+            left: 0 !important;
+        }
+        
+        /* ハンバーガーメニューボタン */
+        #toggleSidebar {
+            position: fixed !important;
+            bottom: 20px;
+            right: 20px;
+            background: var(--brand-primary);
+            color: white;
+            border-radius: 50%;
+            width: 56px;
+            height: 56px;
+            border: none;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            z-index: 1001;
+            font-size: 18px;
+            display: flex !important;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        /* メインコンテンツ調整 */
+        .main-content {
+            margin-left: 0 !important;
+            padding: 12px !important;
+            padding-bottom: 80px;
+            width: 100%;
+        }
+        
+        /* ヘッダー部分の調整 */
+        .mb-4.flex.justify-between.items-start.flex-wrap {
+            flex-direction: column;
+            align-items: stretch;
+            gap: 12px;
+            margin-bottom: 16px;
+        }
+        
+        #dailyScheduleTitle {
+            font-size: 20px;
+            margin-bottom: 8px;
+        }
+        
+        /* 日別集計統計の調整 */
+        .daily-summary-stats {
+            flex-direction: column;
+            align-items: stretch;
+            gap: 8px;
+            margin-left: 0;
+            font-size: 12px;
+            background: rgba(255, 255, 255, 0.8);
+            padding: 8px;
+            border-radius: 8px;
+        }
+        
+        .daily-summary-item {
+            justify-content: space-between;
+        }
+        
+        .progress-bar-mini {
+            width: 60px;
+            height: 6px;
+        }
+        
+        #prevDayBtn, #nextDayBtn {
+            display: inline-flex !important;
+            min-width: 60px;
+            font-size: 10px;
+            padding: 6px 4px;
+        }
+        
+        /* 部門グリッドを1カラムに */
+        #departmentGrid {
+            grid-template-columns: 1fr !important;
+            gap: 12px !important;
+        }
+        
+        /* 部門セクションの調整 */
+        .department-section {
+            padding: 12px !important;
+            border-radius: 12px;
+            background: rgba(255, 255, 255, 0.95);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            border: 1px solid rgba(0, 0, 0, 0.05);
+        }
+        
+        .department-section h3 {
+            font-size: 14px;
+        }
+        
+        .dept-summary-container {
+            flex-direction: column;
+            gap: 4px;
+            margin-top: 6px;
+        }
+        
+        .dept-ratio-bar {
+            height: 4px;
+        }
+        
+        /* 業務カードの調整 */
+        .event-card {
+            padding: 10px !important;
+            margin-bottom: 8px;
+            border-radius: 8px;
+            font-size: 12px;
+        }
+        
+        .event-card .font-semibold {
+            font-size: 13px;
+        }
+        
+        /* 月次業務カードの調整 */
+        .monthly-task-card {
+            padding: 8px !important;
+            font-size: 11px;
+            border-radius: 8px;
+        }
+        
+        .monthly-progress-bar {
+            height: 3px;
+        }
+        
+        .monthly-input-section {
+            flex-wrap: wrap;
+            gap: 4px;
+            font-size: 10px;
+        }
+        
+        .monthly-input-section input {
+            width: 50px;
+            font-size: 10px;
+            padding: 2px 4px;
+        }
+        
+        .monthly-input-section button {
+            font-size: 9px;
+            padding: 4px 6px;
+        }
+        
+        /* CEリストの調整 */
+        .ce-grid {
+            grid-template-columns: repeat(auto-fill, minmax(60px, 1fr)) !important;
+            gap: 6px !important;
+        }
+        
+        .ce-item {
+            padding: 6px 4px !important;
+            font-size: 10px !important;
+            min-height: 50px;
+            border-radius: 8px;
+        }
+        
+        /* CEチップの調整 */
+        .assigned-ces {
+            flex-wrap: wrap;
+            gap: 4px;
+            margin-top: 6px;
+        }
+        
+        .ce-chip {
+            font-size: 9px !important;
+            padding: 2px 4px !important;
+            border-radius: 6px;
+            line-height: 1.2;
+        }
+        
+        .ce-chip .remove-ce {
+            font-size: 8px;
+            margin-left: 2px;
+        }
+        
+        /* モーダルの調整 */
+        .fixed.inset-0 .glass-card {
+            margin: 8px !important;
+            padding: 16px !important;
+            max-width: none !important;
+            width: calc(100% - 16px) !important;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+        
+        .glass-card .grid.grid-cols-2 {
+            grid-template-columns: 1fr !important;
+            gap: 8px;
+        }
+        
+        .glass-card .btn-unified {
+            font-size: 12px;
+            padding: 10px;
+        }
+        
+        /* ナビゲーションタブの調整 */
+        .nav-tab {
+            padding: 10px;
+            text-align: center;
+            border-radius: 8px;
+            margin-bottom: 4px;
+            font-size: 12px;
+        }
+        
+        .nav-tab i {
+            display: block;
+            margin-bottom: 4px;
+            font-size: 16px;
+        }
+        
+        .sidebar-text {
+            font-size: 11px;
+        }
+        
+        /* グラスカードの調整 */
+        .glass-card {
+            padding: 12px !important;
+            margin-bottom: 12px;
+            border-radius: 10px;
+        }
+        
+        .glass-card h3 {
+            font-size: 14px;
+            margin-bottom: 8px;
+        }
+    }
+
+    /* 極小画面対応 */
+    @media (max-width: 480px) {
+        .main-content {
+            padding: 8px !important;
+        }
+        
+        .action-buttons-row {
+            grid-template-columns: 1fr;
+        }
+        
+        .ce-grid {
+            grid-template-columns: repeat(auto-fill, minmax(50px, 1fr)) !important;
+        }
+        
+        .ce-item {
+            font-size: 9px !important;
+            min-height: 45px;
+            padding: 4px 2px !important;
+        }
+        
+        .event-card, .monthly-task-card {
+            font-size: 11px;
+            padding: 8px !important;
+        }
+        
+        .ce-chip {
+            font-size: 8px !important;
+            padding: 1px 3px !important;
+        }
+    }
+
+    /* ランドスケープ対応 */
+    @media (max-width: 768px) and (orientation: landscape) {
+        .sidebar {
+            max-height: 60vh;
+        }
+        
+        .daily-summary-stats {
+            flex-direction: row;
+            flex-wrap: wrap;
+        }
+        
+        .action-buttons-row {
+            grid-template-columns: repeat(3, 1fr);
+        }
+        
+        #scheduleDatePicker {
+            grid-column: auto;
+        }
+    }
+    </style>
     
-    <!-- 基本ファイル読み込み -->
-    <script src="js/data/constants.js"></script>
-    <script src="js/utils/ui-utils.js"></script>
-    <script src="js/schedule/event-manager.js"></script>
+</head>
+<body class="theme-unified">
+    <!-- ローディング画面 -->
+    <div id="loading">
+        <div class="spinner"></div>
+        <p class="text-gray-600">ダッシュボードを読み込んでいます...</p>
+    </div>
+
+    <!-- メインインターフェース -->
+    <div id="mainInterface" style="display:none;">
+        <!-- サイドバー -->
+        <div id="sidebar" class="sidebar p-4">
+            <div class="mb-3 flex justify-between items-center">
+                <button id="toggleSidebar" class="p-2 rounded-lg hover:bg-gray-200" title="サイドバー表示/非表示">
+                    <i class="fas fa-bars"></i>
+                </button>
+                <div class="text-xs text-gray-600 sidebar-text">
+                    <span id="currentUserDisplay">ユーザー</span>
+                </div>
+            </div>
+
+            <div class="mb-3">
+                <div id="mainSyncStatus" class="sync-indicator connected">
+                    <div class="sync-dot pulse"></div>
+                    <span class="sidebar-text">リアルタイム同期中</span>
+                </div>
+            </div>
+
+            <!-- ナビゲーション -->
+            <nav class="space-y-2 mb-6">
+                <button id="dailyScheduleTab" class="nav-tab w-full text-left p-3 rounded-lg hover:bg-green-100 font-medium active">
+                    <i class="fas fa-calendar-day mr-2"></i><span class="sidebar-text">日別スケジュール</span>
+                </button>
+                <button id="weeklyScheduleTab" class="nav-tab w-full text-left p-3 rounded-lg hover:bg-green-100 font-medium">
+                    <i class="fas fa-calendar-week mr-2"></i><span class="sidebar-text">週間スケジュール</span>
+                </button>
+                <button id="ceWorkScheduleTab" class="nav-tab w-full text-left p-3 rounded-lg hover:bg-green-100 font-medium">
+                    <i class="fas fa-table mr-2"></i><span class="sidebar-text">CE勤務表</span>
+                </button>
+                <button id="analysisTab" class="nav-tab w-full text-left p-3 rounded-lg hover:bg-green-100 font-medium">
+                    <i class="fas fa-chart-bar mr-2"></i><span class="sidebar-text">集計・分析</span>
+                </button>
+                <button id="settingsTab" class="nav-tab w-full text-left p-3 rounded-lg hover:bg-green-100 font-medium">
+                    <i class="fas fa-cog mr-2"></i><span class="sidebar-text">設定</span>
+                </button>
+            </nav>
+
+            <!-- テンプレート -->
+            <div class="sidebar-text mb-4">
+                <h3 class="text-sm font-medium text-gray-700 mb-2">テンプレート</h3>
+                <div class="flex flex-col space-y-2">
+                    <button id="templateSaveButton" class="w-full p-2 bg-green-500 text-white rounded-lg text-sm hover:bg-green-600">
+                        <i class="fas fa-save mr-1"></i>保存
+                    </button>
+                    <button id="templateAddLoadButton" class="w-full p-2 bg-blue-500 text-white rounded-lg text-sm hover:bg-blue-600">
+                        <i class="fas fa-folder-plus mr-1"></i>追加読込
+                    </button>
+                </div>
+            </div>
+
+            <!-- 自動同期ステータス -->
+            <div class="mt-6 p-2 bg-yellow-50 rounded-lg sidebar-text">
+                <h4 class="text-xs font-bold text-yellow-700 mb-1">自動同期</h4>
+                <div class="text-xs text-gray-600">
+                    <div class="flex items-center">
+                        <div class="w-2 h-2 bg-green-500 rounded-full mr-1 animate-pulse"></div>
+                        <span id="syncStatusText">同期中</span>
+                    </div>
+                    <div id="lastSyncTime" class="text-xs">最終: --:--</div>
+                </div>
+            </div>
+            
+            <!-- ログアウトボタン -->
+            <div class="mt-auto pt-4 border-t border-gray-200 sidebar-text">
+                <button id="logoutButton" onclick="window.handleLogout()" 
+                        class="w-full bg-gray-500 text-white py-2 rounded-lg hover:bg-gray-600 text-sm font-medium transition-colors">
+                    <i class="fas fa-sign-out-alt mr-2"></i>ログアウト
+                </button>
+            </div>
+        </div>
+
+        <!-- メインコンテンツ -->
+        <div class="main-content p-4">
+            <!-- 日別スケジュール -->
+            <div id="dailyScheduleContent" class="screen-content">
+                <div class="mb-4 flex justify-between items-start flex-wrap">
+                    <div class="flex items-center">
+                        <h2 id="dailyScheduleTitle" class="text-2xl font-bold">日別スケジュール</h2>
+                        <!-- 日別集計表示 -->
+                        <div id="dailySummaryStats" class="daily-summary-stats">
+                            <div class="daily-summary-item">
+                                <i class="fas fa-list text-blue-500"></i>
+                                <span>業務数: <span id="totalEventCount">0</span>件</span>
+                            </div>
+                            <div class="daily-summary-item">
+                                <i class="fas fa-user-check text-green-500"></i>
+                                <span>配置: <span id="totalAssignedCount">0</span>/<span id="totalAvailableCount">0</span>人</span>
+                            </div>
+                            <div class="daily-summary-item">
+                                <span class="text-xs">必要/配置:</span>
+                                <div class="progress-bar-mini">
+                                    <div id="overallProgressFill" class="progress-fill-mini" style="width: 0%"></div>
+                                </div>
+                                <span class="text-xs"><span id="totalRequiredCount">0</span>/<span id="totalAssignedCount2">0</span></span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- 右上ボタン配置 -->
+                    <div class="action-buttons-row">
+                        <button id="prevDayBtn" class="btn-unified btn-outline-unified">
+                            <i class="fas fa-chevron-left mr-1"></i>前日
+                        </button>
+                        <input type="date" id="scheduleDatePicker" class="input-unified" style="width: auto;">
+                        <button id="nextDayBtn" class="btn-unified btn-outline-unified">
+                            翌日<i class="fas fa-chevron-right ml-1"></i>
+                        </button>
+                        <button id="todayBtn" class="btn-unified btn-primary-unified">
+                            <i class="fas fa-calendar-day mr-1"></i>今日
+                        </button>
+                        <button id="addEventButtonDaily" class="btn-unified btn-primary-unified">
+                            <i class="fas fa-plus mr-2"></i>業務追加
+                        </button>
+                        <button id="addBulkEventBtn" class="btn-unified btn-primary-unified">
+                            <i class="fas fa-calendar-plus mr-1"></i>期間一括追加
+                        </button>
+                        <button id="addMonthlyTaskBtn" class="btn-unified btn-primary-unified">
+                            <i class="fas fa-calendar-alt mr-1"></i>＋月次業務追加
+                        </button>
+                    </div>
+                </div>
+                
+                <div id="departmentGrid" class="grid grid-cols-3 gap-4 mb-6"></div>
+                
+                <div class="glass-card p-4">
+                    <h3 class="font-bold mb-3"><i class="fas fa-users mr-2"></i>CEリスト（<span id="ceListCount">--</span>名）</h3>
+                    <div id="ceListContainer" class="ce-grid"></div>
+                </div>
+            </div>
+
+            <!-- 週間スケジュール -->
+            <div id="weeklyScheduleContent" class="screen-content" style="display:none;">
+                <h2 class="text-2xl font-bold mb-4">週間スケジュール</h2>
+                <div class="glass-card p-6 text-center">
+                    <i class="fas fa-calendar-week text-4xl text-gray-400 mb-4"></i>
+                    <h3 class="text-lg font-semibold text-gray-600 mb-2">週間スケジュール機能</h3>
+                    <p class="text-gray-500 mb-4">週単位での業務配置とCE勤務状況を表示する機能です。</p>
+                    <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                        <p class="text-yellow-800 text-sm">
+                            <i class="fas fa-tools mr-2"></i>現在開発中です。近日中にリリース予定です。
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- CE勤務表 -->
+            <div id="ceWorkScheduleContent" class="screen-content" style="display:none; position: relative;">
+                <!-- 勤務時間帯説明（右上極小配置） -->
+                <div class="work-time-compact" style="position: absolute; top: 15px; right: 15px; background: rgba(248, 249, 250, 0.95); border: 1px dashed #e0e0e0; border-radius: 4px; padding: 4px 6px; font-size: 8px; z-index: 50; max-width: 300px; line-height: 1.2; white-space: nowrap; pointer-events: none;">
+                    <table style="width: 100%; border-collapse: collapse;">
+                        <thead>
+                            <tr>
+                                <th style="padding: 2px 4px; font-size: 8px; background: #f2f5f7; font-weight: 600; text-align: left;">区分</th>
+                                <th style="padding: 2px 4px; font-size: 8px; background: #f2f5f7; font-weight: 600; text-align: left;">勤務時間</th>
+                                <th style="padding: 2px 4px; font-size: 8px; background: #f2f5f7; font-weight: 600; text-align: left;">休憩時間</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr><td style="padding: 2px 4px; font-size: 8px;">A</td><td style="padding: 2px 4px; font-size: 8px;">8:00〜16:30</td><td style="padding: 2px 4px; font-size: 8px;">11:45～12:30</td></tr>
+                            <tr><td style="padding: 2px 4px; font-size: 8px;">A1</td><td style="padding: 2px 4px; font-size: 8px;">7:00〜15:30</td><td style="padding: 2px 4px; font-size: 8px;">11:45～12:30</td></tr>
+                            <tr><td style="padding: 2px 4px; font-size: 8px;">B</td><td style="padding: 2px 4px; font-size: 8px;">8:00〜翌8:00（0:00～6:30宿直相当勤務）</td><td style="padding: 2px 4px; font-size: 8px;">11:45～12:45及び16:45～17:45</td></tr>
+                            <tr><td style="padding: 2px 4px; font-size: 8px;">×</td><td style="padding: 2px 4px; font-size: 8px;">休日</td><td style="padding: 2px 4px; font-size: 8px;">-</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="schedule-display-container">
+                    <!-- 上部：期間表示のみ -->
+                    <div class="period-display-header">
+                        <div id="currentPeriodDisplay" class="text-lg font-bold">期間を読み込み中...</div>
+                        <div class="text-sm text-gray-500">28日間の勤務表</div>
+                    </div>
+                    
+                    <div class="text-center mb-4">
+                        <button id="openScheduleEditorBtn" class="btn-unified btn-primary-unified">
+                            <i class="fas fa-edit mr-2"></i>勤務表を作成・編集
+                        </button>
+                    </div>
+
+                    <!-- 勤務表表示エリア -->
+                    <div id="workScheduleDisplayArea" class="text-center py-8 text-gray-500">
+                        <i class="fas fa-table text-4xl mb-4"></i>
+                        <h3 class="text-lg font-semibold mb-2">CE勤務表</h3>
+                        <p class="mb-4">作成済みの勤務表がここに表示されます</p>
+                        <button onclick="document.getElementById('openScheduleEditorBtn').click()" 
+                                class="btn-unified btn-primary-unified">
+                            <i class="fas fa-plus mr-2"></i>最初の勤務表を作成
+                        </button>
+                    </div>
+
+                    <!-- 下部：期間ナビゲーションと管理者コントロール -->
+                    <div id="scheduleControlsFooter" class="schedule-controls-footer">
+                        <!-- JavaScriptで動的に生成 -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- 集計・分析 -->
+            <div id="analysisContent" class="screen-content" style="display:none;">
+                <h2 class="text-2xl font-bold mb-6">集計・分析</h2>
+                <div class="glass-card p-6">
+                    <p class="text-gray-600 mb-4">業務配置とCE勤務状況の各種分析機能にアクセスできます。</p>
+                    
+                    <div class="analysis-grid">
+                        <!-- 業務別タイムライン（フォルダ移動対応） -->
+                        <button class="analysis-btn" onclick="openAnalyticsPage('department-timeline')">
+                            <i class="fas fa-chart-bar"></i>
+                            <div class="analysis-btn-title">業務別タイムライン</div>
+                            <div class="analysis-btn-desc">部門・業務ごとの時系列分析と配置状況の可視化</div>
+                        </button>
+
+                        <!-- 個人別タイムライン -->
+                        <button class="analysis-btn" onclick="openAnalyticsPage('personal-timeline')">
+                            <i class="fas fa-chart-line"></i>
+                            <div class="analysis-btn-title">個人別タイムライン</div>
+                            <div class="analysis-btn-desc">CE個人の勤務パターンと業務配置履歴の分析</div>
+                        </button>
+
+                        <!-- 配置サマリー -->
+                        <button class="analysis-btn" onclick="openAnalyticsPage('assignment-summary')">
+                            <i class="fas fa-clipboard-list"></i>
+                            <div class="analysis-btn-title">配置サマリ</div>
+                            <div class="analysis-btn-desc">業務配置状況の要約表示と効率性分析</div>
+                        </button>
+
+                        <!-- 部門別充足率 -->
+                        <button class="analysis-btn" onclick="openAnalyticsPage('department-coverage')">
+                            <i class="fas fa-percentage"></i>
+                            <div class="analysis-btn-title">部門別充足率</div>
+                            <div class="analysis-btn-desc">必要人数に対する充足状況と不足分析</div>
+                        </button>
+
+                        <!-- 業務時間分析 -->
+                        <button class="analysis-btn" onclick="openAnalyticsPage('work-hours')">
+                            <i class="fas fa-clock"></i>
+                            <div class="analysis-btn-title">業務時間</div>
+                            <div class="analysis-btn-desc">業務時間の集計と勤務負荷の分析</div>
+                        </button>
+
+                        <!-- 時間帯別配置人数 -->
+                        <button class="analysis-btn" onclick="openAnalyticsPage('hourly-staffing')">
+                            <i class="fas fa-users"></i>
+                            <div class="analysis-btn-title">時間帯別配置人数</div>
+                            <div class="analysis-btn-desc">時間帯ごとの人員配置状況と最適化提案</div>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 設定 -->
+            <div id="settingsContent" class="screen-content" style="display:none;">
+                <!-- 動的生成 -->
+            </div>
+        </div>
+    </div>
+
+    <!-- JavaScript読み込み -->
+    <script src="js/data/constants.js?v=20241213"></script>
+    <script src="js/utils/ui-utils.js?v=20241213"></script>
+    <script src="js/utils/date-utils.js?v=20241213"></script>
+    <script src="js/schedule/schedule-core.js?v=20241213"></script>
+    <script src="js/schedule/calendar-view.js?v=20241213"></script>
+    <script src="js/schedule/event-manager.js?v=20241213"></script>
+    <script src="js/ui/ce-manager.js?v=20241213"></script>
+    <script src="js/ui/ce-daily-status.js?v=20241213"></script>
 
     <!-- 分割したファイル読み込み -->
     <script src="js/dashboard-core.js"></script>
