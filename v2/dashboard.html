@@ -3,51 +3,25 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Firebase接続テスト</title>
+    <title>JavaScript実行テスト</title>
     <style>
-        body { 
-            font-family: Arial, sans-serif; 
-            margin: 50px; 
-            background: #f0f0f0; 
-        }
-        .test-box { 
-            background: white; 
-            padding: 30px; 
-            border-radius: 10px; 
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1); 
-        }
+        body { font-family: Arial, sans-serif; margin: 50px; background: #f0f0f0; }
+        .test-box { background: white; padding: 30px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
         .success { color: green; font-weight: bold; }
         .error { color: red; font-weight: bold; }
         .warning { color: orange; font-weight: bold; }
-        .button { 
-            background: #007bff; 
-            color: white; 
-            border: none; 
-            padding: 10px 20px; 
-            border-radius: 5px; 
-            cursor: pointer; 
-            margin: 10px 5px; 
-        }
-        .log-area {
-            background: #f8f9fa;
-            border: 1px solid #ddd;
-            padding: 15px;
-            margin-top: 20px;
-            border-radius: 5px;
-            font-family: monospace;
-            font-size: 12px;
-            max-height: 300px;
-            overflow-y: auto;
-        }
+        .button { background: #007bff; color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; margin: 10px 5px; }
+        .log-area { background: #f8f9fa; border: 1px solid #ddd; padding: 15px; margin-top: 20px; border-radius: 5px; font-family: monospace; font-size: 12px; max-height: 400px; overflow-y: auto; }
     </style>
 </head>
 <body>
     <div class="test-box">
-        <h1>Firebase接続テスト + ファイル読み込みテスト</h1>
+        <h1>JavaScript段階実行テスト</h1>
         <div id="status">テスト待機中...</div>
         
-        <button class="button" onclick="testFirebase()">Firebase接続テスト</button>
-        <button class="button" onclick="testFileLoading()">ファイル読み込みテスト</button>
+        <button class="button" onclick="testStep1()">Step1: 基本ファイル読み込み</button>
+        <button class="button" onclick="testStep2()">Step2: Core実行テスト</button>
+        <button class="button" onclick="testStep3()">Step3: Main実行テスト</button>
         <button class="button" onclick="clearLog()">ログクリア</button>
         
         <div id="results" style="margin-top: 20px;"></div>
@@ -55,6 +29,10 @@
     </div>
 
     <!-- Firebase Scripts -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
+
     <script>
         function log(message, type = 'info') {
             const timestamp = new Date().toLocaleTimeString();
@@ -70,137 +48,168 @@
             document.getElementById('results').innerHTML = '';
             document.getElementById('status').textContent = 'ログクリア完了';
         }
-    </script>
-    
-    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js" 
-            onload="log('Firebase App読み込み完了', 'success')" 
-            onerror="log('Firebase App読み込み失敗', 'error')"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js" 
-            onload="log('Firebase Auth読み込み完了', 'success')" 
-            onerror="log('Firebase Auth読み込み失敗', 'error')"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js" 
-            onload="log('Firebase Database読み込み完了', 'success')" 
-            onerror="log('Firebase Database読み込み失敗', 'error')"></script>
-
-    <script>
-        function testFirebase() {
-            const statusDiv = document.getElementById('status');
-            const resultsDiv = document.getElementById('results');
-            
-            try {
-                log('Firebase接続テスト開始');
-                statusDiv.innerHTML = '<span class="success">Firebase接続テスト実行中...</span>';
-                
-                // Firebase存在確認
-                if (!window.firebase) {
-                    throw new Error('Firebase未読み込み');
-                }
-                log('Firebase オブジェクト確認済み', 'success');
-                
-                // Firebase初期化
-                const firebaseConfig = {
-                    apiKey: "AIzaSyC7VLauLy9vkEcBZHrQ3wKJYm_A6DbJHQ8",
-                    authDomain: "ce-schedule-system.firebaseapp.com",
-                    databaseURL: "https://ce-schedule-system-default-rtdb.firebaseio.com",
-                    projectId: "ce-schedule-system",
-                    storageBucket: "ce-schedule-system.appspot.com",
-                    messagingSenderId: "461684979105",
-                    appId: "1:461684979105:web:1234567890abcdef"
-                };
-                
-                if (!firebase.apps.length) {
-                    firebase.initializeApp(firebaseConfig);
-                    log('Firebase アプリ初期化完了', 'success');
-                } else {
-                    log('Firebase アプリは既に初期化済み', 'warning');
-                }
-                
-                // Auth存在確認
-                if (firebase.auth) {
-                    log('Firebase Auth確認済み', 'success');
-                } else {
-                    throw new Error('Firebase Auth未読み込み');
-                }
-                
-                // Database存在確認
-                if (firebase.database) {
-                    log('Firebase Database確認済み', 'success');
-                } else {
-                    throw new Error('Firebase Database未読み込み');
-                }
-                
-                statusDiv.innerHTML = '<span class="success">✓ Firebase接続テスト成功</span>';
-                resultsDiv.innerHTML = '<p class="success">✓ Firebase全機能が正常に動作しています</p>';
-                log('Firebase接続テスト完了', 'success');
-                
-            } catch (error) {
-                statusDiv.innerHTML = '<span class="error">✗ Firebase接続テスト失敗</span>';
-                resultsDiv.innerHTML = `<p class="error">エラー: ${error.message}</p>`;
-                log(`Firebase接続エラー: ${error.message}`, 'error');
-                console.error('Firebase接続エラー:', error);
-            }
+        
+        // グローバルエラーハンドラー
+        window.onerror = function(msg, url, line, col, error) {
+            log(`グローバルエラー: ${msg} at ${url}:${line}`, 'error');
+            return false;
+        };
+        
+        window.addEventListener('unhandledrejection', function(event) {
+            log(`未処理Promise: ${event.reason}`, 'error');
+        });
+        
+        // Firebase初期化
+        if (!firebase.apps.length) {
+            const firebaseConfig = {
+                apiKey: "AIzaSyC7VLauLy9vkEcBZHrQ3wKJYm_A6DbJHQ8",
+                authDomain: "ce-schedule-system.firebaseapp.com",
+                databaseURL: "https://ce-schedule-system-default-rtdb.firebaseio.com",
+                projectId: "ce-schedule-system",
+                storageBucket: "ce-schedule-system.appspot.com",
+                messagingSenderId: "461684979105",
+                appId: "1:461684979105:web:1234567890abcdef"
+            };
+            firebase.initializeApp(firebaseConfig);
+            log('Firebase初期化完了', 'success');
         }
         
-        function testFileLoading() {
-            const statusDiv = document.getElementById('status');
-            statusDiv.innerHTML = '<span class="success">ファイル読み込みテスト実行中...</span>';
+        async function testStep1() {
+            log('=== Step1: 基本ファイル読み込みテスト開始 ===');
+            document.getElementById('status').innerHTML = '<span class="success">Step1実行中...</span>';
             
-            log('ファイル読み込みテスト開始');
-            
-            // 必要なファイルリスト
-            const requiredFiles = [
+            const basicFiles = [
                 'js/data/constants.js',
-                'js/utils/ui-utils.js',
-                'js/schedule/event-manager.js',
-                'js/dashboard-core.js',
-                'js/dashboard-main.js'
+                'js/utils/ui-utils.js', 
+                'js/schedule/event-manager.js'
             ];
             
-            let loadedCount = 0;
-            let errorCount = 0;
+            for (const file of basicFiles) {
+                try {
+                    log(`${file} 読み込み開始`);
+                    await loadScript(file);
+                    log(`${file} 読み込み完了`, 'success');
+                } catch (error) {
+                    log(`${file} 読み込みエラー: ${error.message}`, 'error');
+                    return;
+                }
+            }
             
-            requiredFiles.forEach(filePath => {
-                fetch(filePath)
-                    .then(response => {
-                        if (response.ok) {
-                            log(`✓ ${filePath} 読み込み成功`, 'success');
-                            loadedCount++;
-                        } else {
-                            log(`✗ ${filePath} 読み込み失敗 (${response.status})`, 'error');
-                            errorCount++;
-                        }
-                        
-                        // 全ファイルチェック完了時
-                        if (loadedCount + errorCount === requiredFiles.length) {
-                            if (errorCount === 0) {
-                                statusDiv.innerHTML = '<span class="success">✓ 全ファイル読み込み成功</span>';
-                                log('全ファイル読み込みテスト完了', 'success');
-                            } else {
-                                statusDiv.innerHTML = '<span class="error">✗ 一部ファイル読み込み失敗</span>';
-                                log(`ファイル読み込みテスト完了 (${errorCount}個のエラー)`, 'error');
-                            }
-                        }
-                    })
-                    .catch(error => {
-                        log(`✗ ${filePath} アクセスエラー: ${error.message}`, 'error');
-                        errorCount++;
-                        
-                        // 全ファイルチェック完了時
-                        if (loadedCount + errorCount === requiredFiles.length) {
-                            statusDiv.innerHTML = '<span class="error">✗ ファイル読み込みテスト失敗</span>';
-                            log(`ファイル読み込みテスト完了 (${errorCount}個のエラー)`, 'error');
-                        }
-                    });
+            // 基本ファイルのクラス・関数確認
+            const expectedGlobals = ['HOSPITAL_ID', 'DEPARTMENTS', 'showLoading', 'hideLoading', 'EventManager'];
+            const missing = [];
+            
+            for (const item of expectedGlobals) {
+                if (typeof window[item] === 'undefined') {
+                    missing.push(item);
+                }
+            }
+            
+            if (missing.length > 0) {
+                log(`不足要素: ${missing.join(', ')}`, 'warning');
+            } else {
+                log('全基本要素確認済み', 'success');
+            }
+            
+            document.getElementById('status').innerHTML = '<span class="success">Step1完了</span>';
+            log('=== Step1完了 ===', 'success');
+        }
+        
+        async function testStep2() {
+            log('=== Step2: Core実行テスト開始 ===');
+            document.getElementById('status').innerHTML = '<span class="success">Step2実行中...</span>';
+            
+            try {
+                log('dashboard-core.js 読み込み開始');
+                await loadScript('js/dashboard-core.js');
+                log('dashboard-core.js 読み込み完了', 'success');
+                
+                // Coreクラス確認
+                const coreClasses = ['DashboardAuth', 'WorkScheduleViewer', 'PublishedScheduleResolver', 'ActivityLogger'];
+                const missingClasses = [];
+                
+                for (const className of coreClasses) {
+                    if (typeof window[className] === 'undefined') {
+                        missingClasses.push(className);
+                    } else {
+                        log(`${className} クラス確認済み`, 'success');
+                    }
+                }
+                
+                if (missingClasses.length > 0) {
+                    log(`不足Coreクラス: ${missingClasses.join(', ')}`, 'error');
+                } else {
+                    log('全Coreクラス確認済み', 'success');
+                    
+                    // DashboardAuth インスタンス作成テスト
+                    try {
+                        const testAuth = new DashboardAuth();
+                        log('DashboardAuth インスタンス作成成功', 'success');
+                    } catch (error) {
+                        log(`DashboardAuth インスタンス作成エラー: ${error.message}`, 'error');
+                    }
+                }
+                
+            } catch (error) {
+                log(`dashboard-core.js エラー: ${error.message}`, 'error');
+            }
+            
+            document.getElementById('status').innerHTML = '<span class="success">Step2完了</span>';
+            log('=== Step2完了 ===', 'success');
+        }
+        
+        async function testStep3() {
+            log('=== Step3: Main実行テスト開始 ===');
+            document.getElementById('status').innerHTML = '<span class="success">Step3実行中...</span>';
+            
+            try {
+                log('dashboard-main.js 読み込み開始');
+                await loadScript('js/dashboard-main.js');
+                log('dashboard-main.js 読み込み完了', 'success');
+                
+                // Main実行後の状態確認
+                setTimeout(() => {
+                    log('Main実行後状態確認');
+                    
+                    // DOMエレメント確認
+                    const loginContainer = document.getElementById('login-container');
+                    const dashboardContainer = document.getElementById('dashboard-container');
+                    
+                    if (loginContainer) {
+                        log('login-container 要素が見つかりました', 'success');
+                    } else {
+                        log('login-container 要素が見つかりません', 'warning');
+                    }
+                    
+                    if (dashboardContainer) {
+                        log('dashboard-container 要素が見つかりました', 'success');
+                    } else {
+                        log('dashboard-container 要素が見つかりません', 'warning');
+                    }
+                    
+                    log('=== Step3完了 ===', 'success');
+                }, 1000);
+                
+            } catch (error) {
+                log(`dashboard-main.js エラー: ${error.message}`, 'error');
+            }
+            
+            document.getElementById('status').innerHTML = '<span class="success">Step3完了</span>';
+        }
+        
+        function loadScript(src) {
+            return new Promise((resolve, reject) => {
+                const script = document.createElement('script');
+                script.src = src;
+                script.onload = resolve;
+                script.onerror = () => reject(new Error(`スクリプト読み込み失敗: ${src}`));
+                document.head.appendChild(script);
             });
         }
         
-        // ページ読み込み完了時に自動実行
+        // 初期化
         window.addEventListener('load', function() {
-            log('ページ読み込み完了');
-            log('Firebase自動テストを5秒後に実行します...');
-            setTimeout(() => {
-                testFirebase();
-            }, 5000);
+            log('JavaScript実行テストページ準備完了');
         });
     </script>
 </body>
