@@ -178,32 +178,52 @@ window.DashboardAuth = class {
     }
 
     // ログアウト
-    logout() {
-        try {
-            // 全てのセッションキーをクリア
-            const sessionKeys = [
-                'ceScheduleSession',
-                'userSession', 
-                'authSession',
-                'currentUser'
-            ];
-            
-            sessionKeys.forEach(key => {
-                localStorage.removeItem(key);
-            });
-            
-            this.currentUser = null;
-            this.isAuthenticated = false;
-            console.log('[AUTH] ログアウト完了');
-            
-            // ログイン画面にリダイレクト
-            window.location.href = 'login.html';
-        } catch (error) {
-            console.error('[AUTH] ログアウトエラー:', error);
-            window.location.href = 'login.html';
+ logout() {
+    try {
+        // 全てのセッションキーをクリア
+        const sessionKeys = [
+            'ceScheduleSession',
+            'userSession', 
+            'authSession',
+            'currentUser'
+        ];
+        
+        sessionKeys.forEach(key => {
+            localStorage.removeItem(key);
+        });
+        
+        this.currentUser = null;
+        this.isAuthenticated = false;
+        console.log('[AUTH] ログアウト完了');
+        
+        // 実際のログインページに合わせてリダイレクト
+        // GitHub Pagesの構造に基づいて調整
+        const possibleLoginPages = [
+            'index.html',           // メインのログインページ
+            '../index.html',        // 1つ上の階層
+            '../../index.html',     // 2つ上の階層
+            'login/index.html',     // loginフォルダ内
+            '/index.html'           // ルート
+        ];
+        
+        // 現在のURL構造を確認してリダイレクト先を決定
+        const currentPath = window.location.pathname;
+        console.log('[AUTH] 現在のパス:', currentPath);
+        
+        if (currentPath.includes('/v2/')) {
+            // v2フォルダ内にいる場合は上の階層に移動
+            window.location.href = '../index.html';
+        } else {
+            // それ以外の場合はindex.htmlに移動
+            window.location.href = 'index.html';
         }
+        
+    } catch (error) {
+        console.error('[AUTH] ログアウトエラー:', error);
+        // エラー時は手動でルートに移動
+        window.location.href = '/';
     }
-};
+}
 
 // 他のコアクラス群（元のコードから継承）
 class PublishedScheduleResolver {
