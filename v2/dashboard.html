@@ -3,14 +3,18 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CEスケジュール管理システム V2 - ダッシュボード</title>
+    <title>CEスケジュール管理システム V2</title>
     <link rel="icon" href="data:image/x-icon;base64,AAABAAEAEBAAAAEAIABoBAAAFgAAACgAAAAQAAAAIAAAAAEAIAAAAAAAAAQAABILAAASCwAAAAAAAAAAAAA=">
     
-    <!-- Font Awesome -->
+    <!-- 外部ライブラリ -->
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css">
     
+    <!-- 統一テーマ（既存システムとの整合性） -->
+    <link rel="stylesheet" href="css/theme-unified.css">
+    
     <style>
-        /* 基本スタイル */
+        /* 基本レイアウト */
         * {
             margin: 0;
             padding: 0;
@@ -32,11 +36,17 @@
 
         /* ローディング画面 */
         .loading-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             display: flex;
             justify-content: center;
             align-items: center;
-            min-height: 100vh;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            z-index: 9999;
+            backdrop-filter: blur(10px);
         }
 
         .loading-content {
@@ -44,9 +54,10 @@
             color: white;
             background: rgba(255, 255, 255, 0.1);
             padding: 40px;
-            border-radius: 15px;
-            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            backdrop-filter: blur(15px);
             border: 1px solid rgba(255, 255, 255, 0.2);
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.2);
         }
 
         .loading-spinner {
@@ -64,14 +75,26 @@
             100% { transform: rotate(360deg); }
         }
 
+        .loading-text {
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 10px;
+        }
+
+        .loading-subtext {
+            font-size: 14px;
+            opacity: 0.9;
+        }
+
         /* ヘッダー */
         .header {
             background: rgba(255, 255, 255, 0.95);
             padding: 15px 0;
             margin-bottom: 20px;
-            border-radius: 10px;
-            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-            backdrop-filter: blur(10px);
+            border-radius: 15px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
         }
 
         .header-content {
@@ -80,127 +103,225 @@
             align-items: center;
             max-width: 1400px;
             margin: 0 auto;
-            padding: 0 20px;
+            padding: 0 30px;
         }
 
         .logo {
-            font-size: 24px;
+            font-size: 28px;
             font-weight: bold;
             color: #667eea;
             display: flex;
             align-items: center;
-            gap: 10px;
+            gap: 12px;
+        }
+
+        .logo i {
+            font-size: 32px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
         }
 
         .user-info {
             display: flex;
             align-items: center;
-            gap: 15px;
-            color: #333;
-        }
-
-        .user-info span {
+            gap: 20px;
             font-weight: 500;
         }
 
-        /* ダッシュボード */
+        .user-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 18px;
+        }
+
+        /* ダッシュボードレイアウト */
         .dashboard-grid {
             display: grid;
-            grid-template-columns: 300px 1fr;
-            gap: 20px;
+            grid-template-columns: 320px 1fr;
+            gap: 25px;
             min-height: calc(100vh - 200px);
         }
 
         .sidebar {
             background: rgba(255, 255, 255, 0.95);
-            border-radius: 10px;
-            padding: 20px;
-            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-            backdrop-filter: blur(10px);
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
             height: fit-content;
         }
 
         .sidebar h3 {
             color: #667eea;
-            margin-bottom: 20px;
-            font-size: 18px;
+            margin-bottom: 25px;
+            font-size: 20px;
+            font-weight: 600;
             display: flex;
             align-items: center;
-            gap: 8px;
+            gap: 10px;
         }
 
         .main-content {
             background: rgba(255, 255, 255, 0.95);
-            border-radius: 10px;
+            border-radius: 15px;
             padding: 30px;
-            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-            backdrop-filter: blur(10px);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
         }
 
-        /* ボタン */
+        /* ボタンスタイル（統一テーマ準拠） */
         .btn {
             padding: 12px 20px;
             border: none;
-            border-radius: 8px;
+            border-radius: 10px;
             cursor: pointer;
             font-size: 14px;
             font-weight: 500;
-            transition: all 0.3s;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
             display: inline-flex;
             align-items: center;
-            gap: 8px;
+            gap: 10px;
             text-decoration: none;
             border: 2px solid transparent;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .btn::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+            transition: left 0.5s;
+        }
+
+        .btn:hover::before {
+            left: 100%;
         }
 
         .btn-primary {
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: white;
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
         }
 
         .btn-primary:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+            transform: translateY(-3px);
+            box-shadow: 0 8px 25px rgba(102, 126, 234, 0.4);
         }
 
         .btn-secondary {
-            background: #6c757d;
+            background: linear-gradient(135deg, #6c757d 0%, #495057 100%);
             color: white;
+            box-shadow: 0 4px 15px rgba(108, 117, 125, 0.3);
         }
 
         .btn-secondary:hover {
-            background: #5a6268;
-            transform: translateY(-1px);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(108, 117, 125, 0.4);
         }
 
-        .btn-outline {
-            background: transparent;
-            color: #667eea;
-            border: 2px solid #667eea;
+        .menu-item {
+            width: 100%;
+            margin-bottom: 12px;
+            text-align: left;
+            justify-content: flex-start;
         }
 
-        .btn-outline:hover {
-            background: #667eea;
+        /* カードスタイル */
+        .welcome-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: white;
+            padding: 30px;
+            border-radius: 15px;
+            margin-bottom: 30px;
+            box-shadow: 0 8px 32px rgba(102, 126, 234, 0.3);
+            position: relative;
+            overflow: hidden;
         }
 
-        /* エラー表示 */
-        .error-message {
-            position: fixed;
-            top: 20px;
-            left: 50%;
-            transform: translateX(-50%);
-            background: #f8d7da;
-            color: #721c24;
-            padding: 15px 20px;
-            border-radius: 8px;
-            border: 1px solid #f5c6cb;
-            z-index: 9999;
-            max-width: 400px;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        .welcome-card::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            right: -50%;
+            width: 100%;
+            height: 100%;
+            background: radial-gradient(circle, rgba(255, 255, 255, 0.1) 0%, transparent 70%);
+            animation: float 6s ease-in-out infinite;
         }
 
-        /* レスポンシブ */
+        @keyframes float {
+            0%, 100% { transform: translateY(0px) rotate(0deg); }
+            50% { transform: translateY(-20px) rotate(5deg); }
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 20px;
+            margin-top: 30px;
+        }
+
+        .stat-card {
+            background: rgba(248, 249, 250, 0.8);
+            padding: 25px;
+            border-radius: 15px;
+            text-align: center;
+            border-left: 5px solid #667eea;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            backdrop-filter: blur(10px);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1);
+        }
+
+        .stat-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 5px;
+            background: linear-gradient(90deg, #667eea, #764ba2, #667eea);
+            background-size: 200% 100%;
+            animation: shimmer 3s ease-in-out infinite;
+        }
+
+        @keyframes shimmer {
+            0% { background-position: -200% 0; }
+            100% { background-position: 200% 0; }
+        }
+
+        /* レスポンシブデザイン */
+        @media (max-width: 1024px) {
+            .dashboard-grid {
+                grid-template-columns: 280px 1fr;
+                gap: 20px;
+            }
+            
+            .container {
+                padding: 15px;
+            }
+        }
+
         @media (max-width: 768px) {
             .dashboard-grid {
                 grid-template-columns: 1fr;
@@ -208,41 +329,103 @@
             
             .sidebar {
                 order: 2;
+                margin-top: 20px;
             }
             
             .header-content {
                 flex-direction: column;
                 gap: 15px;
                 text-align: center;
+                padding: 0 20px;
             }
             
+            .logo {
+                font-size: 24px;
+            }
+            
+            .stats-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        @media (max-width: 480px) {
             .container {
                 padding: 10px;
+            }
+            
+            .main-content,
+            .sidebar {
+                padding: 20px;
+            }
+            
+            .welcome-card {
+                padding: 20px;
             }
         }
 
         /* アニメーション */
         .fade-in {
-            animation: fadeIn 0.5s ease-in-out;
+            animation: fadeIn 0.6s ease-out;
         }
 
         @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(20px); }
-            to { opacity: 1; transform: translateY(0); }
+            from { 
+                opacity: 0; 
+                transform: translateY(30px); 
+            }
+            to { 
+                opacity: 1; 
+                transform: translateY(0); 
+            }
+        }
+
+        /* ダークモード対応（将来の拡張用） */
+        @media (prefers-color-scheme: dark) {
+            .header,
+            .sidebar,
+            .main-content {
+                background: rgba(30, 30, 30, 0.95);
+                color: #e0e0e0;
+            }
+            
+            .stat-card {
+                background: rgba(40, 40, 40, 0.8);
+                color: #e0e0e0;
+            }
+        }
+
+        /* スクロールバーカスタマイズ */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: rgba(0, 0, 0, 0.1);
+            border-radius: 10px;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 10px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: linear-gradient(135deg, #764ba2 0%, #667eea 100%);
         }
     </style>
 </head>
-<body>
+<body class="theme-unified">
     <!-- ローディング画面 -->
     <div id="loading-screen" class="loading-screen">
         <div class="loading-content">
             <div class="loading-spinner"></div>
-            <h2 style="margin-bottom: 10px;">
-                <i class="fas fa-calendar-check"></i> CEスケジュール管理システム V2
-            </h2>
-            <p>認証状態を確認しています...</p>
-            <div style="margin-top: 15px; font-size: 14px; opacity: 0.8;">
-                <i class="fas fa-shield-alt"></i> セキュリティチェック実行中
+            <div class="loading-text">
+                <i class="fas fa-calendar-check"></i>
+                CEスケジュール管理システム V2
+            </div>
+            <div class="loading-subtext">
+                <i class="fas fa-shield-alt"></i>
+                認証状態を確認しています...
             </div>
         </div>
     </div>
@@ -256,10 +439,13 @@
                     CEスケジュール管理システム V2
                 </div>
                 <div class="user-info">
-                    <i class="fas fa-user-circle" style="font-size: 20px; color: #667eea;"></i>
-                    <span id="user-name">ユーザー名</span>
+                    <div class="user-avatar">
+                        <i class="fas fa-user"></i>
+                    </div>
+                    <span id="user-name">読み込み中...</span>
                     <button id="logout-btn" class="btn btn-secondary">
-                        <i class="fas fa-sign-out-alt"></i> ログアウト
+                        <i class="fas fa-sign-out-alt"></i>
+                        ログアウト
                     </button>
                 </div>
             </div>
@@ -269,16 +455,25 @@
             <div class="dashboard-grid">
                 <aside class="sidebar">
                     <h3>
-                        <i class="fas fa-bars"></i> メニュー
+                        <i class="fas fa-bars"></i>
+                        メニュー
                     </h3>
                     <nav id="sidebar-nav">
-                        <!-- サイドバーメニューがここに動的生成される -->
+                        <!-- サイドバーメニューが動的生成される -->
+                        <div style="text-align: center; color: #667eea; padding: 20px;">
+                            <i class="fas fa-spinner fa-spin"></i>
+                            <p style="margin-top: 10px;">メニューを読み込み中...</p>
+                        </div>
                     </nav>
                 </aside>
 
                 <main class="main-content">
                     <div id="main-content-area">
-                        <!-- メインコンテンツがここに動的生成される -->
+                        <!-- メインコンテンツが動的生成される -->
+                        <div style="text-align: center; color: #667eea; padding: 40px;">
+                            <i class="fas fa-spinner fa-spin fa-2x"></i>
+                            <p style="margin-top: 15px; font-size: 16px;">コンテンツを読み込み中...</p>
+                        </div>
                     </div>
                 </main>
             </div>
@@ -286,13 +481,78 @@
     </div>
 
     <!-- Firebase Scripts -->
-    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
-
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+    
     <!-- Firebase設定 -->
     <script src="js/config/firebase-config.js"></script>
-
+    
+    <!-- 統一メッセージシステム -->
+    <script>
+        // 統一メッセージシステム（既存システムとの整合性）
+        window.showMessage = (msg, type = 'info') => {
+            let cont = document.getElementById('messageContainer');
+            if (!cont) {
+                cont = document.createElement('div');
+                cont.id = 'messageContainer';
+                cont.style.cssText = 'position:fixed;top:20px;left:50%;transform:translateX(-50%);z-index:9999;width:min(92vw,480px);';
+                document.body.appendChild(cont);
+            }
+            const div = document.createElement('div');
+            div.className = `status-unified ${type}`;
+            div.style.cssText = 'margin-bottom:8px;padding:12px 16px;border-radius:8px;backdrop-filter:blur(10px);box-shadow:0 4px 12px rgba(0,0,0,0.15);';
+            
+            // メッセージタイプ別スタイル
+            switch(type) {
+                case 'success':
+                    div.style.background = 'linear-gradient(135deg, #28a745, #20c997)';
+                    div.style.color = 'white';
+                    break;
+                case 'error':
+                    div.style.background = 'linear-gradient(135deg, #dc3545, #fd7e14)';
+                    div.style.color = 'white';
+                    break;
+                case 'warning':
+                    div.style.background = 'linear-gradient(135deg, #ffc107, #fd7e14)';
+                    div.style.color = '#212529';
+                    break;
+                default:
+                    div.style.background = 'linear-gradient(135deg, #667eea, #764ba2)';
+                    div.style.color = 'white';
+            }
+            
+            div.innerHTML = `<i class="fas fa-${type === 'success' ? 'check-circle' : type === 'error' ? 'exclamation-triangle' : type === 'warning' ? 'exclamation-circle' : 'info-circle'}"></i> ${msg}`;
+            
+            cont.appendChild(div);
+            
+            // アニメーション
+            div.style.opacity = '0';
+            div.style.transform = 'translateY(-20px)';
+            setTimeout(() => {
+                div.style.transition = 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)';
+                div.style.opacity = '1';
+                div.style.transform = 'translateY(0)';
+            }, 10);
+            
+            // 自動削除
+            setTimeout(() => {
+                div.style.opacity = '0';
+                div.style.transform = 'translateY(-20px)';
+                setTimeout(() => div.remove(), 300);
+            }, 5000);
+        };
+        
+        // エラーハンドリング
+        window.addEventListener('error', (event) => {
+            console.error('Global error:', event.error);
+        });
+        
+        window.addEventListener('unhandledrejection', (event) => {
+            console.error('Unhandled promise rejection:', event.reason);
+        });
+    </script>
+    
     <!-- 基本ファイル読み込み -->
     <script src="js/data/constants.js"></script>
     <script src="js/utils/ui-utils.js"></script>
