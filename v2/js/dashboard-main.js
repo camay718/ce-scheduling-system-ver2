@@ -23,22 +23,18 @@ async function initializeDashboard() {
 
         // Firebase準備待ち
         await window.waitForFirebase();
+        console.log('✅ Firebase準備完了');
 
-        // 認証管理初期化
+        // 認証管理初期化（最優先）
         dashboardAuth = new DashboardAuth();
+        await dashboardAuth.init();
         
-        // 他のコンポーネント初期化は認証後に実行
+        // 認証完了待ち
         await waitForAuthentication();
+        console.log('✅ 認証確認完了');
 
-        // コアコンポーネント初期化
-        scheduleResolver = new PublishedScheduleResolver();
-        activityLogger = new ActivityLogger();
-        scheduleViewer = new WorkScheduleViewer();
-
-        // グローバル公開
-        window.scheduleResolver = scheduleResolver;
-        window.activityLogger = activityLogger;
-        window.scheduleViewer = scheduleViewer;
+        // 認証後にコアコンポーネント初期化
+        await initializeCoreComponents();
 
         // UI初期化
         initializeUI();
@@ -52,31 +48,83 @@ async function initializeDashboard() {
 
     } catch (error) {
         console.error('❌ ダッシュボード初期化エラー:', error);
-        document.getElementById('loading').innerHTML = `
-            <div class="text-red-500 text-center">
-                <i class="fas fa-exclamation-triangle text-4xl mb-4"></i>
-                <h3 class="text-lg font-bold mb-2">初期化エラー</h3>
-                <p class="mb-4">ダッシュボードの初期化に失敗しました</p>
-                <button onclick="location.reload()" class="btn-unified btn-primary-unified">
-                    <i class="fas fa-redo mr-2"></i>再読み込み
-                </button>
-            </div>
-        `;
+        showInitializationError(error);
+    }
+}
+
+// コアコンポーネント初期化
+async function initializeCoreComponents() {
+    try {
+        console.log('📊 コアコンポーネント初期化開始...');
+        
+        // 各コンポーネントを順次初期化
+        scheduleResolver = new PublishedScheduleResolver();
+        activityLogger = new ActivityLogger();
+        scheduleViewer = new WorkScheduleViewer();
+
+        // 並行初期化
+        await Promise.all([
+            scheduleResolver.init(),
+            activityLogger.init(),
+            scheduleViewer.init()
+        ]);
+
+        // グローバル公開
+        window.scheduleResolver = scheduleResolver;
+        window.activityLogger = activityLogger;
+        window.scheduleViewer = scheduleViewer;
+
+        console.log('✅ コアコンポーネント初期化完了');
+    } catch (error) {
+        console.error('❌ コアコンポーネント初期化エラー:', error);
+        // コアコンポーネント初期化エラーでも続行
     }
 }
 
 // 認証完了待ち
 async function waitForAuthentication() {
-    return new Promise((resolve) => {
+    return new Promise((resolve, reject) => {
+        const timeout = setTimeout(() => {
+            reject(new Error('認証確認タイムアウト'));
+        }, 15000); // 15秒タイムアウト
+
         const checkAuth = () => {
             if (dashboardAuth.isAuthenticated) {
+                clearTimeout(timeout);
                 resolve();
+            } else if (dashboardAuth.authStateChangeHandled && !dashboardAuth.isAuthenticated) {
+                // 認証状態が確定したが未認証の場合
+                clearTimeout(timeout);
+                reject(new Error('認証されていません'));
             } else {
                 setTimeout(checkAuth, 100);
             }
         };
+        
         checkAuth();
     });
+}
+
+// 初期化エラー表示
+function showInitializationError(error) {
+    const loading = document.getElementById('loading');
+    if (loading) {
+        loading.innerHTML = `
+            <div class="text-red-500 text-center">
+                <i class="fas fa-exclamation-triangle text-4xl mb-4"></i>
+                <h3 class="text-lg font-bold mb-2">初期化エラー</h3>
+                <p class="mb-4">${error.message || 'ダッシュボードの初期化に失敗しました'}</p>
+                <div class="space-y-2">
+                    <button onclick="location.reload()" class="btn-unified btn-primary-unified mr-2">
+                        <i class="fas fa-redo mr-2"></i>再読み込み
+                    </button>
+                    <button onclick="window.location.href='index.html'" class="btn-unified btn-outline-unified">
+                        <i class="fas fa-sign-in-alt mr-2"></i>ログイン画面へ
+                    </button>
+                </div>
+            </div>
+        `;
+    }
 }
 
 // UI初期化
@@ -116,6 +164,11 @@ function setupEventListeners() {
     
     // キーボードショートカット
     setupKeyboardShortcuts();
+
+    // 権限チェック関数をグローバルに公開
+    window.checkPermission = (requiredRole) => {
+        return dashboardAuth ? dashboardAuth.checkPermission(requiredRole) : false;
+    };
 }
 
 // ナビゲーションタブ設定
@@ -275,7 +328,7 @@ function switchView(view, contentId) {
     }
 
     // 選択されたタブをアクティブ
-    const activeTab = document.querySelector(`[onclick*="${view}"], #${view}ScheduleTab, #${view}Tab`);
+    const activeTab = document.querySelector(`#${view}ScheduleTab, #${view}Tab`);
     if (activeTab) {
         activeTab.classList.add('active');
     }
@@ -296,7 +349,7 @@ function handleViewSpecificInit(view) {
             updateScheduleDisplay();
             break;
         case 'schedule':
-            if (scheduleViewer) {
+            if (scheduleViewer && scheduleViewer.isInitialized) {
                 scheduleViewer.loadLatestSchedule();
             }
             break;
@@ -383,6 +436,12 @@ async function updateDailySummary() {
     try {
         const dateKey = formatDateKey(currentDate);
         
+        // データベースアクセス前にFirebase準備確認
+        if (!window.database) {
+            console.warn('⚠️ データベース未準備のため集計をスキップ');
+            return;
+        }
+        
         // イベントデータ取得
         const eventsSnapshot = await window.database.ref(`${window.DATA_ROOT}/events/${dateKey}`).once('value');
         const events = eventsSnapshot.val() || {};
@@ -424,7 +483,7 @@ async function updateDailySummary() {
 // 部門グリッド更新
 async function updateDepartmentGrid() {
     const grid = document.getElementById('departmentGrid');
-    if (!grid) return;
+    if (!grid || !window.database) return;
 
     try {
         const dateKey = formatDateKey(currentDate);
@@ -459,7 +518,7 @@ async function updateCEList() {
     const container = document.getElementById('ceListContainer');
     const countElement = document.getElementById('ceListCount');
     
-    if (!container) return;
+    if (!container || !window.database) return;
 
     try {
         const dateKey = formatDateKey(currentDate);
@@ -473,7 +532,7 @@ async function updateCEList() {
 
         // 勤務状況取得
         const ceStatusPromises = ceList.map(async (ce) => {
-            const workStatus = scheduleResolver ? 
+            const workStatus = scheduleResolver && scheduleResolver.isInitialized ? 
                 await scheduleResolver.getCEWorkStatusForDate(ce.id, dateKey) : null;
             return { ...ce, workStatus };
         });
@@ -501,6 +560,9 @@ function loadSettingsContent() {
     const container = document.getElementById('settingsContent');
     if (!container) return;
 
+    const userRole = window.userRole || 'user';
+    const currentUserData = window.currentUserData || {};
+
     container.innerHTML = `
         <h2 class="text-2xl font-bold mb-6">設定</h2>
         
@@ -513,12 +575,12 @@ function loadSettingsContent() {
                     <div>
                         <label class="block text-sm font-medium mb-2">表示名</label>
                         <input type="text" id="userDisplayName" class="input-unified" 
-                               value="${window.currentUserData?.displayName || ''}" readonly>
+                               value="${currentUserData.displayName || ''}" readonly>
                     </div>
                     <div>
                         <label class="block text-sm font-medium mb-2">権限</label>
                         <input type="text" id="userRole" class="input-unified" 
-                               value="${window.currentUserData?.role || ''}" readonly>
+                               value="${currentUserData.role || ''}" readonly>
                     </div>
                 </div>
             </div>
@@ -547,7 +609,7 @@ function loadSettingsContent() {
             </div>
 
             <!-- 管理機能 -->
-            ${window.userRole === 'admin' ? `
+            ${userRole === 'admin' ? `
             <div class="glass-card p-6">
                 <h3 class="text-lg font-semibold mb-4"><i class="fas fa-shield-alt mr-2"></i>管理機能</h3>
                 
@@ -589,6 +651,8 @@ function openAddEventModal() {
     if (window.eventManager) {
         const dateStr = formatDateKey(currentDate);
         window.eventManager.openEventModal(null, dateStr);
+    } else if (window.showMessage) {
+        window.showMessage('業務追加機能は準備中です', 'info');
     }
 }
 
@@ -596,28 +660,46 @@ function openAddEventModal() {
 function openBulkAddModal() {
     if (window.eventManager) {
         window.eventManager.openBulkAddModal();
+    } else if (window.showMessage) {
+        window.showMessage('一括追加機能は準備中です', 'info');
     }
 }
 
 // 月次業務モーダル
 function openMonthlyTaskModal() {
     // 月次業務追加の実装
-    window.showMessage('月次業務追加機能は準備中です', 'info');
+    if (window.showMessage) {
+        window.showMessage('月次業務追加機能は準備中です', 'info');
+    }
 }
 
 // テンプレート保存
 function saveTemplate() {
-    window.showMessage('テンプレート保存機能は準備中です', 'info');
+    if (window.showMessage) {
+        window.showMessage('テンプレート保存機能は準備中です', 'info');
+    }
 }
 
 // テンプレート読み込み
 function loadTemplate() {
-    window.showMessage('テンプレート読み込み機能は準備中です', 'info');
+    if (window.showMessage) {
+        window.showMessage('テンプレート読み込み機能は準備中です', 'info');
+    }
 }
 
 // 変更履歴表示
 function showActivityLog() {
-    if (!activityLogger) return;
+    if (!activityLogger) {
+        if (window.showMessage) {
+            window.showMessage('アクティビティログが利用できません', 'warning');
+        }
+        return;
+    }
+
+    if (!window.createModal) {
+        console.error('createModal関数が見つかりません');
+        return;
+    }
 
     const modal = window.createModal('変更履歴', `
         <div class="activity-log" id="activityLogContainer">
@@ -631,22 +713,30 @@ function showActivityLog() {
 // システムデータエクスポート
 async function exportSystemData() {
     if (!window.checkPermission('admin')) {
-        window.showMessage('管理者権限が必要です', 'error');
+        if (window.showMessage) {
+            window.showMessage('管理者権限が必要です', 'error');
+        }
         return;
     }
 
     try {
-        window.showMessage('データエクスポートを準備しています...', 'info');
+        if (window.showMessage) {
+            window.showMessage('データエクスポートを準備しています...', 'info');
+        }
         
         // システムデータの収集とエクスポートの実装
         // 現在は準備中メッセージ
         setTimeout(() => {
-            window.showMessage('データエクスポート機能は準備中です', 'info');
+            if (window.showMessage) {
+                window.showMessage('データエクスポート機能は準備中です', 'info');
+            }
         }, 1000);
 
     } catch (error) {
         console.error('データエクスポートエラー:', error);
-        window.showMessage('データエクスポートに失敗しました', 'error');
+        if (window.showMessage) {
+            window.showMessage('データエクスポートに失敗しました', 'error');
+        }
     }
 }
 
@@ -906,7 +996,9 @@ async function handleEventDrop(e) {
         }
     } catch (error) {
         console.error('CE配置エラー:', error);
-        window.showMessage('CE配置に失敗しました', 'error');
+        if (window.showMessage) {
+            window.showMessage('CE配置に失敗しました', 'error');
+        }
     }
 }
 
@@ -916,11 +1008,20 @@ function handleDepartmentDrop(e) {
     e.target.classList.remove('drag-over');
     
     // 部門への直接ドロップは新規イベント作成として処理
-    window.showMessage('新規イベント作成機能は準備中です', 'info');
+    if (window.showMessage) {
+        window.showMessage('新規イベント作成機能は準備中です', 'info');
+    }
 }
 
 // CEを業務に配置
 async function assignCEToEvent(eventId, ceId, ceName) {
+    if (!window.database) {
+        if (window.showMessage) {
+            window.showMessage('データベースが利用できません', 'error');
+        }
+        return;
+    }
+
     try {
         const dateKey = formatDateKey(currentDate);
         const eventRef = window.database.ref(`${window.DATA_ROOT}/events/${dateKey}/${eventId}`);
@@ -930,7 +1031,9 @@ async function assignCEToEvent(eventId, ceId, ceName) {
         const event = snapshot.val();
         
         if (!event) {
-            window.showMessage('業務が見つかりません', 'error');
+            if (window.showMessage) {
+                window.showMessage('業務が見つかりません', 'error');
+            }
             return;
         }
         
@@ -938,7 +1041,9 @@ async function assignCEToEvent(eventId, ceId, ceName) {
         
         // 重複チェック
         if (assignedCEs.some(ce => ce.id === ceId)) {
-            window.showMessage('既に配置済みです', 'warning');
+            if (window.showMessage) {
+                window.showMessage('既に配置済みです', 'warning');
+            }
             return;
         }
         
@@ -947,12 +1052,14 @@ async function assignCEToEvent(eventId, ceId, ceName) {
         const ceData = ceSnapshot.val();
         
         if (!ceData) {
-            window.showMessage('CE情報が見つかりません', 'error');
+            if (window.showMessage) {
+                window.showMessage('CE情報が見つかりません', 'error');
+            }
             return;
         }
         
         // 勤務状況チェック
-        const workStatus = scheduleResolver ? 
+        const workStatus = scheduleResolver && scheduleResolver.isInitialized ? 
             await scheduleResolver.getCEWorkStatusForDate(ceId, dateKey) : null;
         
         // 新しいCE情報を追加
@@ -969,7 +1076,7 @@ async function assignCEToEvent(eventId, ceId, ceName) {
         await eventRef.update({ assignedCEs });
         
         // アクティビティログ
-        if (activityLogger) {
+        if (activityLogger && activityLogger.isInitialized) {
             await activityLogger.logActivity('ce-assign', {
                 eventTitle: event.title,
                 department: event.department,
@@ -981,16 +1088,22 @@ async function assignCEToEvent(eventId, ceId, ceName) {
         // UI更新
         updateScheduleDisplay();
         
-        window.showMessage(`${ceName}を${event.title}に配置しました`, 'success');
+        if (window.showMessage) {
+            window.showMessage(`${ceName}を${event.title}に配置しました`, 'success');
+        }
         
     } catch (error) {
         console.error('CE配置エラー:', error);
-        window.showMessage('CE配置に失敗しました', 'error');
+        if (window.showMessage) {
+            window.showMessage('CE配置に失敗しました', 'error');
+        }
     }
 }
 
 // CEを業務から除去
 async function removeCEFromEvent(eventId, ceId) {
+    if (!window.database) return;
+
     try {
         const dateKey = formatDateKey(currentDate);
         const eventRef = window.database.ref(`${window.DATA_ROOT}/events/${dateKey}/${eventId}`);
@@ -1007,7 +1120,7 @@ async function removeCEFromEvent(eventId, ceId) {
         
         // アクティビティログ
         const removedCE = assignedCEs.find(ce => ce.id === ceId);
-        if (activityLogger && removedCE) {
+        if (activityLogger && activityLogger.isInitialized && removedCE) {
             await activityLogger.logActivity('ce-unassign', {
                 eventTitle: event.title,
                 department: event.department,
@@ -1017,11 +1130,16 @@ async function removeCEFromEvent(eventId, ceId) {
         }
         
         updateScheduleDisplay();
-        window.showMessage('CE配置を解除しました', 'success');
+        
+        if (window.showMessage) {
+            window.showMessage('CE配置を解除しました', 'success');
+        }
         
     } catch (error) {
         console.error('CE配置解除エラー:', error);
-        window.showMessage('CE配置解除に失敗しました', 'error');
+        if (window.showMessage) {
+            window.showMessage('CE配置解除に失敗しました', 'error');
+        }
     }
 }
 
