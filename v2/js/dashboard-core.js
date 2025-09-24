@@ -3,6 +3,156 @@
 
 console.log('[CORE] dashboard-core.js 読み込み開始');
 
+// 認証管理クラス
+class dashboardAuth {
+    constructor() {
+        this.currentUser = null;
+        this.database = null;
+        this.isAuthenticated = false;
+        console.log('[AUTH] dashboardAuth クラス初期化');
+    }
+
+    // Firebase初期化
+    async initializeFirebase() {
+        try {
+            if (typeof firebase === 'undefined') {
+                console.error('[AUTH] Firebase が読み込まれていません');
+                return false;
+            }
+
+            // Firebase設定が読み込まれるまで待機
+            if (typeof window.firebaseConfig === 'undefined') {
+                console.log('[AUTH] Firebase設定の読み込みを待機中...');
+                await this.waitForFirebaseConfig();
+            }
+
+            // Realtime Database初期化
+            this.database = firebase.database();
+            console.log('[AUTH] Firebase Realtime Database 初期化完了');
+            return true;
+        } catch (error) {
+            console.error('[AUTH] Firebase初期化エラー:', error);
+            return false;
+        }
+    }
+
+    // Firebase設定読み込み待機
+    waitForFirebaseConfig(timeout = 5000) {
+        return new Promise((resolve, reject) => {
+            const startTime = Date.now();
+            const checkConfig = () => {
+                if (typeof window.firebaseConfig !== 'undefined') {
+                    resolve();
+                } else if (Date.now() - startTime > timeout) {
+                    reject(new Error('Firebase設定の読み込みがタイムアウトしました'));
+                } else {
+                    setTimeout(checkConfig, 100);
+                }
+            };
+            checkConfig();
+        });
+    }
+
+    // セッション確認
+    checkSession() {
+        try {
+            const sessionData = localStorage.getItem('ceScheduleSession');
+            console.log('[AUTH] セッション確認:', sessionData);
+            
+            if (sessionData) {
+                const parsed = JSON.parse(sessionData);
+                console.log('[AUTH] セッションデータ:', parsed);
+                
+                if (parsed && parsed.targetUID && parsed.username) {
+                    this.currentUser = {
+                        uid: parsed.targetUID,
+                        username: parsed.username
+                    };
+                    this.isAuthenticated = true;
+                    console.log('[AUTH] セッション認証成功:', this.currentUser);
+                    return true;
+                }
+            }
+            
+            console.log('[AUTH] 有効なセッションが見つかりません');
+            return false;
+        } catch (error) {
+            console.error('[AUTH] セッション確認エラー:', error);
+            return false;
+        }
+    }
+
+    // 認証確認
+    async verifyAuthentication() {
+        try {
+            if (!this.isAuthenticated || !this.currentUser) {
+                console.log('[AUTH] 認証されていません');
+                return false;
+            }
+
+            // データベース接続確認
+            if (!this.database) {
+                console.log('[AUTH] データベース接続が必要です');
+                const firebaseReady = await this.initializeFirebase();
+                if (!firebaseReady) {
+                    return false;
+                }
+            }
+
+            // ユーザー情報確認
+            const userRef = this.database.ref(`users/${this.currentUser.uid}`);
+            const snapshot = await userRef.once('value');
+            
+            if (snapshot.exists()) {
+                const userData = snapshot.val();
+                console.log('[AUTH] ユーザー確認成功:', userData);
+                return true;
+            } else {
+                console.log('[AUTH] ユーザーデータが見つかりません');
+                return false;
+            }
+        } catch (error) {
+            console.error('[AUTH] 認証確認エラー:', error);
+            return false;
+        }
+    }
+
+    // ログアウト
+    logout() {
+        try {
+            localStorage.removeItem('ceScheduleSession');
+            this.currentUser = null;
+            this.isAuthenticated = false;
+            console.log('[AUTH] ログアウト完了');
+            
+            // ログイン画面にリダイレクト
+            window.location.href = 'login.html';
+        } catch (error) {
+            console.error('[AUTH] ログアウトエラー:', error);
+        }
+    }
+
+    // 現在のユーザー取得
+    getCurrentUser() {
+        return this.currentUser;
+    }
+
+    // 認証状態取得
+    isUserAuthenticated() {
+        return this.isAuthenticated;
+    }
+
+    // データベース取得
+    getDatabase() {
+        return this.database;
+    }
+}
+
+// グローバルインスタンスを作成
+window.dashboardAuth = new dashboardAuth();
+
+console.log('[AUTH] dashboardAuth クラス読み込み完了');
+
 // 祝日判定関数（簡易実装）
 window.isJapaneseHoliday = function(date) {
     const month = date.getMonth() + 1;
