@@ -261,6 +261,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                     // ログイン成功処理
                     sessionStorage.setItem('targetUID', uid);
                     sessionStorage.setItem('currentUsername', username);
+                    sessionStorage.setItem('userRole', userData.role || 'viewer');
                     
                     await window.database.ref(`${window.DATA_ROOT}/users/${uid}`).update({
                         lastLogin: firebase.database.ServerValue.TIMESTAMP
