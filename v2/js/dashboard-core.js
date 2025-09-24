@@ -1,4 +1,4 @@
-// dashboard-core.js - コアクラス群
+// dashboard-core.js - コアクラス群（完全修正版）
 
 console.log('[CORE] dashboard-core.js 読み込み開始');
 
@@ -19,24 +19,40 @@ window.DashboardAuth = class {
                 'ceScheduleSession',
                 'userSession', 
                 'authSession',
-                'currentUser'
+                'currentUser',
+                'targetUID'
             ];
             
             for (const key of sessionKeys) {
-                const sessionData = localStorage.getItem(key);
+                // localStorage と sessionStorage 両方をチェック
+                let sessionData = localStorage.getItem(key) || sessionStorage.getItem(key);
                 console.log(`[AUTH] セッションキー ${key} 確認:`, sessionData);
                 
                 if (sessionData && sessionData !== 'null' && sessionData !== 'undefined') {
                     try {
-                        const parsed = JSON.parse(sessionData);
-                        console.log(`[AUTH] パース成功 ${key}:`, parsed);
-                        
-                        // 様々な形式のセッションデータに対応
-                        if (this.validateSessionData(parsed)) {
-                            this.currentUser = this.extractUserFromSession(parsed);
-                            this.isAuthenticated = true;
-                            console.log('[AUTH] セッション認証成功:', this.currentUser);
-                            return true;
+                        // JSON形式の場合
+                        if (sessionData.startsWith('{') || sessionData.startsWith('[')) {
+                            const parsed = JSON.parse(sessionData);
+                            console.log(`[AUTH] JSON パース成功 ${key}:`, parsed);
+                            
+                            if (this.validateSessionData(parsed)) {
+                                this.currentUser = this.extractUserFromSession(parsed);
+                                this.isAuthenticated = true;
+                                console.log('[AUTH] セッション認証成功:', this.currentUser);
+                                return true;
+                            }
+                        } else {
+                            // プレーンテキストの場合（targetUID等）
+                            if (key === 'targetUID' && sessionData) {
+                                const username = sessionStorage.getItem('currentUsername') || 'admin';
+                                this.currentUser = {
+                                    uid: sessionData,
+                                    username: username
+                                };
+                                this.isAuthenticated = true;
+                                console.log('[AUTH] プレーンセッション認証成功:', this.currentUser);
+                                return true;
+                            }
                         }
                     } catch (parseError) {
                         console.warn(`[AUTH] セッション ${key} パースエラー:`, parseError);
@@ -116,15 +132,22 @@ window.DashboardAuth = class {
                 return false;
             }
 
-            // Firebase設定待機
+            // Firebase設定待機（より柔軟に）
             let attempts = 0;
-            while (typeof window.firebaseConfig === 'undefined' && attempts < 50) {
+            const maxAttempts = 100; // 10秒まで待機
+            
+            while (attempts < maxAttempts) {
+                if (typeof window.firebaseConfig !== 'undefined' || 
+                    typeof window.database !== 'undefined' ||
+                    typeof firebase.database === 'function') {
+                    break;
+                }
                 await new Promise(resolve => setTimeout(resolve, 100));
                 attempts++;
             }
 
-            if (typeof window.firebaseConfig === 'undefined') {
-                console.warn('[AUTH] Firebase設定が見つかりません、デフォルト設定を使用');
+            if (attempts >= maxAttempts) {
+                console.warn('[AUTH] Firebase設定の読み込みがタイムアウト、デフォルト設定で続行');
             }
 
             // Realtime Database初期化
@@ -177,90 +200,81 @@ window.DashboardAuth = class {
         return this.database;
     }
 
-    // ログアウト
- logout() {
-    try {
-        // 全てのセッションキーをクリア
-        const sessionKeys = [
-            'ceScheduleSession',
-            'userSession', 
-            'authSession',
-            'currentUser',
-            'targetUID',
-            'currentUsername',
-            'needsSetup'
-        ];
-        
-        sessionKeys.forEach(key => {
-            localStorage.removeItem(key);
-            sessionStorage.removeItem(key); // sessionStorageもクリア
-        });
-        
-        this.currentUser = null;
-        this.isAuthenticated = false;
-        console.log('[AUTH] ログアウト完了');
-        
-        // より確実なリダイレクト処理
-        this.findAndRedirectToLogin();
-        
-    } catch (error) {
-        console.error('[AUTH] ログアウトエラー:', error);
-        // エラー時はルートに強制移動
-        window.location.href = '/';
+    // ログアウト（修正版）
+    logout() {
+        try {
+            // 全てのセッションキーをクリア
+            const sessionKeys = [
+                'ceScheduleSession',
+                'userSession', 
+                'authSession',
+                'currentUser',
+                'targetUID',
+                'currentUsername',
+                'needsSetup'
+            ];
+            
+            sessionKeys.forEach(key => {
+                localStorage.removeItem(key);
+                sessionStorage.removeItem(key); // sessionStorageもクリア
+            });
+            
+            this.currentUser = null;
+            this.isAuthenticated = false;
+            console.log('[AUTH] ログアウト完了');
+            
+            // より確実なリダイレクト処理
+            this.findAndRedirectToLogin();
+            
+        } catch (error) {
+            console.error('[AUTH] ログアウトエラー:', error);
+            // エラー時はルートに強制移動
+            window.location.href = '/';
+        }
     }
-}
 
-// 動的リダイレクト関数を logout メソッドの直後に追加
-findAndRedirectToLogin() {
-    console.log('[AUTH] ログインページを検索中...');
-    
-    // 現在のURLを解析
-    const currentPath = window.location.pathname;
-    const currentOrigin = window.location.origin;
-    
-    console.log('[AUTH] 現在のパス:', currentPath);
-    console.log('[AUTH] 現在のオリジン:', currentOrigin);
-    
-    // 可能性のあるログインページのパス（優先度順）
-    const possiblePaths = [
-        'index.html',                    // 同じディレクトリ
-        '../index.html',                 // 1つ上の階層
-        '../../index.html',              // 2つ上の階層
-        '/index.html',                   // ルート
-        '/ce-scheduling-system-ver2/index.html', // GitHub Pages プロジェクト名
-        '/'                              // ルートディレクトリ
-    ];
-    
-    // 現在のディレクトリ構造を判定
-    let redirectUrl;
-    
-    if (currentPath.includes('/v2/') || currentPath.includes('/dashboard')) {
-        // v2フォルダやdashboardフォルダ内にいる場合
-        redirectUrl = '../index.html';
-    } else if (currentPath.includes('/pages/')) {
-        // pagesフォルダ内にいる場合
-        redirectUrl = '../index.html';
-    } else if (currentPath.includes('/js/')) {
-        // jsフォルダ内にいる場合（通常は直接アクセスしない）
-        redirectUrl = '../index.html';
-    } else {
-        // その他の場合
-        redirectUrl = 'index.html';
+    // 動的リダイレクト関数
+    findAndRedirectToLogin() {
+        console.log('[AUTH] ログインページを検索中...');
+        
+        // 現在のURLを解析
+        const currentPath = window.location.pathname;
+        const currentOrigin = window.location.origin;
+        
+        console.log('[AUTH] 現在のパス:', currentPath);
+        console.log('[AUTH] 現在のオリジン:', currentOrigin);
+        
+        // 現在のディレクトリ構造を判定
+        let redirectUrl;
+        
+        if (currentPath.includes('/v2/') || currentPath.includes('/dashboard')) {
+            // v2フォルダやdashboardフォルダ内にいる場合
+            redirectUrl = '../index.html';
+        } else if (currentPath.includes('/pages/')) {
+            // pagesフォルダ内にいる場合
+            redirectUrl = '../index.html';
+        } else if (currentPath.includes('/js/')) {
+            // jsフォルダ内にいる場合（通常は直接アクセスしない）
+            redirectUrl = '../index.html';
+        } else {
+            // その他の場合
+            redirectUrl = 'index.html';
+        }
+        
+        console.log('[AUTH] リダイレクト先:', redirectUrl);
+        
+        // リダイレクト実行
+        try {
+            window.location.href = redirectUrl;
+        } catch (redirectError) {
+            console.error('[AUTH] リダイレクトエラー:', redirectError);
+            // 最後の手段：ルートに移動
+            window.location.href = '/';
+        }
     }
-    
-    console.log('[AUTH] リダイレクト先:', redirectUrl);
-    
-    // リダイレクト実行
-    try {
-        window.location.href = redirectUrl;
-    } catch (redirectError) {
-        console.error('[AUTH] リダイレクトエラー:', redirectError);
-        // 最後の手段：ルートに移動
-        window.location.href = '/';
-    }
-}
+};
 
-// 他のコアクラス群（元のコードから継承）
+// 他のコアクラス群（構文エラー修正版）
 class PublishedScheduleResolver {
     constructor() {
         console.log('[CORE] PublishedScheduleResolver 初期化');
@@ -282,7 +296,7 @@ class ActivityLogger {
             timestamp: new Date().toISOString(),
             action: action,
             details: details,
-            user: window.DashboardAuth?.getCurrentUser()?.username || 'system'
+            user: window.DashboardAuth?.getCurrentUser?.()?.username || 'system'
         };
         this.logs.push(logEntry);
         console.log('[ACTIVITY]', logEntry);
