@@ -1,9 +1,7 @@
-/*
-==========================================
-📊 ダッシュボードコアモジュール
-クラス・ユーティリティ群
-==========================================
-*/
+// CEスケジュール管理システム V2 - Dashboard Core Classes
+// 元のdashboard.htmlのコアクラス群を集約
+
+console.log('[CORE] dashboard-core.js 読み込み開始');
 
 // 祝日判定関数（簡易実装）
 window.isJapaneseHoliday = function(date) {
@@ -54,21 +52,12 @@ window.handleLogout = async () => {
     }
 };
 
-// 分析ページ開く関数
-window.openAnalysisPage = function(pageType) {
-    if (pageType === 'department-timeline') {
-        window.open('department-timeline.html', '_blank');
-    } else {
-        window.showMessage(`${pageType}機能は開発中です`, 'info');
-    }
-};
-
 // 公開勤務表連動管理クラス
 class PublishedScheduleResolver {
     constructor() {
         this.publishedSchedules = [];
         this.cache = new Map();
-        this.isInitialized = false;
+        this.init();
     }
 
     async init() {
@@ -76,7 +65,6 @@ class PublishedScheduleResolver {
             await window.waitForFirebase();
             await this.loadPublishedSchedules();
             this.setupRealtimeUpdates();
-            this.isInitialized = true;
             console.log('✅ 公開勤務表連動システム初期化完了');
         } catch (error) {
             console.error('❌ 公開勤務表連動システム初期化エラー:', error);
@@ -104,8 +92,6 @@ class PublishedScheduleResolver {
     }
 
     async getCEWorkStatusForDate(ceId, dateKey) {
-        if (!this.isInitialized) return null;
-        
         const cacheKey = `${ceId}_${dateKey}`;
         if (this.cache.has(cacheKey)) {
             return this.cache.get(cacheKey);
@@ -125,15 +111,14 @@ class PublishedScheduleResolver {
             const conflicts = this.checkConflicts(ceId, dateKey, relevantSchedules);
             if (conflicts.length > 0) {
                 console.warn('⚠️ 勤務表競合検出:', conflicts);
-                if (window.showMessage) {
-                    window.showMessage(`${dateKey}に勤務表の競合があります。管理者に確認を依頼してください。`, 'warning');
-                }
+                window.showMessage(`${dateKey}に勤務表の競合があります。管理者に確認を依頼してください。`, 'warning');
                 return { status: '競合', workType: 'ERROR', desired: false };
             }
         }
 
         const schedule = relevantSchedules[0];
         const scheduleData = schedule.scheduleData || {};
+        const workTypeOverrides = schedule.workTypeOverrides || {};
         const ceList = schedule.ceList || [];
         
         const ce = ceList.find(c => c.id === ceId);
@@ -142,12 +127,13 @@ class PublishedScheduleResolver {
         const workData = scheduleData[ceId]?.[dateKey];
         if (!workData) return null;
 
+        const effectiveWorkType = this.getEffectiveWorkType(ceId, dateKey, ce, workTypeOverrides);
+        const status = workData.customText?.trim() || workData.status;
+        
         const result = {
-            workType: workData.workType || '×',
-            status: workData.status || 'normal',
-            desired: workData.desired || false,
-            source: 'published_schedule',
-            scheduleKey: schedule.key
+            status: status,
+            workType: effectiveWorkType,
+            desired: workData.desired || false
         };
 
         this.cache.set(cacheKey, result);
@@ -155,186 +141,163 @@ class PublishedScheduleResolver {
     }
 
     checkConflicts(ceId, dateKey, schedules) {
-        const conflicts = [];
-        const workTypes = schedules.map(s => ({
-            key: s.key,
-            workType: s.scheduleData?.[ceId]?.[dateKey]?.workType || '×'
-        })).filter(w => w.workType !== '×');
+        const statuses = schedules.map(schedule => {
+            const scheduleData = schedule.scheduleData || {};
+            const workData = scheduleData[ceId]?.[dateKey];
+            return workData ? (workData.customText?.trim() || workData.status) : null;
+        }).filter(status => status !== null);
 
-        if (workTypes.length > 1) {
-            const uniqueWorkTypes = new Set(workTypes.map(w => w.workType));
-            if (uniqueWorkTypes.size > 1) {
-                conflicts.push({
-                    ceId,
-                    dateKey,
-                    conflictingSchedules: workTypes
-                });
+        const uniqueStatuses = [...new Set(statuses)];
+        return uniqueStatuses.length > 1 ? uniqueStatuses : [];
+    }
+
+    getEffectiveWorkType(ceId, dateKey, ce, workTypeOverrides) {
+        const overrides = workTypeOverrides[ceId];
+        if (Array.isArray(overrides)) {
+            const validOverrides = overrides.filter(override => 
+                dateKey >= override.startDate && dateKey <= override.endDate
+            );
+            if (validOverrides.length > 0) {
+                const latest = validOverrides.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0))[0];
+                return latest.workType;
             }
+        } else if (overrides && overrides.startDate && dateKey >= overrides.startDate && dateKey <= overrides.endDate) {
+            return overrides.workType;
         }
         
-        return conflicts;
+        return ce.workType || 'ME';
     }
 
     setupRealtimeUpdates() {
-        if (window.database) {
-            window.database.ref(`${window.DATA_ROOT}/workSchedules`).on('value', () => {
-                setTimeout(() => this.loadPublishedSchedules(), 500);
-            });
-        }
-    }
-
-    getScheduleStatus() {
-        return {
-            total: this.publishedSchedules.length,
-            visible: this.publishedSchedules.filter(s => s.metadata?.isVisible !== false).length,
-            cacheSize: this.cache.size
-        };
-    }
-}
-
-// 活動ログ管理クラス
-class ActivityLogger {
-    constructor() {
-        this.activities = [];
-        this.maxEntries = 100;
-        this.isInitialized = false;
-    }
-
-    async init() {
-        try {
-            await window.waitForFirebase();
-            await this.loadRecentActivities();
-            this.setupRealtimeUpdates();
-            this.isInitialized = true;
-            console.log('✅ アクティビティログ初期化完了');
-        } catch (error) {
-            console.error('❌ アクティビティログ初期化エラー:', error);
-        }
-    }
-
-    async loadRecentActivities() {
-        try {
-            const snapshot = await window.database.ref(`${window.DATA_ROOT}/auditLogs`)
-                .orderByChild('timestamp')
-                .limitToLast(this.maxEntries)
-                .once('value');
+        window.database.ref(`${window.DATA_ROOT}/workSchedules`).on('value', async () => {
+            console.log('🔄 公開勤務表データ更新検知（連動システム）');
+            await this.loadPublishedSchedules();
             
-            const data = snapshot.val() || {};
-            this.activities = Object.keys(data)
-                .map(key => ({ id: key, ...data[key] }))
-                .sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
-                
-            console.log(`✅ アクティビティ読み込み完了: ${this.activities.length}件`);
-        } catch (error) {
-            console.error('❌ アクティビティ読み込みエラー:', error);
-        }
-    }
-
-    setupRealtimeUpdates() {
-        if (window.database) {
-            window.database.ref(`${window.DATA_ROOT}/auditLogs`)
-                .orderByChild('timestamp')
-                .limitToLast(10)
-                .on('child_added', (snapshot) => {
-                    const activity = { id: snapshot.key, ...snapshot.val() };
-                    
-                    const exists = this.activities.some(a => a.id === activity.id);
-                    if (!exists) {
-                        this.activities.unshift(activity);
-                        
-                        if (this.activities.length > this.maxEntries) {
-                            this.activities = this.activities.slice(0, this.maxEntries);
-                        }
-                        
-                        this.notifyNewActivity(activity);
-                    }
-                });
-        }
-    }
-
-    notifyNewActivity(activity) {
-        if (activity.uid !== window.currentUserData?.uid) {
-            const actionMap = {
-                'event-add': '業務が追加されました',
-                'event-edit': '業務が編集されました',
-                'ce-assign': 'CE配置が変更されました',
-                'schedule-publish': '勤務表が公開されました'
-            };
-            
-            const message = actionMap[activity.action] || '変更が行われました';
-            
-            if (window.showNotification) {
-                window.showNotification(`${activity.displayName || 'ユーザー'}が${message}`, 'info', 3000);
+            if (window.ceManager && typeof window.ceManager.updateCEIconsFromSchedule === 'function') {
+                window.ceManager.updateCEIconsFromSchedule();
             }
-        }
-    }
-
-    async logActivity(action, details = {}) {
-        if (!this.isInitialized || !window.database) return;
-        
-        try {
-            const entry = {
-                action,
-                details,
-                uid: window.currentUserData?.uid || null,
-                username: window.currentUserData?.username || 'unknown',
-                displayName: window.currentUserData?.displayName || 'unknown',
-                timestamp: firebase.database.ServerValue.TIMESTAMP,
-                userAgent: navigator.userAgent.substring(0, 100)
-            };
-            
-            await window.database.ref(`${window.DATA_ROOT}/auditLogs`).push(entry);
-            
-        } catch (error) {
-            console.warn('アクティビティログ記録失敗:', error);
-        }
-    }
-
-    getRecentActivities(limit = 20) {
-        return this.activities.slice(0, limit);
-    }
-
-    getActivitiesByDate(dateKey) {
-        return this.activities.filter(activity => {
-            const date = new Date(activity.timestamp);
-            const activityDate = date.toISOString().split('T')[0].replace(/-/g, '');
-            return activityDate === dateKey;
         });
     }
 
-    renderActivityLog(containerId) {
-        const container = document.getElementById(containerId);
-        if (!container) return;
+    async applyCEStatusToList(dateKey) {
+        const ceItems = document.querySelectorAll('#ceListContainer .ce-item');
+        const ceList = window.ceManager?.ceList || [];
 
-        const recentActivities = this.getRecentActivities(15);
-        
-        if (recentActivities.length === 0) {
-            container.innerHTML = '<div class="text-gray-500 text-center py-4">アクティビティがありません</div>';
-            return;
-        }
+        for (let i = 0; i < ceItems.length; i++) {
+            const item = ceItems[i];
+            const ce = ceList[i];
+            if (!ce) continue;
 
-        container.innerHTML = recentActivities.map(activity => {
-            const date = new Date(activity.timestamp);
-            const timeStr = date.toLocaleString('ja-JP');
-            const actionName = this.getActionDisplayName(activity.action);
+            // 既存のクラスとバッジを削除
+            item.classList.remove('worktype-ope', 'worktype-me', 'worktype-hd', 'worktype-flex', 'worktype-error');
+            item.querySelectorAll('.status-badge').forEach(badge => badge.remove());
+
+            const workStatus = await this.getCEWorkStatusForDate(ce.id, dateKey);
             
-            return `
-                <div class="activity-item ${activity.action}">
-                    <div class="flex justify-between items-start">
-                        <div>
-                            <strong>${activity.displayName || 'ユーザー'}</strong>が
-                            <span class="text-blue-600">${actionName}</span>
-                        </div>
-                        <i class="fas fa-${this.getActionIcon(activity.action)} text-gray-400"></i>
-                    </div>
-                    ${activity.details ? `<div class="text-xs mt-1">${this.formatActivityDetails(activity.details)}</div>` : ''}
-                    <div class="activity-timestamp">${timeStr}</div>
-                </div>
-            `;
-        }).join('');
+            if (workStatus) {
+                if (workStatus.workType === 'ERROR') {
+                    item.classList.add('worktype-error');
+                } else {
+                    item.classList.add(`worktype-${workStatus.workType.toLowerCase()}`);
+                }
+                
+                if (workStatus.status && workStatus.status !== 'A') {
+                    const badge = document.createElement('div');
+                    badge.className = 'status-badge';
+                    badge.textContent = workStatus.status;
+                    
+                    const statusColors = {
+                        'A1': '#FF9800', 'B': '#9C27B0', '非': '#607D8B',
+                        '×': '#F44336', '年': '#2196F3', '出': '#2196F3', '研': '#795548',
+                        '競合': '#FF0000'
+                    };
+                    if (statusColors[workStatus.status]) {
+                        badge.style.background = statusColors[workStatus.status];
+                        badge.style.color = 'white';
+                    }
+                    
+                    item.appendChild(badge);
+                }
+                
+                item.dataset.workType = workStatus.workType;
+            } else {
+                item.classList.add(`worktype-${(ce.workType || 'ME').toLowerCase()}`);
+                item.dataset.workType = ce.workType || 'ME';
+            }
+        }
+    }
+}
+
+// 変更履歴管理クラス
+class ActivityLogger {
+    constructor() {
+        this.logContainer = null;
+        this.realtimeRef = null;
+        this.realtimeCallback = null;
+        this.maxLogs = 50;
     }
 
-    getActionDisplayName(action) {
+    init() {
+        this.logContainer = document.getElementById('activityLogContainer');
+        if (this.logContainer) {
+            this.setupRealtimeListener();
+        }
+    }
+
+    setupRealtimeListener() {
+        if (this.realtimeRef && this.realtimeCallback) {
+            this.realtimeRef.off('child_added', this.realtimeCallback);
+        }
+
+        this.realtimeRef = window.database.ref(`${window.DATA_ROOT}/auditLogs`).limitToLast(this.maxLogs);
+        this.realtimeCallback = (snapshot) => {
+            const logEntry = snapshot.val();
+            if (logEntry) {
+                this.displayLogEntry(logEntry);
+            }
+        };
+        
+        this.logContainer.innerHTML = '<div class="text-center py-4 text-gray-500"><i class="fas fa-spinner fa-spin"></i> 履歴を読み込み中...</div>';
+        
+        this.realtimeRef.on('child_added', this.realtimeCallback);
+    }
+
+    displayLogEntry(entry) {
+        if (!this.logContainer) return;
+
+        if (this.logContainer.querySelector('.fa-spinner')) {
+            this.logContainer.innerHTML = '';
+        }
+
+        const logItem = document.createElement('div');
+        logItem.className = `activity-item ${this.getActionClass(entry.action)}`;
+
+        const timestamp = entry.timestamp ? 
+            new Date(entry.timestamp).toLocaleString('ja-JP', {
+                month: 'short', day: 'numeric', 
+                hour: '2-digit', minute: '2-digit'
+            }) : '不明';
+        
+        const user = entry.displayName || entry.username || '不明';
+        const actionText = this.getActionText(entry);
+
+        logItem.innerHTML = `
+            <div class="font-medium">${actionText}</div>
+            <div class="activity-timestamp">[${timestamp}] ${user}</div>
+        `;
+
+        if (this.logContainer.firstChild) {
+            this.logContainer.insertBefore(logItem, this.logContainer.firstChild);
+        } else {
+            this.logContainer.appendChild(logItem);
+        }
+
+        while (this.logContainer.children.length > this.maxLogs) {
+            this.logContainer.removeChild(this.logContainer.lastChild);
+        }
+    }
+
+    getActionText(entry) {
         const actionMap = {
             'login': 'ログイン',
             'logout': 'ログアウト',
@@ -343,679 +306,550 @@ class ActivityLogger {
             'event-delete': '業務削除',
             'ce-assign': 'CE配置',
             'ce-unassign': 'CE配置解除',
-            'schedule-publish': '勤務表公開',
-            'schedule-edit': '勤務表編集'
+            'schedule-create': '勤務表作成',
+            'schedule-edit': '勤務表編集',
+            'schedule-publish': '勤務表公開'
         };
-        return actionMap[action] || action;
+
+        const actionText = actionMap[entry.action] || entry.action || '不明な操作';
+        
+        if (entry.details) {
+            const details = entry.details;
+            if (details.eventName) return `${actionText}: ${details.eventName}`;
+            if (details.ceName) return `${actionText}: ${details.ceName}`;
+            if (details.description) return `${actionText}: ${details.description}`;
+        }
+        
+        return actionText;
     }
 
-    getActionIcon(action) {
-        const iconMap = {
-            'login': 'sign-in-alt',
-            'logout': 'sign-out-alt',
-            'event-add': 'plus',
-            'event-edit': 'edit',
-            'event-delete': 'trash',
-            'ce-assign': 'user-plus',
-            'ce-unassign': 'user-minus',
-            'schedule-publish': 'calendar-check',
-            'schedule-edit': 'calendar-edit'
+    getActionClass(action) {
+        const classMap = {
+            'login': 'login',
+            'logout': 'login',
+            'event-add': 'event-add',
+            'event-edit': 'event-add',
+            'event-delete': 'event-add',
+            'ce-assign': 'ce-assign',
+            'ce-unassign': 'ce-assign',
+            'schedule-create': 'schedule-edit',
+            'schedule-edit': 'schedule-edit',
+            'schedule-publish': 'schedule-edit'
         };
-        return iconMap[action] || 'info';
-    }
-
-    formatActivityDetails(details) {
-        if (typeof details === 'string') return details;
         
-        const parts = [];
-        if (details.eventTitle) parts.push(`業務: ${details.eventTitle}`);
-        if (details.department) parts.push(`部門: ${details.department}`);
-        if (details.ceNames) parts.push(`CE: ${details.ceNames.join(', ')}`);
-        if (details.dateRange) parts.push(`期間: ${details.dateRange}`);
-        
-        return parts.join(' | ') || JSON.stringify(details);
+        return classMap[action] || '';
     }
 }
 
-// 勤務表ビューア管理クラス
+// 勤務表ビューア
 class WorkScheduleViewer {
     constructor() {
-        this.currentPeriodKey = null;
-        this.scheduleData = null;
-        this.ceList = [];
-        this.isInitialized = false;
+        this.currentPeriodIndex = 0;
+        this.availablePeriods = [];
+        this.realtimeListener = null;
+        this.init();
     }
 
     async init() {
         try {
             await window.waitForFirebase();
-            await this.loadLatestSchedule();
-            this.setupUI();
-            this.isInitialized = true;
-            console.log('✅ 勤務表ビューア初期化完了');
+            this.setupRealtimeListener();
+            this.setupEventListeners();
+            console.log('✅ 勤務区分表ビューアー初期化完了');
         } catch (error) {
-            console.error('❌ 勤務表ビューア初期化エラー:', error);
+            console.error('❌ 勤務区分表ビューアー初期化エラー:', error);
         }
     }
 
-    async loadLatestSchedule() {
+    setupRealtimeListener() {
+        if (this.realtimeListener) {
+            this.realtimeListener.off();
+        }
+        
+        this.realtimeListener = window.database.ref(`${window.DATA_ROOT}/workSchedules`);
+        this.realtimeListener.on('value', async () => {
+            console.log('🔄 公開勤務表データ更新検知');
+            await this.loadAvailablePeriods();
+            this.displayCurrentPeriod();
+        });
+    }
+
+    async loadAvailablePeriods() {
         try {
             const snapshot = await window.database.ref(`${window.DATA_ROOT}/workSchedules`).once('value');
-            const schedules = snapshot.val() || {};
+            const data = snapshot.val() || {};
             
-            const scheduleList = Object.keys(schedules)
-                .map(key => ({ key, ...schedules[key] }))
-                .filter(s => window.userRole === 'admin' || s.metadata?.isVisible !== false)
-                .sort((a, b) => (b.metadata?.publishedAt || 0) - (a.metadata?.publishedAt || 0));
+            this.availablePeriods = Object.keys(data)
+                .map(periodKey => ({
+                    key: periodKey,
+                    ...data[periodKey].metadata
+                }))
+                .filter(period => {
+                    return window.userRole === 'admin' || (period.isVisible !== false);
+                })
+                .sort((a, b) => (b.publishedAt || b.createdAt || 0) - (a.publishedAt || a.createdAt || 0));
             
-            if (scheduleList.length > 0) {
-                const latest = scheduleList[0];
-                this.currentPeriodKey = latest.key;
-                this.scheduleData = latest.scheduleData || {};
-                this.ceList = latest.ceList || [];
-                this.metadata = latest.metadata || {};
-                
-                this.updatePeriodDisplay();
-                this.renderScheduleTable();
+            if (this.availablePeriods.length > 0) {
+                if (this.currentPeriodIndex >= this.availablePeriods.length) {
+                    this.currentPeriodIndex = 0;
+                }
+                this.displayCurrentPeriod();
             } else {
-                this.showEmptyState();
+                this.displayNoPeriods();
             }
-            
         } catch (error) {
-            console.error('❌ 勤務表読み込みエラー:', error);
-            this.showErrorState();
+            console.error('❌ 期間データ読み込みエラー:', error);
         }
     }
 
-    setupUI() {
+    setupEventListeners() {
         const editorBtn = document.getElementById('openScheduleEditorBtn');
-        if (editorBtn) {
-            editorBtn.addEventListener('click', () => {
-                this.openScheduleEditor();
-            });
+        if (editorBtn) editorBtn.onclick = () => this.openScheduleEditor();
+    }
+
+    navigatePeriod(direction) {
+        const newIndex = this.currentPeriodIndex + direction;
+        
+        if (newIndex < 0 || newIndex >= this.availablePeriods.length) {
+            window.showMessage('これ以上の期間はありません', 'info');
+            return;
         }
+        
+        this.currentPeriodIndex = newIndex;
+        this.displayCurrentPeriod();
     }
 
-    updatePeriodDisplay() {
-        const display = document.getElementById('currentPeriodDisplay');
-        if (display && this.metadata) {
-            const startDate = this.formatDate(this.metadata.startDate);
-            const endDate = this.formatDate(this.metadata.endDate);
-            display.textContent = `${startDate} 〜 ${endDate}`;
-        }
-    }
-
-    formatDate(dateStr) {
-        if (!dateStr || dateStr.length !== 8) return dateStr;
-        const year = dateStr.substring(0, 4);
-        const month = dateStr.substring(4, 6);
-        const day = dateStr.substring(6, 8);
-        return `${year}年${parseInt(month)}月${parseInt(day)}日`;
-    }
-
-    renderScheduleTable() {
-        const container = document.getElementById('workScheduleDisplayArea');
-        if (!container) return;
-
-        if (!this.scheduleData || Object.keys(this.scheduleData).length === 0) {
-            this.showEmptyState();
+    async displayCurrentPeriod() {
+        const displayEl = document.getElementById('currentPeriodDisplay');
+        const footerEl = document.getElementById('scheduleControlsFooter');
+        
+        if (this.availablePeriods.length === 0) {
+            this.displayNoPeriods();
             return;
         }
 
-        // スケジュール表の生成
-        const table = this.generateScheduleTable();
+        const currentPeriod = this.availablePeriods[this.currentPeriodIndex];
         
-        container.innerHTML = `
-            <div class="schedule-table-container">
-                ${table}
-            </div>
-            <div class="schedule-actions mt-4 text-center">
-                <button onclick="window.scheduleViewer.openScheduleEditor()" 
-                        class="btn-unified btn-primary-unified mr-2">
-                    <i class="fas fa-edit mr-1"></i>編集
+        if (displayEl) {
+            const visibilityStatus = currentPeriod.isVisible === false ? ' (非公開)' : '';
+            displayEl.innerHTML = `
+                <div>${currentPeriod.startDate} ～ ${currentPeriod.endDate}${visibilityStatus}</div>
+                <div class="text-sm text-gray-500">
+                    (${this.currentPeriodIndex + 1}/${this.availablePeriods.length})
+                </div>
+            `;
+        }
+
+        await this.renderWorkScheduleTable(currentPeriod.key);
+        
+        if (footerEl) {
+            footerEl.innerHTML = `
+                <div class="controls-container">
+                    <div class="navigation-controls">
+                        <button class="btn-unified btn-outline-unified" onclick="window.workScheduleViewer.navigatePeriod(-1)">
+                            <i class="fas fa-chevron-left mr-1"></i>前の期間
+                        </button>
+                        <button class="btn-unified btn-outline-unified" onclick="window.workScheduleViewer.navigatePeriod(1)">
+                            次の期間<i class="fas fa-chevron-right ml-1"></i>
+                        </button>
+                    </div>
+                    <div class="admin-controls-container">
+                        ${this.renderAdminControls(currentPeriod)}
+                    </div>
+                </div>
+            `;
+        }
+    }
+
+    renderAdminControls(period) {
+        const isAdmin = (
+            window.userRole === 'admin' && 
+            window.currentUserData && 
+            window.currentUserData.role === 'admin'
+        );
+        
+        if (!isAdmin) {
+            return '';
+        }
+        
+        return `
+            <div class="admin-controls">
+                <span class="admin-label">管理者操作:</span>
+                <button onclick="window.workScheduleViewer.toggleVisibility('${period.key}')" 
+                        class="btn-small ${period.isVisible === false ? 'bg-green-500' : 'bg-yellow-500'} text-white" 
+                        title="表示/非表示切替">
+                    <i class="fas fa-eye${period.isVisible === false ? '' : '-slash'}"></i>
                 </button>
-                <button onclick="window.scheduleViewer.exportSchedule()" 
-                        class="btn-unified btn-outline-unified">
-                    <i class="fas fa-download mr-1"></i>エクスポート
+                <button onclick="window.workScheduleViewer.deleteSchedule('${period.key}')" 
+                        class="btn-small bg-red-500 text-white" title="削除">
+                    <i class="fas fa-trash"></i>
                 </button>
             </div>
         `;
     }
 
-    generateScheduleTable() {
-        if (!this.metadata || !this.scheduleData) return '';
-
-        // 日付範囲生成
-        const dates = this.generateDateRange(this.metadata.startDate, this.metadata.endDate);
+    displayNoPeriods() {
+        const displayEl = document.getElementById('currentPeriodDisplay');
+        const areaEl = document.getElementById('workScheduleDisplayArea');
+        const footerEl = document.getElementById('scheduleControlsFooter');
         
-        // CEリストをソート
-        const sortedCEs = [...this.ceList].sort((a, b) => a.name.localeCompare(b.name));
+        if (displayEl) displayEl.textContent = '作成済みの期間なし';
+        if (areaEl) {
+            areaEl.innerHTML = `
+                <div class="text-center py-12">
+                    <i class="fas fa-calendar-plus text-4xl text-gray-400 mb-4"></i>
+                    <h3 class="text-lg font-semibold text-gray-600 mb-2">CE勤務表</h3>
+                    <p class="text-gray-500 mb-4">まだ勤務表が作成されていません</p>
+                    <button onclick="document.getElementById('openScheduleEditorBtn').click()" 
+                            class="btn-unified btn-primary-unified">
+                        <i class="fas fa-plus mr-2"></i>最初の勤務表を作成
+                    </button>
+                </div>
+            `;
+        }
+        if (footerEl) footerEl.innerHTML = '';
+    }
 
-        let html = `
-            <div class="schedule-table-wrapper">
-                <table class="schedule-table">
-                    <thead>
-                        <tr>
-                            <th class="ce-name-header">CE名</th>
-                            ${dates.map(date => `
-                                <th class="date-header">
-                                    <div class="date-display">
-                                        <div class="month-day">${this.formatDateShort(date)}</div>
-                                        <div class="weekday">${this.getWeekday(date)}</div>
-                                    </div>
-                                </th>
-                            `).join('')}
-                        </tr>
-                    </thead>
-                    <tbody>
-        `;
+    async renderWorkScheduleTable(periodKey) {
+        const areaEl = document.getElementById('workScheduleDisplayArea');
+        if (!areaEl) return;
 
-        // CE別行生成
-        for (const ce of sortedCEs) {
-            html += `<tr class="ce-row">`;
-            html += `<td class="ce-name-cell">${ce.name}</td>`;
+        try {
+            const snapshot = await window.database.ref(`${window.DATA_ROOT}/workSchedules/${periodKey}`).once('value');
+            const periodData = snapshot.val();
             
-            for (const date of dates) {
-                const workData = this.scheduleData[ce.id]?.[date];
-                const workType = workData?.workType || '×';
-                const status = workData?.status || 'normal';
-                
-                html += `
-                    <td class="work-cell work-type-${workType} status-${status}">
-                        <span class="work-type-display">${workType}</span>
-                    </td>
+            if (!periodData || !periodData.ceList) {
+                areaEl.innerHTML = `
+                    <div class="text-center py-8">
+                        <i class="fas fa-exclamation-triangle text-4xl text-yellow-500 mb-4"></i>
+                        <p class="text-gray-600">勤務表データまたはCEリストが見つかりません</p>
+                    </div>
                 `;
+                return;
             }
+
+            const scheduleData = periodData.scheduleData || {};
+            const ceList = periodData.ceList;
+            const workTypeOverrides = periodData.workTypeOverrides || {};
+            const metadata = periodData.metadata || {};
+            const dates = this.generateDateRange(new Date(metadata.startDate), new Date(metadata.endDate));
+
+            areaEl.innerHTML = `
+                <div class="work-schedule-table-wrapper">
+                    <table class="work-schedule-table">
+                        ${this.generateTableHTML(dates, scheduleData, ceList, workTypeOverrides)}
+                    </table>
+                </div>
+            `;
+
+        } catch (error) {
+            console.error('❌ 勤務表表示エラー:', error);
+            areaEl.innerHTML = `
+                <div class="text-center py-8">
+                    <i class="fas fa-exclamation-triangle text-4xl text-red-500 mb-4"></i>
+                    <p class="text-gray-600">勤務表の読み込みでエラーが発生しました</p>
+                </div>
+            `;
+        }
+    }
+
+    getEffectiveWorkType(ceId, dateKey, ceList, workTypeOverrides) {
+        const ce = ceList.find(c => c.id === ceId);
+        if (!ce) return 'ME';
+
+        const overrides = workTypeOverrides[ceId];
+        if (Array.isArray(overrides)) {
+            const validOverrides = overrides.filter(override => 
+                dateKey >= override.startDate && dateKey <= override.endDate
+            );
+            if (validOverrides.length > 0) {
+                const latest = validOverrides.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0))[0];
+                return latest.workType;
+            }
+        } else if (overrides && overrides.startDate && dateKey >= overrides.startDate && dateKey <= overrides.endDate) {
+            return overrides.workType;
+        }
+        
+        return ce.workType || 'ME';
+    }
+
+    generateTableHTML(dates, scheduleData, ceList, workTypeOverrides) {
+        let html = '<thead><tr><th class="name-header">氏名</th>';
+        
+        dates.forEach(date => {
+            const dayOfWeek = ['日', '月', '火', '水', '木', '金', '土'][date.getDay()];
+            const isWeekend = date.getDay() === 0 || date.getDay() === 6;
+            const headerClass = isWeekend ? 'date-header weekend-header' : 'date-header';
             
-            html += `</tr>`;
+            html += `
+                <th class="${headerClass}">
+                    <div>${date.getDate()}</div>
+                    <div class="text-xs">${dayOfWeek}</div>
+                </th>
+            `;
+        });
+        
+        const summaryHeaders = ['A', 'A1', 'B', '非', '×', '年', '出', '研', '休日数', '実勤務', '当直回数'];
+        summaryHeaders.forEach(header => {
+            html += `<th class="summary-header">${header}</th>`;
+        });
+        html += '</tr></thead>';
+        
+        html += '<tbody>';
+        ceList.forEach(ce => {
+            const fullName = ce.fullName || ce.name || '';
+            html += `<tr><td class="name-cell">
+                <div class="font-medium">${fullName}</div>
+            </td>`;
+            
+            const summary = { A: 0, A1: 0, B: 0, non: 0, off: 0, year: 0, trip: 0, training: 0, holidays: 0, actual: 0, night: 0 };
+            
+            dates.forEach(date => {
+                const dateKey = this.formatDate(date);
+                const workData = scheduleData[ce.id]?.[dateKey] || {};
+                const isWeekend = date.getDay() === 0 || date.getDay() === 6;
+                const status = workData.customText?.trim() || workData.status || (isWeekend ? '×' : 'A');
+                const desired = workData.desired || false;
+                
+                const effectiveWorkType = this.getEffectiveWorkType(ce.id, dateKey, ceList, workTypeOverrides);
+                
+                if (isWeekend) summary.holidays++;
+                switch (workData.status || (isWeekend ? '×' : 'A')) {
+                    case 'A': summary.A++; summary.actual++; break;
+                    case 'A1': summary.A1++; summary.actual++; break;
+                    case 'B': summary.B++; summary.actual++; summary.night++; break;
+                    case '非': summary.non++; summary.actual++; break;
+                    case '×': summary.off++; break;
+                    case '年': summary.year++; summary.actual++; break;
+                    case '出': summary.trip++; summary.actual++; break;
+                    case '研': summary.training++; summary.actual++; break;
+                }
+                
+                let cellClass = `work-cell type-${effectiveWorkType.toLowerCase()}`;
+                if (workData.status) cellClass += ` status-${workData.status}`;
+                if (desired) cellClass += ' desired';
+                if (isWeekend) cellClass += ' holiday';
+                
+                html += `<td class="${cellClass}">${status}</td>`;
+            });
+            
+            const summaryValues = [summary.A, summary.A1, summary.B, summary.non, summary.off, summary.year, summary.trip, summary.training, summary.holidays, summary.actual, summary.night];
+            summaryValues.forEach(value => {
+                html += `<td class="summary-cell">${value}</td>`;
+            });
+            
+            html += '</tr>';
+        });
+        html += '</tbody>';
+
+        html += '<tfoot>';
+        const footerTypes = [
+            { label: 'OPE(A)', filter: (effectiveType, status) => effectiveType === 'OPE' && status === 'A' },
+            { label: 'OPE(A1)', filter: (effectiveType, status) => effectiveType === 'OPE' && status === 'A1' },
+            { label: 'ME', filter: (effectiveType, status) => effectiveType === 'ME' && ['A', 'A1', 'B', '非', '年', '出', '研'].includes(status) },
+            { label: 'HD', filter: (effectiveType, status) => effectiveType === 'HD' && ['A', 'A1', 'B', '非', '年', '出', '研'].includes(status) },
+            { label: 'FLEX', filter: (effectiveType, status) => effectiveType === 'FLEX' && ['A', 'A1', 'B', '非', '年', '出', '研'].includes(status) },
+            { label: '当直', filter: (effectiveType, status) => status === 'B', target: 1 },
+            { label: '非番', filter: (effectiveType, status) => status === '非', target: 1 }
+        ];
+
+        footerTypes.forEach(type => {
+            html += `<tr class="footer-summary-row"><th class="type-label">${type.label}</th>`;
+            
+            dates.forEach(date => {
+                const dateKey = this.formatDate(date);
+                let count = 0;
+                ceList.forEach(ce => {
+                    const workData = scheduleData[ce.id]?.[dateKey] || {};
+                    const status = workData.status || (date.getDay() === 0 || date.getDay() === 6 ? '×' : 'A');
+                    const effectiveType = this.getEffectiveWorkType(ce.id, dateKey, ceList, workTypeOverrides);
+                    
+                    if (type.filter(effectiveType, status)) {
+                        count++;
+                    }
+                });
+                
+                const cellClass = type.target && count !== type.target ? 'warning-count' : '';
+                html += `<td class="${cellClass}">${count}</td>`;
+            });
+            
+            for (let i = 0; i < summaryHeaders.length; i++) {
+                html += '<td></td>';
+            }
+            html += '</tr>';
+        });
+        
+        html += '</tfoot>';
+        return html;
+    }
+
+    async toggleVisibility(periodKey) {
+        const isAdmin = (
+            window.userRole === 'admin' && 
+            window.currentUserData && 
+            window.currentUserData.role === 'admin'
+        );
+        
+        if (!isAdmin) {
+            window.showMessage('管理者権限が必要です', 'warning');
+            return;
         }
 
-        html += `
-                    </tbody>
-                </table>
-            </div>
-        `;
+        try {
+            const snapshot = await window.database.ref(`${window.DATA_ROOT}/workSchedules/${periodKey}/metadata`).once('value');
+            const metadata = snapshot.val();
+            
+            const newVisibility = !(metadata?.isVisible !== false);
+            await window.database.ref(`${window.DATA_ROOT}/workSchedules/${periodKey}/metadata/isVisible`).set(newVisibility);
+            
+            window.showMessage(`勤務表を${newVisibility ? '表示' : '非表示'}に設定しました`, 'success');
+            
+            await this.loadAvailablePeriods();
+            
+        } catch (error) {
+            console.error('❌ 表示切替エラー:', error);
+            window.showMessage('表示設定の変更に失敗しました', 'error');
+        }
+    }
 
-        return html;
+    async deleteSchedule(periodKey) {
+        const isAdmin = (
+            window.userRole === 'admin' && 
+            window.currentUserData && 
+            window.currentUserData.role === 'admin'
+        );
+        
+        if (!isAdmin) {
+            window.showMessage('管理者権限が必要です', 'warning');
+            return;
+        }
+
+        const period = this.availablePeriods.find(p => p.key === periodKey);
+        if (!period) return;
+
+        if (!confirm(`勤務表「${period.startDate} ～ ${period.endDate}」を完全に削除しますか？\n\nこの操作は元に戻せません。`)) {
+            return;
+        }
+
+        try {
+            await window.database.ref(`${window.DATA_ROOT}/workSchedules/${periodKey}`).remove();
+            window.showMessage('勤務表を削除しました', 'success');
+            
+            await this.loadAvailablePeriods();
+            
+        } catch (error) {
+            console.error('❌ 勤務表削除エラー:', error);
+            window.showMessage('勤務表の削除に失敗しました', 'error');
+        }
     }
 
     generateDateRange(startDate, endDate) {
         const dates = [];
-        const start = new Date(
-            parseInt(startDate.substring(0, 4)),
-            parseInt(startDate.substring(4, 6)) - 1,
-            parseInt(startDate.substring(6, 8))
-        );
-        const end = new Date(
-            parseInt(endDate.substring(0, 4)),
-            parseInt(endDate.substring(4, 6)) - 1,
-            parseInt(endDate.substring(6, 8))
-        );
-
-        const current = new Date(start);
-        while (current <= end) {
-            const dateStr = current.toISOString().split('T')[0].replace(/-/g, '');
-            dates.push(dateStr);
+        const current = new Date(startDate);
+        
+        while (current <= endDate) {
+            dates.push(new Date(current));
             current.setDate(current.getDate() + 1);
         }
-
+        
         return dates;
     }
 
-    formatDateShort(dateStr) {
-        const month = parseInt(dateStr.substring(4, 6));
-        const day = parseInt(dateStr.substring(6, 8));
-        return `${month}/${day}`;
-    }
-
-    getWeekday(dateStr) {
-        const date = new Date(
-            parseInt(dateStr.substring(0, 4)),
-            parseInt(dateStr.substring(4, 6)) - 1,
-            parseInt(dateStr.substring(6, 8))
-        );
-        
-        const weekdays = ['日', '月', '火', '水', '木', '金', '土'];
-        return weekdays[date.getDay()];
-    }
-
-    showEmptyState() {
-        const container = document.getElementById('workScheduleDisplayArea');
-        if (!container) return;
-
-        container.innerHTML = `
-            <div class="text-center py-8 text-gray-500">
-                <i class="fas fa-table text-4xl mb-4"></i>
-                <h3 class="text-lg font-semibold mb-2">CE勤務表</h3>
-                <p class="mb-4">作成済みの勤務表がここに表示されます</p>
-                <button onclick="window.scheduleViewer.openScheduleEditor()" 
-                        class="btn-unified btn-primary-unified">
-                    <i class="fas fa-plus mr-2"></i>最初の勤務表を作成
-                </button>
-            </div>
-        `;
-    }
-
-    showErrorState() {
-        const container = document.getElementById('workScheduleDisplayArea');
-        if (!container) return;
-
-        container.innerHTML = `
-            <div class="text-center py-8 text-red-500">
-                <i class="fas fa-exclamation-triangle text-4xl mb-4"></i>
-                <h3 class="text-lg font-semibold mb-2">読み込みエラー</h3>
-                <p class="mb-4">勤務表の読み込み中にエラーが発生しました</p>
-                <button onclick="window.scheduleViewer.loadLatestSchedule()" 
-                        class="btn-unified btn-outline-unified">
-                    <i class="fas fa-redo mr-2"></i>再読み込み
-                </button>
-            </div>
-        `;
+    formatDate(date) {
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const day = String(date.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
     }
 
     openScheduleEditor() {
-        window.open('work-schedule-editor.html', '_blank');
-    }
-
-    exportSchedule() {
-        if (!this.scheduleData) {
-            if (window.showMessage) {
-                window.showMessage('エクスポートできる勤務表がありません', 'warning');
-            }
+        if (window.userRole === 'viewer') {
+            window.showMessage('編集権限がありません', 'warning');
             return;
         }
-
-        // CSV形式でエクスポート
-        const csv = this.generateCSV();
-        const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
-        const url = URL.createObjectURL(blob);
         
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `勤務表_${this.currentPeriodKey}.csv`;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
-
-        if (window.showMessage) {
-            window.showMessage('勤務表をエクスポートしました', 'success');
+        const targetUID = sessionStorage.getItem('targetUID');
+        const currentUsername = sessionStorage.getItem('currentUsername');
+        
+        if (!targetUID || !currentUsername) {
+            window.showMessage('セッション情報が不足しています。再度ログインしてください。', 'error');
+            return;
         }
-    }
-
-    generateCSV() {
-        if (!this.metadata || !this.scheduleData) return '';
-
-        const dates = this.generateDateRange(this.metadata.startDate, this.metadata.endDate);
-        const sortedCEs = [...this.ceList].sort((a, b) => a.name.localeCompare(b.name));
-
-        // CSVヘッダー
-        let csv = 'CE名,' + dates.map(date => this.formatDateShort(date)).join(',') + '\n';
-
-        // CE別データ
-        for (const ce of sortedCEs) {
-            let row = `"${ce.name}",`;
-            const workTypes = dates.map(date => {
-                const workData = this.scheduleData[ce.id]?.[date];
-                return workData?.workType || '×';
-            });
-            row += workTypes.join(',');
-            csv += row + '\n';
-        }
-
-        return csv;
-    }
-}
-
-// ダッシュボード認証管理クラス
-class DashboardAuth {
-    constructor() {
-        this.isAuthenticated = false;
-        this.currentUser = null;
-        this.userRole = 'user';
-        this.authStateChangeHandled = false;
-        this.initializationPromise = null;
-    }
-
-    async init() {
-        if (this.initializationPromise) {
-            return this.initializationPromise;
-        }
-
-        this.initializationPromise = this.performInit();
-        return this.initializationPromise;
-    }
-
-    async performInit() {
-        try {
-            console.log('🔐 ダッシュボード認証初期化開始...');
-            
-            await window.waitForFirebase();
-            
-            // Firebase Auth準備待ち
-            let authReady = false;
-            let attempts = 0;
-            
-            while (!authReady && attempts < 50) {
-                if (window.auth && typeof window.auth.onAuthStateChanged === 'function') {
-                    authReady = true;
-                } else {
-                    await new Promise(resolve => setTimeout(resolve, 100));
-                    attempts++;
-                }
-            }
-
-            if (!authReady) {
-                throw new Error('Firebase Auth初期化タイムアウト');
-            }
-
-            await this.setupAuthStateListener();
-            console.log('✅ ダッシュボード認証初期化完了');
-            
-        } catch (error) {
-            console.error('❌ ダッシュボード認証初期化エラー:', error);
-            throw error;
-        }
-    }
-
-    async setupAuthStateListener() {
-        return new Promise((resolve, reject) => {
-            const timeout = setTimeout(() => {
-                reject(new Error('認証状態確認タイムアウト'));
-            }, 10000); // 10秒タイムアウト
-
-            window.auth.onAuthStateChanged(async (user) => {
-                try {
-                    if (this.authStateChangeHandled) return;
-                    
-                    clearTimeout(timeout);
-                    this.authStateChangeHandled = true;
-
-                    if (user) {
-                        console.log('🔐 認証ユーザー検出:', user.uid);
-                        await this.handleUserAuthenticated(user);
-                        resolve();
-                    } else {
-                        console.log('🔐 未認証状態検出');
-                        this.handleUserNotAuthenticated();
-                        resolve(); // 未認証でもresolveして処理を続行
-                    }
-                } catch (error) {
-                    console.error('❌ 認証状態変更処理エラー:', error);
-                    reject(error);
-                }
-            });
+        
+        const params = new URLSearchParams({
+            uid: targetUID,
+            username: currentUsername,
+            role: window.userRole,
+            timestamp: Date.now()
         });
-    }
-
-    async handleUserAuthenticated(user) {
-        try {
-            console.log('🔐 ユーザー認証処理開始...', user.uid);
-            
-            // ユーザーデータ取得
-            const userSnapshot = await window.database.ref(`${window.DATA_ROOT}/users/${user.uid}`).once('value');
-            const userData = userSnapshot.val();
-
-            if (!userData) {
-                console.error('❌ ユーザーデータが見つかりません:', user.uid);
-                this.redirectToLogin();
-                return;
+        
+        const url = `pages/work-schedule-editor.html?${params.toString()}`;
+        
+        const win = window.open(url, 'workScheduleEditor', 'width=1400,height=900,scrollbars=yes,resizable=yes');
+        
+        if (!win || win.closed || typeof win.closed === 'undefined') {
+            if (confirm('新しいタブで開けませんでした。同じタブで勤務表エディタを開きますか？')) {
+                window.location.href = url;
+            } else {
+                window.showMessage('勤務表エディタを開くには、ポップアップを許可してください', 'warning');
             }
-
-            this.isAuthenticated = true;
-            this.currentUser = user;
-            this.userRole = userData.role || 'user';
-
-            // グローバル変数設定
-            window.currentUserData = {
-                uid: user.uid,
-                username: userData.username,
-                displayName: userData.displayName,
-                role: userData.role
-            };
-            window.userRole = userData.role;
-
-            // UI更新
-            this.updateUserDisplay(userData);
-            this.showMainInterface();
-
-            // ログイン記録
-            await this.logLogin();
-
-            console.log(`✅ ユーザー認証完了: ${userData.displayName} (${userData.role})`);
-
-        } catch (error) {
-            console.error('❌ ユーザー認証処理エラー:', error);
-            this.redirectToLogin();
+        } else {
+            console.log('✅ 勤務表エディタを新しいタブで開きました');
         }
-    }
-
-    handleUserNotAuthenticated() {
-        console.log('🔐 未認証ユーザーの処理');
-        
-        this.isAuthenticated = false;
-        this.currentUser = null;
-        this.userRole = 'user';
-        
-        delete window.currentUserData;
-        delete window.userRole;
-
-        this.redirectToLogin();
-    }
-
-    updateUserDisplay(userData) {
-        const display = document.getElementById('currentUserDisplay');
-        if (display) {
-            display.textContent = `${userData.displayName} (${userData.role})`;
-        }
-    }
-
-    showMainInterface() {
-        const loading = document.getElementById('loading');
-        const mainInterface = document.getElementById('mainInterface');
-        
-        if (loading) {
-            loading.style.display = 'none';
-        }
-        if (mainInterface) {
-            mainInterface.style.display = 'block';
-        }
-    }
-
-    redirectToLogin() {
-        console.log('🔐 ログイン画面へリダイレクト');
-        
-        // 現在のパスを確認
-        const currentPath = window.location.pathname;
-        const isLoginPage = currentPath.endsWith('index.html') || currentPath === '/' || currentPath.endsWith('/');
-        
-        if (!isLoginPage) {
-            // ダッシュボードページからのリダイレクト
-            setTimeout(() => {
-                window.location.href = 'index.html';
-            }, 100);
-        }
-    }
-
-    async logLogin() {
-        if (!this.isAuthenticated || !window.database) return;
-        
-        try {
-            const entry = {
-                action: 'login',
-                details: {
-                    loginMethod: 'dashboard',
-                    userAgent: navigator.userAgent.substring(0, 100)
-                },
-                uid: this.currentUser.uid,
-                username: window.currentUserData.username,
-                displayName: window.currentUserData.displayName,
-                timestamp: firebase.database.ServerValue.TIMESTAMP
-            };
-
-            await window.database.ref(`${window.DATA_ROOT}/auditLogs`).push(entry);
-        } catch (error) {
-            console.warn('ログイン記録失敗:', error);
-        }
-    }
-
-    checkPermission(requiredRole = 'user') {
-        if (!this.isAuthenticated) return false;
-        
-        const roleHierarchy = {
-            'user': 0,
-            'admin': 1
-        };
-        
-        const userLevel = roleHierarchy[this.userRole] || 0;
-        const requiredLevel = roleHierarchy[requiredRole] || 0;
-        
-        return userLevel >= requiredLevel;
     }
 }
 
-// ログイン管理ウィンドウ
-window.openLoginManagement = async () => {
-    if (!window.checkPermission || !window.checkPermission('admin')) {
-        if (window.showMessage) {
-            window.showMessage('管理者権限が必要です', 'error');
-        }
-        return;
-    }
-    
-    if (!window.createModal) {
-        console.error('createModal関数が見つかりません');
-        return;
-    }
-    
-    const modal = window.createModal('ログイン管理', `
-        <div class="space-y-4">
-            <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                <h3 class="font-bold text-blue-800 mb-2">現在のセッション状況</h3>
-                <div id="currentSessionInfo">読み込み中...</div>
-            </div>
-            
-            <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-                <h3 class="font-bold text-yellow-800 mb-2">最近のログイン履歴</h3>
-                <div id="recentLoginHistory" class="text-sm max-h-40 overflow-y-auto">
-                    読み込み中...
-                </div>
-            </div>
-            
-            <div class="bg-red-50 border border-red-200 rounded-lg p-4">
-                <h3 class="font-bold text-red-800 mb-2">緊急操作</h3>
-                <button onclick="forceLogoutAllUsers()" 
-                        class="btn-unified btn-danger-unified w-full">
-                    <i class="fas fa-sign-out-alt mr-2"></i>全ユーザー強制ログアウト
-                </button>
-                <p class="text-xs text-red-600 mt-2">
-                    ⚠️ この操作により全てのユーザーが強制的にログアウトされます
-                </p>
-            </div>
-        </div>
-    `, 'large');
-
-    // セッション情報表示
-    await loadSessionInfo();
-    await loadLoginHistory();
+// ログイン管理機能（将来の開発用）
+window.openLoginManagement = function() {
+    window.showMessage('ログイン管理機能は開発中です', 'info');
 };
 
-async function loadSessionInfo() {
-    try {
-        const container = document.getElementById('currentSessionInfo');
-        if (!container) return;
-
-        // オンラインユーザー数を取得（簡易実装）
-        const usersSnapshot = await window.database.ref(`${window.DATA_ROOT}/users`).once('value');
-        const users = usersSnapshot.val() || {};
-        const totalUsers = Object.keys(users).length;
-
-        container.innerHTML = `
-            <div class="grid grid-cols-2 gap-4 text-sm">
-                <div>
-                    <div class="font-medium">総ユーザー数</div>
-                    <div class="text-lg font-bold text-blue-600">${totalUsers}名</div>
-                </div>
-                <div>
-                    <div class="font-medium">現在のセッション</div>
-                    <div class="text-lg font-bold text-green-600">アクティブ</div>
-                </div>
-            </div>
-        `;
-    } catch (error) {
-        console.error('セッション情報読み込みエラー:', error);
-    }
-}
-
-async function loadLoginHistory() {
-    try {
-        const container = document.getElementById('recentLoginHistory');
-        if (!container) return;
-
-        const snapshot = await window.database.ref(`${window.DATA_ROOT}/auditLogs`)
-            .orderByChild('action')
-            .equalTo('login')
-            .limitToLast(10)
-            .once('value');
-
-        const logs = snapshot.val() || {};
-        const loginEntries = Object.values(logs)
-            .sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
-
-        if (loginEntries.length === 0) {
-            container.innerHTML = '<div class="text-gray-500">ログイン履歴がありません</div>';
-            return;
-        }
-
-        container.innerHTML = loginEntries.map(entry => {
-            const date = new Date(entry.timestamp);
-            const timeStr = date.toLocaleString('ja-JP');
-            
-            return `
-                <div class="flex justify-between items-center py-1 border-b border-gray-200 last:border-b-0">
-                    <div>
-                        <strong>${entry.displayName}</strong>
-                        <span class="text-xs text-gray-500">(${entry.username})</span>
-                    </div>
-                    <div class="text-xs text-gray-500">${timeStr}</div>
-                </div>
-            `;
-        }).join('');
-
-    } catch (error) {
-        console.error('ログイン履歴読み込みエラー:', error);
-    }
-}
-
-async function forceLogoutAllUsers() {
-    if (!confirm('本当に全ユーザーを強制ログアウトしますか？\nこの操作は取り消せません。')) {
+// 統一された分析ページ開く関数
+function openAnalyticsPage(pageName) {
+    console.log(`分析ページを開いています: ${pageName}`);
+    
+    // 認証チェック
+    const targetUID = sessionStorage.getItem('targetUID');
+    const currentUsername = sessionStorage.getItem('currentUsername');
+    
+    if (!targetUID || !currentUsername) {
+        window.showMessage('認証が必要です。ログインしてからアクセスしてください。', 'warning');
         return;
     }
-
+    
+    // 権限チェック
+    if (window.userRole === 'viewer') {
+        window.showMessage('分析機能の利用には編集権限以上が必要です', 'warning');
+        return;
+    }
+    
     try {
-        // 強制ログアウトフラグを設定
-        await window.database.ref(`${window.DATA_ROOT}/system/forceLogout`).set({
-            timestamp: firebase.database.ServerValue.TIMESTAMP,
-            executor: window.currentUserData.displayName
-        });
-
-        if (window.showMessage) {
-            window.showMessage('全ユーザーに強制ログアウトを実行しました', 'success');
-        }
+        // analyticsフォルダ内のHTMLファイルを新しいタブで開く
+        const url = `analytics/${pageName}.html`;
         
-        // モーダルを閉じる
-        document.getElementById('modalOverlay')?.remove();
-
-    } catch (error) {
-        console.error('強制ログアウト実行エラー:', error);
-        if (window.showMessage) {
-            window.showMessage('強制ログアウトの実行に失敗しました', 'error');
+        const newWindow = window.open(url, '_blank', 'noopener,noreferrer,width=1400,height=900,scrollbars=yes,resizable=yes');
+        
+        // ポップアップブロッカー対応
+        if (!newWindow || newWindow.closed || typeof newWindow.closed === 'undefined') {
+            console.warn('ポップアップがブロックされました');
+            if (confirm('ポップアップがブロックされています。同じタブで分析ページを開きますか？')) {
+                window.location.href = url;
+            } else {
+                window.showMessage('分析ページを開くには、ポップアップを許可してください', 'warning');
+            }
+        } else {
+            console.log('分析ページが正常に開かれました');
         }
+    } catch (error) {
+        console.error('分析ページを開くときにエラーが発生しました:', error);
+        window.showMessage('分析ページを開くことができませんでした', 'error');
     }
 }
 
 // グローバル公開
 window.PublishedScheduleResolver = PublishedScheduleResolver;
-window.ActivityLogger = ActivityLogger;
+window.ActivityLogger = ActivityLogger;  
 window.WorkScheduleViewer = WorkScheduleViewer;
-window.DashboardAuth = DashboardAuth;
+window.openAnalyticsPage = openAnalyticsPage;
+
+console.log('[CORE] dashboard-core.js 読み込み完了');
