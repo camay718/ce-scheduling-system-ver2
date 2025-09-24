@@ -3,8 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CEスケジュール管理システム V2</title>
+    <title>CEスケジュール管理システム V2 - ダッシュボード</title>
     <link rel="icon" href="data:image/x-icon;base64,AAABAAEAEBAAAAEAIABoBAAAFgAAACgAAAAQAAAAIAAAAAEAIAAAAAAAAAQAABILAAASCwAAAAAAAAAAAAA=">
+    
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css">
     
     <style>
         /* 基本スタイル */
@@ -27,106 +30,31 @@
             padding: 20px;
         }
 
-        /* ログイン画面 */
-        .login-container {
+        /* ローディング画面 */
+        .loading-screen {
             display: flex;
             justify-content: center;
             align-items: center;
             min-height: 100vh;
-            padding: 20px;
-        }
-
-        .login-box {
-            background: rgba(255, 255, 255, 0.95);
-            padding: 40px;
-            border-radius: 10px;
-            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1);
-            width: 100%;
-            max-width: 400px;
-            text-align: center;
-        }
-
-        .login-title {
-            color: #333;
-            margin-bottom: 30px;
-            font-size: 24px;
-            font-weight: 600;
-        }
-
-        .login-form {
-            display: flex;
-            flex-direction: column;
-            gap: 20px;
-        }
-
-        .form-group {
-            text-align: left;
-        }
-
-        .form-group label {
-            display: block;
-            margin-bottom: 5px;
-            color: #555;
-            font-weight: 500;
-        }
-
-        .form-group input {
-            width: 100%;
-            padding: 12px;
-            border: 2px solid #ddd;
-            border-radius: 5px;
-            font-size: 16px;
-            transition: border-color 0.3s;
-        }
-
-        .form-group input:focus {
-            outline: none;
-            border-color: #667eea;
-        }
-
-        .login-button {
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            border: none;
-            padding: 12px 24px;
-            border-radius: 5px;
-            font-size: 16px;
-            cursor: pointer;
-            transition: transform 0.2s;
         }
 
-        .login-button:hover {
-            transform: translateY(-2px);
-        }
-
-        .login-button:disabled {
-            opacity: 0.6;
-            cursor: not-allowed;
-            transform: none;
-        }
-
-        /* エラー表示 */
-        .error-message {
-            background-color: #f8d7da;
-            color: #721c24;
-            padding: 10px;
-            border-radius: 5px;
-            margin: 10px 0;
-            border: 1px solid #f5c6cb;
-        }
-
-        /* ローディング */
-        .loading {
+        .loading-content {
             text-align: center;
-            padding: 20px;
+            color: white;
+            background: rgba(255, 255, 255, 0.1);
+            padding: 40px;
+            border-radius: 15px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
         }
 
         .loading-spinner {
-            border: 4px solid #f3f3f3;
-            border-top: 4px solid #667eea;
+            border: 4px solid rgba(255, 255, 255, 0.3);
+            border-top: 4px solid white;
             border-radius: 50%;
-            width: 50px;
-            height: 50px;
+            width: 60px;
+            height: 60px;
             animation: spin 1s linear infinite;
             margin: 0 auto 20px;
         }
@@ -143,6 +71,7 @@
             margin-bottom: 20px;
             border-radius: 10px;
             box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            backdrop-filter: blur(10px);
         }
 
         .header-content {
@@ -158,12 +87,20 @@
             font-size: 24px;
             font-weight: bold;
             color: #667eea;
+            display: flex;
+            align-items: center;
+            gap: 10px;
         }
 
         .user-info {
             display: flex;
             align-items: center;
             gap: 15px;
+            color: #333;
+        }
+
+        .user-info span {
+            font-weight: 500;
         }
 
         /* ダッシュボード */
@@ -179,29 +116,51 @@
             border-radius: 10px;
             padding: 20px;
             box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            backdrop-filter: blur(10px);
             height: fit-content;
+        }
+
+        .sidebar h3 {
+            color: #667eea;
+            margin-bottom: 20px;
+            font-size: 18px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
         }
 
         .main-content {
             background: rgba(255, 255, 255, 0.95);
             border-radius: 10px;
-            padding: 20px;
+            padding: 30px;
             box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            backdrop-filter: blur(10px);
         }
 
         /* ボタン */
         .btn {
-            padding: 8px 16px;
+            padding: 12px 20px;
             border: none;
-            border-radius: 5px;
+            border-radius: 8px;
             cursor: pointer;
             font-size: 14px;
+            font-weight: 500;
             transition: all 0.3s;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            text-decoration: none;
+            border: 2px solid transparent;
         }
 
         .btn-primary {
-            background: #667eea;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: white;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
         }
 
         .btn-secondary {
@@ -209,9 +168,36 @@
             color: white;
         }
 
-        .btn:hover {
+        .btn-secondary:hover {
+            background: #5a6268;
             transform: translateY(-1px);
-            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+        }
+
+        .btn-outline {
+            background: transparent;
+            color: #667eea;
+            border: 2px solid #667eea;
+        }
+
+        .btn-outline:hover {
+            background: #667eea;
+            color: white;
+        }
+
+        /* エラー表示 */
+        .error-message {
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #f8d7da;
+            color: #721c24;
+            padding: 15px 20px;
+            border-radius: 8px;
+            border: 1px solid #f5c6cb;
+            z-index: 9999;
+            max-width: 400px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
         }
 
         /* レスポンシブ */
@@ -223,33 +209,58 @@
             .sidebar {
                 order: 2;
             }
+            
+            .header-content {
+                flex-direction: column;
+                gap: 15px;
+                text-align: center;
+            }
+            
+            .container {
+                padding: 10px;
+            }
+        }
+
+        /* アニメーション */
+        .fade-in {
+            animation: fadeIn 0.5s ease-in-out;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
         }
     </style>
 </head>
 <body>
-    <!-- 🎯 これらのDOM要素が dashboard-main.js に必要 -->
-    
-    <!-- ログイン画面 -->
-    <div id="login-container" class="login-container">
-        <div class="login-box">
-            <h1 class="login-title">CEスケジュール管理システム V2</h1>
-            <div id="login-content">
-                <div class="loading">
-                    <div class="loading-spinner"></div>
-                    <p>システムを初期化しています...</p>
-                </div>
+    <!-- ローディング画面 -->
+    <div id="loading-screen" class="loading-screen">
+        <div class="loading-content">
+            <div class="loading-spinner"></div>
+            <h2 style="margin-bottom: 10px;">
+                <i class="fas fa-calendar-check"></i> CEスケジュール管理システム V2
+            </h2>
+            <p>認証状態を確認しています...</p>
+            <div style="margin-top: 15px; font-size: 14px; opacity: 0.8;">
+                <i class="fas fa-shield-alt"></i> セキュリティチェック実行中
             </div>
         </div>
     </div>
 
     <!-- メインダッシュボード -->
-    <div id="dashboard-container" style="display: none;">
+    <div id="dashboard-container" style="display: none;" class="fade-in">
         <header class="header">
             <div class="header-content">
-                <div class="logo">CEスケジュール管理システム V2</div>
+                <div class="logo">
+                    <i class="fas fa-calendar-check"></i>
+                    CEスケジュール管理システム V2
+                </div>
                 <div class="user-info">
+                    <i class="fas fa-user-circle" style="font-size: 20px; color: #667eea;"></i>
                     <span id="user-name">ユーザー名</span>
-                    <button id="logout-btn" class="btn btn-secondary">ログアウト</button>
+                    <button id="logout-btn" class="btn btn-secondary">
+                        <i class="fas fa-sign-out-alt"></i> ログアウト
+                    </button>
                 </div>
             </div>
         </header>
@@ -257,7 +268,9 @@
         <div class="container">
             <div class="dashboard-grid">
                 <aside class="sidebar">
-                    <h3>メニュー</h3>
+                    <h3>
+                        <i class="fas fa-bars"></i> メニュー
+                    </h3>
                     <nav id="sidebar-nav">
                         <!-- サイドバーメニューがここに動的生成される -->
                     </nav>
@@ -276,6 +289,9 @@
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
+
+    <!-- Firebase設定 -->
+    <script src="js/config/firebase-config.js"></script>
 
     <!-- 基本ファイル読み込み -->
     <script src="js/data/constants.js"></script>
