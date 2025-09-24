@@ -48,18 +48,24 @@ if (typeof window.firebaseV2Initialized === 'undefined') {
             let app;
             if (firebase.apps && firebase.apps.length > 0) {
                 app = firebase.app();
+                console.log('✅ 既存Firebase App使用');
             } else {
                 app = firebase.initializeApp(window.firebaseConfig);
+                console.log('✅ Firebase App初期化完了');
             }
             
             window.auth = firebase.auth();
             window.database = firebase.database();
             window.firebaseV2Initialized = true;
             
-            window.database.ref('.info/connected').on('value', function(snapshot) {
-                window.isFirebaseReady = snapshot.val();
-                console.log(snapshot.val() ? '✅ Firebase接続成功' : '❌ Firebase接続失敗');
-            });
+            try {
+                window.database.ref('.info/connected').on('value', function(snapshot) {
+                    window.isFirebaseReady = snapshot.val();
+                    console.log(snapshot.val() ? '✅ Firebase接続成功' : '❌ Firebase接続失敗');
+                });
+            } catch (connectionError) {
+                console.warn('⚠️ 接続監視設定失敗:', connectionError.message);
+            }
 
             if (!isResolved && initResolve) {
                 isResolved = true;
