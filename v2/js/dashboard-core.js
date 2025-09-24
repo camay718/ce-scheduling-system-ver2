@@ -68,7 +68,7 @@ class PublishedScheduleResolver {
     constructor() {
         this.publishedSchedules = [];
         this.cache = new Map();
-        this.init();
+        this.isInitialized = false;
     }
 
     async init() {
@@ -76,6 +76,7 @@ class PublishedScheduleResolver {
             await window.waitForFirebase();
             await this.loadPublishedSchedules();
             this.setupRealtimeUpdates();
+            this.isInitialized = true;
             console.log('✅ 公開勤務表連動システム初期化完了');
         } catch (error) {
             console.error('❌ 公開勤務表連動システム初期化エラー:', error);
@@ -103,6 +104,8 @@ class PublishedScheduleResolver {
     }
 
     async getCEWorkStatusForDate(ceId, dateKey) {
+        if (!this.isInitialized) return null;
+        
         const cacheKey = `${ceId}_${dateKey}`;
         if (this.cache.has(cacheKey)) {
             return this.cache.get(cacheKey);
@@ -122,14 +125,15 @@ class PublishedScheduleResolver {
             const conflicts = this.checkConflicts(ceId, dateKey, relevantSchedules);
             if (conflicts.length > 0) {
                 console.warn('⚠️ 勤務表競合検出:', conflicts);
-                window.showMessage(`${dateKey}に勤務表の競合があります。管理者に確認を依頼してください。`, 'warning');
+                if (window.showMessage) {
+                    window.showMessage(`${dateKey}に勤務表の競合があります。管理者に確認を依頼してください。`, 'warning');
+                }
                 return { status: '競合', workType: 'ERROR', desired: false };
             }
         }
 
         const schedule = relevantSchedules[0];
         const scheduleData = schedule.scheduleData || {};
-        const workTypeOverrides = schedule.workTypeOverrides || {};
         const ceList = schedule.ceList || [];
         
         const ce = ceList.find(c => c.id === ceId);
@@ -172,9 +176,11 @@ class PublishedScheduleResolver {
     }
 
     setupRealtimeUpdates() {
-        window.database.ref(`${window.DATA_ROOT}/workSchedules`).on('value', () => {
-            setTimeout(() => this.loadPublishedSchedules(), 500);
-        });
+        if (window.database) {
+            window.database.ref(`${window.DATA_ROOT}/workSchedules`).on('value', () => {
+                setTimeout(() => this.loadPublishedSchedules(), 500);
+            });
+        }
     }
 
     getScheduleStatus() {
@@ -191,7 +197,7 @@ class ActivityLogger {
     constructor() {
         this.activities = [];
         this.maxEntries = 100;
-        this.init();
+        this.isInitialized = false;
     }
 
     async init() {
@@ -199,6 +205,7 @@ class ActivityLogger {
             await window.waitForFirebase();
             await this.loadRecentActivities();
             this.setupRealtimeUpdates();
+            this.isInitialized = true;
             console.log('✅ アクティビティログ初期化完了');
         } catch (error) {
             console.error('❌ アクティビティログ初期化エラー:', error);
@@ -224,23 +231,25 @@ class ActivityLogger {
     }
 
     setupRealtimeUpdates() {
-        window.database.ref(`${window.DATA_ROOT}/auditLogs`)
-            .orderByChild('timestamp')
-            .limitToLast(10)
-            .on('child_added', (snapshot) => {
-                const activity = { id: snapshot.key, ...snapshot.val() };
-                
-                const exists = this.activities.some(a => a.id === activity.id);
-                if (!exists) {
-                    this.activities.unshift(activity);
+        if (window.database) {
+            window.database.ref(`${window.DATA_ROOT}/auditLogs`)
+                .orderByChild('timestamp')
+                .limitToLast(10)
+                .on('child_added', (snapshot) => {
+                    const activity = { id: snapshot.key, ...snapshot.val() };
                     
-                    if (this.activities.length > this.maxEntries) {
-                        this.activities = this.activities.slice(0, this.maxEntries);
+                    const exists = this.activities.some(a => a.id === activity.id);
+                    if (!exists) {
+                        this.activities.unshift(activity);
+                        
+                        if (this.activities.length > this.maxEntries) {
+                            this.activities = this.activities.slice(0, this.maxEntries);
+                        }
+                        
+                        this.notifyNewActivity(activity);
                     }
-                    
-                    this.notifyNewActivity(activity);
-                }
-            });
+                });
+        }
     }
 
     notifyNewActivity(activity) {
@@ -261,6 +270,8 @@ class ActivityLogger {
     }
 
     async logActivity(action, details = {}) {
+        if (!this.isInitialized || !window.database) return;
+        
         try {
             const entry = {
                 action,
@@ -372,7 +383,7 @@ class WorkScheduleViewer {
         this.currentPeriodKey = null;
         this.scheduleData = null;
         this.ceList = [];
-        this.init();
+        this.isInitialized = false;
     }
 
     async init() {
@@ -380,6 +391,7 @@ class WorkScheduleViewer {
             await window.waitForFirebase();
             await this.loadLatestSchedule();
             this.setupUI();
+            this.isInitialized = true;
             console.log('✅ 勤務表ビューア初期化完了');
         } catch (error) {
             console.error('❌ 勤務表ビューア初期化エラー:', error);
@@ -607,7 +619,9 @@ class WorkScheduleViewer {
 
     exportSchedule() {
         if (!this.scheduleData) {
-            window.showMessage('エクスポートできる勤務表がありません', 'warning');
+            if (window.showMessage) {
+                window.showMessage('エクスポートできる勤務表がありません', 'warning');
+            }
             return;
         }
 
@@ -624,7 +638,9 @@ class WorkScheduleViewer {
         document.body.removeChild(a);
         URL.revokeObjectURL(url);
 
-        window.showMessage('勤務表をエクスポートしました', 'success');
+        if (window.showMessage) {
+            window.showMessage('勤務表をエクスポートしました', 'success');
+        }
     }
 
     generateCSV() {
@@ -657,38 +673,91 @@ class DashboardAuth {
         this.isAuthenticated = false;
         this.currentUser = null;
         this.userRole = 'user';
-        this.init();
+        this.authStateChangeHandled = false;
+        this.initializationPromise = null;
     }
 
     async init() {
+        if (this.initializationPromise) {
+            return this.initializationPromise;
+        }
+
+        this.initializationPromise = this.performInit();
+        return this.initializationPromise;
+    }
+
+    async performInit() {
         try {
+            console.log('🔐 ダッシュボード認証初期化開始...');
+            
             await window.waitForFirebase();
-            this.setupAuthStateListener();
+            
+            // Firebase Auth準備待ち
+            let authReady = false;
+            let attempts = 0;
+            
+            while (!authReady && attempts < 50) {
+                if (window.auth && typeof window.auth.onAuthStateChanged === 'function') {
+                    authReady = true;
+                } else {
+                    await new Promise(resolve => setTimeout(resolve, 100));
+                    attempts++;
+                }
+            }
+
+            if (!authReady) {
+                throw new Error('Firebase Auth初期化タイムアウト');
+            }
+
+            await this.setupAuthStateListener();
             console.log('✅ ダッシュボード認証初期化完了');
+            
         } catch (error) {
             console.error('❌ ダッシュボード認証初期化エラー:', error);
-            this.redirectToLogin();
+            throw error;
         }
     }
 
-    setupAuthStateListener() {
-        window.auth.onAuthStateChanged(async (user) => {
-            if (user) {
-                await this.handleUserAuthenticated(user);
-            } else {
-                this.handleUserNotAuthenticated();
-            }
+    async setupAuthStateListener() {
+        return new Promise((resolve, reject) => {
+            const timeout = setTimeout(() => {
+                reject(new Error('認証状態確認タイムアウト'));
+            }, 10000); // 10秒タイムアウト
+
+            window.auth.onAuthStateChanged(async (user) => {
+                try {
+                    if (this.authStateChangeHandled) return;
+                    
+                    clearTimeout(timeout);
+                    this.authStateChangeHandled = true;
+
+                    if (user) {
+                        console.log('🔐 認証ユーザー検出:', user.uid);
+                        await this.handleUserAuthenticated(user);
+                        resolve();
+                    } else {
+                        console.log('🔐 未認証状態検出');
+                        this.handleUserNotAuthenticated();
+                        resolve(); // 未認証でもresolveして処理を続行
+                    }
+                } catch (error) {
+                    console.error('❌ 認証状態変更処理エラー:', error);
+                    reject(error);
+                }
+            });
         });
     }
 
     async handleUserAuthenticated(user) {
         try {
+            console.log('🔐 ユーザー認証処理開始...', user.uid);
+            
             // ユーザーデータ取得
             const userSnapshot = await window.database.ref(`${window.DATA_ROOT}/users/${user.uid}`).once('value');
             const userData = userSnapshot.val();
 
             if (!userData) {
-                console.error('ユーザーデータが見つかりません');
+                console.error('❌ ユーザーデータが見つかりません:', user.uid);
                 this.redirectToLogin();
                 return;
             }
@@ -722,6 +791,8 @@ class DashboardAuth {
     }
 
     handleUserNotAuthenticated() {
+        console.log('🔐 未認証ユーザーの処理');
+        
         this.isAuthenticated = false;
         this.currentUser = null;
         this.userRole = 'user';
@@ -743,18 +814,32 @@ class DashboardAuth {
         const loading = document.getElementById('loading');
         const mainInterface = document.getElementById('mainInterface');
         
-        if (loading) loading.style.display = 'none';
-        if (mainInterface) mainInterface.style.display = 'block';
+        if (loading) {
+            loading.style.display = 'none';
+        }
+        if (mainInterface) {
+            mainInterface.style.display = 'block';
+        }
     }
 
     redirectToLogin() {
-        if (window.location.pathname !== '/index.html' && 
-            !window.location.pathname.endsWith('index.html')) {
-            window.location.href = 'index.html';
+        console.log('🔐 ログイン画面へリダイレクト');
+        
+        // 現在のパスを確認
+        const currentPath = window.location.pathname;
+        const isLoginPage = currentPath.endsWith('index.html') || currentPath === '/' || currentPath.endsWith('/');
+        
+        if (!isLoginPage) {
+            // ダッシュボードページからのリダイレクト
+            setTimeout(() => {
+                window.location.href = 'index.html';
+            }, 100);
         }
     }
 
     async logLogin() {
+        if (!this.isAuthenticated || !window.database) return;
+        
         try {
             const entry = {
                 action: 'login',
@@ -791,8 +876,15 @@ class DashboardAuth {
 
 // ログイン管理ウィンドウ
 window.openLoginManagement = async () => {
-    if (!window.checkPermission('admin')) {
-        window.showMessage('管理者権限が必要です', 'error');
+    if (!window.checkPermission || !window.checkPermission('admin')) {
+        if (window.showMessage) {
+            window.showMessage('管理者権限が必要です', 'error');
+        }
+        return;
+    }
+    
+    if (!window.createModal) {
+        console.error('createModal関数が見つかりません');
         return;
     }
     
@@ -907,14 +999,18 @@ async function forceLogoutAllUsers() {
             executor: window.currentUserData.displayName
         });
 
-        window.showMessage('全ユーザーに強制ログアウトを実行しました', 'success');
+        if (window.showMessage) {
+            window.showMessage('全ユーザーに強制ログアウトを実行しました', 'success');
+        }
         
         // モーダルを閉じる
         document.getElementById('modalOverlay')?.remove();
 
     } catch (error) {
         console.error('強制ログアウト実行エラー:', error);
-        window.showMessage('強制ログアウトの実行に失敗しました', 'error');
+        if (window.showMessage) {
+            window.showMessage('強制ログアウトの実行に失敗しました', 'error');
+        }
     }
 }
 
