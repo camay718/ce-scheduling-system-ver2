@@ -185,42 +185,77 @@ window.DashboardAuth = class {
             'ceScheduleSession',
             'userSession', 
             'authSession',
-            'currentUser'
+            'currentUser',
+            'targetUID',
+            'currentUsername',
+            'needsSetup'
         ];
         
         sessionKeys.forEach(key => {
             localStorage.removeItem(key);
+            sessionStorage.removeItem(key); // sessionStorageもクリア
         });
         
         this.currentUser = null;
         this.isAuthenticated = false;
         console.log('[AUTH] ログアウト完了');
         
-        // 実際のログインページに合わせてリダイレクト
-        // GitHub Pagesの構造に基づいて調整
-        const possibleLoginPages = [
-            'index.html',           // メインのログインページ
-            '../index.html',        // 1つ上の階層
-            '../../index.html',     // 2つ上の階層
-            'login/index.html',     // loginフォルダ内
-            '/index.html'           // ルート
-        ];
-        
-        // 現在のURL構造を確認してリダイレクト先を決定
-        const currentPath = window.location.pathname;
-        console.log('[AUTH] 現在のパス:', currentPath);
-        
-        if (currentPath.includes('/v2/')) {
-            // v2フォルダ内にいる場合は上の階層に移動
-            window.location.href = '../index.html';
-        } else {
-            // それ以外の場合はindex.htmlに移動
-            window.location.href = 'index.html';
-        }
+        // より確実なリダイレクト処理
+        this.findAndRedirectToLogin();
         
     } catch (error) {
         console.error('[AUTH] ログアウトエラー:', error);
-        // エラー時は手動でルートに移動
+        // エラー時はルートに強制移動
+        window.location.href = '/';
+    }
+}
+
+// 動的リダイレクト関数を logout メソッドの直後に追加
+findAndRedirectToLogin() {
+    console.log('[AUTH] ログインページを検索中...');
+    
+    // 現在のURLを解析
+    const currentPath = window.location.pathname;
+    const currentOrigin = window.location.origin;
+    
+    console.log('[AUTH] 現在のパス:', currentPath);
+    console.log('[AUTH] 現在のオリジン:', currentOrigin);
+    
+    // 可能性のあるログインページのパス（優先度順）
+    const possiblePaths = [
+        'index.html',                    // 同じディレクトリ
+        '../index.html',                 // 1つ上の階層
+        '../../index.html',              // 2つ上の階層
+        '/index.html',                   // ルート
+        '/ce-scheduling-system-ver2/index.html', // GitHub Pages プロジェクト名
+        '/'                              // ルートディレクトリ
+    ];
+    
+    // 現在のディレクトリ構造を判定
+    let redirectUrl;
+    
+    if (currentPath.includes('/v2/') || currentPath.includes('/dashboard')) {
+        // v2フォルダやdashboardフォルダ内にいる場合
+        redirectUrl = '../index.html';
+    } else if (currentPath.includes('/pages/')) {
+        // pagesフォルダ内にいる場合
+        redirectUrl = '../index.html';
+    } else if (currentPath.includes('/js/')) {
+        // jsフォルダ内にいる場合（通常は直接アクセスしない）
+        redirectUrl = '../index.html';
+    } else {
+        // その他の場合
+        redirectUrl = 'index.html';
+    }
+    
+    console.log('[AUTH] リダイレクト先:', redirectUrl);
+    
+    // リダイレクト実行
+    try {
+        window.location.href = redirectUrl;
+    } catch (redirectError) {
+        console.error('[AUTH] リダイレクトエラー:', redirectError);
+        // 最後の手段：ルートに移動
         window.location.href = '/';
     }
 }
