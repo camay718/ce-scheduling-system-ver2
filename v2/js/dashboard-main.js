@@ -132,16 +132,19 @@
 function redirectToLogin() {
     console.log('[MAIN] ログイン画面にリダイレクト');
     
-    // 現在のURL構造に基づいてリダイレクト先を決定
-    const currentPath = window.location.pathname;
-    console.log('[MAIN] 現在のパス:', currentPath);
-    
-    if (currentPath.includes('/v2/')) {
-        // v2フォルダ内にいる場合
-        window.location.href = '../index.html';
+    // dashboardAuth のリダイレクト機能を使用
+    if (window.dashboardAuth && typeof window.dashboardAuth.findAndRedirectToLogin === 'function') {
+        window.dashboardAuth.findAndRedirectToLogin();
     } else {
-        // それ以外の場合
-        window.location.href = 'index.html';
+        // フォールバック処理
+        const currentPath = window.location.pathname;
+        console.log('[MAIN] 現在のパス:', currentPath);
+        
+        if (currentPath.includes('/v2/') || currentPath.includes('/dashboard')) {
+            window.location.href = '../index.html';
+        } else {
+            window.location.href = 'index.html';
+        }
     }
 }
 
