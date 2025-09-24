@@ -304,6 +304,32 @@
             }
         }
 
+                // パスワードハッシュ化関数を追加（ログイン処理と同じ形式）
+        async function hashPasswordPBKDF2(password, iterations = 100000) {
+            const enc = new TextEncoder();
+            const salt = crypto.getRandomValues(new Uint8Array(16));
+            
+            const keyMaterial = await crypto.subtle.importKey(
+                'raw', 
+                enc.encode(password), 
+                'PBKDF2', 
+                false, 
+                ['deriveBits']
+            );
+            
+            const bits = await crypto.subtle.deriveBits(
+                { name: 'PBKDF2', salt, iterations, hash: 'SHA-256' },
+                keyMaterial,
+                256
+            );
+            
+            const hashBytes = new Uint8Array(bits);
+            const hashB64 = btoa(String.fromCharCode(...hashBytes));
+            const saltB64 = btoa(String.fromCharCode(...salt));
+            
+            return { hash: hashB64, salt: saltB64, iterations };
+        }
+
         // Password validation
         function validatePassword(password) {
             const minLength = 8;
@@ -431,24 +457,40 @@
                     throw new Error('認証状態が無効です');
                 }
 
-                // Update password in Firebase Auth
-                await user.updatePassword(newPassword);
+                // セッションからUID取得
+                const targetUID = sessionStorage.getItem('targetUID');
+                const username = sessionStorage.getItem('currentUsername');
+                
+                if (!targetUID || !username) {
+                    throw new Error('セッション情報が不足しています');
+                }
 
-                // Update user data in database
+                // パスワードをハッシュ化（ログイン処理と同じ形式）
+                const hashedPassword = await hashPasswordPBKDF2(newPassword);
+
+                // Update user data in database（重要：フラグ名を統一）
                 const updates = {
-                    hasCompletedSetup: true,
+                    password: hashedPassword,              // ハッシュ化されたパスワード
+                    setupCompleted: true,                 // ログイン処理と同じフラグ名
+                    needsSetup: false,                    // セットアップ不要フラグ
+                    hasCompletedSetup: true,              // 後方互換性のため両方設定
                     isInitialUser: false,
                     lastUpdate: new Date().toISOString(),
                     setupCompletedAt: new Date().toISOString()
                 };
 
-                await database.ref(`ceScheduleV2/users/${user.uid}`).update(updates);
+                await database.ref(`ceScheduleV2/users/${targetUID}`).update(updates);
 
                 // Remove from initialUsers if exists
-                await database.ref(`ceScheduleV2/initialUsers/${user.uid}`).remove();
+                await database.ref(`ceScheduleV2/initialUsers/${targetUID}`).remove();
+                
+                // Remove from pendingUsers if exists
+                await database.ref(`ceScheduleV2/pendingUsers/${username}`).remove();
 
                 console.log('✅ ユーザー設定保存完了');
-                showSuccess();
+                
+                // 直接ダッシュボードへリダイレクト
+                window.location.href = '../dashboard.html';
 
             } catch (error) {
                 console.error('❌ 設定保存エラー:', error);
@@ -458,6 +500,8 @@
                     errorMessage = 'パスワードが弱すぎます';
                 } else if (error.code === 'auth/requires-recent-login') {
                     errorMessage = '再度ログインが必要です';
+                } else if (error.message) {
+                    errorMessage = error.message;
                 }
                 
                 showError(errorMessage);
@@ -477,21 +521,30 @@
 
         // Redirect to dashboard
         function redirectToDashboard() {
-            if (currentUserData?.role === 'admin') {
-                window.location.href = 'admin-debug.html';
+            // 相対パスを正しく指定（pages/フォルダから戻る）
+            const userRole = sessionStorage.getItem('userRole') || currentUserData?.role;
+            
+            if (userRole === 'admin') {
+                window.location.href = '../dashboard.html';
             } else {
-                window.location.href = 'dashboard.html';
+                window.location.href = '../dashboard.html';
             }
         }
 
         // Logout function
         async function logout() {
             try {
-                await auth.signOut();
+                if (auth?.currentUser) {
+                    await auth.signOut();
+                }
                 console.log('✅ ログアウト完了');
-                window.location.href = 'login-unified.html';
             } catch (error) {
                 console.error('❌ ログアウトエラー:', error);
+            } finally {
+                sessionStorage.clear();
+                localStorage.clear();
+                // 正しい相対パスでログイン画面へ
+                window.location.href = '../index.html';
             }
         }
 
