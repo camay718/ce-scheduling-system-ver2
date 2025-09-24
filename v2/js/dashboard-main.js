@@ -129,10 +129,21 @@
     }
 
     // ログイン画面にリダイレクト
-    function redirectToLogin() {
-        console.log('[MAIN] ログイン画面にリダイレクト');
-        window.location.href = 'login.html';
+function redirectToLogin() {
+    console.log('[MAIN] ログイン画面にリダイレクト');
+    
+    // 現在のURL構造に基づいてリダイレクト先を決定
+    const currentPath = window.location.pathname;
+    console.log('[MAIN] 現在のパス:', currentPath);
+    
+    if (currentPath.includes('/v2/')) {
+        // v2フォルダ内にいる場合
+        window.location.href = '../index.html';
+    } else {
+        // それ以外の場合
+        window.location.href = 'index.html';
     }
+}
 
     // DOM初期化
     function initializeDOM() {
