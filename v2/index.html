@@ -270,18 +270,32 @@ document.addEventListener('DOMContentLoaded', async () => {
                     // 監査ログ記録
                     await logLogin(username, userData.displayName, uid, 'normal');
                     
-                    // 個人設定が必要かチェック
-                    if (userData.needsSetup || userData.passwordResetCompleted || !userData.password?.hash) {
-                        window.showMessage('ログイン成功！個人設定へ移動します...', 'success');
-                        setTimeout(() => {
-                            window.location.href = 'pages/user-setup.html';
-                        }, 1000);
-                    } else {
-                        window.showMessage('ログイン成功！ダッシュボードに移動します...', 'success');
-                        setTimeout(() => {
-                            window.location.href = 'dashboard.html';
-                        }, 1000);
-                    }
+  // 個人設定が必要かチェック（複数フラグ統合判定）
+const needsPersonalSetup = (
+    userData.needsSetup === true || 
+    (!userData.setupCompleted && !userData.hasCompletedSetup) ||
+    !userData.password?.hash
+);
+
+console.log('個人設定必要性チェック:', {
+    needsSetup: userData.needsSetup,
+    setupCompleted: userData.setupCompleted,
+    hasCompletedSetup: userData.hasCompletedSetup,
+    hasPasswordHash: !!userData.password?.hash,
+    needsPersonalSetup: needsPersonalSetup
+});
+
+if (needsPersonalSetup) {
+    window.showMessage('ログイン成功！個人設定へ移動します...', 'success');
+    setTimeout(() => {
+        window.location.href = 'pages/user-setup.html';
+    }, 1000);
+} else {
+    window.showMessage('ログイン成功！ダッシュボードに移動します...', 'success');
+    setTimeout(() => {
+        window.location.href = 'dashboard.html';
+    }, 1000);
+}
                     return;
                 }
             }
