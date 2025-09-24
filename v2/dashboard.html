@@ -3,29 +3,273 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>JavaScript実行テスト</title>
+    <title>CEスケジュール管理システム V2</title>
+    <link rel="icon" href="data:image/x-icon;base64,AAABAAEAEBAAAAEAIABoBAAAFgAAACgAAAAQAAAAIAAAAAEAIAAAAAAAAAQAABILAAASCwAAAAAAAAAAAAA=">
+    
     <style>
-        body { font-family: Arial, sans-serif; margin: 50px; background: #f0f0f0; }
-        .test-box { background: white; padding: 30px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
-        .success { color: green; font-weight: bold; }
-        .error { color: red; font-weight: bold; }
-        .warning { color: orange; font-weight: bold; }
-        .button { background: #007bff; color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; margin: 10px 5px; }
-        .log-area { background: #f8f9fa; border: 1px solid #ddd; padding: 15px; margin-top: 20px; border-radius: 5px; font-family: monospace; font-size: 12px; max-height: 400px; overflow-y: auto; }
+        /* 基本スタイル */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: #333;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        /* ログイン画面 */
+        .login-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .login-box {
+            background: rgba(255, 255, 255, 0.95);
+            padding: 40px;
+            border-radius: 10px;
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1);
+            width: 100%;
+            max-width: 400px;
+            text-align: center;
+        }
+
+        .login-title {
+            color: #333;
+            margin-bottom: 30px;
+            font-size: 24px;
+            font-weight: 600;
+        }
+
+        .login-form {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .form-group {
+            text-align: left;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            color: #555;
+            font-weight: 500;
+        }
+
+        .form-group input {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #ddd;
+            border-radius: 5px;
+            font-size: 16px;
+            transition: border-color 0.3s;
+        }
+
+        .form-group input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .login-button {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 5px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+
+        .login-button:hover {
+            transform: translateY(-2px);
+        }
+
+        .login-button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        /* エラー表示 */
+        .error-message {
+            background-color: #f8d7da;
+            color: #721c24;
+            padding: 10px;
+            border-radius: 5px;
+            margin: 10px 0;
+            border: 1px solid #f5c6cb;
+        }
+
+        /* ローディング */
+        .loading {
+            text-align: center;
+            padding: 20px;
+        }
+
+        .loading-spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* ヘッダー */
+        .header {
+            background: rgba(255, 255, 255, 0.95);
+            padding: 15px 0;
+            margin-bottom: 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        .header-content {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 0 20px;
+        }
+
+        .logo {
+            font-size: 24px;
+            font-weight: bold;
+            color: #667eea;
+        }
+
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        /* ダッシュボード */
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: 300px 1fr;
+            gap: 20px;
+            min-height: calc(100vh - 200px);
+        }
+
+        .sidebar {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            height: fit-content;
+        }
+
+        .main-content {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        /* ボタン */
+        .btn {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.3s;
+        }
+
+        .btn-primary {
+            background: #667eea;
+            color: white;
+        }
+
+        .btn-secondary {
+            background: #6c757d;
+            color: white;
+        }
+
+        .btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+        }
+
+        /* レスポンシブ */
+        @media (max-width: 768px) {
+            .dashboard-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .sidebar {
+                order: 2;
+            }
+        }
     </style>
 </head>
 <body>
-    <div class="test-box">
-        <h1>JavaScript段階実行テスト</h1>
-        <div id="status">テスト待機中...</div>
-        
-        <button class="button" onclick="testStep1()">Step1: 基本ファイル読み込み</button>
-        <button class="button" onclick="testStep2()">Step2: Core実行テスト</button>
-        <button class="button" onclick="testStep3()">Step3: Main実行テスト</button>
-        <button class="button" onclick="clearLog()">ログクリア</button>
-        
-        <div id="results" style="margin-top: 20px;"></div>
-        <div id="log-area" class="log-area"></div>
+    <!-- 🎯 これらのDOM要素が dashboard-main.js に必要 -->
+    
+    <!-- ログイン画面 -->
+    <div id="login-container" class="login-container">
+        <div class="login-box">
+            <h1 class="login-title">CEスケジュール管理システム V2</h1>
+            <div id="login-content">
+                <div class="loading">
+                    <div class="loading-spinner"></div>
+                    <p>システムを初期化しています...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- メインダッシュボード -->
+    <div id="dashboard-container" style="display: none;">
+        <header class="header">
+            <div class="header-content">
+                <div class="logo">CEスケジュール管理システム V2</div>
+                <div class="user-info">
+                    <span id="user-name">ユーザー名</span>
+                    <button id="logout-btn" class="btn btn-secondary">ログアウト</button>
+                </div>
+            </div>
+        </header>
+
+        <div class="container">
+            <div class="dashboard-grid">
+                <aside class="sidebar">
+                    <h3>メニュー</h3>
+                    <nav id="sidebar-nav">
+                        <!-- サイドバーメニューがここに動的生成される -->
+                    </nav>
+                </aside>
+
+                <main class="main-content">
+                    <div id="main-content-area">
+                        <!-- メインコンテンツがここに動的生成される -->
+                    </div>
+                </main>
+            </div>
+        </div>
     </div>
 
     <!-- Firebase Scripts -->
@@ -33,184 +277,13 @@
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
 
-    <script>
-        function log(message, type = 'info') {
-            const timestamp = new Date().toLocaleTimeString();
-            const logDiv = document.getElementById('log-area');
-            const className = type === 'error' ? 'error' : type === 'success' ? 'success' : type === 'warning' ? 'warning' : '';
-            logDiv.innerHTML += `<div class="${className}">[${timestamp}] ${message}</div>`;
-            logDiv.scrollTop = logDiv.scrollHeight;
-            console.log(`[${type.toUpperCase()}]`, message);
-        }
-        
-        function clearLog() {
-            document.getElementById('log-area').innerHTML = '';
-            document.getElementById('results').innerHTML = '';
-            document.getElementById('status').textContent = 'ログクリア完了';
-        }
-        
-        // グローバルエラーハンドラー
-        window.onerror = function(msg, url, line, col, error) {
-            log(`グローバルエラー: ${msg} at ${url}:${line}`, 'error');
-            return false;
-        };
-        
-        window.addEventListener('unhandledrejection', function(event) {
-            log(`未処理Promise: ${event.reason}`, 'error');
-        });
-        
-        // Firebase初期化
-        if (!firebase.apps.length) {
-            const firebaseConfig = {
-                apiKey: "AIzaSyC7VLauLy9vkEcBZHrQ3wKJYm_A6DbJHQ8",
-                authDomain: "ce-schedule-system.firebaseapp.com",
-                databaseURL: "https://ce-schedule-system-default-rtdb.firebaseio.com",
-                projectId: "ce-schedule-system",
-                storageBucket: "ce-schedule-system.appspot.com",
-                messagingSenderId: "461684979105",
-                appId: "1:461684979105:web:1234567890abcdef"
-            };
-            firebase.initializeApp(firebaseConfig);
-            log('Firebase初期化完了', 'success');
-        }
-        
-        async function testStep1() {
-            log('=== Step1: 基本ファイル読み込みテスト開始 ===');
-            document.getElementById('status').innerHTML = '<span class="success">Step1実行中...</span>';
-            
-            const basicFiles = [
-                'js/data/constants.js',
-                'js/utils/ui-utils.js', 
-                'js/schedule/event-manager.js'
-            ];
-            
-            for (const file of basicFiles) {
-                try {
-                    log(`${file} 読み込み開始`);
-                    await loadScript(file);
-                    log(`${file} 読み込み完了`, 'success');
-                } catch (error) {
-                    log(`${file} 読み込みエラー: ${error.message}`, 'error');
-                    return;
-                }
-            }
-            
-            // 基本ファイルのクラス・関数確認
-            const expectedGlobals = ['HOSPITAL_ID', 'DEPARTMENTS', 'showLoading', 'hideLoading', 'EventManager'];
-            const missing = [];
-            
-            for (const item of expectedGlobals) {
-                if (typeof window[item] === 'undefined') {
-                    missing.push(item);
-                }
-            }
-            
-            if (missing.length > 0) {
-                log(`不足要素: ${missing.join(', ')}`, 'warning');
-            } else {
-                log('全基本要素確認済み', 'success');
-            }
-            
-            document.getElementById('status').innerHTML = '<span class="success">Step1完了</span>';
-            log('=== Step1完了 ===', 'success');
-        }
-        
-        async function testStep2() {
-            log('=== Step2: Core実行テスト開始 ===');
-            document.getElementById('status').innerHTML = '<span class="success">Step2実行中...</span>';
-            
-            try {
-                log('dashboard-core.js 読み込み開始');
-                await loadScript('js/dashboard-core.js');
-                log('dashboard-core.js 読み込み完了', 'success');
-                
-                // Coreクラス確認
-                const coreClasses = ['DashboardAuth', 'WorkScheduleViewer', 'PublishedScheduleResolver', 'ActivityLogger'];
-                const missingClasses = [];
-                
-                for (const className of coreClasses) {
-                    if (typeof window[className] === 'undefined') {
-                        missingClasses.push(className);
-                    } else {
-                        log(`${className} クラス確認済み`, 'success');
-                    }
-                }
-                
-                if (missingClasses.length > 0) {
-                    log(`不足Coreクラス: ${missingClasses.join(', ')}`, 'error');
-                } else {
-                    log('全Coreクラス確認済み', 'success');
-                    
-                    // DashboardAuth インスタンス作成テスト
-                    try {
-                        const testAuth = new DashboardAuth();
-                        log('DashboardAuth インスタンス作成成功', 'success');
-                    } catch (error) {
-                        log(`DashboardAuth インスタンス作成エラー: ${error.message}`, 'error');
-                    }
-                }
-                
-            } catch (error) {
-                log(`dashboard-core.js エラー: ${error.message}`, 'error');
-            }
-            
-            document.getElementById('status').innerHTML = '<span class="success">Step2完了</span>';
-            log('=== Step2完了 ===', 'success');
-        }
-        
-        async function testStep3() {
-            log('=== Step3: Main実行テスト開始 ===');
-            document.getElementById('status').innerHTML = '<span class="success">Step3実行中...</span>';
-            
-            try {
-                log('dashboard-main.js 読み込み開始');
-                await loadScript('js/dashboard-main.js');
-                log('dashboard-main.js 読み込み完了', 'success');
-                
-                // Main実行後の状態確認
-                setTimeout(() => {
-                    log('Main実行後状態確認');
-                    
-                    // DOMエレメント確認
-                    const loginContainer = document.getElementById('login-container');
-                    const dashboardContainer = document.getElementById('dashboard-container');
-                    
-                    if (loginContainer) {
-                        log('login-container 要素が見つかりました', 'success');
-                    } else {
-                        log('login-container 要素が見つかりません', 'warning');
-                    }
-                    
-                    if (dashboardContainer) {
-                        log('dashboard-container 要素が見つかりました', 'success');
-                    } else {
-                        log('dashboard-container 要素が見つかりません', 'warning');
-                    }
-                    
-                    log('=== Step3完了 ===', 'success');
-                }, 1000);
-                
-            } catch (error) {
-                log(`dashboard-main.js エラー: ${error.message}`, 'error');
-            }
-            
-            document.getElementById('status').innerHTML = '<span class="success">Step3完了</span>';
-        }
-        
-        function loadScript(src) {
-            return new Promise((resolve, reject) => {
-                const script = document.createElement('script');
-                script.src = src;
-                script.onload = resolve;
-                script.onerror = () => reject(new Error(`スクリプト読み込み失敗: ${src}`));
-                document.head.appendChild(script);
-            });
-        }
-        
-        // 初期化
-        window.addEventListener('load', function() {
-            log('JavaScript実行テストページ準備完了');
-        });
-    </script>
+    <!-- 基本ファイル読み込み -->
+    <script src="js/data/constants.js"></script>
+    <script src="js/utils/ui-utils.js"></script>
+    <script src="js/schedule/event-manager.js"></script>
+
+    <!-- 分割したファイル読み込み -->
+    <script src="js/dashboard-core.js"></script>
+    <script src="js/dashboard-main.js"></script>
 </body>
 </html>
