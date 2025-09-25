@@ -46,6 +46,27 @@
         line-height: 1.2;
     }
 
+            /* 月次業務バッジ */
+    .monthly-task-badge {
+        position: absolute;
+        top: -6px;
+        right: -10px;
+        background: #f97316;
+        color: white;
+        font-size: 8px;
+        padding: 2px 4px;
+        border-radius: 3px;
+        font-weight: bold;
+        line-height: 1;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+    }
+
+    /* 月次業務タイトルの相対位置設定 */
+    .monthly-task-title {
+        position: relative;
+        display: inline-block;
+    }
+
     /* 業務カード改良 - 予定件数表示 */
     .event-card {
         position: relative;
@@ -2080,6 +2101,113 @@
                         </span>
                     `);
                 }
+
+                       // 月次業務追加（部門連動・即時表示版）
+        async addMonthlyTaskWithDepartmentFocus(modal) {
+            const name = document.getElementById('monthlyTaskName')?.value?.trim();
+            const department = document.getElementById('monthlyTaskDepartment')?.value;
+            const yearMonth = document.getElementById('monthlyTaskMonth')?.value;
+            const goalCount = parseInt(document.getElementById('monthlyGoalCount')?.value) || 1;
+            const requiredPeople = parseInt(document.getElementById('monthlyRequiredPeople')?.value) || 1;
+            const description = document.getElementById('monthlyTaskDescription')?.value?.trim();
+
+            if (!name || !department || !yearMonth) {
+                window.showMessage('必須項目を入力してください', 'error');
+                return;
+            }
+
+            try {
+                const taskRef = window.database.ref(`${window.DATA_ROOT}/monthlyTasks/${yearMonth}`).push();
+
+                const taskData = {
+                    id: taskRef.key,
+                    name: name,
+                    department: department,
+                    yearMonth: yearMonth,
+                    goalCount: goalCount,
+                    actualCount: 0,
+                    requiredPeople: requiredPeople,
+                    description: description || null,
+                    assignedCEs: [],
+                    createdAt: firebase.database.ServerValue.TIMESTAMP,
+                    createdBy: window.currentUserData?.displayName || 'user',
+                    type: 'monthly',
+                    status: 'active'
+                };
+
+                console.log('📅 月次業務データ作成:', taskData);
+
+                // データベースに保存
+                await taskRef.set(taskData);
+
+                // ローカルデータに即座に反映（表示の即時更新）
+                this.monthlyTasks[yearMonth] = this.monthlyTasks[yearMonth] || {};
+                this.monthlyTasks[yearMonth][taskRef.key] = taskData;
+
+                modal.remove();
+                window.showMessage(`月次業務「${name}」を${department}に追加しました`, 'success');
+
+                // 現在表示中の月と一致する場合は即座に再描画
+                const currentYearMonth = this.formatDate(this.selectedDate).substring(0, 7);
+                if (currentYearMonth === yearMonth) {
+                    console.log('🔄 月次業務即時表示更新開始');
+                    
+                    // 即座に再描画
+                    await this.renderMonthlyTasks();
+                    
+                    // 全体の集計も更新
+                    this.updateDailySummary().catch(console.error);
+                    
+                    // 対象部門をハイライト表示
+                    this.highlightDepartmentSection(department, taskRef.key);
+                    
+                    console.log('✅ 月次業務即時表示更新完了');
+                }
+
+            } catch (error) {
+                console.error('❌ 月次業務追加エラー:', error);
+                window.showMessage('月次業務の追加に失敗しました', 'error');
+            }
+        }
+
+        // 部門セクションのハイライト表示（新規追加）
+        highlightDepartmentSection(department, taskId = null) {
+            try {
+                const section = document.querySelector(`.department-section[data-department="${department}"]`);
+                if (section) {
+                    // スクロールして表示
+                    section.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    
+                    // 一時的にハイライト表示
+                    section.style.transition = 'all 0.3s ease';
+                    section.style.boxShadow = '0 0 20px rgba(16, 185, 129, 0.4)';
+                    section.style.transform = 'scale(1.02)';
+                    
+                    setTimeout(() => {
+                        section.style.boxShadow = '';
+                        section.style.transform = '';
+                    }, 2000);
+                    
+                    // 特定のタスクカードもハイライト
+                    if (taskId) {
+                        setTimeout(() => {
+                            const taskCard = section.querySelector(`[data-task-id="${taskId}"]`);
+                            if (taskCard) {
+                                taskCard.style.transition = 'all 0.3s ease';
+                                taskCard.style.boxShadow = '0 0 15px rgba(249, 115, 22, 0.5)';
+                                setTimeout(() => {
+                                    taskCard.style.boxShadow = '';
+                                }, 1500);
+                            }
+                        }, 500);
+                    }
+                    
+                    console.log(`✅ 部門${department}をハイライト表示`);
+                }
+            } catch (error) {
+                console.warn('⚠️ ハイライト表示エラー:', error);
+            }
+        }
 
                 const assignedCEChipsHtml = assignedCEChips.join('');
 
