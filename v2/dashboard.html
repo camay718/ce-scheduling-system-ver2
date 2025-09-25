@@ -333,6 +333,28 @@
             margin-top: 4px;
         }
     }
+
+            /* 月次業務バッジ */
+    .monthly-task-badge {
+        position: absolute;
+        top: -6px;
+        right: -10px;
+        background: #f97316;
+        color: white;
+        font-size: 8px;
+        padding: 2px 4px;
+        border-radius: 3px;
+        font-weight: bold;
+        line-height: 1;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+    }
+
+    /* 月次業務タイトルの相対位置設定 */
+    .monthly-task-title {
+        position: relative;
+        display: inline-block;
+    }
+        
     </style>
 
     <!-- Firebase SDK -->
@@ -1986,7 +2008,7 @@
             }
         }
 
-        // 修正済み：renderMonthlyTasks を async 化
+        // 月次業務表示（部門連動・バッジ対応版）
         async renderMonthlyTasks() {
             const grid = document.getElementById('departmentGrid');
             if (!grid) return;
@@ -2016,11 +2038,14 @@
                 // 無効なタスクをスキップ
                 if (!task || !task.department || !task.name) {
                     console.warn('⚠️ 無効な月次業務データ:', task);
-                    continue;  // return を continue に変更
+                    continue;
                 }
                 
                 const section = grid.querySelector(`.monthly-plans[data-department="${task.department}"]`);
-                if (!section) continue;  // return を continue に変更
+                if (!section) {
+                    console.warn(`⚠️ 部門${task.department}の月次業務セクションが見つかりません`);
+                    continue;
+                }
 
                 const currentCount = task.actualCount || 0;
                 const goalCount = task.goalCount || 0;
@@ -2095,8 +2120,9 @@
 
                 monthlyCard.innerHTML = `
                     <div class="flex justify-between items-center mb-2">
-                        <div class="font-semibold text-sm">
+                        <div class="font-semibold text-sm monthly-task-title">
                             <i class="fas fa-calendar-alt mr-1" style="color: ${deptColor}"></i>${task.name}
+                            <span class="monthly-task-badge">月次</span>
                         </div>
                         <div class="text-xs text-gray-600">${assignedCount}/${needCount}名</div>
                     </div>
@@ -2159,6 +2185,113 @@
             }
 
             console.log(`✅ ${yearMonth} の月次業務表示完了`);
+        }
+
+                // 月次業務追加（部門連動・即時表示版）
+        async addMonthlyTaskWithDepartmentFocus(modal) {
+            const name = document.getElementById('monthlyTaskName')?.value?.trim();
+            const department = document.getElementById('monthlyTaskDepartment')?.value;
+            const yearMonth = document.getElementById('monthlyTaskMonth')?.value;
+            const goalCount = parseInt(document.getElementById('monthlyGoalCount')?.value) || 1;
+            const requiredPeople = parseInt(document.getElementById('monthlyRequiredPeople')?.value) || 1;
+            const description = document.getElementById('monthlyTaskDescription')?.value?.trim();
+
+            if (!name || !department || !yearMonth) {
+                window.showMessage('必須項目を入力してください', 'error');
+                return;
+            }
+
+            try {
+                const taskRef = window.database.ref(`${window.DATA_ROOT}/monthlyTasks/${yearMonth}`).push();
+
+                const taskData = {
+                    id: taskRef.key,
+                    name: name,
+                    department: department,
+                    yearMonth: yearMonth,
+                    goalCount: goalCount,
+                    actualCount: 0,
+                    requiredPeople: requiredPeople,
+                    description: description || null,
+                    assignedCEs: [],
+                    createdAt: firebase.database.ServerValue.TIMESTAMP,
+                    createdBy: window.currentUserData?.displayName || 'user',
+                    type: 'monthly',
+                    status: 'active'
+                };
+
+                console.log('📅 月次業務データ作成:', taskData);
+
+                // データベースに保存
+                await taskRef.set(taskData);
+
+                // ローカルデータに即座に反映（表示の即時更新）
+                this.monthlyTasks[yearMonth] = this.monthlyTasks[yearMonth] || {};
+                this.monthlyTasks[yearMonth][taskRef.key] = taskData;
+
+                modal.remove();
+                window.showMessage(`月次業務「${name}」を${department}に追加しました`, 'success');
+
+                // 現在表示中の月と一致する場合は即座に再描画
+                const currentYearMonth = this.formatDate(this.selectedDate).substring(0, 7);
+                if (currentYearMonth === yearMonth) {
+                    console.log('🔄 月次業務即時表示更新開始');
+                    
+                    // 即座に再描画
+                    await this.renderMonthlyTasks();
+                    
+                    // 全体の集計も更新
+                    this.updateDailySummary().catch(console.error);
+                    
+                    // 対象部門をハイライト表示
+                    this.highlightDepartmentSection(department, taskRef.key);
+                    
+                    console.log('✅ 月次業務即時表示更新完了');
+                }
+
+            } catch (error) {
+                console.error('❌ 月次業務追加エラー:', error);
+                window.showMessage('月次業務の追加に失敗しました', 'error');
+            }
+        }
+
+        // 部門セクションのハイライト表示（新規追加）
+        highlightDepartmentSection(department, taskId = null) {
+            try {
+                const section = document.querySelector(`.department-section[data-department="${department}"]`);
+                if (section) {
+                    // スクロールして表示
+                    section.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    
+                    // 一時的にハイライト表示
+                    section.style.transition = 'all 0.3s ease';
+                    section.style.boxShadow = '0 0 20px rgba(16, 185, 129, 0.4)';
+                    section.style.transform = 'scale(1.02)';
+                    
+                    setTimeout(() => {
+                        section.style.boxShadow = '';
+                        section.style.transform = '';
+                    }, 2000);
+                    
+                    // 特定のタスクカードもハイライト
+                    if (taskId) {
+                        setTimeout(() => {
+                            const taskCard = section.querySelector(`[data-task-id="${taskId}"]`);
+                            if (taskCard) {
+                                taskCard.style.transition = 'all 0.3s ease';
+                                taskCard.style.boxShadow = '0 0 15px rgba(249, 115, 22, 0.5)';
+                                setTimeout(() => {
+                                    taskCard.style.boxShadow = '';
+                                }, 1500);
+                            }
+                        }, 500);
+                    }
+                    
+                    console.log(`✅ 部門${department}をハイライト表示`);
+                }
+            } catch (error) {
+                console.warn('⚠️ ハイライト表示エラー:', error);
+            }
         }
 
         async updateDailySummary() {
@@ -3369,80 +3502,105 @@
             }
         }
 
-        // 月次業務追加モーダル（修正済み）
-        openMonthlyTaskModal() {
-            const modal = document.createElement('div');
-            modal.id = 'monthlyTaskModal';
-            modal.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50';
+// 月次業務追加モーダル（部門選択・即時表示対応版）
+openMonthlyTaskModal(defaultDepartment = '') {
+    if (window.userRole === 'viewer') {
+        window.showMessage('編集権限がありません', 'warning');
+        return;
+    }
+
+    const modal = document.createElement('div');
+    modal.id = 'monthlyTaskModal';
+    modal.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50';
+    
+    const departmentOptions = this.buildDepartmentOptions(defaultDepartment);
+    const currentYearMonth = this.formatDate(this.selectedDate).substring(0, 7);
+    
+    modal.innerHTML = `
+        <div class="glass-card p-6 max-w-lg w-full mx-4 max-h-[90vh] overflow-y-auto">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-lg font-bold">
+                    <i class="fas fa-calendar-alt text-orange-600 mr-2"></i>月次業務追加
+                </h3>
+                <button onclick="this.closest('.fixed').remove()" class="text-gray-500 hover:text-gray-700">
+                    <i class="fas fa-times text-xl"></i>
+                </button>
+            </div>
             
-            const departmentOptions = this.buildDepartmentOptions();
-            const currentYearMonth = this.formatDate(this.selectedDate).substring(0, 7);
-            
-            modal.innerHTML = `
-                <div class="glass-card p-6 max-w-lg w-full mx-4 max-h-[90vh] overflow-y-auto">
-                    <div class="flex justify-between items-center mb-4">
-                        <h3 class="text-lg font-bold">月次業務追加</h3>
-                        <button onclick="this.closest('.fixed').remove()" class="text-gray-500 hover:text-gray-700">
-                            <i class="fas fa-times text-xl"></i>
-                        </button>
-                    </div>
-                    
-                    <form id="monthlyTaskForm" class="space-y-4">
-                        <div>
-                            <label class="block text-sm font-bold mb-2">業務名 *</label>
-                            <input type="text" id="monthlyTaskName" class="input-unified" required placeholder="月次業務名を入力">
-                        </div>
-                        
-                        <div>
-                            <label class="block text-sm font-bold mb-2">部門 *</label>
-                            <select id="monthlyTaskDepartment" class="input-unified" required>
-                                ${departmentOptions}
-                            </select>
-                        </div>
-                        
-                        <div>
-                            <label class="block text-sm font-bold mb-2">実施月 *</label>
-                            <input type="month" id="monthlyTaskMonth" class="input-unified" value="${currentYearMonth}" required>
-                        </div>
-                        
-                        <div class="grid grid-cols-2 gap-4">
-                            <div>
-                                <label class="block text-sm font-bold mb-2">目標件数</label>
-                                <input type="number" id="monthlyGoalCount" class="input-unified" min="0" max="999" value="0">
-                            </div>
-                            <div>
-                                <label class="block text-sm font-bold mb-2">必要人数</label>
-                                <input type="number" id="monthlyRequiredPeople" class="input-unified" min="0" max="20" value="1">
-                            </div>
-                        </div>
-                        
-                        <div>
-                            <label class="block text-sm font-bold mb-2">詳細</label>
-                            <textarea id="monthlyTaskDescription" class="input-unified" rows="3" placeholder="詳細説明（任意）"></textarea>
-                        </div>
-                        
-                        <div class="flex space-x-3">
-                            <button type="button" onclick="this.closest('.fixed').remove()" 
-                                    class="btn-unified btn-outline-unified flex-1">
-                                キャンセル
-                            </button>
-                            <button type="submit" class="btn-unified btn-primary-unified flex-1">
-                                <i class="fas fa-calendar-alt mr-2"></i>追加
-                            </button>
-                        </div>
-                    </form>
+            <form id="monthlyTaskForm" class="space-y-4">
+                <div>
+                    <label class="block text-sm font-bold mb-2">業務名 *</label>
+                    <input type="text" id="monthlyTaskName" class="input-unified" required 
+                           placeholder="例: 月次機器点検、品質管理業務">
                 </div>
-            `;
+                
+                <div>
+                    <label class="block text-sm font-bold mb-2">部門 *</label>
+                    <select id="monthlyTaskDepartment" class="input-unified" required>
+                        ${departmentOptions}
+                    </select>
+                </div>
+                
+                <div>
+                    <label class="block text-sm font-bold mb-2">実施月 *</label>
+                    <input type="month" id="monthlyTaskMonth" class="input-unified" value="${currentYearMonth}" required>
+                </div>
+                
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-bold mb-2">目標件数</label>
+                        <input type="number" id="monthlyGoalCount" class="input-unified" min="0" max="999" value="1">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-bold mb-2">必要人数</label>
+                        <input type="number" id="monthlyRequiredPeople" class="input-unified" min="0" max="20" value="1">
+                    </div>
+                </div>
+                
+                <div>
+                    <label class="block text-sm font-bold mb-2">詳細説明</label>
+                    <textarea id="monthlyTaskDescription" class="input-unified" rows="3" 
+                              placeholder="月次業務の詳細内容を入力してください（任意）"></textarea>
+                </div>
+                
+                <div class="bg-orange-50 border border-orange-200 rounded-lg p-3">
+                    <h4 class="text-sm font-semibold text-orange-800 mb-1">
+                        <i class="fas fa-info-circle mr-1"></i>月次業務について
+                    </h4>
+                    <ul class="text-xs text-orange-700 space-y-1">
+                        <li>• 月単位で継続的に実施する業務です</li>
+                        <li>• 選択した部門の日別スケジュールに表示されます</li>
+                        <li>• 実施件数の記録と進捗管理ができます</li>
+                        <li>• CEの配置も通常業務と同様に行えます</li>
+                    </ul>
+                </div>
+                
+                <div class="flex space-x-3">
+                    <button type="button" onclick="this.closest('.fixed').remove()" 
+                            class="btn-unified btn-outline-unified flex-1">
+                        キャンセル
+                    </button>
+                    <button type="submit" class="btn-unified btn-primary-unified flex-1">
+                        <i class="fas fa-calendar-alt mr-2"></i>月次業務を追加
+                    </button>
+                </div>
+            </form>
+        </div>
+    `;
 
-            document.body.appendChild(modal);
+    document.body.appendChild(modal);
 
-            document.getElementById('monthlyTaskForm').onsubmit = (e) => {
-                e.preventDefault();
-                this.addMonthlyTask(modal);
-            };
-        }
+    // フォーム送信イベント
+    document.getElementById('monthlyTaskForm').onsubmit = (e) => {
+        e.preventDefault();
+        this.addMonthlyTaskWithDepartmentFocus(modal);
+    };
+}
 
-        async addMonthlyTask(modal) {
+// 旧版月次業務追加（後方互換性のため保持）
+async addMonthlyTaskLegacy(modal) {
+    // 既存のコード内容はそのまま保持
+    // （新しいaddMonthlyTaskWithDepartmentFocus関数を使用するため、この関数は参照されなくなる）
             const name = document.getElementById('monthlyTaskName')?.value?.trim();
             const department = document.getElementById('monthlyTaskDepartment')?.value;
             const yearMonth = document.getElementById('monthlyTaskMonth')?.value;
@@ -3666,24 +3824,17 @@
                 };
             }
 
-            const monthlyBtn = document.getElementById('addMonthlyTaskBtn');
-            if (monthlyBtn) {
-                monthlyBtn.onclick = () => {
-                    if (window.userRole === 'viewer') {
-                        window.showMessage('編集権限がありません', 'warning');
-                        return;
-                    }
-                    if (!window.eventManager && window.EventManager) {
-                        try { 
-                            window.eventManager = new window.EventManager(); 
-                        } catch (e) { 
-                            console.warn('EventManager初期化失敗:', e); 
-                        }
-                    }
-                    // EventManagerエラー回避のため、常にフォールバック使用
-                    this.openMonthlyTaskModal();
-                };
-            }
+const monthlyBtn = document.getElementById('addMonthlyTaskBtn');
+if (monthlyBtn) {
+    monthlyBtn.onclick = () => {
+        if (window.userRole === 'viewer') {
+            window.showMessage('編集権限がありません', 'warning');
+            return;
+        }
+        // 部門選択なしで汎用モーダルを開く
+        this.openMonthlyTaskModal();
+    };
+}
 
             this.renderDailySchedule();
         }
@@ -3736,16 +3887,22 @@
             const deptColor = window.DEPARTMENT_COLORS?.[dept] || '#6b7280';
             
             section.innerHTML = `
-                <div class="flex items-center justify-between mb-2">
-                    <div class="flex items-center gap-2">
-                        <i class="fas fa-${window.DEPARTMENT_ICONS?.[dept] || 'cog'}" style="color: ${deptColor}"></i>
-                        <h3 class="font-bold text-sm">${dept}</h3>
-                    </div>
-                    ${window.userRole !== 'viewer' ? `
-                    <button class="btn-unified btn-primary-unified btn-small" onclick="window.dashboardAuth.openQuickAddEvent('${dept}')">
-                        <i class="fas fa-plus mr-1"></i>業務追加
-                    </button>` : ''}
-                </div>
+<div class="flex items-center justify-between mb-2">
+    <div class="flex items-center gap-2">
+        <i class="fas fa-${window.DEPARTMENT_ICONS?.[dept] || 'cog'}" style="color: ${deptColor}"></i>
+        <h3 class="font-bold text-sm">${dept}</h3>
+    </div>
+    ${window.userRole !== 'viewer' ? `
+    <div class="flex items-center gap-1">
+        <button class="btn-unified btn-primary-unified btn-small" onclick="window.dashboardAuth.openQuickAddEvent('${dept}')">
+            <i class="fas fa-plus mr-1"></i>業務追加
+        </button>
+        <button class="btn-unified btn-outline-unified btn-small" onclick="window.dashboardAuth.openMonthlyTaskModal('${dept}')" 
+                title="この部門の月次業務を追加">
+            <i class="fas fa-calendar-alt mr-1"></i>月次
+        </button>
+    </div>` : ''}
+</div>
                 <!-- 部門別集計バー -->
                 <div class="dept-summary-container">
                     <span class="text-xs dept-summary-text">0/0名</span>
