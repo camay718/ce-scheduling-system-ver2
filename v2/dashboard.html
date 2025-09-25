@@ -334,25 +334,82 @@
         }
     }
 
-            /* 月次業務バッジ */
+  /* 月次業務バッジ（左上配置・改良版） */
     .monthly-task-badge {
         position: absolute;
-        top: -6px;
-        right: -10px;
-        background: #f97316;
+        top: -8px;
+        left: -8px;
+        background: linear-gradient(135deg, #f97316, #ea580c);
         color: white;
-        font-size: 8px;
-        padding: 2px 4px;
-        border-radius: 3px;
+        font-size: 9px;
+        padding: 3px 6px;
+        border-radius: 6px;
         font-weight: bold;
         line-height: 1;
-        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.25);
+        z-index: 10;
+        border: 1px solid rgba(255, 255, 255, 0.3);
     }
 
-    /* 月次業務タイトルの相対位置設定 */
+    /* 月次業務カードの基準設定 */
+    .monthly-task-card {
+        position: relative !important;
+    }
+
+    /* 月次業務タイトルの調整 */
     .monthly-task-title {
         position: relative;
-        display: inline-block;
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        padding-left: 8px; /* バッジ分のスペース確保 */
+    }
+
+    /* 実施入力セクションの強化 */
+    .monthly-input-section {
+        background: rgba(255, 255, 255, 0.6);
+        border: 1px solid rgba(0, 0, 0, 0.1);
+        border-radius: 8px;
+        padding: 10px;
+        margin-top: 8px;
+        font-size: 11px;
+    }
+
+    .monthly-input-row {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin-bottom: 6px;
+        flex-wrap: wrap;
+    }
+
+    .monthly-input-row:last-child {
+        margin-bottom: 0;
+    }
+
+    .monthly-time-inputs {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        font-size: 10px;
+    }
+
+    .monthly-time-inputs input {
+        width: 70px;
+        padding: 3px 6px;
+        border: 1px solid #d1d5db;
+        border-radius: 4px;
+        text-align: center;
+        font-size: 10px;
+    }
+
+    .monthly-count-input {
+        width: 60px;
+        padding: 3px 6px;
+        border: 1px solid #d1d5db;
+        border-radius: 4px;
+        text-align: center;
+        font-size: 11px;
     }
         
     </style>
@@ -2008,7 +2065,7 @@
             }
         }
 
-        // 月次業務表示（部門連動・バッジ対応版）
+        // 月次業務表示（実施記録・日付連携対応版）
         async renderMonthlyTasks() {
             const grid = document.getElementById('departmentGrid');
             if (!grid) return;
@@ -2024,33 +2081,40 @@
                 el.innerHTML = '';
             });
 
-            // データが存在するかチェック
             const taskList = Object.values(monthlyData);
             if (taskList.length === 0) {
                 console.log('📭 月次業務データなし:', yearMonth);
                 return;
             }
 
-            console.log('📋 月次業務一覧:', taskList);
-
-            // forEach を for...of に変更（await対応）
             for (const task of taskList) {
-                // 無効なタスクをスキップ
                 if (!task || !task.department || !task.name) {
                     console.warn('⚠️ 無効な月次業務データ:', task);
                     continue;
                 }
                 
                 const section = grid.querySelector(`.monthly-plans[data-department="${task.department}"]`);
-                if (!section) {
-                    console.warn(`⚠️ 部門${task.department}の月次業務セクションが見つかりません`);
-                    continue;
+                if (!section) continue;
+
+                // 実施記録から累積件数を計算（選択日まで）
+                const activityRecords = Array.isArray(task.activityRecords) ? task.activityRecords : [];
+                let cumulativeCount = 0;
+                
+                // 選択された日付以前の記録を累積
+                activityRecords.forEach(record => {
+                    if (record.date && record.date <= dateKey) {
+                        cumulativeCount += (record.count || 0);
+                    }
+                });
+
+                // 後方互換性：activityRecordsが空の場合はactualCountを使用
+                if (activityRecords.length === 0 && typeof task.actualCount === 'number') {
+                    cumulativeCount = task.actualCount;
                 }
 
-                const currentCount = task.actualCount || 0;
                 const goalCount = task.goalCount || 0;
-                const progressPercent = goalCount > 0 ? Math.min((currentCount / goalCount) * 100, 100) : 0;
-                const remaining = Math.max(0, goalCount - currentCount);
+                const progressPercent = goalCount > 0 ? Math.min((cumulativeCount / goalCount) * 100, 100) : 0;
+                const remaining = Math.max(0, goalCount - cumulativeCount);
 
                 // assignedCEsの処理
                 const assignedList = Array.isArray(task.assignedCEs) ? task.assignedCEs : [];
@@ -2074,11 +2138,9 @@
 
                 const assignedCount = normalizedAssigned.length;
                 const needCount = task.requiredPeople || 0;
-
-                // 部門色の取得
                 const deptColor = window.DEPARTMENT_COLORS?.[task.department] || '#6b7280';
 
-                // 月次業務のCEチップも勤務区分連動
+                // 月次業務のCEチップ（勤務区分連動）
                 const assignedCEChips = [];
                 for (const assigned of normalizedAssigned) {
                     let effectiveWorkType = assigned.workType || 'ME';
@@ -2119,16 +2181,16 @@
                 monthlyCard.addEventListener('drop', (e) => this.handleMonthlyTaskDrop(e));
 
                 monthlyCard.innerHTML = `
+                    <span class="monthly-task-badge">月次</span>
                     <div class="flex justify-between items-center mb-2">
                         <div class="font-semibold text-sm monthly-task-title">
                             <i class="fas fa-calendar-alt mr-1" style="color: ${deptColor}"></i>${task.name}
-                            <span class="monthly-task-badge">月次</span>
                         </div>
                         <div class="text-xs text-gray-600">${assignedCount}/${needCount}名</div>
                     </div>
                     <div class="flex justify-between text-xs text-gray-600 mb-2">
                         <span>目標: ${goalCount}件</span>
-                        <span>実施: ${currentCount}件</span>
+                        <span>実施: ${cumulativeCount}件</span>
                         <span>残: ${remaining}件</span>
                     </div>
                     <div class="monthly-progress-bar">
@@ -2138,33 +2200,83 @@
                         ${assignedCEChipsHtml}
                     </div>
                     <div class="monthly-input-section">
-                        <span>実施入力:</span>
-                        <input type="number" class="actual-input" value="${currentCount}" min="0" max="999">
-                        ${window.userRole !== 'viewer' ? `<button class="btn-unified btn-outline-unified save-actual-btn">保存</button>` : ''}
-                        ${window.userRole !== 'viewer' ? `<button class="edit-monthly-btn text-blue-600 hover:text-blue-800 text-xs">
-                            <i class="fas fa-edit"></i>
-                        </button>` : ''}
+                        <div class="monthly-input-row">
+                            <span class="font-semibold text-gray-700">実施記録:</span>
+                            <input type="date" class="monthly-date-input" value="${dateKey}">
+                        </div>
+                        <div class="monthly-input-row">
+                            <span>件数:</span>
+                            <input type="number" class="monthly-count-input" value="1" min="1" max="99">
+                            <div class="monthly-time-inputs">
+                                <input type="time" class="start-time-input" value="09:00">
+                                <span>〜</span>
+                                <input type="time" class="end-time-input" value="17:00">
+                            </div>
+                        </div>
+                        <div class="monthly-input-row">
+                            ${window.userRole !== 'viewer' ? `
+                            <button class="btn-unified btn-primary-unified btn-small save-monthly-record-btn">
+                                <i class="fas fa-plus mr-1"></i>記録追加
+                            </button>
+                            <button class="edit-monthly-btn text-blue-600 hover:text-blue-800 text-xs">
+                                <i class="fas fa-edit mr-1"></i>編集
+                            </button>
+                            ` : ''}
+                        </div>
                     </div>
                     <div class="text-xs text-gray-400 mt-1 italic">CEをドラッグ&ドロップで配置</div>
                 `;
 
-                // 実施入力保存のイベント
-                const saveBtn = monthlyCard.querySelector('.save-actual-btn');
-                if (saveBtn) {
-                    saveBtn.addEventListener('click', async (e) => {
+                // 実施記録保存のイベント
+                const saveRecordBtn = monthlyCard.querySelector('.save-monthly-record-btn');
+                if (saveRecordBtn) {
+                    saveRecordBtn.addEventListener('click', async (e) => {
                         e.stopPropagation();
-                        const input = monthlyCard.querySelector('.actual-input');
-                        const newCount = parseInt(input.value) || 0;
-                        await this.updateMonthlyTaskActual(yearMonth, task.id, newCount);
+                        
+                        const dateInput = monthlyCard.querySelector('.monthly-date-input');
+                        const countInput = monthlyCard.querySelector('.monthly-count-input');
+                        const startTimeInput = monthlyCard.querySelector('.start-time-input');
+                        const endTimeInput = monthlyCard.querySelector('.end-time-input');
+                        
+                        const recordData = {
+                            date: dateInput.value,
+                            count: parseInt(countInput.value) || 0,
+                            startTime: startTimeInput.value || null,
+                            endTime: endTimeInput.value || null
+                        };
+
+                        if (!recordData.date || recordData.count <= 0) {
+                            window.showMessage('実施日と件数を正しく入力してください', 'warning');
+                            return;
+                        }
+
+                        // 月範囲チェック
+                        if (recordData.date.substring(0, 7) !== yearMonth) {
+                            window.showMessage(`実施日は${yearMonth}内で入力してください`, 'warning');
+                            return;
+                        }
+
+                        await this.saveMonthlyActivityRecord(yearMonth, task.id, recordData);
+                        
+                        // 入力フィールドをリセット
+                        countInput.value = '1';
+                        startTimeInput.value = '09:00';
+                        endTimeInput.value = '17:00';
                     });
                 }
 
-                // 編集ボタンのイベント
+                // 編集ボタンのイベント（実施記録詳細表示機能付き）
                 const editBtn = monthlyCard.querySelector('.edit-monthly-btn');
                 if (editBtn) {
                     editBtn.addEventListener('click', (e) => {
                         e.stopPropagation();
-                        this.openEditMonthlyTaskModal(yearMonth, task.id, task);
+                        // 実施記録がある場合は詳細表示、ない場合は業務編集
+                        const hasRecords = Array.isArray(task.activityRecords) && task.activityRecords.length > 0;
+                        if (hasRecords) {
+                            this.openMonthlyActivityDetailsModal(yearMonth, task.id);
+                        } else {
+                            this.openEditMonthlyTaskModal(yearMonth, task.id, task);
+                        }
                     });
                 }
 
@@ -2185,6 +2297,371 @@
             }
 
             console.log(`✅ ${yearMonth} の月次業務表示完了`);
+        }
+
+                // 月次業務実施記録の保存（日付連携・累積対応）
+        async saveMonthlyActivityRecord(yearMonth, taskId, recordData) {
+            try {
+                const taskRef = window.database.ref(`${window.DATA_ROOT}/monthlyTasks/${yearMonth}/${taskId}`);
+                const snapshot = await taskRef.once('value');
+                const taskData = snapshot.val();
+
+                if (!taskData) {
+                    window.showMessage('月次業務データが見つかりません', 'error');
+                    return;
+                }
+
+                // 既存の実施記録を取得
+                let activityRecords = Array.isArray(taskData.activityRecords) ? taskData.activityRecords : [];
+
+                // 同日の既存記録をチェック
+                const existingIndex = activityRecords.findIndex(record => record.date === recordData.date);
+                
+                const newRecord = {
+                    date: recordData.date,
+                    count: recordData.count,
+                    startTime: recordData.startTime,
+                    endTime: recordData.endTime,
+                    recordedAt: firebase.database.ServerValue.TIMESTAMP,
+                    recordedBy: window.currentUserData?.displayName || 'user'
+                };
+
+                if (existingIndex >= 0) {
+                    // 既存記録を更新（件数は累積）
+                    activityRecords[existingIndex].count = (activityRecords[existingIndex].count || 0) + recordData.count;
+                    activityRecords[existingIndex].lastUpdated = firebase.database.ServerValue.TIMESTAMP;
+                    window.showMessage(`${recordData.date}の記録を更新しました（+${recordData.count}件）`, 'success');
+                } else {
+                    // 新規記録を追加
+                    activityRecords.push(newRecord);
+                    window.showMessage(`${recordData.date}に${recordData.count}件の実施記録を追加しました`, 'success');
+                }
+
+                // 月全体の累積を再計算（後方互換性のため）
+                const totalCount = activityRecords.reduce((sum, record) => sum + (record.count || 0), 0);
+
+                // データベース更新
+                await taskRef.update({
+                    activityRecords: activityRecords,
+                    actualCount: totalCount, // 後方互換性フィールド
+                    lastActivityUpdate: firebase.database.ServerValue.TIMESTAMP,
+                    updatedBy: window.currentUserData?.displayName || 'user'
+                });
+
+                // ローカルデータ更新
+                this.monthlyTasks[yearMonth][taskId].activityRecords = activityRecords;
+                this.monthlyTasks[yearMonth][taskId].actualCount = totalCount;
+
+                // 表示を即座に更新
+                await this.renderMonthlyTasks();
+                this.updateDailySummary().catch(console.error);
+
+                console.log('✅ 月次業務実施記録保存完了:', { date: recordData.date, count: recordData.count, total: totalCount });
+
+            } catch (error) {
+                console.error('❌ 月次業務実施記録保存エラー:', error);
+                window.showMessage('実施記録の保存に失敗しました', 'error');
+            }
+        }
+
+        // 月次業務実施記録の詳細表示モーダル
+        openMonthlyActivityDetailsModal(yearMonth, taskId) {
+            const task = this.monthlyTasks[yearMonth]?.[taskId];
+            if (!task) {
+                window.showMessage('月次業務データが見つかりません', 'error');
+                return;
+            }
+
+            const modal = document.createElement('div');
+            modal.id = 'monthlyActivityDetailsModal';
+            modal.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50';
+            
+            const activityRecords = Array.isArray(task.activityRecords) ? task.activityRecords : [];
+            const sortedRecords = activityRecords.sort((a, b) => b.date.localeCompare(a.date)); // 新しい順
+
+            const recordsHTML = sortedRecords.length > 0 ? sortedRecords.map((record, index) => {
+                const timeDisplay = (record.startTime && record.endTime) 
+                    ? `${record.startTime} - ${record.endTime}` 
+                    : '時間未記録';
+                
+                return `
+                    <div class="flex items-center justify-between bg-white p-3 rounded border mb-2">
+                        <div class="flex-1">
+                            <div class="font-semibold text-sm">${record.date}</div>
+                            <div class="text-xs text-gray-600">${timeDisplay}</div>
+                        </div>
+                        <div class="text-right">
+                            <div class="font-bold text-green-600">${record.count}件</div>
+                            <div class="text-xs text-gray-500">
+                                ${record.recordedBy || 'unknown'}
+                            </div>
+                        </div>
+                        <div class="flex flex-col gap-1 ml-3">
+                            <button onclick="window.dashboardAuth.editMonthlyActivityRecord('${yearMonth}', '${taskId}', ${index})" 
+                                    class="text-blue-500 hover:text-blue-700 text-sm" title="編集">
+                                <i class="fas fa-edit"></i>
+                            </button>
+                            <button onclick="window.dashboardAuth.deleteMonthlyActivityRecord('${yearMonth}', '${taskId}', ${index})" 
+                                    class="text-red-500 hover:text-red-700 text-sm" title="削除">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </div>
+                    </div>
+                `;
+            }).join('') : '<p class="text-center text-gray-500 py-4">実施記録がありません</p>';
+
+            modal.innerHTML = `
+                <div class="glass-card p-6 max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+                    <div class="flex justify-between items-center mb-4">
+                        <h3 class="text-lg font-bold">
+                            <i class="fas fa-clipboard-list text-purple-600 mr-2"></i>実施記録詳細
+                        </h3>
+                        <button onclick="this.closest('.fixed').remove()" class="text-gray-500 hover:text-gray-700">
+                            <i class="fas fa-times text-xl"></i>
+                        </button>
+                    </div>
+                    
+                    <div class="mb-6">
+                        <h4 class="font-semibold text-lg">${task.name}</h4>
+                        <p class="text-sm text-gray-600">部門: ${task.department} | 実施月: ${yearMonth}</p>
+                        <div class="mt-2 text-sm">
+                            <span class="text-gray-700">累計実施件数: </span>
+                            <span class="font-bold text-green-600">${activityRecords.reduce((sum, r) => sum + (r.count || 0), 0)}件</span>
+                            <span class="text-gray-700"> / 目標: ${task.goalCount || 0}件</span>
+                        </div>
+                    </div>
+
+                    <div class="space-y-2 max-h-60 overflow-y-auto">
+                        ${recordsHTML}
+                    </div>
+
+                    <div class="flex space-x-3 mt-6">
+                        <button onclick="window.dashboardAuth.openMonthlyActivityRecordModal('${yearMonth}', '${taskId}')" 
+                                class="btn-unified btn-primary-unified flex-1">
+                            <i class="fas fa-plus mr-2"></i>新しい実施記録を追加
+                        </button>
+                        <button onclick="this.closest('.fixed').remove()" 
+                                class="btn-unified btn-outline-unified">
+                            閉じる
+                        </button>
+                    </div>
+                </div>
+            `;
+
+            document.body.appendChild(modal);
+        }
+
+        // 実施記録の編集
+        editMonthlyActivityRecord(yearMonth, taskId, recordIndex) {
+            this.openMonthlyActivityRecordModal(yearMonth, taskId, recordIndex);
+        }
+
+        // 実施記録の削除
+        async deleteMonthlyActivityRecord(yearMonth, taskId, recordIndex) {
+            if (!confirm('この実施記録を削除しますか？')) return;
+
+            try {
+                const taskRef = window.database.ref(`${window.DATA_ROOT}/monthlyTasks/${yearMonth}/${taskId}`);
+                const snapshot = await taskRef.once('value');
+                const taskData = snapshot.val();
+
+                if (!taskData) {
+                    window.showMessage('月次業務データが見つかりません', 'error');
+                    return;
+                }
+
+                let activityRecords = Array.isArray(taskData.activityRecords) ? taskData.activityRecords : [];
+
+                if (recordIndex >= 0 && recordIndex < activityRecords.length) {
+                    const deletedRecord = activityRecords[recordIndex];
+                    activityRecords.splice(recordIndex, 1);
+
+                    // 累計を再計算
+                    const totalCount = activityRecords.reduce((sum, record) => sum + (record.count || 0), 0);
+
+                    await taskRef.update({
+                        activityRecords: activityRecords,
+                        actualCount: totalCount,
+                        lastActivityUpdate: firebase.database.ServerValue.TIMESTAMP
+                    });
+
+                    window.showMessage(`${deletedRecord.date}の実施記録を削除しました`, 'success');
+                    
+                    // モーダルを閉じて再描画
+                    document.querySelectorAll('#monthlyActivityDetailsModal, #editMonthlyTaskModal').forEach(modal => modal.remove());
+                    await this.renderMonthlyTasks();
+                    this.updateDailySummary().catch(console.error);
+                }
+
+            } catch (error) {
+                console.error('❌ 実施記録削除エラー:', error);
+                window.showMessage('実施記録の削除に失敗しました', 'error');
+            }
+        }
+
+        // 実施記録追加/編集モーダル
+        openMonthlyActivityRecordModal(yearMonth, taskId, recordIndex = null) {
+            const task = this.monthlyTasks[yearMonth]?.[taskId];
+            if (!task) {
+                window.showMessage('月次業務データが見つかりません', 'error');
+                return;
+            }
+
+            const isEdit = recordIndex !== null;
+            const existingRecord = isEdit ? task.activityRecords?.[recordIndex] : null;
+
+            const modal = document.createElement('div');
+            modal.id = 'monthlyActivityRecordModal';
+            modal.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50';
+            
+            const defaultDate = existingRecord?.date || this.formatDate(this.selectedDate);
+            const defaultCount = existingRecord?.count || 1;
+            const defaultStartTime = existingRecord?.startTime || '09:00';
+            const defaultEndTime = existingRecord?.endTime || '17:00';
+
+            modal.innerHTML = `
+                <div class="glass-card p-6 max-w-lg w-full mx-4">
+                    <div class="flex justify-between items-center mb-4">
+                        <h3 class="text-lg font-bold">
+                            <i class="fas fa-clipboard-list text-purple-600 mr-2"></i>
+                            ${isEdit ? '実施記録を編集' : '実施記録を追加'}
+                        </h3>
+                        <button onclick="this.closest('.fixed').remove()" class="text-gray-500 hover:text-gray-700">
+                            <i class="fas fa-times text-xl"></i>
+                        </button>
+                    </div>
+                    
+                    <div class="mb-4 p-3 bg-gray-50 rounded">
+                        <p class="text-sm"><strong>業務:</strong> ${task.name}</p>
+                        <p class="text-sm"><strong>部門:</strong> ${task.department}</p>
+                        <p class="text-sm"><strong>対象月:</strong> ${yearMonth}</p>
+                    </div>
+
+                    <form id="monthlyActivityRecordForm" class="space-y-4">
+                        <div>
+                            <label class="block text-sm font-bold mb-2">実施日 *</label>
+                            <input type="date" id="recordDate" class="input-unified" value="${defaultDate}" required>
+                        </div>
+                        
+                        <div>
+                            <label class="block text-sm font-bold mb-2">実施件数 *</label>
+                            <input type="number" id="recordCount" class="input-unified" min="1" max="999" value="${defaultCount}" required>
+                        </div>
+                        
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-sm font-bold mb-2">開始時刻</label>
+                                <input type="time" id="recordStartTime" class="input-unified" value="${defaultStartTime}">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-bold mb-2">終了時刻</label>
+                                <input type="time" id="recordEndTime" class="input-unified" value="${defaultEndTime}">
+                            </div>
+                        </div>
+                        
+                        <div class="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                            <p class="text-xs text-blue-700">
+                                <i class="fas fa-info-circle mr-1"></i>
+                                ${isEdit ? '既存の記録を変更します' : '新しい実施記録を追加します'}。
+                                同じ日付に複数回記録すると、件数は累積されます。
+                            </p>
+                        </div>
+                        
+                        <div class="flex space-x-3">
+                            <button type="button" onclick="this.closest('.fixed').remove()" 
+                                    class="btn-unified btn-outline-unified flex-1">
+                                キャンセル
+                            </button>
+                            <button type="submit" class="btn-unified btn-primary-unified flex-1">
+                                <i class="fas fa-save mr-2"></i>
+                                ${isEdit ? '変更を保存' : '記録を追加'}
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            `;
+
+            document.body.appendChild(modal);
+
+            document.getElementById('monthlyActivityRecordForm').onsubmit = (e) => {
+                e.preventDefault();
+                this.saveMonthlyActivityRecordFromModal(yearMonth, taskId, recordIndex, modal);
+            };
+        }
+
+        // モーダルからの実施記録保存
+        async saveMonthlyActivityRecordFromModal(yearMonth, taskId, recordIndex, modal) {
+            const date = document.getElementById('recordDate')?.value;
+            const count = parseInt(document.getElementById('recordCount')?.value) || 0;
+            const startTime = document.getElementById('recordStartTime')?.value || null;
+            const endTime = document.getElementById('recordEndTime')?.value || null;
+
+            if (!date || count <= 0) {
+                window.showMessage('実施日と件数を正しく入力してください', 'warning');
+                return;
+            }
+
+            // 月範囲チェック
+            if (date.substring(0, 7) !== yearMonth) {
+                window.showMessage(`実施日は${yearMonth}内で入力してください`, 'warning');
+                return;
+            }
+
+            try {
+                const taskRef = window.database.ref(`${window.DATA_ROOT}/monthlyTasks/${yearMonth}/${taskId}`);
+                const snapshot = await taskRef.once('value');
+                const taskData = snapshot.val();
+
+                if (!taskData) {
+                    window.showMessage('月次業務データが見つかりません', 'error');
+                    return;
+                }
+
+                let activityRecords = Array.isArray(taskData.activityRecords) ? taskData.activityRecords : [];
+
+                const recordData = {
+                    date: date,
+                    count: count,
+                    startTime: startTime,
+                    endTime: endTime,
+                    recordedAt: firebase.database.ServerValue.TIMESTAMP,
+                    recordedBy: window.currentUserData?.displayName || 'user'
+                };
+
+                if (recordIndex !== null && recordIndex >= 0 && recordIndex < activityRecords.length) {
+                    // 既存記録を編集
+                    activityRecords[recordIndex] = { ...activityRecords[recordIndex], ...recordData };
+                    window.showMessage('実施記録を更新しました', 'success');
+                } else {
+                    // 新規記録を追加
+                    activityRecords.push(recordData);
+                    window.showMessage(`${date}に${count}件の実施記録を追加しました`, 'success');
+                }
+
+                // 累計を再計算
+                const totalCount = activityRecords.reduce((sum, record) => sum + (record.count || 0), 0);
+
+                // データベース更新
+                await taskRef.update({
+                    activityRecords: activityRecords,
+                    actualCount: totalCount,
+                    lastActivityUpdate: firebase.database.ServerValue.TIMESTAMP
+                });
+
+                // ローカルデータ更新
+                this.monthlyTasks[yearMonth][taskId].activityRecords = activityRecords;
+                this.monthlyTasks[yearMonth][taskId].actualCount = totalCount;
+
+                modal.remove();
+                
+                // 表示を更新
+                await this.renderMonthlyTasks();
+                this.updateDailySummary().catch(console.error);
+
+            } catch (error) {
+                console.error('❌ 実施記録保存エラー:', error);
+                window.showMessage('実施記録の保存に失敗しました', 'error');
+            }
         }
 
                 // 月次業務追加（部門連動・即時表示版）
