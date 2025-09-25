@@ -328,10 +328,10 @@
         #nextDayBtn { grid-column: 3; }
         #todayBtn { grid-column: 4; }
 
-        #addEventButtonDaily, #addBulkEventBtn, #addMonthlyTaskBtn {
-            grid-column: 1 / -1;
-            margin-top: 4px;
-        }
+        #addEventButtonDaily, #addBulkEventBtn {
+    grid-column: 1 / -1;
+    margin-top: 4px;
+}
     }
 
   /* 月次業務バッジ（左上配置・改良版） */
@@ -851,9 +851,6 @@
                         </button>
                         <button id="addBulkEventBtn" class="btn-unified btn-primary-unified">
                             <i class="fas fa-calendar-plus mr-1"></i>期間一括追加
-                        </button>
-                        <button id="addMonthlyTaskBtn" class="btn-unified btn-primary-unified">
-                            <i class="fas fa-calendar-alt mr-1"></i>＋月次業務追加
                         </button>
                     </div>
                 </div>
@@ -2065,240 +2062,408 @@
             }
         }
 
-        // 月次業務表示（実施記録・日付連携対応版）
-        async renderMonthlyTasks() {
-            const grid = document.getElementById('departmentGrid');
-            if (!grid) return;
+// 月次業務表示（日別CE配置・実施記録対応版）
+async renderMonthlyTasks() {
+    const grid = document.getElementById('departmentGrid');
+    if (!grid) return;
 
-            const dateKey = this.formatDate(this.selectedDate);
-            const yearMonth = dateKey.substring(0, 7);
-            const monthlyData = this.monthlyTasks[yearMonth] || {};
+    const dateKey = this.formatDate(this.selectedDate);
+    const yearMonth = dateKey.substring(0, 7);
+    const monthlyData = this.monthlyTasks[yearMonth] || {};
 
-            console.log('🔄 月次業務表示処理:', { dateKey, yearMonth, monthlyData });
+    console.log('🔄 月次業務表示処理（日別CE配置版）:', { dateKey, yearMonth, monthlyData });
 
-            // 既存の月次業務カードをクリア
-            grid.querySelectorAll('.monthly-plans').forEach(el => {
-                el.innerHTML = '';
-            });
+    // 既存の月次業務カードをクリア
+    grid.querySelectorAll('.monthly-plans').forEach(el => {
+        el.innerHTML = '';
+    });
 
-            const taskList = Object.values(monthlyData);
-            if (taskList.length === 0) {
-                console.log('📭 月次業務データなし:', yearMonth);
-                return;
+    const taskList = Object.values(monthlyData);
+    if (taskList.length === 0) {
+        console.log('📭 月次業務データなし:', yearMonth);
+        return;
+    }
+
+    for (const task of taskList) {
+        if (!task || !task.department || !task.name) {
+            console.warn('⚠️ 無効な月次業務データ:', task);
+            continue;
+        }
+        
+        const section = grid.querySelector(`.monthly-plans[data-department="${task.department}"]`);
+        if (!section) continue;
+
+        // 実施記録から累積件数を計算（選択日まで）
+        const activityRecords = Array.isArray(task.activityRecords) ? task.activityRecords : [];
+        let cumulativeCount = 0;
+        
+        activityRecords.forEach(record => {
+            if (record.date && record.date <= dateKey) {
+                cumulativeCount += (record.count || 0);
             }
+        });
 
-            for (const task of taskList) {
-                if (!task || !task.department || !task.name) {
-                    console.warn('⚠️ 無効な月次業務データ:', task);
-                    continue;
-                }
-                
-                const section = grid.querySelector(`.monthly-plans[data-department="${task.department}"]`);
-                if (!section) continue;
-
-                // 実施記録から累積件数を計算（選択日まで）
-                const activityRecords = Array.isArray(task.activityRecords) ? task.activityRecords : [];
-                let cumulativeCount = 0;
-                
-                // 選択された日付以前の記録を累積
-                activityRecords.forEach(record => {
-                    if (record.date && record.date <= dateKey) {
-                        cumulativeCount += (record.count || 0);
-                    }
-                });
-
-                // 後方互換性：activityRecordsが空の場合はactualCountを使用
-                if (activityRecords.length === 0 && typeof task.actualCount === 'number') {
-                    cumulativeCount = task.actualCount;
-                }
-
-                const goalCount = task.goalCount || 0;
-                const progressPercent = goalCount > 0 ? Math.min((cumulativeCount / goalCount) * 100, 100) : 0;
-                const remaining = Math.max(0, goalCount - cumulativeCount);
-
-                // assignedCEsの処理
-                const assignedList = Array.isArray(task.assignedCEs) ? task.assignedCEs : [];
-                const normalizedAssigned = assignedList.map(entry => {
-                    if (typeof entry === 'string') {
-                        const ce = window.ceManager?.ceList?.find(c => c.id === entry);
-                        return ce ? { 
-                            id: ce.id, 
-                            name: ce.iconName || ce.displayName || ce.name, 
-                            workType: ce.workType || 'ME' 
-                        } : { id: entry, name: entry, workType: 'ME' };
-                    } else if (entry && typeof entry === 'object') {
-                        return { 
-                            id: entry.id, 
-                            name: entry.name, 
-                            workType: entry.workType || 'ME' 
-                        };
-                    }
-                    return null;
-                }).filter(Boolean);
-
-                const assignedCount = normalizedAssigned.length;
-                const needCount = task.requiredPeople || 0;
-                const deptColor = window.DEPARTMENT_COLORS?.[task.department] || '#6b7280';
-
-                // 月次業務のCEチップ（勤務区分連動）
-                const assignedCEChips = [];
-                for (const assigned of normalizedAssigned) {
-                    let effectiveWorkType = assigned.workType || 'ME';
-                    
-                    // 勤務表連動で実際の勤務区分を取得
-                    if (window.publishedScheduleResolver) {
-                        try {
-                            const workStatus = await window.publishedScheduleResolver.getCEWorkStatusForDate(assigned.id, dateKey);
-                            if (workStatus && workStatus.workType) {
-                                effectiveWorkType = workStatus.workType;
-                            }
-                        } catch (statusError) {
-                            console.warn('⚠️ 月次業務勤務状態取得失敗:', assigned.name, statusError);
-                        }
-                    }
-                    
-                    assignedCEChips.push(`
-                        <span class="ce-chip worktype-${effectiveWorkType.toLowerCase()}" data-ce-id="${assigned.id}" title="${assigned.name}">
-                            ${assigned.name}
-                            ${window.userRole !== 'viewer' ? `<i class="fas fa-times remove-ce" title="配置解除"></i>` : ''}
-                        </span>
-                    `);
-                }
-
-                const assignedCEChipsHtml = assignedCEChips.join('');
-
-                const monthlyCard = document.createElement('div');
-                monthlyCard.className = 'monthly-task-card';
-                monthlyCard.style.background = `linear-gradient(135deg, ${deptColor}15, ${deptColor}05)`;
-                monthlyCard.style.borderColor = `${deptColor}40`;
-                monthlyCard.dataset.taskId = task.id;
-                monthlyCard.dataset.yearMonth = yearMonth;
-                monthlyCard.dataset.department = task.department;
-
-                // ドロップイベントリスナー
-                monthlyCard.addEventListener('dragover', (e) => this.handleMonthlyTaskDragOver(e));
-                monthlyCard.addEventListener('dragleave', (e) => this.handleMonthlyTaskDragLeave(e));
-                monthlyCard.addEventListener('drop', (e) => this.handleMonthlyTaskDrop(e));
-
-                monthlyCard.innerHTML = `
-                    <span class="monthly-task-badge">月次</span>
-                    <div class="flex justify-between items-center mb-2">
-                        <div class="font-semibold text-sm monthly-task-title">
-                            <i class="fas fa-calendar-alt mr-1" style="color: ${deptColor}"></i>${task.name}
-                        </div>
-                        <div class="text-xs text-gray-600">${assignedCount}/${needCount}名</div>
-                    </div>
-                    <div class="flex justify-between text-xs text-gray-600 mb-2">
-                        <span>目標: ${goalCount}件</span>
-                        <span>実施: ${cumulativeCount}件</span>
-                        <span>残: ${remaining}件</span>
-                    </div>
-                    <div class="monthly-progress-bar">
-                        <div class="monthly-progress-fill" style="width: ${progressPercent}%; background: ${deptColor}"></div>
-                    </div>
-                    <div class="assigned-ces">
-                        ${assignedCEChipsHtml}
-                    </div>
-                    <div class="monthly-input-section">
-                        <div class="monthly-input-row">
-                            <span class="font-semibold text-gray-700">実施記録:</span>
-                            <input type="date" class="monthly-date-input" value="${dateKey}">
-                        </div>
-                        <div class="monthly-input-row">
-                            <span>件数:</span>
-                            <input type="number" class="monthly-count-input" value="1" min="1" max="99">
-                            <div class="monthly-time-inputs">
-                                <input type="time" class="start-time-input" value="09:00">
-                                <span>〜</span>
-                                <input type="time" class="end-time-input" value="17:00">
-                            </div>
-                        </div>
-                        <div class="monthly-input-row">
-                            ${window.userRole !== 'viewer' ? `
-                            <button class="btn-unified btn-primary-unified btn-small save-monthly-record-btn">
-                                <i class="fas fa-plus mr-1"></i>記録追加
-                            </button>
-                            <button class="edit-monthly-btn text-blue-600 hover:text-blue-800 text-xs">
-                                <i class="fas fa-edit mr-1"></i>編集
-                            </button>
-                            ` : ''}
-                        </div>
-                    </div>
-                    <div class="text-xs text-gray-400 mt-1 italic">CEをドラッグ&ドロップで配置</div>
-                `;
-
-                // 実施記録保存のイベント
-                const saveRecordBtn = monthlyCard.querySelector('.save-monthly-record-btn');
-                if (saveRecordBtn) {
-                    saveRecordBtn.addEventListener('click', async (e) => {
-                        e.stopPropagation();
-                        
-                        const dateInput = monthlyCard.querySelector('.monthly-date-input');
-                        const countInput = monthlyCard.querySelector('.monthly-count-input');
-                        const startTimeInput = monthlyCard.querySelector('.start-time-input');
-                        const endTimeInput = monthlyCard.querySelector('.end-time-input');
-                        
-                        const recordData = {
-                            date: dateInput.value,
-                            count: parseInt(countInput.value) || 0,
-                            startTime: startTimeInput.value || null,
-                            endTime: endTimeInput.value || null
-                        };
-
-                        if (!recordData.date || recordData.count <= 0) {
-                            window.showMessage('実施日と件数を正しく入力してください', 'warning');
-                            return;
-                        }
-
-                        // 月範囲チェック
-                        if (recordData.date.substring(0, 7) !== yearMonth) {
-                            window.showMessage(`実施日は${yearMonth}内で入力してください`, 'warning');
-                            return;
-                        }
-
-                        await this.saveMonthlyActivityRecord(yearMonth, task.id, recordData);
-                        
-                        // 入力フィールドをリセット
-                        countInput.value = '1';
-                        startTimeInput.value = '09:00';
-                        endTimeInput.value = '17:00';
-                    });
-                }
-
-                // 編集ボタンのイベント（実施記録詳細表示機能付き）
-                const editBtn = monthlyCard.querySelector('.edit-monthly-btn');
-                if (editBtn) {
-                    editBtn.addEventListener('click', (e) => {
-                        e.stopPropagation();
-                        // 実施記録がある場合は詳細表示、ない場合は業務編集
-                        const hasRecords = Array.isArray(task.activityRecords) && task.activityRecords.length > 0;
-                        if (hasRecords) {
-                            this.openMonthlyActivityDetailsModal(yearMonth, task.id);
-                        } else {
-                            this.openEditMonthlyTaskModal(yearMonth, task.id, task);
-                        }
-                    });
-                }
-
-                // 配置解除ボタンのイベント
-                const removeButtons = monthlyCard.querySelectorAll('.remove-ce');
-                removeButtons.forEach(removeBtn => {
-                    removeBtn.addEventListener('click', async (e) => {
-                        e.stopPropagation();
-                        const chip = e.currentTarget.closest('.ce-chip');
-                        const ceId = chip?.dataset?.ceId;
-                        if (ceId) {
-                            await this.unassignCEFromMonthlyTask(yearMonth, task.id, ceId);
-                        }
-                    });
-                });
-
-                section.appendChild(monthlyCard);
-            }
-
-            console.log(`✅ ${yearMonth} の月次業務表示完了`);
+        // 後方互換性：activityRecordsが空の場合はactualCountを使用
+        if (activityRecords.length === 0 && typeof task.actualCount === 'number') {
+            cumulativeCount = task.actualCount;
         }
 
+        const goalCount = task.goalCount || 0;
+        const progressPercent = goalCount > 0 ? Math.min((cumulativeCount / goalCount) * 100, 100) : 0;
+        const remaining = Math.max(0, goalCount - cumulativeCount);
+
+        // 日別CE配置の取得（新機能）
+        const assignmentsByDate = task.assignmentsByDate || {};
+        const todayAssignedCEs = assignmentsByDate[dateKey] || [];
+
+        // 後方互換性：旧assignedCEsフィールドがある場合の表示対応
+        let normalizedAssigned = [];
+        if (todayAssignedCEs.length > 0) {
+            normalizedAssigned = todayAssignedCEs.map(entry => {
+                if (typeof entry === 'string') {
+                    const ce = window.ceManager?.ceList?.find(c => c.id === entry);
+                    return ce ? { 
+                        id: ce.id, 
+                        name: ce.iconName || ce.displayName || ce.name, 
+                        workType: ce.workType || 'ME' 
+                    } : { id: entry, name: entry, workType: 'ME' };
+                } else if (entry && typeof entry === 'object') {
+                    return { 
+                        id: entry.id, 
+                        name: entry.name, 
+                        workType: entry.workType || 'ME' 
+                    };
+                }
+                return null;
+            }).filter(Boolean);
+        } else if (Array.isArray(task.assignedCEs) && task.assignedCEs.length > 0) {
+            // 旧データとの後方互換性（表示のみ、保存は行わない）
+            normalizedAssigned = task.assignedCEs.map(entry => {
+                if (typeof entry === 'string') {
+                    const ce = window.ceManager?.ceList?.find(c => c.id === entry);
+                    return ce ? { 
+                        id: ce.id, 
+                        name: ce.iconName || ce.displayName || ce.name, 
+                        workType: ce.workType || 'ME' 
+                    } : { id: entry, name: entry, workType: 'ME' };
+                } else if (entry && typeof entry === 'object') {
+                    return { 
+                        id: entry.id, 
+                        name: entry.name, 
+                        workType: entry.workType || 'ME' 
+                    };
+                }
+                return null;
+            }).filter(Boolean);
+        }
+
+        const assignedCount = normalizedAssigned.length;
+        const needCount = task.requiredPeople || 0;
+        const deptColor = window.DEPARTMENT_COLORS?.[task.department] || '#6b7280';
+
+        // 今日配置されたCEチップ（勤務区分連動）
+        const assignedCEChips = [];
+        for (const assigned of normalizedAssigned) {
+            let effectiveWorkType = assigned.workType || 'ME';
+            
+            // 勤務表連動で実際の勤務区分を取得
+            if (window.publishedScheduleResolver) {
+                try {
+                    const workStatus = await window.publishedScheduleResolver.getCEWorkStatusForDate(assigned.id, dateKey);
+                    if (workStatus && workStatus.workType) {
+                        effectiveWorkType = workStatus.workType;
+                    }
+                } catch (statusError) {
+                    console.warn('⚠️ 月次業務勤務状態取得失敗:', assigned.name, statusError);
+                }
+            }
+            
+            assignedCEChips.push(`
+                <span class="ce-chip worktype-${effectiveWorkType.toLowerCase()}" data-ce-id="${assigned.id}" title="${assigned.name}">
+                    ${assigned.name}
+                    ${window.userRole !== 'viewer' ? `<i class="fas fa-times remove-ce" title="配置解除"></i>` : ''}
+                </span>
+            `);
+        }
+
+        const assignedCEChipsHtml = assignedCEChips.join('');
+
+        const monthlyCard = document.createElement('div');
+        monthlyCard.className = 'monthly-task-card';
+        monthlyCard.style.background = `linear-gradient(135deg, ${deptColor}15, ${deptColor}05)`;
+        monthlyCard.style.borderColor = `${deptColor}40`;
+        monthlyCard.dataset.taskId = task.id;
+        monthlyCard.dataset.yearMonth = yearMonth;
+        monthlyCard.dataset.department = task.department;
+        monthlyCard.dataset.dateKey = dateKey; // 日別管理用
+
+        // ドロップイベントリスナー
+        monthlyCard.addEventListener('dragover', (e) => this.handleMonthlyTaskDragOver(e));
+        monthlyCard.addEventListener('dragleave', (e) => this.handleMonthlyTaskDragLeave(e));
+        monthlyCard.addEventListener('drop', (e) => this.handleMonthlyTaskDrop(e));
+
+        monthlyCard.innerHTML = `
+            <span class="monthly-task-badge">月次</span>
+            <div class="flex justify-between items-center mb-2">
+                <div class="font-semibold text-sm monthly-task-title">
+                    <i class="fas fa-calendar-alt mr-1" style="color: ${deptColor}"></i>${task.name}
+                </div>
+                <div class="text-xs text-gray-600">${assignedCount}/${needCount}名 (${dateKey})</div>
+            </div>
+            <div class="flex justify-between text-xs text-gray-600 mb-2">
+                <span>目標: ${goalCount}件</span>
+                <span>実施: ${cumulativeCount}件</span>
+                <span>残: ${remaining}件</span>
+            </div>
+            <div class="monthly-progress-bar">
+                <div class="monthly-progress-fill" style="width: ${progressPercent}%; background: ${deptColor}"></div>
+            </div>
+            <div class="assigned-ces">
+                ${assignedCEChipsHtml}
+            </div>
+            <div class="monthly-input-section">
+                <div class="monthly-input-row">
+                    <span class="font-semibold text-gray-700">実施記録:</span>
+                    <input type="date" class="monthly-date-input" value="${dateKey}">
+                </div>
+                <div class="monthly-input-row">
+                    <span>件数:</span>
+                    <input type="number" class="monthly-count-input" value="1" min="1" max="99">
+                    <div class="monthly-time-inputs">
+                        <input type="time" class="start-time-input" value="09:00">
+                        <span>〜</span>
+                        <input type="time" class="end-time-input" value="17:00">
+                    </div>
+                </div>
+                <div class="monthly-input-row">
+                    ${window.userRole !== 'viewer' ? `
+                    <button class="btn-unified btn-primary-unified btn-small save-monthly-record-btn">
+                        <i class="fas fa-plus mr-1"></i>記録追加
+                    </button>
+                    <button class="edit-monthly-btn text-blue-600 hover:text-blue-800 text-xs">
+                        <i class="fas fa-edit mr-1"></i>編集
+                    </button>
+                    ` : ''}
+                </div>
+            </div>
+            <div class="text-xs text-gray-400 mt-1 italic">CEをドラッグ&ドロップで配置（${dateKey}のみ有効）</div>
+        `;
+
+        // 実施記録保存のイベント
+        const saveRecordBtn = monthlyCard.querySelector('.save-monthly-record-btn');
+        if (saveRecordBtn) {
+            saveRecordBtn.addEventListener('click', async (e) => {
+                e.stopPropagation();
+                
+                const dateInput = monthlyCard.querySelector('.monthly-date-input');
+                const countInput = monthlyCard.querySelector('.monthly-count-input');
+                const startTimeInput = monthlyCard.querySelector('.start-time-input');
+                const endTimeInput = monthlyCard.querySelector('.end-time-input');
+                
+                const recordData = {
+                    date: dateInput.value,
+                    count: parseInt(countInput.value) || 0,
+                    startTime: startTimeInput.value || null,
+                    endTime: endTimeInput.value || null
+                };
+
+                if (!recordData.date || recordData.count <= 0) {
+                    window.showMessage('実施日と件数を正しく入力してください', 'warning');
+                    return;
+                }
+
+                if (recordData.date.substring(0, 7) !== yearMonth) {
+                    window.showMessage(`実施日は${yearMonth}内で入力してください`, 'warning');
+                    return;
+                }
+
+                await this.saveMonthlyActivityRecord(yearMonth, task.id, recordData);
+                
+                countInput.value = '1';
+                startTimeInput.value = '09:00';
+                endTimeInput.value = '17:00';
+            });
+        }
+
+        // 編集ボタンのイベント
+        const editBtn = monthlyCard.querySelector('.edit-monthly-btn');
+        if (editBtn) {
+            editBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const hasRecords = Array.isArray(task.activityRecords) && task.activityRecords.length > 0;
+                if (hasRecords) {
+                    this.openMonthlyActivityDetailsModal(yearMonth, task.id);
+                } else {
+                    this.openEditMonthlyTaskModal(yearMonth, task.id, task);
+                }
+            });
+        }
+
+        // 配置解除ボタンのイベント（日別対応）
+        const removeButtons = monthlyCard.querySelectorAll('.remove-ce');
+        removeButtons.forEach(removeBtn => {
+            removeBtn.addEventListener('click', async (e) => {
+                e.stopPropagation();
+                const chip = e.currentTarget.closest('.ce-chip');
+                const ceId = chip?.dataset?.ceId;
+                if (ceId) {
+                    await this.unassignCEFromMonthlyTaskDaily(yearMonth, task.id, ceId, dateKey);
+                }
+            });
+        });
+
+        section.appendChild(monthlyCard);
+    }
+
+    console.log(`✅ ${yearMonth} の月次業務表示完了（日別CE配置版）`);
+}
+
+// 月次業務への日別CE配置（新機能）
+async assignCEToMonthlyTaskDaily(yearMonth, taskId, ceData, dateKey) {
+    try {
+        const taskRef = window.database.ref(`${window.DATA_ROOT}/monthlyTasks/${yearMonth}/${taskId}`);
+        const snapshot = await taskRef.once('value');
+        const taskData = snapshot.val();
+
+        if (!taskData) {
+            window.showMessage('月次業務データが見つかりません', 'error');
+            return;
+        }
+
+        // 日別配置データの取得
+        const assignmentsByDate = taskData.assignmentsByDate || {};
+        const todayAssigned = Array.isArray(assignmentsByDate[dateKey]) ? assignmentsByDate[dateKey] : [];
+        
+        // 重複チェック
+        const exists = todayAssigned.some(assignment => {
+            const assignmentCeId = typeof assignment === 'string' ? assignment : assignment.id;
+            return assignmentCeId === ceData.ceId;
+        });
+        
+        if (exists) {
+            window.showMessage(`${ceData.ceName}は${dateKey}に既に配置済みです`, 'warning');
+            return;
+        }
+
+        // 勤務状態チェック
+        if (window.publishedScheduleResolver) {
+            try {
+                const workStatus = await window.publishedScheduleResolver.getCEWorkStatusForDate(ceData.ceId, dateKey);
+                if (workStatus && workStatus.status && !['A', 'A1', 'B', '非'].includes(workStatus.status)) {
+                    const proceed = confirm(`${ceData.ceName}は${workStatus.status}ですが、配置しますか？`);
+                    if (!proceed) {
+                        return;
+                    }
+                }
+            } catch (statusError) {
+                console.warn('⚠️ 勤務状態チェックスキップ:', statusError);
+            }
+        }
+
+        // 日別配置エントリの作成
+        const ceEntry = {
+            id: ceData.ceId,
+            name: ceData.ceName,
+            workType: ceData.workType || 'ME',
+            assignedAt: firebase.database.ServerValue.TIMESTAMP,
+            assignedBy: window.currentUserData?.displayName || 'user'
+        };
+
+        todayAssigned.push(ceEntry);
+        assignmentsByDate[dateKey] = todayAssigned;
+
+        // データベース更新
+        await taskRef.update({
+            assignmentsByDate: assignmentsByDate,
+            updatedAt: firebase.database.ServerValue.TIMESTAMP,
+            updatedBy: window.currentUserData?.displayName || 'user'
+        });
+
+        // ローカルデータ更新
+        this.monthlyTasks[yearMonth][taskId].assignmentsByDate = assignmentsByDate;
+
+        window.showMessage(`${ceData.ceName}を${dateKey}の月次業務に配置しました`, 'success');
+        console.log('✅ 月次業務日別CE配置完了:', ceData.ceName, dateKey);
+
+        // 監査ログ記録
+        try {
+            await window.database.ref(`${window.DATA_ROOT}/auditLogs`).push({
+                action: 'ce-assign',
+                details: { 
+                    ceName: ceData.ceName, 
+                    taskName: taskData.name,
+                    date: dateKey,
+                    description: `${dateKey}の月次業務「${taskData.name}」に${ceData.ceName}を配置`
+                },
+                uid: window.currentUserData?.uid || null,
+                username: window.currentUserData?.username || 'unknown',
+                displayName: window.currentUserData?.displayName || 'unknown',
+                timestamp: firebase.database.ServerValue.TIMESTAMP
+            });
+        } catch (logError) {
+            console.warn('監査ログ記録失敗:', logError);
+        }
+
+        // 表示を更新
+        await this.renderMonthlyTasks();
+        this.updateDailySummary().catch(console.error);
+
+    } catch (error) {
+        console.error('❌ 月次業務日別CE配置エラー:', error);
+        window.showMessage('月次業務CE配置処理でエラーが発生しました', 'error');
+    }
+}
+
+// 月次業務からの日別CE配置解除（新機能）
+async unassignCEFromMonthlyTaskDaily(yearMonth, taskId, ceId, dateKey) {
+    if (!confirm(`${dateKey}のこのCE配置を解除しますか？`)) return;
+
+    try {
+        const taskRef = window.database.ref(`${window.DATA_ROOT}/monthlyTasks/${yearMonth}/${taskId}`);
+        const snapshot = await taskRef.once('value');
+        const taskData = snapshot.val();
+
+        if (!taskData) {
+            window.showMessage('月次業務データが見つかりません', 'error');
+            return;
+        }
+
+        const assignmentsByDate = taskData.assignmentsByDate || {};
+        const todayAssigned = Array.isArray(assignmentsByDate[dateKey]) ? assignmentsByDate[dateKey] : [];
+        
+        const updatedAssigned = todayAssigned.filter(assignment => {
+            const assignmentCeId = typeof assignment === 'string' ? assignment : assignment.id;
+            return assignmentCeId !== ceId;
+        });
+
+        if (updatedAssigned.length !== todayAssigned.length) {
+            if (updatedAssigned.length === 0) {
+                // 配置が0件になった場合はプロパティを削除
+                delete assignmentsByDate[dateKey];
+            } else {
+                assignmentsByDate[dateKey] = updatedAssigned;
+            }
+
+            await taskRef.update({
+                assignmentsByDate: assignmentsByDate,
+                updatedAt: firebase.database.ServerValue.TIMESTAMP,
+                updatedBy: window.currentUserData?.displayName || 'user'
+            });
+
+            // ローカルデータ更新
+            this.monthlyTasks[yearMonth][taskId].assignmentsByDate = assignmentsByDate;
+
+            window.showMessage(`${dateKey}のCE配置を解除しました`, 'success');
+            await this.renderMonthlyTasks();
+            this.updateDailySummary().catch(console.error);
+        }
+
+    } catch (error) {
+        console.error('❌ 月次業務日別CE配置解除エラー:', error);
+        window.showMessage('CE配置解除に失敗しました', 'error');
+    }
+}
+        
                 // 月次業務実施記録の保存（日付連携・累積対応）
         async saveMonthlyActivityRecord(yearMonth, taskId, recordData) {
             try {
@@ -2681,21 +2846,22 @@
             try {
                 const taskRef = window.database.ref(`${window.DATA_ROOT}/monthlyTasks/${yearMonth}`).push();
 
-                const taskData = {
-                    id: taskRef.key,
-                    name: name,
-                    department: department,
-                    yearMonth: yearMonth,
-                    goalCount: goalCount,
-                    actualCount: 0,
-                    requiredPeople: requiredPeople,
-                    description: description || null,
-                    assignedCEs: [],
-                    createdAt: firebase.database.ServerValue.TIMESTAMP,
-                    createdBy: window.currentUserData?.displayName || 'user',
-                    type: 'monthly',
-                    status: 'active'
-                };
+const taskData = {
+    id: taskRef.key,
+    name: name,
+    department: department,
+    yearMonth: yearMonth,
+    goalCount: goalCount,
+    actualCount: 0,
+    requiredPeople: requiredPeople,
+    description: description || null,
+    assignedCEs: [], // 後方互換性のため保持
+    assignmentsByDate: {}, // 新しい日別配置管理
+    createdAt: firebase.database.ServerValue.TIMESTAMP,
+    createdBy: window.currentUserData?.displayName || 'user',
+    type: 'monthly',
+    status: 'active'
+};
 
                 console.log('📅 月次業務データ作成:', taskData);
 
@@ -2912,60 +3078,58 @@
             }
         }
 
-        async handleMonthlyTaskDrop(e) {
-            e.preventDefault();
-            e.currentTarget.classList.remove('drag-over');
+async handleMonthlyTaskDrop(e) {
+    e.preventDefault();
+    e.currentTarget.classList.remove('drag-over');
 
-            if (window.userRole === 'viewer') {
-                window.showMessage('編集権限がありません', 'warning');
-                return;
-            }
+    if (window.userRole === 'viewer') {
+        window.showMessage('編集権限がありません', 'warning');
+        return;
+    }
 
-            try {
-                let ceDataStr = e.dataTransfer.getData('application/json') || 
-                                e.dataTransfer.getData('text/plain');
-                
-                if (!ceDataStr) {
-                    console.warn('⚠️ 月次業務ドラッグデータが見つかりません');
-                    return;
-                }
-
-                let ceData;
-                try {
-                    ceData = JSON.parse(ceDataStr);
-                } catch (parseError) {
-                    console.error('❌ 月次業務CEデータのパースに失敗:', parseError);
-                    return;
-                }
-
-                const taskId = e.currentTarget.dataset.taskId;
-                const yearMonth = e.currentTarget.dataset.yearMonth;
-
-                if (!ceData.ceId || !ceData.ceName || !taskId || !yearMonth) {
-                    console.error('❌ 月次業務必須データが不足:', { ceData, taskId, yearMonth });
-                    window.showMessage('データが不完全です', 'error');
-                    return;
-                }
-
-                console.log('📥 V1準拠月次業務ドロップ処理:', { ceData, taskId, yearMonth });
-                await this.assignCEToMonthlyTask(yearMonth, taskId, ceData);
-
-            } catch (error) {
-                console.error('❌ 月次業務ドロップ処理エラー:', error);
-                window.showMessage(`月次業務CE配置に失敗しました: ${error.message}`, 'error');
-            }
+    try {
+        let ceDataStr = e.dataTransfer.getData('application/json') || 
+                        e.dataTransfer.getData('text/plain');
+        
+        if (!ceDataStr) {
+            console.warn('⚠️ 月次業務ドラッグデータが見つかりません');
+            return;
         }
 
-        async assignCEToMonthlyTask(yearMonth, taskId, ceData) {
-            try {
-                const taskRef = window.database.ref(`${window.DATA_ROOT}/monthlyTasks/${yearMonth}/${taskId}`);
-                const snapshot = await taskRef.once('value');
-                const taskData = snapshot.val();
+        let ceData;
+        try {
+            ceData = JSON.parse(ceDataStr);
+        } catch (parseError) {
+            console.error('❌ 月次業務CEデータのパースに失敗:', parseError);
+            return;
+        }
 
-                if (!taskData) {
-                    window.showMessage('月次業務データが見つかりません', 'error');
-                    return;
-                }
+        const taskId = e.currentTarget.dataset.taskId;
+        const yearMonth = e.currentTarget.dataset.yearMonth;
+        const dateKey = e.currentTarget.dataset.dateKey; // 日別管理用
+
+        if (!ceData.ceId || !ceData.ceName || !taskId || !yearMonth || !dateKey) {
+            console.error('❌ 月次業務必須データが不足:', { ceData, taskId, yearMonth, dateKey });
+            window.showMessage('データが不完全です', 'error');
+            return;
+        }
+
+        console.log('📥 月次業務日別ドロップ処理:', { ceData, taskId, yearMonth, dateKey });
+        await this.assignCEToMonthlyTaskDaily(yearMonth, taskId, ceData, dateKey);
+
+    } catch (error) {
+        console.error('❌ 月次業務ドロップ処理エラー:', error);
+        window.showMessage(`月次業務CE配置に失敗しました: ${error.message}`, 'error');
+    }
+}
+
+// 旧版：月単位CE配置（日別配置機能により非推奨）
+async assignCEToMonthlyTask(yearMonth, taskId, ceData) {
+    console.warn('⚠️ 旧版月次業務CE配置が呼ばれました。日別配置機能を使用してください。');
+    // 日別配置機能へのリダイレクト
+    const dateKey = this.formatDate(this.selectedDate);
+    return this.assignCEToMonthlyTaskDaily(yearMonth, taskId, ceData, dateKey);
+}
 
                 const currentAssigned = Array.isArray(taskData.assignedCEs) ? taskData.assignedCEs : [];
                 
@@ -3018,41 +3182,13 @@
             }
         }
 
-        async unassignCEFromMonthlyTask(yearMonth, taskId, ceId) {
-            if (!confirm('このCEの配置を解除しますか？')) return;
-
-            try {
-                const taskRef = window.database.ref(`${window.DATA_ROOT}/monthlyTasks/${yearMonth}/${taskId}`);
-                const snapshot = await taskRef.once('value');
-                const taskData = snapshot.val();
-
-                if (!taskData) {
-                    window.showMessage('月次業務データが見つかりません', 'error');
-                    return;
-                }
-
-                const currentAssigned = Array.isArray(taskData.assignedCEs) ? taskData.assignedCEs : [];
-                const updatedAssigned = currentAssigned.filter(x => 
-                    (typeof x === 'string' ? x !== ceId : x?.id !== ceId)
-                );
-
-                if (updatedAssigned.length !== currentAssigned.length) {
-                    await taskRef.update({
-                        assignedCEs: updatedAssigned,
-                        updatedAt: firebase.database.ServerValue.TIMESTAMP,
-                        updatedBy: window.currentUserData?.displayName || 'user'
-                    });
-
-                    window.showMessage('CEの配置を解除しました', 'success');
-                    await this.renderMonthlyTasks();  // await を追加
-                    this.updateDailySummary().catch(console.error);
-                }
-
-            } catch (error) {
-                console.error('❌ 月次業務CE配置解除エラー:', error);
-                window.showMessage('CE配置解除に失敗しました', 'error');
-            }
-        }
+// 旧版：月単位CE配置解除（日別配置機能により非推奨）
+async unassignCEFromMonthlyTask(yearMonth, taskId, ceId) {
+    console.warn('⚠️ 旧版月次業務CE配置解除が呼ばれました。日別配置機能を使用してください。');
+    // 日別配置機能へのリダイレクト
+    const dateKey = this.formatDate(this.selectedDate);
+    return this.unassignCEFromMonthlyTaskDaily(yearMonth, taskId, ceId, dateKey);
+}
 
         enableCEDragging() {
             const ceItems = document.querySelectorAll('.ce-item');
@@ -4300,18 +4436,6 @@ async addMonthlyTaskLegacy(modal) {
                     this.openBulkAddEventModal();
                 };
             }
-
-const monthlyBtn = document.getElementById('addMonthlyTaskBtn');
-if (monthlyBtn) {
-    monthlyBtn.onclick = () => {
-        if (window.userRole === 'viewer') {
-            window.showMessage('編集権限がありません', 'warning');
-            return;
-        }
-        // 部門選択なしで汎用モーダルを開く
-        this.openMonthlyTaskModal();
-    };
-}
 
             this.renderDailySchedule();
         }
