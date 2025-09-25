@@ -1044,18 +1044,32 @@
             window.location.href = 'index.html';
         }
 
-        showDashboard() {
-            const loadingEl = document.getElementById('loading');
-            const mainEl = document.getElementById('mainInterface');
-            if (loadingEl) loadingEl.style.display = 'none';
-            if (mainEl) mainEl.style.display = 'block';
-            
-            this.updateUserDisplay();
-            this.setupNavigation();
-            this.setupSidebar();
-            this.setupDailySchedule();
-            this.initializeV2System();
+showDashboard() {
+    const loadingEl = document.getElementById('loading');
+    const mainEl = document.getElementById('mainInterface');
+    if (loadingEl) loadingEl.style.display = 'none';
+    if (mainEl) mainEl.style.display = 'block';
+    
+    this.updateUserDisplay();
+    this.setupNavigation();
+    this.setupSidebar();
+    this.setupDailySchedule();
+    this.initializeV2System();
+
+    // リアルタイム同期を確実に開始
+setTimeout(() => {
+    if (typeof this.setupRealtimeUpdates === 'function') {
+        this.setupRealtimeUpdates();
+    }
+}, 1000);
+
+    // リアルタイム同期を確実に開始
+    setTimeout(() => {
+        if (typeof this.setupRealtimeUpdates === 'function') {
+            this.setupRealtimeUpdates();
         }
+    }, 1000);
+}
 
         updateUserDisplay() {
             const userData = window.currentUserData;
@@ -1148,6 +1162,7 @@
                 datePicker.onchange = (e) => {
                     this.selectedDate = new Date(e.target.value + 'T00:00:00');
                     this.renderDailySchedule();
+                    this.setupRealtimeUpdates();
                 };
             }
 
@@ -1157,17 +1172,20 @@
             if (prev) prev.onclick = () => { 
                 this.selectedDate.setDate(this.selectedDate.getDate() - 1); 
                 if (datePicker) datePicker.value = this.formatDate(this.selectedDate); 
-                this.renderDailySchedule(); 
+                this.renderDailySchedule();
+                this.setupRealtimeUpdates();
             };
             if (next) next.onclick = () => { 
                 this.selectedDate.setDate(this.selectedDate.getDate() + 1); 
                 if (datePicker) datePicker.value = this.formatDate(this.selectedDate); 
-                this.renderDailySchedule(); 
+                this.renderDailySchedule();
+                this.setupRealtimeUpdates();
             };
             if (today) today.onclick = () => { 
                 this.selectedDate = new Date(); 
                 if (datePicker) datePicker.value = this.formatDate(this.selectedDate); 
-                this.renderDailySchedule(); 
+                this.renderDailySchedule();
+                this.setupRealtimeUpdates();
             };
 
             this.renderDailySchedule();
@@ -1287,6 +1305,144 @@
             }
         }
 
+        // Firebase接続確立待機ヘルパー
+async waitForFirebaseConnection(timeoutMs = 15000) {
+    if (window.isFirebaseReady) {
+        return true;
+    }
+
+    console.log('⏳ Firebase Realtime Database接続を待機中...');
+    return new Promise((resolve) => {
+        let attempts = 0;
+        const maxAttempts = timeoutMs / 200;
+        
+        const checkConnection = () => {
+            attempts++;
+            if (window.isFirebaseReady) {
+                console.log('✅ Firebase接続確立を確認しました。');
+                resolve(true);
+            } else if (attempts >= maxAttempts) {
+                console.warn('⚠️ Firebase接続タイムアウト。処理を続行します。');
+                resolve(false);
+            } else {
+                setTimeout(checkConnection, 200);
+            }
+        };
+        
+        checkConnection();
+    });
+}
+
+        // リアルタイム同期設定メソッド
+setupRealtimeUpdates() {
+    console.log('🔄 リアルタイム同期設定開始');
+    
+    const updateEvents = async () => {
+        try {
+            // Firebase接続確立を待機
+            if (typeof this.waitForFirebaseConnection === 'function') {
+                const connected = await this.waitForFirebaseConnection();
+                if (!connected) {
+                    console.warn('⚠️ Firebase接続タイムアウト。リアルタイム更新をスキップします。');
+                    return;
+                }
+            }
+            
+            if (!window.database || !window.DATA_ROOT) {
+                console.warn('⚠️ Firebase Database未初期化');
+                return;
+            }
+
+            const dateKey = this.formatDate(this.selectedDate);
+            console.log('📅 リアルタイム同期対象日付:', dateKey);
+            
+            // 既存のイベントリスナーをクリア
+            if (this.eventsRef && this.eventsCallback) {
+                try {
+                    this.eventsRef.off('value', this.eventsCallback);
+                } catch (e) {
+                    console.warn('既存イベントリスナー削除エラー:', e);
+                }
+            }
+            
+            // 日別イベントのリアルタイム監視
+            this.eventsRef = window.database.ref(`${window.DATA_ROOT}/events/byDate/${dateKey}`);
+            this.eventsCallback = (snapshot) => {
+                console.log('🔄 イベントデータ更新検知:', dateKey);
+                setTimeout(() => {
+                    if (typeof this.loadAndRenderEventsForSelectedDate === 'function') {
+                        this.loadAndRenderEventsForSelectedDate();
+                    } else {
+                        console.warn('loadAndRenderEventsForSelectedDate メソッドが見つかりません');
+                        // フォールバック: 画面全体を再描画
+                        this.renderDailySchedule();
+                    }
+                }, 300);
+            };
+            
+            this.eventsRef.on('value', this.eventsCallback, (error) => {
+                console.error('イベントデータ監視エラー:', error);
+            });
+
+            // 月次業務のリアルタイム監視
+            const yearMonth = dateKey.substring(0, 7);
+            
+            if (this.monthlyRef && this.monthlyCallback) {
+                try {
+                    this.monthlyRef.off('value', this.monthlyCallback);
+                } catch (e) {
+                    console.warn('既存月次リスナー削除エラー:', e);
+                }
+            }
+            
+            this.monthlyRef = window.database.ref(`${window.DATA_ROOT}/monthlyTasks/${yearMonth}`);
+            this.monthlyCallback = async (snapshot) => {
+                console.log('🔄 月次業務データ更新検知:', yearMonth);
+                const data = snapshot.val() || {};
+                this.monthlyTasks[yearMonth] = data;
+                
+                // 月次業務の再描画
+                if (typeof this.renderMonthlyTasks === 'function') {
+                    try {
+                        await this.renderMonthlyTasks();
+                    } catch (e) {
+                        console.error('月次業務再描画エラー:', e);
+                    }
+                }
+                
+                // 集計の更新
+                if (typeof this.updateDailySummary === 'function') {
+                    this.updateDailySummary().catch(console.error);
+                }
+            };
+            
+            this.monthlyRef.on('value', this.monthlyCallback, (error) => {
+                console.error('月次業務データ監視エラー:', error);
+            });
+            
+            console.log('✅ リアルタイム同期設定完了');
+            
+        } catch (error) {
+            console.error('❌ リアルタイム同期設定エラー:', error);
+        }
+    };
+    
+    // 初回実行
+    updateEvents();
+    
+    // renderDailyScheduleメソッドにフック追加
+    if (typeof this.renderDailySchedule === 'function') {
+        const originalRenderSchedule = this.renderDailySchedule.bind(this);
+        this.renderDailySchedule = function() {
+            originalRenderSchedule();
+            setTimeout(() => {
+                updateEvents();
+            }, 100);
+        };
+        console.log('✅ renderDailyScheduleフック設定完了');
+    }
+}
+        
         formatDate(date) {
             return date.toISOString().slice(0, 10);
         }
