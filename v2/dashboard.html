@@ -3130,56 +3130,6 @@ async assignCEToMonthlyTask(yearMonth, taskId, ceData) {
     const dateKey = this.formatDate(this.selectedDate);
     return this.assignCEToMonthlyTaskDaily(yearMonth, taskId, ceData, dateKey);
 }
-
-                const currentAssigned = Array.isArray(taskData.assignedCEs) ? taskData.assignedCEs : [];
-                
-                // 重複チェック
-                const exists = currentAssigned.some(x => 
-                    (typeof x === 'string' ? x === ceData.ceId : x?.id === ceData.ceId)
-                );
-                
-                if (exists) {
-                    window.showMessage(`${ceData.ceName}は既に配置済みです`, 'warning');
-                    return;
-                }
-
-                // オブジェクト形式でCE情報を保存
-                const ceEntry = {
-                    id: ceData.ceId,
-                    name: ceData.ceName,
-                    workType: ceData.workType || 'ME'
-                };
-
-                // 既存のID文字列をオブジェクト形式に変換（後方互換性）
-                const upgradedAssigned = currentAssigned.map(x => {
-                    if (typeof x === 'string') {
-                        const ce = window.ceManager?.ceList?.find(c => c.id === x);
-                        return {
-                            id: x,
-                            name: ce?.iconName || ce?.displayName || x,
-                            workType: ce?.workType || 'ME'
-                        };
-                    }
-                    return x;
-                });
-
-                upgradedAssigned.push(ceEntry);
-
-                await taskRef.update({
-                    assignedCEs: upgradedAssigned,
-                    updatedAt: firebase.database.ServerValue.TIMESTAMP,
-                    updatedBy: window.currentUserData?.displayName || 'user'
-                });
-
-                window.showMessage(`${ceData.ceName}を月次業務に配置しました`, 'success');
-                console.log('✅ 月次業務CE配置完了:', ceData.ceName);
-                await this.renderMonthlyTasks();  // await を追加、重複削除
-                this.updateDailySummary().catch(console.error);
-
-            } catch (error) {
-                console.error('❌ 月次業務CE配置エラー:', error);
-                window.showMessage('月次業務CE配置処理でエラーが発生しました', 'error');
-            }
         }
 
 // 旧版：月単位CE配置解除（日別配置機能により非推奨）
