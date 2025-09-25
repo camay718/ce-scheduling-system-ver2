@@ -979,9 +979,11 @@
             this.selectedDate = new Date();
             this.monthlyTasks = {};
             this.eventsRef = null;
-            this.eventsCallback = null;
-            this.monthlyRef = null;
-            this.monthlyCallback = null;
+this.eventsCallback = null;
+this.monthlyRef = null;
+this.monthlyCallback = null;
+this.currentRealtimeDateKey = null;
+this.isSettingUpRealtime = false;
         }
 
         async init() {
@@ -1055,13 +1057,7 @@ showDashboard() {
     this.setupSidebar();
     this.setupDailySchedule();
     this.initializeV2System();
-
-    // リアルタイム同期を確実に開始
-setTimeout(() => {
-    if (typeof this.setupRealtimeUpdates === 'function') {
-        this.setupRealtimeUpdates();
-    }
-}, 1000);
+    this.setupCleanupHandlers();
 
     // リアルタイム同期を確実に開始
     setTimeout(() => {
@@ -1333,115 +1329,143 @@ async waitForFirebaseConnection(timeoutMs = 15000) {
     });
 }
 
-        // リアルタイム同期設定メソッド
+// リアルタイム同期設定メソッド（改良版）
 setupRealtimeUpdates() {
     console.log('🔄 リアルタイム同期設定開始');
     
-    const updateEvents = async () => {
-        try {
-            // Firebase接続確立を待機
-            if (typeof this.waitForFirebaseConnection === 'function') {
-                const connected = await this.waitForFirebaseConnection();
-                if (!connected) {
-                    console.warn('⚠️ Firebase接続タイムアウト。リアルタイム更新をスキップします。');
-                    return;
-                }
-            }
-            
-            if (!window.database || !window.DATA_ROOT) {
-                console.warn('⚠️ Firebase Database未初期化');
-                return;
-            }
-
-            const dateKey = this.formatDate(this.selectedDate);
-            console.log('📅 リアルタイム同期対象日付:', dateKey);
-            
-            // 既存のイベントリスナーをクリア
-            if (this.eventsRef && this.eventsCallback) {
-                try {
-                    this.eventsRef.off('value', this.eventsCallback);
-                } catch (e) {
-                    console.warn('既存イベントリスナー削除エラー:', e);
-                }
-            }
-            
-            // 日別イベントのリアルタイム監視
-            this.eventsRef = window.database.ref(`${window.DATA_ROOT}/events/byDate/${dateKey}`);
-            this.eventsCallback = (snapshot) => {
-                console.log('🔄 イベントデータ更新検知:', dateKey);
-                setTimeout(() => {
-                    if (typeof this.loadAndRenderEventsForSelectedDate === 'function') {
-                        this.loadAndRenderEventsForSelectedDate();
-                    } else {
-                        console.warn('loadAndRenderEventsForSelectedDate メソッドが見つかりません');
-                        // フォールバック: 画面全体を再描画
-                        this.renderDailySchedule();
-                    }
-                }, 300);
-            };
-            
-            this.eventsRef.on('value', this.eventsCallback, (error) => {
-                console.error('イベントデータ監視エラー:', error);
-            });
-
-            // 月次業務のリアルタイム監視
-            const yearMonth = dateKey.substring(0, 7);
-            
-            if (this.monthlyRef && this.monthlyCallback) {
-                try {
-                    this.monthlyRef.off('value', this.monthlyCallback);
-                } catch (e) {
-                    console.warn('既存月次リスナー削除エラー:', e);
-                }
-            }
-            
-            this.monthlyRef = window.database.ref(`${window.DATA_ROOT}/monthlyTasks/${yearMonth}`);
-            this.monthlyCallback = async (snapshot) => {
-                console.log('🔄 月次業務データ更新検知:', yearMonth);
-                const data = snapshot.val() || {};
-                this.monthlyTasks[yearMonth] = data;
-                
-                // 月次業務の再描画
-                if (typeof this.renderMonthlyTasks === 'function') {
-                    try {
-                        await this.renderMonthlyTasks();
-                    } catch (e) {
-                        console.error('月次業務再描画エラー:', e);
-                    }
-                }
-                
-                // 集計の更新
-                if (typeof this.updateDailySummary === 'function') {
-                    this.updateDailySummary().catch(console.error);
-                }
-            };
-            
-            this.monthlyRef.on('value', this.monthlyCallback, (error) => {
-                console.error('月次業務データ監視エラー:', error);
-            });
-            
-            console.log('✅ リアルタイム同期設定完了');
-            
-        } catch (error) {
-            console.error('❌ リアルタイム同期設定エラー:', error);
+    // 重複実行防止
+    if (this.isSettingUpRealtime) {
+        console.log('⏳ 既に設定中のためスキップ');
+        return;
+    }
+    this.isSettingUpRealtime = true;
+    
+    try {
+        const dateKey = this.formatDate(this.selectedDate);
+        const yearMonth = dateKey.substring(0, 7);
+        
+        // 日付が変わらない場合はスキップ
+        if (this.currentRealtimeDateKey === dateKey) {
+            console.log('ℹ️ 同じ日付のためリスナー再設定をスキップ:', dateKey);
+            return;
         }
-    };
-    
-    // 初回実行
-    updateEvents();
-    
-    // renderDailyScheduleメソッドにフック追加
-    if (typeof this.renderDailySchedule === 'function') {
-        const originalRenderSchedule = this.renderDailySchedule.bind(this);
-        this.renderDailySchedule = function() {
-            originalRenderSchedule();
-            setTimeout(() => {
-                updateEvents();
-            }, 100);
-        };
-        console.log('✅ renderDailyScheduleフック設定完了');
+        
+        console.log('📅 リアルタイム同期対象:', { dateKey, yearMonth });
+        
+        // 既存リスナーのクリーンアップ
+        this.cleanupRealtimeListeners();
+        
+        if (!window.database || !window.DATA_ROOT) {
+            console.warn('⚠️ Firebase Database未初期化');
+            return;
+        }
+        
+        // 日別イベントのリアルタイム監視（デバウンス付き）
+        this.eventsRef = window.database.ref(`${window.DATA_ROOT}/events/byDate/${dateKey}`);
+        this.eventsCallback = this.debounceCallback((snapshot) => {
+            console.log('🔄 イベントデータ更新検知:', dateKey);
+            this.handleRealtimeEventUpdate();
+        }, 300);
+        
+        this.eventsRef.on('value', this.eventsCallback, (error) => {
+            console.error('イベントデータ監視エラー:', error);
+        });
+
+        // 月次業務のリアルタイム監視（デバウンス付き）
+        this.monthlyRef = window.database.ref(`${window.DATA_ROOT}/monthlyTasks/${yearMonth}`);
+        this.monthlyCallback = this.debounceCallback(async (snapshot) => {
+            console.log('🔄 月次業務データ更新検知:', yearMonth);
+            const data = snapshot.val() || {};
+            this.monthlyTasks[yearMonth] = data;
+            this.handleRealtimeMonthlyUpdate();
+        }, 300);
+        
+        this.monthlyRef.on('value', this.monthlyCallback, (error) => {
+            console.error('月次業務データ監視エラー:', error);
+        });
+        
+        // 現在の日付キーを記録
+        this.currentRealtimeDateKey = dateKey;
+        console.log('✅ リアルタイム同期設定完了');
+        
+    } catch (error) {
+        console.error('❌ リアルタイム同期設定エラー:', error);
+    } finally {
+        this.isSettingUpRealtime = false;
     }
 }
+
+// リアルタイムリスナーのクリーンアップ
+cleanupRealtimeListeners() {
+    if (this.eventsRef && this.eventsCallback) {
+        try {
+            this.eventsRef.off('value', this.eventsCallback);
+            console.log('📤 イベントリスナー削除完了');
+        } catch (e) {
+            console.warn('イベントリスナー削除エラー:', e);
+        }
+    }
+    
+    if (this.monthlyRef && this.monthlyCallback) {
+        try {
+            this.monthlyRef.off('value', this.monthlyCallback);
+            console.log('📤 月次リスナー削除完了');
+        } catch (e) {
+            console.warn('月次リスナー削除エラー:', e);
+        }
+    }
+    
+    this.eventsRef = null;
+    this.eventsCallback = null;
+    this.monthlyRef = null;
+    this.monthlyCallback = null;
+}
+
+// デバウンス機能付きコールバック生成
+debounceCallback(func, wait) {
+    let timeout;
+    return (...args) => {
+        clearTimeout(timeout);
+        timeout = setTimeout(() => func.apply(this, args), wait);
+    };
+}
+
+// リアルタイムイベント更新処理（循環参照回避）
+handleRealtimeEventUpdate() {
+    try {
+        // setupRealtimeUpdates()は呼び出さない
+        if (typeof this.loadAndRenderEventsForSelectedDate === 'function') {
+            this.loadAndRenderEventsForSelectedDate();
+        } else if (window.eventManager && typeof window.eventManager.loadEventsForDate === 'function') {
+            window.eventManager.loadEventsForDate(this.selectedDate);
+        } else {
+            // フォールバック: renderDailySchedule()を呼ぶが、setupRealtimeUpdates()は呼ばない
+            console.log('フォールバック: 画面再描画のみ実行');
+            this.renderDailySchedule();
+        }
+        
+        if (typeof this.updateDailySummary === 'function') {
+            this.updateDailySummary().catch(console.error);
+        }
+    } catch (error) {
+        console.error('リアルタイムイベント更新エラー:', error);
+    }
+}
+
+// リアルタイム月次業務更新処理
+handleRealtimeMonthlyUpdate() {
+    try {
+        if (typeof this.renderMonthlyTasks === 'function') {
+            this.renderMonthlyTasks().catch(console.error);
+        }
+        
+        if (typeof this.updateDailySummary === 'function') {
+            this.updateDailySummary().catch(console.error);
+        }
+    } catch (error) {
+        console.error('リアルタイム月次更新エラー:', error);
+    }
+}        
         
         formatDate(date) {
             return date.toISOString().slice(0, 10);
@@ -1505,6 +1529,24 @@ setupRealtimeUpdates() {
             }, 1500);
         }
     }
+
+        // ページ離脱時のクリーンアップ設定
+setupCleanupHandlers() {
+    window.addEventListener('beforeunload', () => {
+        console.log('📴 ページ離脱: リスナークリーンアップ');
+        this.cleanupRealtimeListeners();
+    });
+    
+    document.addEventListener('visibilitychange', () => {
+        if (document.hidden) {
+            console.log('📴 タブ非表示: リスナー一時停止');
+            this.cleanupRealtimeListeners();
+        } else {
+            console.log('📱 タブ表示: リスナー再開');
+            setTimeout(() => this.setupRealtimeUpdates(), 500);
+        }
+    });
+}
 
     // 初期化処理
     if (!window.dashboardAuthInitialized) {
