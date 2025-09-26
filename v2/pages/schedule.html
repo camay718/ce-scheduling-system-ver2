@@ -1,0 +1,737 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>スケジュール - CEスケジュール管理システム V2</title>
+    
+    <!-- 外部ライブラリ -->
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="../css/theme-unified.css?v=20241217">
+    
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+    <script src="../js/config/firebase-config.js"></script>
+
+    <!-- 既存モジュール -->
+    <script src="../js/data/constants.js?v=20241213"></script>
+    <script src="../js/utils/ui-utils.js?v=20241213"></script>
+    <script src="../js/utils/date-utils.js?v=20241213"></script>
+    <script src="../js/schedule/schedule-core.js?v=20241213"></script>
+    <script src="../js/schedule/calendar-view.js?v=20241213"></script>
+    <script src="../js/schedule/event-manager.js?v=20241213"></script>
+    <script src="../js/ui/ce-manager.js?v=20241213"></script>
+    <script src="../js/ui/ce-daily-status.js?v=20241213"></script>
+    
+    <!-- 新規共通モジュール -->
+    <script src="../js/core/auth-guard.js"></script>
+    <script src="../js/schedule/published-schedule-resolver.js"></script>
+
+    <style>
+        /* スケジュール専用レスポンシブレイアウト */
+        .schedule-layout {
+            display: flex;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        .schedule-sidebar {
+            width: 280px;
+            background: var(--glass-bg);
+            backdrop-filter: blur(10px);
+            border-right: 1px solid var(--glass-border);
+            display: flex;
+            flex-direction: column;
+            transition: width 0.3s ease;
+            position: relative;
+            flex-shrink: 0;
+        }
+
+        .schedule-sidebar.collapsed {
+            width: 60px;
+        }
+
+        .sidebar-content {
+            padding: 20px;
+            width: 280px;
+            transition: opacity 0.3s ease;
+            flex: 1;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .schedule-sidebar.collapsed .sidebar-content {
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .sidebar-toggle {
+            position: absolute;
+            top: 15px;
+            right: -15px;
+            background: var(--brand-primary);
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            cursor: pointer;
+            z-index: 101;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+        }
+
+        .schedule-main {
+            flex-grow: 1;
+            padding: 20px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* 日別集計統計 */
+        .daily-summary-stats {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            font-size: 14px;
+            color: #4b5563;
+            margin-left: 16px;
+        }
+
+        .daily-summary-item {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .progress-bar-mini {
+            width: 80px;
+            height: 8px;
+            background: rgba(0,0,0,0.1);
+            border-radius: 4px;
+            overflow: hidden;
+        }
+
+        .progress-fill-mini {
+            height: 100%;
+            background: linear-gradient(90deg, #10b981, #059669);
+            transition: width 0.3s ease;
+            border-radius: 4px;
+        }
+
+        /* スマートフォン対応 */
+        @media (max-width: 768px) {
+            .schedule-sidebar {
+                position: fixed;
+                top: 0;
+                bottom: 0;
+                left: -280px;
+                width: 280px;
+                height: 100vh;
+                transform: translateX(0);
+                transition: left 0.3s ease;
+                z-index: 1000;
+                background: rgba(255, 255, 255, 0.98);
+                backdrop-filter: blur(10px);
+                border-radius: 0 8px 8px 0;
+                border-right: 2px solid #e5e7eb;
+                overflow-y: auto;
+                box-shadow: 2px 0 20px rgba(0, 0, 0, 0.15);
+            }
+            
+            .schedule-sidebar.expanded {
+                left: 0;
+            }
+            
+            .sidebar-toggle {
+                position: fixed;
+                bottom: 20px;
+                right: 20px;
+                background: var(--brand-primary);
+                color: white;
+                border-radius: 50%;
+                width: 56px;
+                height: 56px;
+                border: none;
+                box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+                z-index: 1001;
+                font-size: 18px;
+            }
+            
+            .schedule-main {
+                margin-left: 0;
+                padding: 12px;
+                padding-bottom: 80px;
+                width: 100%;
+            }
+            
+            .daily-summary-stats {
+                flex-direction: column;
+                align-items: stretch;
+                gap: 8px;
+                margin-left: 0;
+                font-size: 12px;
+                background: rgba(255, 255, 255, 0.8);
+                padding: 8px;
+                border-radius: 8px;
+            }
+            
+            .daily-summary-item {
+                justify-content: space-between;
+            }
+            
+            .progress-bar-mini {
+                width: 60px;
+                height: 6px;
+            }
+        }
+    </style>
+</head>
+<body class="theme-unified">
+    <!-- ローディング -->
+    <div id="loading" class="center-layout">
+        <div class="glass-card center-card text-center">
+            <div class="spinner mb-4"></div>
+            <p class="text-gray-600">スケジュールを読み込んでいます...</p>
+        </div>
+    </div>
+
+    <!-- メインインターフェース -->
+    <div id="mainInterface" class="schedule-layout" style="display:none;">
+        <!-- サイドバー -->
+        <div id="sidebar" class="schedule-sidebar">
+            <button id="toggleSidebar" class="sidebar-toggle" title="サイドバー表示/非表示">
+                <i class="fas fa-bars"></i>
+            </button>
+            
+            <div class="sidebar-content">
+                <!-- ヘッダー -->
+                <div class="mb-6 text-center">
+                    <h1 class="text-lg font-bold text-gray-800 mb-2">
+                        <i class="fas fa-calendar-alt mr-2 text-green-600"></i>
+                        スケジュール管理
+                    </h1>
+                    <p class="text-xs text-gray-600">CEスケジュール管理システム V2</p>
+                    <div class="mt-3 text-xs text-gray-600">
+                        <span id="currentUserDisplay">ユーザー</span>
+                    </div>
+                </div>
+
+                <!-- 同期ステータス -->
+                <div class="mb-4">
+                    <div id="mainSyncStatus" class="sync-indicator connected">
+                        <div class="sync-dot pulse"></div>
+                        <span class="text-xs">リアルタイム同期中</span>
+                    </div>
+                </div>
+
+                <!-- 日付ナビゲーション -->
+                <div class="mb-6">
+                    <h3 class="text-sm font-semibold mb-3">
+                        <i class="fas fa-calendar mr-2"></i>日付選択
+                    </h3>
+                    <div class="space-y-3">
+                        <div class="flex gap-2">
+                            <button id="prevDayBtn" class="btn-unified btn-outline-unified btn-small flex-1">
+                                <i class="fas fa-chevron-left"></i>
+                            </button>
+                            <button id="todayBtn" class="btn-unified btn-primary-unified btn-small flex-1">
+                                今日
+                            </button>
+                            <button id="nextDayBtn" class="btn-unified btn-outline-unified btn-small flex-1">
+                                <i class="fas fa-chevron-right"></i>
+                            </button>
+                        </div>
+                        <input type="date" id="scheduleDatePicker" class="input-unified text-sm">
+                    </div>
+                </div>
+
+                <!-- 業務操作 -->
+                <div class="mb-6">
+                    <h3 class="text-sm font-semibold mb-3">
+                        <i class="fas fa-plus mr-2"></i>業務操作
+                    </h3>
+                    <div class="space-y-2">
+                        <button id="addEventButtonDaily" class="btn-unified btn-primary-unified btn-small w-full">
+                            <i class="fas fa-plus mr-1"></i>業務追加
+                        </button>
+                        <button id="addBulkEventBtn" class="btn-unified btn-primary-unified btn-small w-full">
+                            <i class="fas fa-calendar-plus mr-1"></i>期間一括追加
+                        </button>
+                        <button id="addMonthlyTaskBtn" class="btn-unified btn-primary-unified btn-small w-full">
+                            <i class="fas fa-calendar-alt mr-1"></i>月次業務追加
+                        </button>
+                    </div>
+                </div>
+
+                <!-- 表示切替 -->
+                <div class="mb-6">
+                    <h3 class="text-sm font-semibold mb-3">
+                        <i class="fas fa-eye mr-2"></i>表示切替
+                    </h3>
+                    <div class="space-y-2">
+                        <button id="dailyViewBtn" class="btn-unified btn-primary-unified btn-small w-full">
+                            <i class="fas fa-calendar-day mr-1"></i>日別表示
+                        </button>
+                        <button id="weeklyViewBtn" class="btn-unified btn-outline-unified btn-small w-full">
+                            <i class="fas fa-calendar-week mr-1"></i>週間表示
+                        </button>
+                    </div>
+                </div>
+
+                <!-- ナビゲーション -->
+                <div class="mt-auto pt-4 border-t border-gray-200">
+                    <div class="space-y-2">
+                        <a href="./home.html" class="btn-unified btn-outline-unified btn-small w-full">
+                            <i class="fas fa-home mr-1"></i>HOME
+                        </a>
+                        <button onclick="window.handleLogout()" 
+                                class="btn-unified btn-outline-unified btn-small w-full text-red-600 border-red-600">
+                            <i class="fas fa-sign-out-alt mr-1"></i>ログアウト
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- メインコンテンツ -->
+        <div class="schedule-main">
+            <!-- ヘッダー -->
+            <div class="mb-4 flex justify-between items-start flex-wrap">
+                <div class="flex items-center">
+                    <h2 id="scheduleTitle" class="text-2xl font-bold">日別スケジュール</h2>
+                    <!-- 日別集計統計 -->
+                    <div id="dailySummaryStats" class="daily-summary-stats">
+                        <div class="daily-summary-item">
+                            <i class="fas fa-list text-blue-500"></i>
+                            <span>業務数: <span id="totalEventCount">0</span>件</span>
+                        </div>
+                        <div class="daily-summary-item">
+                            <i class="fas fa-user-check text-green-500"></i>
+                            <span>配置: <span id="totalAssignedCount">0</span>/<span id="totalAvailableCount">0</span>人</span>
+                        </div>
+                        <div class="daily-summary-item">
+                            <span class="text-xs">必要/配置:</span>
+                            <div class="progress-bar-mini">
+                                <div id="overallProgressFill" class="progress-fill-mini" style="width: 0%"></div>
+                            </div>
+                            <span class="text-xs"><span id="totalRequiredCount">0</span>/<span id="totalAssignedCount2">0</span></span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 日別スケジュールコンテンツ -->
+            <div id="dailyScheduleContent" class="schedule-content">
+                <div id="departmentGrid" class="grid grid-cols-3 gap-4 mb-6"></div>
+                
+                <div class="glass-card p-4">
+                    <h3 class="font-bold mb-3"><i class="fas fa-users mr-2"></i>CEリスト（<span id="ceListCount">--</span>名）</h3>
+                    <div id="ceListContainer" class="ce-grid"></div>
+                </div>
+            </div>
+
+            <!-- 週間スケジュールコンテンツ -->
+            <div id="weeklyScheduleContent" class="schedule-content" style="display:none;">
+                <div class="glass-card p-6 text-center">
+                    <i class="fas fa-calendar-week text-4xl text-gray-400 mb-4"></i>
+                    <h3 class="text-lg font-semibold text-gray-600 mb-2">週間スケジュール機能</h3>
+                    <p class="text-gray-500 mb-4">週単位での業務配置とCE勤務状況を表示する機能です。</p>
+                    <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                        <p class="text-yellow-800 text-sm">
+                            <i class="fas fa-tools mr-2"></i>現在開発中です。近日中にリリース予定です。
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- スケジュール専用JavaScript -->
+    <script>
+        // スケジュール管理クラス（dashboard.htmlから機能移植）
+        class ScheduleManager {
+            constructor() {
+                this.isInitialized = false;
+                this.selectedDate = new Date();
+                this.monthlyTasks = {};
+                this.eventsRef = null;
+                this.eventsCallback = null;
+                this.monthlyRef = null;
+                this.monthlyCallback = null;
+            }
+
+            async init() {
+                if (this.isInitialized) return;
+                this.isInitialized = true;
+
+                try {
+                    // 認証ガード実行
+                    const authSuccess = await AuthGuard.init();
+                    if (!authSuccess) return;
+
+                    // ユーザーデータ取得
+                    const userData = await AuthGuard.getUserData();
+                    if (!userData || !userData.setupCompleted) {
+                        console.error('ユーザーデータ不正:', userData);
+                        location.href = '../index.html';
+                        return;
+                    }
+
+                    window.userRole = userData.role || 'viewer';
+                    window.currentUserData = userData;
+
+                    await this.initializeScheduleSystem();
+                    console.log('✅ スケジュール管理初期化完了');
+                } catch (error) {
+                    console.error('スケジュール初期化エラー:', error);
+                    location.href = '../index.html';
+                }
+            }
+
+            async initializeScheduleSystem() {
+                try {
+                    // 必要なマネージャーの初期化
+                    if (!window.ceManager && window.CEManager) {
+                        window.ceManager = new window.CEManager();
+                    }
+                    if (!window.publishedScheduleResolver) {
+                        window.publishedScheduleResolver = new PublishedScheduleResolver();
+                    }
+
+                    this.showSchedule();
+                    this.setupEventListeners();
+                    this.setupRealtimeUpdates();
+
+                    console.log('✅ スケジュールシステム初期化完了');
+                } catch (error) {
+                    console.error('❌ スケジュールシステム初期化エラー:', error);
+                    throw error;
+                }
+            }
+
+            showSchedule() {
+                const loadingEl = document.getElementById('loading');
+                const mainEl = document.getElementById('mainInterface');
+                if (loadingEl) loadingEl.style.display = 'none';
+                if (mainEl) mainEl.style.display = 'flex';
+
+                this.updateUserDisplay();
+                this.setupDailySchedule();
+                this.renderDailySchedule();
+            }
+
+            updateUserDisplay() {
+                const userData = window.currentUserData;
+                if (!userData) return;
+                
+                const displayName = userData.displayName || userData.username || 'ユーザー';
+                document.querySelectorAll('#currentUserDisplay').forEach(el => {
+                    el.textContent = displayName;
+                });
+            }
+
+            setupEventListeners() {
+                // サイドバートグル
+                const toggle = document.getElementById('toggleSidebar');
+                const sidebar = document.getElementById('sidebar');
+                if (toggle && sidebar) {
+                    toggle.onclick = () => sidebar.classList.toggle('expanded');
+                }
+
+                // 日付ナビゲーション
+                const datePicker = document.getElementById('scheduleDatePicker');
+                if (datePicker) {
+                    datePicker.value = this.formatDate(this.selectedDate);
+                    datePicker.onchange = (e) => {
+                        this.selectedDate = new Date(e.target.value + 'T00:00:00');
+                        this.renderDailySchedule();
+                    };
+                }
+
+                const prev = document.getElementById('prevDayBtn');
+                const next = document.getElementById('nextDayBtn');
+                const today = document.getElementById('todayBtn');
+                
+                if (prev) prev.onclick = () => this.navigateDay(-1);
+                if (next) next.onclick = () => this.navigateDay(1);
+                if (today) today.onclick = () => this.goToToday();
+
+                // 表示切替
+                const dailyBtn = document.getElementById('dailyViewBtn');
+                const weeklyBtn = document.getElementById('weeklyViewBtn');
+                
+                if (dailyBtn) dailyBtn.onclick = () => this.switchView('daily');
+                if (weeklyBtn) weeklyBtn.onclick = () => this.switchView('weekly');
+
+                // 業務追加ボタン（dashboard.htmlから移植）
+                const addBtn = document.getElementById('addEventButtonDaily');
+                if (addBtn) addBtn.onclick = () => this.openQuickAddEvent();
+
+                const bulkBtn = document.getElementById('addBulkEventBtn');
+                if (bulkBtn) bulkBtn.onclick = () => this.openBulkAddEventModal();
+
+                const monthlyBtn = document.getElementById('addMonthlyTaskBtn');
+                if (monthlyBtn) monthlyBtn.onclick = () => this.openMonthlyTaskModal();
+            }
+
+            navigateDay(days) {
+                this.selectedDate.setDate(this.selectedDate.getDate() + days);
+                const datePicker = document.getElementById('scheduleDatePicker');
+                if (datePicker) datePicker.value = this.formatDate(this.selectedDate);
+                this.renderDailySchedule();
+            }
+
+            goToToday() {
+                this.selectedDate = new Date();
+                const datePicker = document.getElementById('scheduleDatePicker');
+                if (datePicker) datePicker.value = this.formatDate(this.selectedDate);
+                this.renderDailySchedule();
+            }
+
+            switchView(view) {
+                const dailyContent = document.getElementById('dailyScheduleContent');
+                const weeklyContent = document.getElementById('weeklyScheduleContent');
+                const dailyBtn = document.getElementById('dailyViewBtn');
+                const weeklyBtn = document.getElementById('weeklyViewBtn');
+                const title = document.getElementById('scheduleTitle');
+
+                if (view === 'daily') {
+                    dailyContent.style.display = 'block';
+                    weeklyContent.style.display = 'none';
+                    dailyBtn.className = 'btn-unified btn-primary-unified btn-small w-full';
+                    weeklyBtn.className = 'btn-unified btn-outline-unified btn-small w-full';
+                    title.textContent = '日別スケジュール';
+                } else {
+                    dailyContent.style.display = 'none';
+                    weeklyContent.style.display = 'block';
+                    dailyBtn.className = 'btn-unified btn-outline-unified btn-small w-full';
+                    weeklyBtn.className = 'btn-unified btn-primary-unified btn-small w-full';
+                    title.textContent = '週間スケジュール';
+                }
+            }
+
+            setupDailySchedule() {
+                if (window.ceManager) {
+                    window.ceManager.currentDisplayDate = this.selectedDate;
+                    window.ceManager.displayCEList();
+                }
+            }
+
+            renderDailySchedule() {
+                const title = document.getElementById('scheduleTitle');
+                const grid = document.getElementById('departmentGrid');
+                
+                if (title && document.getElementById('dailyScheduleContent').style.display !== 'none') {
+                    const dateStr = this.selectedDate.toLocaleDateString('ja-JP', { 
+                        year: 'numeric', 
+                        month: 'long', 
+                        day: 'numeric', 
+                        weekday: 'short' 
+                    });
+                    title.textContent = `日別スケジュール（${dateStr}）`;
+                }
+
+                if (window.ceManager) {
+                    window.ceManager.currentDisplayDate = this.selectedDate;
+                    window.ceManager.displayCEList();
+                }
+
+                if (!grid) return;
+
+                grid.innerHTML = '';
+                grid.className = 'grid grid-cols-3 gap-4 mb-6';
+
+                if (window.DEPARTMENTS) {
+                    window.DEPARTMENTS.forEach(dept => {
+                        const section = this.createDepartmentSection(dept);
+                        grid.appendChild(section);
+                    });
+                }
+
+                this.updateCEListCount();
+                this.loadAndRenderEventsForSelectedDate();
+
+                // 公開勤務表連動の適用
+                const dateKey = this.formatDate(this.selectedDate);
+                setTimeout(() => {
+                    if (window.publishedScheduleResolver) {
+                        window.publishedScheduleResolver.applyCEStatusToList(dateKey);
+                    }
+                }, 500);
+            }
+
+            createDepartmentSection(dept) {
+                const section = document.createElement('div');
+                section.className = 'department-section p-4';
+                section.dataset.department = dept;
+                const deptColor = window.DEPARTMENT_COLORS?.[dept] || '#6b7280';
+                
+                section.innerHTML = `
+                    <div class="flex items-center justify-between mb-2">
+                        <div class="flex items-center gap-2">
+                            <i class="fas fa-${window.DEPARTMENT_ICONS?.[dept] || 'cog'}" style="color: ${deptColor}"></i>
+                            <h3 class="font-bold text-sm">${dept}</h3>
+                        </div>
+                        ${window.userRole !== 'viewer' ? `
+                        <div class="flex items-center gap-1">
+                            <button class="btn-unified btn-primary-unified btn-small" onclick="window.scheduleManager.openQuickAddEvent('${dept}')">
+                                <i class="fas fa-plus mr-1"></i>業務追加
+                            </button>
+                            <button class="btn-unified btn-outline-unified btn-small" onclick="window.scheduleManager.openMonthlyTaskModal('${dept}')" 
+                                    title="この部門の月次業務を追加">
+                                <i class="fas fa-calendar-alt mr-1"></i>月次
+                            </button>
+                        </div>` : ''}
+                    </div>
+                    <!-- 部門別集計バー -->
+                    <div class="dept-summary-container">
+                        <span class="text-xs dept-summary-text">0/0名</span>
+                        <div class="dept-ratio-bar">
+                            <div class="dept-ratio-fill" style="background: ${deptColor}; width: 0%"></div>
+                        </div>
+                    </div>
+                    <div class="task-list min-h-[120px] space-y-2 mt-3" data-department="${dept}">
+                        <!-- 通常業務がここに表示されます -->
+                    </div>
+                    <div class="monthly-plans mt-2" data-department="${dept}">
+                        <!-- 月次業務がここに表示されます -->
+                    </div>
+                `;
+
+                return section;
+            }
+
+            setupRealtimeUpdates() {
+                const updateEvents = () => {
+                    const dateKey = this.formatDate(this.selectedDate);
+                    
+                    if (this.eventsRef && this.eventsCallback) {
+                        this.eventsRef.off('value', this.eventsCallback);
+                    }
+                    
+                    this.eventsRef = window.database.ref(`${window.DATA_ROOT}/events/byDate/${dateKey}`);
+                    this.eventsCallback = (snapshot) => {
+                        console.log('🔄 イベントデータ更新検知');
+                        setTimeout(() => {
+                            this.loadAndRenderEventsForSelectedDate();
+                        }, 300);
+                    };
+                    this.eventsRef.on('value', this.eventsCallback);
+
+                    // 月次業務のリアルタイム更新
+                    const yearMonth = dateKey.substring(0, 7);
+                    if (this.monthlyRef && this.monthlyCallback) {
+                        this.monthlyRef.off('value', this.monthlyCallback);
+                    }
+                    
+                    this.monthlyRef = window.database.ref(`${window.DATA_ROOT}/monthlyTasks/${yearMonth}`);
+                    this.monthlyCallback = async (snapshot) => {
+                        console.log('🔄 月次業務データ更新検知:', yearMonth);
+                        const data = snapshot.val() || {};
+                        this.monthlyTasks[yearMonth] = data;
+                        
+                        await this.renderMonthlyTasks();
+                        this.updateDailySummary().catch(console.error);
+                    };
+                    this.monthlyRef.on('value', this.monthlyCallback);
+                };
+                
+                updateEvents();
+            }
+
+            // dashboard.htmlから主要なメソッドを移植（以下は実装例、実際はdashboard.htmlから完全移植）
+            async loadAndRenderEventsForSelectedDate() {
+                // dashboard.htmlの該当メソッドをそのまま移植
+                console.log('イベント読み込み・表示処理（dashboard.htmlから完全移植予定）');
+                // 実際の実装はdashboard.htmlのloadAndRenderEventsForSelectedDateメソッドをコピー
+            }
+
+            async renderMonthlyTasks() {
+                console.log('月次業務表示（dashboard.htmlから完全移植予定）');
+                // 実際の実装はdashboard.htmlのrenderMonthlyTasksメソッドをコピー
+            }
+
+            async updateDailySummary() {
+                console.log('日別集計更新（dashboard.htmlから完全移植予定）');
+                // 実際の実装はdashboard.htmlのupdateDailySummaryメソッドをコピー
+            }
+
+            formatDate(date) {
+                return date.toISOString().slice(0, 10);
+            }
+
+            updateCEListCount() {
+                const el = document.getElementById('ceListCount');
+                if (el) {
+                    const count = window.ceManager?.ceList?.length || 0;
+                    el.textContent = String(count);
+                }
+            }
+
+            // プレースホルダーメソッド（dashboard.htmlから段階的に移植）
+            openQuickAddEvent(department) {
+                console.log('業務追加モーダル（実装予定）:', department);
+            }
+
+            openBulkAddEventModal() {
+                console.log('期間一括追加モーダル（実装予定）');
+            }
+
+            openMonthlyTaskModal(department) {
+                console.log('月次業務追加モーダル（実装予定）:', department);
+            }
+        }
+
+        // ログアウト処理
+        window.handleLogout = async () => {
+            try {
+                try {
+                    const entry = {
+                        action: 'logout',
+                        details: {},
+                        uid: window.currentUserData?.uid || null,
+                        username: window.currentUserData?.username || 'unknown',
+                        displayName: window.currentUserData?.displayName || 'unknown',
+                        timestamp: firebase.database.ServerValue.TIMESTAMP,
+                        userAgent: navigator.userAgent.substring(0, 100)
+                    };
+                    await window.database.ref(`${window.DATA_ROOT}/auditLogs`).push(entry);
+                } catch (logError) {
+                    console.warn('監査ログ記録失敗:', logError);
+                }
+                if (window.auth && window.auth.currentUser) {
+                    await window.auth.signOut();
+                }
+            } catch (error) {
+                console.error('ログアウトエラー:', error);
+            } finally {
+                sessionStorage.clear();
+                localStorage.clear();
+                window.location.href = '../index.html';
+            }
+        };
+
+        // 初期化
+        window.scheduleManager = null;
+        document.addEventListener('DOMContentLoaded', async () => {
+            try {
+                window.scheduleManager = new ScheduleManager();
+                await window.scheduleManager.init();
+                console.log('✅ スケジュール管理初期化完了');
+            } catch (error) {
+                console.error('❌ スケジュール管理初期化エラー:', error);
+                window.showMessage('スケジュール管理の初期化に失敗しました', 'error');
+            }
+        });
+    </script>
+</body>
+</html>
