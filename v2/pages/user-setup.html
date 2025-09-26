@@ -261,182 +261,231 @@
             return { hash: hashB64, salt: saltB64, iterations };
         }
 
-        // 初期化
-        async function init() {
+// 強化された初期化関数
+async function init() {
+    try {
+        console.log('🚀 user-setup: 初期化開始');
+        
+        // ローディング画面を確実に表示
+        document.getElementById('loadingScreen').style.display = 'flex';
+        document.getElementById('mainContent').style.display = 'none';
+
+        // デバッグモードの確認
+        const urlParams = new URLSearchParams(window.location.search);
+        const debugMode = urlParams.get('debug') === 'true';
+        
+        if (debugMode) {
+            console.log('🔧 デバッグモード: レイアウトテスト用');
+            setupDebugMode();
+            return;
+        }
+
+        // Firebase初期化待機（タイムアウト付き）
+        console.log('🔄 Firebase初期化待機...');
+        let firebaseReady = false;
+        
+        if (typeof window.waitForFirebase === 'function') {
             try {
-                // Firebase初期化待機
-                await window.waitForFirebase?.();
-                auth = window.auth;
-                database = window.database;
-
-                if (!auth || !database) {
-                    throw new Error('Firebase初期化に失敗しました');
-                }
-
-                // セッション情報確認
-                const uid = sessionStorage.getItem('targetUID');
-                const username = sessionStorage.getItem('currentUsername');
-                
-                if (!uid || !username) {
-                    showMessage('セッション情報が不足しています。ログインし直してください。', 'error');
-                    setTimeout(() => location.href = '../index.html', 2000);
-                    return;
-                }
-
-                // 匿名認証
-                if (!auth.currentUser) {
-                    await auth.signInAnonymously();
-                }
-
-                // ユーザーデータ取得
-                const dataRoot = window.DATA_ROOT || 'ceScheduleV2';
-                const userSnap = await database.ref(`${dataRoot}/users/${uid}`).once('value');
-                
-                if (!userSnap.exists()) {
-                    showMessage('ユーザーデータが見つかりません。', 'error');
-                    setTimeout(() => location.href = '../index.html', 2000);
-                    return;
-                }
-
-                currentUserData = userSnap.val();
-
-                // UI設定
-                document.getElementById('currentUser').textContent = currentUserData.username || 'Unknown';
-                document.getElementById('usernameDisplay').textContent = currentUserData.username || '';
-                document.getElementById('displayNameInput').value = currentUserData.displayName || currentUserData.username || '';
-                
-                // 権限表示
-                const roleBadges = {
-                    admin: '管理者',
-                    editor: '編集者', 
-                    viewer: '閲覧者'
-                };
-                document.getElementById('roleDisplay').textContent = roleBadges[currentUserData.role] || '不明';
-
-                // 画面表示
-                document.getElementById('loadingScreen').style.display = 'none';
-                document.getElementById('mainContent').style.display = 'block';
-
-                // イベントリスナー設定
-                document.getElementById('newPassword').addEventListener('input', updatePasswordStrength);
-                document.getElementById('confirmPassword').addEventListener('input', checkPasswordMatch);
-                document.getElementById('setupForm').addEventListener('submit', saveSettings);
-
-            } catch (error) {
-                console.error('初期化エラー:', error);
-                showMessage('初期化に失敗しました: ' + (error.message || error), 'error');
-                setTimeout(() => location.href = '../index.html', 2000);
+                await Promise.race([
+                    window.waitForFirebase(),
+                    new Promise((_, reject) => 
+                        setTimeout(() => reject(new Error('Firebase初期化タイムアウト')), 10000)
+                    )
+                ]);
+                firebaseReady = true;
+                console.log('✅ Firebase初期化完了');
+            } catch (e) {
+                console.warn('⚠️ Firebase初期化タイムアウト:', e.message);
             }
         }
 
-        // 設定保存
-        async function saveSettings(event) {
-            event.preventDefault();
+        // フォールバック初期化
+        if (!firebaseReady) {
+            console.log('🔁 フォールバック初期化実行');
+            if (!firebase.apps.length) {
+                firebase.initializeApp(window.firebaseConfig);
+            }
+            window.auth = firebase.auth();
+            window.database = firebase.database();
+        }
+
+        auth = window.auth;
+        database = window.database;
+
+        if (!auth || !database) {
+            throw new Error('Firebase初期化に失敗しました');
+        }
+
+        // 多重セッション復元ロジック
+        let uid, username, role;
+        
+        // 1. URLパラメータから復元（最優先）
+        const uidFromUrl = urlParams.get('uid');
+        const usernameFromUrl = urlParams.get('username');
+        const roleFromUrl = urlParams.get('role');
+
+        if (uidFromUrl && usernameFromUrl) {
+            uid = uidFromUrl;
+            username = usernameFromUrl;
+            role = roleFromUrl || 'viewer';
+            sessionStorage.setItem('targetUID', uid);
+            sessionStorage.setItem('currentUsername', username);
+            sessionStorage.setItem('userRole', role);
+            console.log('✅ URLパラメータから認証情報復元');
+        } else {
+            // 2. sessionStorageから復元
+            uid = sessionStorage.getItem('targetUID');
+            username = sessionStorage.getItem('currentUsername');
+            role = sessionStorage.getItem('userRole') || 'viewer';
             
-            if (isProcessing) return;
-
-            const displayName = document.getElementById('displayNameInput').value.trim();
-            const newPassword = document.getElementById('newPassword').value;
-            const confirmPassword = document.getElementById('confirmPassword').value;
-            const saveButton = document.getElementById('saveButton');
-
-            // バリデーション
-            if (!newPassword || !confirmPassword) {
-                showMessage('パスワードを入力してください', 'error');
-                return;
-            }
-
-            if (!validatePassword(newPassword).isValid) {
-                showMessage('パスワードの強度が不十分です', 'error');
-                return;
-            }
-
-            if (!checkPasswordMatch()) {
-                showMessage('パスワードが一致しません', 'error');
-                return;
-            }
-
-            // 処理開始
-            isProcessing = true;
-            saveButton.disabled = true;
-            saveButton.innerHTML = '<div class="spinner inline-block mr-2"></div>保存中...';
-
-            try {
-                const uid = sessionStorage.getItem('targetUID');
-                const username = sessionStorage.getItem('currentUsername');
-                
-                if (!uid || !username) {
-                    throw new Error('セッション情報が無効です');
-                }
-
-                // 匿名認証確認
-                if (!auth.currentUser) {
-                    await auth.signInAnonymously();
-                }
-
-                // パスワードハッシュ化
-                const hashedPassword = await hashPasswordPBKDF2(newPassword);
-
-                // データベース更新（重要：全フラグを適切に設定）
-                const dataRoot = window.DATA_ROOT || 'ceScheduleV2';
-                const updates = {
-                    displayName: displayName || currentUserData.displayName || currentUserData.username,
-                    password: hashedPassword,
-                    setupCompleted: true,           // 最重要：セットアップ完了フラグ
-                    hasCompletedSetup: true,        // 後方互換性
-                    needsSetup: false,              // セットアップ不要
-                    passwordResetCompleted: false,  // リセット完了フラグをクリア
-                    fromPending: false,             // 待機状態フラグをクリア
-                    isInitialUser: false,           // 初期ユーザーフラグをクリア
-                    lastUpdate: firebase.database.ServerValue.TIMESTAMP,
-                    setupCompletedAt: firebase.database.ServerValue.TIMESTAMP,
-                    updatedBy: 'user-setup'
-                };
-
-                await database.ref(`${dataRoot}/users/${uid}`).update(updates);
-
-                // 待機リストから削除
+            if (!uid || !username) {
+                // 3. localStorageから復元（HOMEで保存した情報）
                 try {
-                    await database.ref(`${dataRoot}/pendingUsers/${username}`).remove();
-                } catch (e) { /* 存在しない場合は無視 */ }
-                
-                try {
-                    await database.ref(`${dataRoot}/initialUsers/${uid}`).remove();
-                } catch (e) { /* 存在しない場合は無視 */ }
-
-                // セッション更新
-                sessionStorage.setItem('userRole', currentUserData.role || 'viewer');
-
-                showMessage('設定を保存しました。ダッシュボードへ移動します。', 'success');
-                
-                // HOME画面へリダイレクト
-setTimeout(() => {
-    location.href = './home.html';  // 同じpagesディレクトリ内なので ./
-}, 1500);
-
-            } catch (error) {
-                console.error('保存エラー:', error);
-                showMessage('保存に失敗しました: ' + (error.message || error), 'error');
-            } finally {
-                isProcessing = false;
-                saveButton.disabled = false;
-                saveButton.innerHTML = '<i class="fas fa-save mr-2"></i>設定を保存してダッシュボードへ';
+                    const saved = localStorage.getItem('dashboardAuth');
+                    if (saved) {
+                        const data = JSON.parse(saved);
+                        if (data?.uid && data?.username) {
+                            uid = data.uid;
+                            username = data.username;
+                            role = data.role || 'viewer';
+                            sessionStorage.setItem('targetUID', uid);
+                            sessionStorage.setItem('currentUsername', username);
+                            sessionStorage.setItem('userRole', role);
+                            console.log('✅ localStorageから認証情報復元');
+                        }
+                    }
+                } catch (e) {
+                    console.warn('localStorage復元エラー:', e);
+                }
             }
         }
 
-        // ログアウト
-        async function logout() {
-            try {
-                await auth?.signOut?.();
-            } catch (e) { /* エラーは無視 */ }
-            
-            sessionStorage.clear();
-            localStorage.clear();
-            location.href = '../index.html';
+        // 認証情報が取得できない場合はログイン画面へ
+        if (!uid || !username) {
+            console.error('❌ 認証情報が見つかりません');
+            showMessage('認証情報が見つかりません。ログイン画面に戻ります。', 'error');
+            setTimeout(() => location.href = '../index.html', 2000);
+            return;
         }
 
-        // 初期化実行
-        document.addEventListener('DOMContentLoaded', init);
+        // 匿名認証の確保（タイムアウト付き）
+        console.log('🔄 匿名認証確認...');
+        try {
+            if (!auth.currentUser) {
+                await Promise.race([
+                    auth.signInAnonymously(),
+                    new Promise((_, reject) => 
+                        setTimeout(() => reject(new Error('認証タイムアウト')), 8000)
+                    )
+                ]);
+                console.log('✅ 匿名認証成功');
+            } else {
+                console.log('✅ 既存認証確認済み');
+            }
+        } catch (e) {
+            console.error('❌ 匿名認証エラー:', e);
+            showMessage('認証に失敗しました。ログイン画面に戻ります。', 'error');
+            setTimeout(() => location.href = '../index.html', 2000);
+            return;
+        }
+
+        // ユーザーデータ取得（タイムアウト付き）
+        console.log('🔄 ユーザーデータ取得...');
+        const dataRoot = window.DATA_ROOT || 'ceScheduleV2';
+        let userSnap;
+        
+        try {
+            userSnap = await Promise.race([
+                database.ref(`${dataRoot}/users/${uid}`).once('value'),
+                new Promise((_, reject) => 
+                    setTimeout(() => reject(new Error('データベースタイムアウト')), 8000)
+                )
+            ]);
+        } catch (e) {
+            console.error('❌ ユーザーデータ取得エラー:', e);
+            showMessage('ユーザーデータの取得に失敗しました。', 'error');
+            setTimeout(() => location.href = '../index.html', 2000);
+            return;
+        }
+
+        if (!userSnap?.exists()) {
+            console.error('❌ ユーザーデータが存在しません');
+            showMessage('ユーザーデータが見つかりません。', 'error');
+            setTimeout(() => location.href = '../index.html', 2000);
+            return;
+        }
+
+        currentUserData = userSnap.val();
+        console.log('✅ ユーザーデータ取得完了');
+
+        // UI設定
+        setupUserInterface();
+
+        // 画面表示
+        document.getElementById('loadingScreen').style.display = 'none';
+        document.getElementById('mainContent').style.display = 'flex';
+        console.log('✅ 初期化完了 - UI表示');
+
+        // イベントリスナー設定
+        setupEventListeners();
+
+    } catch (error) {
+        console.error('❌ 初期化致命的エラー:', error);
+        showMessage('システムの初期化に失敗しました。', 'error');
+        setTimeout(() => location.href = '../index.html', 3000);
+    }
+}
+
+// デバッグモード設定
+function setupDebugMode() {
+    console.log('🔧 デバッグモード設定');
+    
+    // ダミーデータ設定
+    sessionStorage.setItem('targetUID', 'debug-uid');
+    sessionStorage.setItem('currentUsername', 'デバッグユーザー');
+    sessionStorage.setItem('userRole', 'viewer');
+    
+    // UI更新
+    document.getElementById('currentUser').textContent = 'デバッグユーザー';
+    document.getElementById('usernameDisplay').textContent = 'デバッグユーザー';
+    document.getElementById('displayNameInput').value = 'デバッグユーザー';
+    document.getElementById('roleDisplay').textContent = '閲覧者';
+    
+    // 画面表示
+    document.getElementById('loadingScreen').style.display = 'none';
+    document.getElementById('mainContent').style.display = 'flex';
+    
+    // 基本的なイベントリスナー設定
+    setupEventListeners();
+}
+
+// UI設定関数
+function setupUserInterface() {
+    document.getElementById('currentUser').textContent = currentUserData.username || 'Unknown';
+    document.getElementById('usernameDisplay').textContent = currentUserData.username || '';
+    document.getElementById('displayNameInput').value = currentUserData.displayName || currentUserData.username || '';
+    
+    const roleBadges = {
+        admin: '管理者',
+        editor: '編集者', 
+        viewer: '閲覧者'
+    };
+    document.getElementById('roleDisplay').textContent = roleBadges[currentUserData.role] || '不明';
+}
+
+// イベントリスナー設定関数
+function setupEventListeners() {
+    const newPasswordEl = document.getElementById('newPassword');
+    const confirmPasswordEl = document.getElementById('confirmPassword');
+    const setupFormEl = document.getElementById('setupForm');
+    
+    if (newPasswordEl) newPasswordEl.addEventListener('input', updatePasswordStrength);
+    if (confirmPasswordEl) confirmPasswordEl.addEventListener('input', checkPasswordMatch);
+    if (setupFormEl) setupFormEl.addEventListener('submit', saveSettings);
+}
+
+// 初期化実行
+document.addEventListener('DOMContentLoaded', init);
     </script>
 </body>
 </html>
