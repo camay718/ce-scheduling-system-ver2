@@ -288,13 +288,24 @@ console.log('個人設定必要性チェック:', {
 if (needsPersonalSetup) {
     window.showMessage('ログイン成功！個人設定へ移動します...', 'success');
     setTimeout(() => {
-        window.location.href = 'pages/user-setup.html';
+        // 認証情報をURLパラメータとして確実に渡す
+        const uid = sessionStorage.getItem('targetUID');
+        const username = sessionStorage.getItem('currentUsername');
+        const role = sessionStorage.getItem('userRole') || 'viewer';
+
+        if (uid && username) {
+            const params = new URLSearchParams({
+                uid: uid,
+                username: username,
+                role: role,
+                from: 'login'
+            });
+            window.location.href = `pages/user-setup.html?${params.toString()}`;
+        } else {
+            console.error('認証情報が不完全です');
+            window.location.href = 'pages/user-setup.html';
+        }
     }, 1000);
-} else {
-    window.showMessage('ログイン成功！HOMEに移動します...', 'success');
-setTimeout(() => {
-    window.location.href = 'pages/home.html';
-}, 1000);
 }
                     return;
                 }
