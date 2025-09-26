@@ -409,10 +409,10 @@
 
                 showMessage('設定を保存しました。ダッシュボードへ移動します。', 'success');
                 
-                // ダッシュボードへリダイレクト
-                setTimeout(() => {
-                    location.href = '../dashboard.html';
-                }, 1500);
+                // HOME画面へリダイレクト
+setTimeout(() => {
+    location.href = './home.html';  // 同じpagesディレクトリ内なので ./
+}, 1500);
 
             } catch (error) {
                 console.error('保存エラー:', error);
