@@ -3648,6 +3648,34 @@ openMonthlyTaskModal(defaultDepartment = '') {
             this.setupSidebar();
             this.setupDailySchedule();
             this.initializeV2System();
+
+             // URLパラメータによる直接タブアクセス機能
+    setTimeout(() => {
+        const tabParam = new URLSearchParams(window.location.search).get('tab');
+        if (tabParam) {
+            const tabMap = {
+                daily: ['dailyScheduleContent', 'dailyScheduleTab'],
+                weekly: ['weeklyScheduleContent', 'weeklyScheduleTab'],
+                ce: ['ceWorkScheduleContent', 'ceWorkScheduleTab'],
+                analysis: ['analysisContent', 'analysisTab'],
+                settings: ['settingsContent', 'settingsTab']
+            };
+            const target = tabMap[tabParam];
+            if (target) {
+                try {
+                    this.showScreen(target[0], target[1]);
+                    console.log(`タブ切り替え完了: ${tabParam}`);
+                } catch (error) {
+                    console.warn('タブ切り替えエラー:', error);
+                    // フォールバック: デフォルトタブを表示
+                    this.showScreen('dailyScheduleContent', 'dailyScheduleTab');
+                }
+            }
+        }
+    }, 800); // initializeV2System()の完了を待つため少し長めの遅延
+}
+
+            
         }
 
        updateUserDisplay() {
