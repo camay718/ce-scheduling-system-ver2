@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HOME - CEスケジュール管理システム V2</title>
+    
+    <!-- 外部ライブラリ -->
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="../css/theme-unified.css">
+    
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+    <script src="../js/config/firebase-config.js"></script>
+
+    <style>
+        .home-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 24px;
+        }
+        .nav-card {
+            background: var(--glass-bg);
+            border: 2px solid var(--glass-border);
+            border-radius: 16px;
+            padding: 32px;
+            text-align: center;
+            transition: all 0.3s ease;
+            cursor: pointer;
+            text-decoration: none;
+            color: var(--text-color-default);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+        .nav-card:hover {
+            transform: translateY(-5px);
+            border-color: var(--brand-primary);
+            box-shadow: var(--shadow-hover);
+        }
+        .nav-card i {
+            font-size: 4rem;
+            margin-bottom: 20px;
+            color: var(--brand-primary);
+        }
+        .nav-card h2 {
+            font-size: 1.75rem;
+            font-weight: 700;
+            margin-bottom: 12px;
+        }
+        .nav-card p {
+            font-size: 1rem;
+            color: var(--text-color-light);
+        }
+    </style>
+</head>
+<body class="theme-unified">
+    <!-- ローディング画面 -->
+    <div id="loading" class="center-layout">
+        <div class="glass-card center-card text-center">
+            <div class="spinner mb-4"></div>
+            <p class="text-gray-600">HOMEを読み込んでいます...</p>
+        </div>
+    </div>
+
+    <!-- メインコンテンツ -->
+    <div id="mainContent" class="center-layout" style="display: none;">
+        <div class="glass-card center-card" style="max-width: 1000px; padding: 40px;">
+            <!-- ヘッダー -->
+            <div class="text-center mb-10">
+                <h1 class="text-4xl font-bold text-gray-800 mb-4">
+                    <i class="fas fa-home text-green-600 mr-3"></i>
+                    CEスケジュール管理システム V2
+                </h1>
+                <div class="flex justify-between items-center">
+                    <p class="text-gray-600 text-lg">ようこそ、<span id="userNameDisplay" class="font-semibold text-green-700"></span>さん</p>
+                    <div class="text-right">
+                        <div class="text-xs text-gray-500">権限</div>
+                        <span id="roleBadge" class="badge-unified">-</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ナビゲーションカード -->
+            <div class="home-grid">
+                <!-- 日別スケジュール -->
+                <a href="../dashboard.html?tab=daily" class="nav-card">
+                    <i class="fas fa-calendar-day"></i>
+                    <h2>日別スケジュール</h2>
+                    <p>本日の業務とCE配置を管理</p>
+                </a>
+
+                <!-- 週間スケジュール -->
+                <a href="../dashboard.html?tab=weekly" class="nav-card">
+                    <i class="fas fa-calendar-week"></i>
+                    <h2>週間スケジュール</h2>
+                    <p>週単位での予定を確認</p>
+                </a>
+
+                <!-- CE勤務表 -->
+                <a href="../dashboard.html?tab=ce" class="nav-card">
+                    <i class="fas fa-table"></i>
+                    <h2>CE勤務表</h2>
+                    <p>勤務シフトの作成・閲覧</p>
+                </a>
+
+                <!-- 集計・分析 -->
+                <a href="../dashboard.html?tab=analysis" class="nav-card">
+                    <i class="fas fa-chart-bar"></i>
+                    <h2>集計・分析</h2>
+                    <p>業務配置や勤務状況を分析</p>
+                </a>
+
+                <!-- 設定 -->
+                <a href="../dashboard.html?tab=settings" class="nav-card">
+                    <i class="fas fa-cog"></i>
+                    <h2>設定</h2>
+                    <p>システム設定と個人情報の管理</p>
+                </a>
+
+                <!-- 管理者ダッシュボード（admin のみ表示） -->
+                <a href="admin-dashboard.html" id="adminLink" class="nav-card" style="display: none;">
+                    <i class="fas fa-shield-alt"></i>
+                    <h2>管理者ダッシュボード</h2>
+                    <p>ユーザー管理やシステム権限設定</p>
+                </a>
+            </div>
+
+            <!-- ログアウトボタン -->
+            <div class="text-center mt-8">
+                <button onclick="handleLogout()" class="btn-unified btn-outline-unified">
+                    <i class="fas fa-sign-out-alt mr-2"></i>ログアウト
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 軽量メッセージ機能
+        window.showMessage = window.showMessage || function(msg, type='info') {
+            console.log(`[${type}] ${msg}`);
+        };
+
+        // 認証確認と初期化
+        async function initHome() {
+            try {
+                await window.waitForFirebase();
+                
+                // セッション情報の確認
+                const uid = sessionStorage.getItem('targetUID');
+                const username = sessionStorage.getItem('currentUsername');
+                let role = sessionStorage.getItem('userRole') || 'viewer';
+
+                if (!uid || !username) {
+                    showMessage('認証が必要です。ログインに戻ります。', 'warning');
+                    return location.href = '../index.html';
+                }
+
+                // 匿名認証の確保
+                if (!window.auth.currentUser) {
+                    await window.auth.signInAnonymously();
+                }
+
+                // ユーザーデータの再取得（最新情報を確保）
+                const userSnapshot = await window.database.ref(`${window.DATA_ROOT}/users/${uid}`).once('value');
+                if (!userSnapshot.exists()) {
+                    showMessage('ユーザーデータが見つかりません', 'error');
+                    return location.href = '../index.html';
+                }
+                
+                const userData = userSnapshot.val();
+                role = userData.role || role;
+
+                // UI更新
+                document.getElementById('userNameDisplay').textContent = userData.displayName || userData.username || username;
+                
+                const roleMap = { admin: '管理者', editor: '編集者', viewer: '閲覧者' };
+                const badge = document.getElementById('roleBadge');
+                badge.textContent = roleMap[role] || '不明';
+                badge.className = `badge-unified badge-${role}`;
+
+                // 管理者リンクの表示制御
+                if (role === 'admin') {
+                    document.getElementById('adminLink').style.display = 'flex';
+                }
+
+                // 画面表示
+                document.getElementById('loading').style.display = 'none';
+                document.getElementById('mainContent').style.display = 'block';
+
+            } catch (error) {
+                console.error('HOME初期化エラー:', error);
+                alert('初期化に失敗しました。ログイン画面に戻ります。');
+                location.href = '../index.html';
+            }
+        }
+
+        // ログアウト処理
+        async function handleLogout() {
+            try {
+                // 監査ログ記録
+                try {
+                    const entry = {
+                        action: 'logout',
+                        uid: sessionStorage.getItem('targetUID') || null,
+                        username: sessionStorage.getItem('currentUsername') || 'unknown',
+                        displayName: document.getElementById('userNameDisplay')?.textContent || 'unknown',
+                        timestamp: firebase.database.ServerValue.TIMESTAMP,
+                        userAgent: navigator.userAgent.substring(0, 100)
+                    };
+                    await window.database.ref(`${window.DATA_ROOT}/auditLogs`).push(entry);
+                } catch (logError) {
+                    console.warn('監査ログ記録失敗:', logError);
+                }
+
+                if (window.auth && window.auth.currentUser) {
+                    await window.auth.signOut();
+                }
+            } catch (error) {
+                console.warn('ログアウトエラー:', error);
+            } finally {
+                sessionStorage.clear();
+                localStorage.clear();
+                location.href = '../index.html';
+            }
+        }
+
+        // 初期化実行
+        document.addEventListener('DOMContentLoaded', initHome);
+    </script>
+</body>
+</html>
