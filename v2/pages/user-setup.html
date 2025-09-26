@@ -9,8 +9,8 @@
     <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css">
     
-    <!-- 統一テーマ -->
-    <link rel="stylesheet" href="../css/theme-unified.css?v=20241218">
+    <!-- 統一テーマ（重要：相対パス調整） -->
+    <link rel="stylesheet" href="../css/theme-unified.css">
     
     <!-- Firebase SDK -->
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
@@ -19,71 +19,8 @@
     
     <!-- Firebase設定ファイル -->
     <script src="../js/config/firebase-config.js"></script>
-
-    <!-- 確実な中央配置とレスポンシブ対応 -->
-    <style>
-        /* 中央配置の確実な実装 */
-        .center-layout {
-            min-height: 100vh !important;
-            min-height: 100svh !important; /* モバイルUIバー考慮 */
-            display: flex !important;
-            align-items: center !important;
-            justify-content: center !important;
-            padding: 20px !important;
-            box-sizing: border-box !important;
-            width: 100% !important;
-        }
-        
-        .center-card {
-            width: 100% !important;
-            max-width: 600px !important;
-            margin: 0 auto !important;
-        }
-
-        /* スマートフォン対応 */
-        @media (max-width: 768px) {
-            .center-layout {
-                padding: 16px !important;
-                align-items: flex-start !important;
-                padding-top: 40px !important;
-            }
-            
-            .glass-card {
-                padding: 20px !important;
-            }
-            
-            h1 {
-                font-size: 1.8rem !important;
-            }
-            
-            .input-unified {
-                font-size: 16px !important; /* iOSズーム防止 */
-                padding: 12px !important;
-            }
-            
-            .btn-unified {
-                padding: 14px 20px !important;
-                font-size: 14px !important;
-            }
-        }
-        
-        @media (max-width: 480px) {
-            .center-layout {
-                padding: 12px !important;
-                padding-top: 20px !important;
-            }
-            
-            .glass-card {
-                padding: 16px !important;
-            }
-            
-            h1 {
-                font-size: 1.5rem !important;
-            }
-        }
-    </style>
 </head>
-<body class="theme-unified user-setup-page">
+<body class="theme-unified">
     <!-- ローディング画面 -->
     <div id="loadingScreen" class="center-layout">
         <div class="glass-card center-card text-center">
@@ -95,7 +32,7 @@
 
     <!-- メインコンテンツ -->
     <div id="mainContent" class="center-layout" style="display: none;">
-        <div class="glass-card center-card">
+        <div class="glass-card center-card" style="max-width: 600px;">
             <!-- ヘッダー -->
             <div class="text-center mb-8">
                 <div class="bg-gradient-to-br from-green-100 to-blue-100 w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-4 shadow-lg">
@@ -187,7 +124,7 @@
 
                     <!-- 保存ボタン -->
                     <button type="submit" id="saveButton" class="btn-unified btn-primary-unified w-full">
-                        <i class="fas fa-save mr-2"></i>設定を保存してHOMEへ
+                        <i class="fas fa-save mr-2"></i>設定を保存してダッシュボードへ
                     </button>
                 </form>
 
@@ -299,7 +236,7 @@
             }
         }
 
-        // パスワードハッシュ化（PBKDF2-SHA256）
+        // パスワードハッシュ化
         async function hashPasswordPBKDF2(password, iterations = 100000) {
             const enc = new TextEncoder();
             const salt = crypto.getRandomValues(new Uint8Array(16));
@@ -324,44 +261,11 @@
             return { hash: hashB64, salt: saltB64, iterations };
         }
 
-        // 強化された初期化関数
+        // 初期化
         async function init() {
             try {
-                console.log('🚀 user-setup: 初期化開始');
-                
-                // ローディング画面を確実に表示
-                document.getElementById('loadingScreen').style.display = 'flex';
-                document.getElementById('mainContent').style.display = 'none';
-
-                // Firebase初期化待機（10秒タイムアウト）
-                console.log('🔄 Firebase初期化待機...');
-                let firebaseReady = false;
-                
-                if (typeof window.waitForFirebase === 'function') {
-                    try {
-                        await Promise.race([
-                            window.waitForFirebase(),
-                            new Promise((_, reject) => 
-                                setTimeout(() => reject(new Error('Firebase初期化タイムアウト')), 10000)
-                            )
-                        ]);
-                        firebaseReady = true;
-                        console.log('✅ Firebase初期化完了');
-                    } catch (e) {
-                        console.warn('⚠️ Firebase初期化タイムアウト:', e.message);
-                    }
-                }
-
-                // フォールバック初期化
-                if (!firebaseReady) {
-                    console.log('🔁 フォールバック初期化実行');
-                    if (!firebase.apps.length) {
-                        firebase.initializeApp(window.firebaseConfig);
-                    }
-                    window.auth = firebase.auth();
-                    window.database = firebase.database();
-                }
-
+                // Firebase初期化待機
+                await window.waitForFirebase?.();
                 auth = window.auth;
                 database = window.database;
 
@@ -369,114 +273,39 @@
                     throw new Error('Firebase初期化に失敗しました');
                 }
 
-                // 多重セッション復元ロジック
-                let uid, username, role;
-                const urlParams = new URLSearchParams(window.location.search);
+                // セッション情報確認
+                const uid = sessionStorage.getItem('targetUID');
+                const username = sessionStorage.getItem('currentUsername');
                 
-                // 1. URLパラメータから復元（最優先）
-                const uidFromUrl = urlParams.get('uid');
-                const usernameFromUrl = urlParams.get('username');
-                const roleFromUrl = urlParams.get('role');
-
-                if (uidFromUrl && usernameFromUrl) {
-                    uid = uidFromUrl;
-                    username = usernameFromUrl;
-                    role = roleFromUrl || 'viewer';
-                    sessionStorage.setItem('targetUID', uid);
-                    sessionStorage.setItem('currentUsername', username);
-                    sessionStorage.setItem('userRole', role);
-                    console.log('✅ URLパラメータから認証情報復元');
-                } else {
-                    // 2. sessionStorageから復元
-                    uid = sessionStorage.getItem('targetUID');
-                    username = sessionStorage.getItem('currentUsername');
-                    role = sessionStorage.getItem('userRole') || 'viewer';
-                    
-                    if (!uid || !username) {
-                        // 3. localStorageから復元（HOMEで保存した情報）
-                        try {
-                            const saved = localStorage.getItem('dashboardAuth');
-                            if (saved) {
-                                const data = JSON.parse(saved);
-                                if (data?.uid && data?.username) {
-                                    uid = data.uid;
-                                    username = data.username;
-                                    role = data.role || 'viewer';
-                                    sessionStorage.setItem('targetUID', uid);
-                                    sessionStorage.setItem('currentUsername', username);
-                                    sessionStorage.setItem('userRole', role);
-                                    console.log('✅ localStorageから認証情報復元');
-                                }
-                            }
-                        } catch (e) {
-                            console.warn('localStorage復元エラー:', e);
-                        }
-                    }
-                }
-
-                // 認証情報が取得できない場合はログイン画面へ
                 if (!uid || !username) {
-                    console.error('❌ 認証情報が見つかりません');
-                    showMessage('認証情報が見つかりません。ログイン画面に戻ります。', 'error');
+                    showMessage('セッション情報が不足しています。ログインし直してください。', 'error');
                     setTimeout(() => location.href = '../index.html', 2000);
                     return;
                 }
 
-                // 匿名認証の確保（8秒タイムアウト）
-                console.log('🔄 匿名認証確認...');
-                try {
-                    if (!auth.currentUser) {
-                        await Promise.race([
-                            auth.signInAnonymously(),
-                            new Promise((_, reject) => 
-                                setTimeout(() => reject(new Error('認証タイムアウト')), 8000)
-                            )
-                        ]);
-                        console.log('✅ 匿名認証成功');
-                    } else {
-                        console.log('✅ 既存認証確認済み');
-                    }
-                } catch (e) {
-                    console.error('❌ 匿名認証エラー:', e);
-                    showMessage('認証に失敗しました。ログイン画面に戻ります。', 'error');
-                    setTimeout(() => location.href = '../index.html', 2000);
-                    return;
+                // 匿名認証
+                if (!auth.currentUser) {
+                    await auth.signInAnonymously();
                 }
 
-                // ユーザーデータ取得（8秒タイムアウト）
-                console.log('🔄 ユーザーデータ取得...');
+                // ユーザーデータ取得
                 const dataRoot = window.DATA_ROOT || 'ceScheduleV2';
-                let userSnap;
+                const userSnap = await database.ref(`${dataRoot}/users/${uid}`).once('value');
                 
-                try {
-                    userSnap = await Promise.race([
-                        database.ref(`${dataRoot}/users/${uid}`).once('value'),
-                        new Promise((_, reject) => 
-                            setTimeout(() => reject(new Error('データベースタイムアウト')), 8000)
-                        )
-                    ]);
-                } catch (e) {
-                    console.error('❌ ユーザーデータ取得エラー:', e);
-                    showMessage('ユーザーデータの取得に失敗しました。', 'error');
-                    setTimeout(() => location.href = '../index.html', 2000);
-                    return;
-                }
-
-                if (!userSnap?.exists()) {
-                    console.error('❌ ユーザーデータが存在しません');
+                if (!userSnap.exists()) {
                     showMessage('ユーザーデータが見つかりません。', 'error');
                     setTimeout(() => location.href = '../index.html', 2000);
                     return;
                 }
 
                 currentUserData = userSnap.val();
-                console.log('✅ ユーザーデータ取得完了');
 
                 // UI設定
                 document.getElementById('currentUser').textContent = currentUserData.username || 'Unknown';
                 document.getElementById('usernameDisplay').textContent = currentUserData.username || '';
                 document.getElementById('displayNameInput').value = currentUserData.displayName || currentUserData.username || '';
                 
+                // 権限表示
                 const roleBadges = {
                     admin: '管理者',
                     editor: '編集者', 
@@ -486,8 +315,7 @@
 
                 // 画面表示
                 document.getElementById('loadingScreen').style.display = 'none';
-                document.getElementById('mainContent').style.display = 'flex';
-                console.log('✅ 初期化完了 - UI表示');
+                document.getElementById('mainContent').style.display = 'block';
 
                 // イベントリスナー設定
                 document.getElementById('newPassword').addEventListener('input', updatePasswordStrength);
@@ -495,13 +323,13 @@
                 document.getElementById('setupForm').addEventListener('submit', saveSettings);
 
             } catch (error) {
-                console.error('❌ 初期化致命的エラー:', error);
-                showMessage('システムの初期化に失敗しました。', 'error');
-                setTimeout(() => location.href = '../index.html', 3000);
+                console.error('初期化エラー:', error);
+                showMessage('初期化に失敗しました: ' + (error.message || error), 'error');
+                setTimeout(() => location.href = '../index.html', 2000);
             }
         }
 
-        // 設定保存（完全版）
+        // 設定保存
         async function saveSettings(event) {
             event.preventDefault();
             
@@ -549,17 +377,17 @@
                 // パスワードハッシュ化
                 const hashedPassword = await hashPasswordPBKDF2(newPassword);
 
-                // データベース更新
+                // データベース更新（重要：全フラグを適切に設定）
                 const dataRoot = window.DATA_ROOT || 'ceScheduleV2';
                 const updates = {
                     displayName: displayName || currentUserData.displayName || currentUserData.username,
                     password: hashedPassword,
-                    setupCompleted: true,
-                    hasCompletedSetup: true,
-                    needsSetup: false,
-                    passwordResetCompleted: false,
-                    fromPending: false,
-                    isInitialUser: false,
+                    setupCompleted: true,           // 最重要：セットアップ完了フラグ
+                    hasCompletedSetup: true,        // 後方互換性
+                    needsSetup: false,              // セットアップ不要
+                    passwordResetCompleted: false,  // リセット完了フラグをクリア
+                    fromPending: false,             // 待機状態フラグをクリア
+                    isInitialUser: false,           // 初期ユーザーフラグをクリア
                     lastUpdate: firebase.database.ServerValue.TIMESTAMP,
                     setupCompletedAt: firebase.database.ServerValue.TIMESTAMP,
                     updatedBy: 'user-setup'
@@ -579,11 +407,11 @@
                 // セッション更新
                 sessionStorage.setItem('userRole', currentUserData.role || 'viewer');
 
-                // 成功メッセージとHOMEへリダイレクト
-                showMessage('設定を保存しました。HOMEへ移動します。', 'success');
+                showMessage('設定を保存しました。ダッシュボードへ移動します。', 'success');
                 
+                // ダッシュボードへリダイレクト
                 setTimeout(() => {
-                    location.href = './home.html';
+                    location.href = '../dashboard.html';
                 }, 1500);
 
             } catch (error) {
@@ -592,7 +420,7 @@
             } finally {
                 isProcessing = false;
                 saveButton.disabled = false;
-                saveButton.innerHTML = '<i class="fas fa-save mr-2"></i>設定を保存してHOMEへ';
+                saveButton.innerHTML = '<i class="fas fa-save mr-2"></i>設定を保存してダッシュボードへ';
             }
         }
 
