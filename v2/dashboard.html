@@ -4334,5 +4334,71 @@ if (monthlyBtn) {
         
     }
     </script>
+
+    <script>
+// 緊急時フォールバック設定（本番環境では true 推奨）
+window.ENABLE_EMERGENCY_FALLBACK = true;
+window.FALLBACK_TIMEOUT_MS = 20000; // 20秒
+
+(function() {
+    'use strict';
+    
+    if (!window.ENABLE_EMERGENCY_FALLBACK) return;
+    
+    window.addEventListener('load', function() {
+        setTimeout(function() {
+            try {
+                const loading = document.getElementById('loading');
+                const main = document.getElementById('mainInterface');
+                
+                // 初期化状態の詳細チェック
+                const isStillLoading = loading && loading.style.display !== 'none';
+                const isMainHidden = main && getComputedStyle(main).display === 'none';
+                const isInitialized = !!(window.dashboardAuth && window.dashboardAuth.isInitialized);
+                
+                if (isStillLoading || (isMainHidden && !isInitialized)) {
+                    console.warn('⚠️ システム初期化タイムアウト - 緊急復旧モード実行');
+                    
+                    // 強制的にメイン画面を表示
+                    if (loading) loading.style.display = 'none';
+                    if (main) main.style.display = 'block';
+                    
+                    // ユーザー向け通知表示
+                    const notification = document.createElement('div');
+                    notification.className = 'fixed top-4 left-4 right-4 z-50';
+                    notification.innerHTML = `
+                        <div class="bg-yellow-100 border border-yellow-500 text-yellow-700 px-4 py-3 rounded shadow-lg">
+                            <div class="flex items-center justify-between">
+                                <div>
+                                    <strong>⚠️ システム初期化遅延</strong><br>
+                                    <small>初期化に時間がかかっています。一部機能が制限される可能性があります。</small>
+                                </div>
+                                <div>
+                                    <button onclick="location.reload()" 
+                                            class="ml-2 bg-yellow-500 text-white px-3 py-1 rounded hover:bg-yellow-600 transition">
+                                        再読み込み
+                                    </button>
+                                    <button onclick="this.closest('.fixed').remove()" 
+                                            class="ml-1 text-yellow-500 hover:text-yellow-700 text-lg">
+                                        ×
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                    document.body.insertBefore(notification, document.body.firstChild);
+                    
+                    console.log('✅ 緊急復旧モード完了');
+                }
+            } catch (error) {
+                console.warn('⚠️ 緊急復旧処理でエラー:', error);
+            }
+        }, window.FALLBACK_TIMEOUT_MS || 20000);
+    });
+    
+    console.log('✅ 緊急時フォールバック処理初期化完了');
+})();
+</script>
+
 </body>
 </html>
