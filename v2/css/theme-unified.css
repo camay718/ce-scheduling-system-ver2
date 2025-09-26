@@ -1575,3 +1575,53 @@ body.theme-unified {
         order: 1;
     }
 }
+/* user-setup ページ専用スタイル */
+.user-setup-page .center-layout {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    box-sizing: border-box;
+}
+
+.user-setup-page .center-card {
+    width: 100%;
+    max-width: 600px;
+    margin: 0 auto;
+}
+
+@media (max-width: 768px) {
+    .user-setup-page .center-layout {
+        padding: 16px;
+        align-items: flex-start;
+        padding-top: 40px;
+    }
+    .user-setup-page .glass-card {
+        padding: 20px !important;
+    }
+    .user-setup-page h1 {
+        font-size: 1.8rem !important;
+    }
+    .user-setup-page .input-unified {
+        font-size: 16px;
+        padding: 12px;
+    }
+    .user-setup-page .btn-unified {
+        padding: 14px 20px;
+        font-size: 14px;
+    }
+}
+
+@media (max-width: 480px) {
+    .user-setup-page .center-layout {
+        padding: 12px;
+        padding-top: 20px;
+    }
+    .user-setup-page .glass-card {
+        padding: 16px !important;
+    }
+    .user-setup-page h1 {
+        font-size: 1.5rem !important;
+    }
+}
