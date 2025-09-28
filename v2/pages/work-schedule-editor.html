@@ -771,6 +771,16 @@
                 <label class="block text-xs font-medium mb-1">アイコン名（ダッシュボード表示名）</label>
                 <input type="text" id="editCEIconName" class="input-unified text-sm" placeholder="アイコン名を入力">
             </div>
+                  <!-- 追加: 基本勤務区分選択 -->
+        <div>
+            <label class="block text-xs font-medium mb-1">基本勤務区分</label>
+            <select id="editCEWorkType" class="input-unified text-sm">
+                <option value="OPE">OPE</option>
+                <option value="ME">ME</option>
+                <option value="HD">HD</option>
+                <option value="FLEX">FLEX</option>
+            </select>
+        </div>
         </div>
 
         <div class="flex gap-2 mt-4">
@@ -2092,6 +2102,7 @@
             const menu = document.getElementById('ceEditMenu');
             const fullNameInput = document.getElementById('editCEFullName');
             const iconNameInput = document.getElementById('editCEIconName');
+            const workTypeSelect = document.getElementById('editCEWorkType');
             
             if (!menu) return;
 
@@ -2099,6 +2110,7 @@
 
             fullNameInput.value = ce.fullName || '';
             iconNameInput.value = ce.iconName || '';
+            workTypeSelect.value = ce.workType || 'ME';
 
             this.positionMenu(menu, event.target);
         }
@@ -2116,9 +2128,11 @@
 
             const fullNameInput = document.getElementById('editCEFullName');
             const iconNameInput = document.getElementById('editCEIconName');
+            const workTypeSelect = document.getElementById('editCEWorkType');
             
             const fullName = fullNameInput.value.trim();
             const iconName = iconNameInput.value.trim();
+            const workType = workTypeSelect.value;
 
             if (!fullName || !iconName) {
                 window.showMessage('氏名とアイコン名を両方入力してください', 'warning');
@@ -2134,9 +2148,11 @@
                     this.ceList[ceIndex].iconName = iconName;
                     this.ceList[ceIndex].displayName = iconName;
                     this.ceList[ceIndex].name = iconName;
+                    this.ceList[ceIndex].workType = workType;
                     
                     await this.saveCEList();
                     this.renderScheduleTable();
+                    this.updateRemoveCESelect();
                     this.closeCEEditMenu();
                     
                     window.showMessage(`CE情報（${fullName}）を更新しました`, 'success');
