@@ -561,9 +561,6 @@
 
             <!-- 右側：業務追加ボタン -->
             <div class="taskbar-right">
-                <button id="addEventButtonDaily" class="btn-unified btn-primary-unified btn-small">
-                    <i class="fas fa-plus mr-1"></i>業務追加
-                </button>
                 <button id="addBulkEventBtn" class="btn-unified btn-primary-unified btn-small">
                     <i class="fas fa-calendar-plus mr-1"></i>期間一括追加
                 </button>
@@ -880,9 +877,16 @@
                 }
 
                 if (bulkBtn && !bulkBtn.dataset.bound) {
-                    bulkBtn.dataset.bound = 'true';
-                    bulkBtn.onclick = () => this.openBulkAddEventModal();
-                }
+    const newBtn = bulkBtn.cloneNode(true);
+    bulkBtn.parentNode.replaceChild(newBtn, bulkBtn);
+    
+    newBtn.dataset.bound = 'true';
+    newBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopImmediatePropagation();
+        this.openBulkAddEventModal();
+    });
+}
 
                 if (monthlyBtn && !monthlyBtn.dataset.bound) {
                     monthlyBtn.dataset.bound = 'true';
@@ -1221,7 +1225,7 @@
                 const department = document.getElementById('simpleEventDepartment')?.value;
                 const startTime = document.getElementById('simpleStartTime')?.value;
                 const endTime = document.getElementById('simpleEndTime')?.value;
-                const count = parseInt(document.getElementById('simpleEventCount')?.value) || 0;
+                const count = parseInt(document.getElementById('bulkEventCount')?.value) || 0;
                 const requiredPeople = parseInt(document.getElementById('simpleRequiredPeople')?.value) || 1;
                 const description = document.getElementById('simpleDescription')?.value?.trim();
 
@@ -1243,7 +1247,7 @@
                         count: count,
                         requiredPeople: requiredPeople,
                         description: description || null,
-                        assignedCEs: [],
+                        assignedCEs: {},
                         createdAt: firebase.database.ServerValue.TIMESTAMP,
                         createdBy: window.currentUserData?.displayName || 'user'
                     };
@@ -1455,7 +1459,7 @@
                             count: count,
                             requiredPeople: requiredPeople,
                             description: description || null,
-                            assignedCEs: [],
+                            assignedCEs: {},
                             createdAt: firebase.database.ServerValue.TIMESTAMP,
                             createdBy: window.currentUserData?.displayName || 'user',
                             bulkCreated: true
@@ -1602,7 +1606,7 @@
                         actualCount: 0,
                         requiredPeople: requiredPeople,
                         description: description || null,
-                        assignedCEs: [],
+                        assignedCEs: {},
                         createdAt: firebase.database.ServerValue.TIMESTAMP,
                         createdBy: window.currentUserData?.displayName || 'user',
                         type: 'monthly',
@@ -2492,20 +2496,6 @@ async unassignCEFromMonthlyTask(yearMonth, taskId, ceId, dateKey) {
                 }
             }
 
-            // 月次業務CE配置
-            async assignCEToMonthlyTask(yearMonth, taskId, ceData) {
-                try {
-                    const taskRef = window.database.ref(`${window.DATA_ROOT}/monthlyTasks/${yearMonth}/${taskId}`);
-                    const snapshot = await taskRef.once('value');
-                    const taskData = snapshot.val();
-
-                    if (!taskData) {
-                        window.showMessage('月次業務データが見つかりません', 'error');
-                        return;
-                    }
-
-                    const currentAssigned = Array.isArray(taskData.assignedCEs) ? taskData.assignedCEs : [];
-                    
                     // 重複チェック
                     const exists = currentAssigned.some(x => 
                         (typeof x === 'string' ? x === ceData.ceId : x?.id === ceData.ceId)
@@ -2605,11 +2595,143 @@ async unassignCEFromMonthlyTask(yearMonth, taskId, ceId, dateKey) {
                 }
             }
 
-            // 業務編集モーダル（プレースホルダー）
-            openEditEventModal(dateKey, eventId, eventData) {
-                console.log('業務編集モーダル（実装予定）:', { dateKey, eventId, eventData });
-                window.showMessage('業務編集機能は開発中です', 'info');
-            }
+// 業務編集モーダル（完全実装版）
+openEditEventModal(dateKey, eventId, eventData) {
+    if (window.userRole === 'viewer') {
+        window.showMessage('編集権限がありません', 'warning');
+        return;
+    }
+
+    const modal = document.createElement('div');
+    modal.id = 'editEventModal';
+    modal.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50';
+    
+    const departmentOptions = this.buildDepartmentOptions(eventData.department);
+    
+    modal.innerHTML = `
+        <div class="glass-card p-6 max-w-lg w-full mx-4 max-h-[90vh] overflow-y-auto">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-lg font-bold">
+                    <i class="fas fa-edit text-blue-600 mr-2"></i>業務編集
+                </h3>
+                <button onclick="this.closest('.fixed').remove()" class="text-gray-500 hover:text-gray-700">
+                    <i class="fas fa-times text-xl"></i>
+                </button>
+            </div>
+            
+            <form id="editEventForm" class="space-y-4">
+                <div>
+                    <label class="block text-sm font-bold mb-2">業務名 *</label>
+                    <input type="text" id="editEventName" class="input-unified" value="${this.escapeHtmlAttribute(eventData.name || '')}" required>
+                </div>
+                
+                <div>
+                    <label class="block text-sm font-bold mb-2">部門 *</label>
+                    <select id="editEventDepartment" class="input-unified" required>
+                        ${departmentOptions}
+                    </select>
+                </div>
+                
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-bold mb-2">開始時間</label>
+                        <input type="time" id="editStartTime" class="input-unified" value="${eventData.startTime || ''}">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-bold mb-2">終了時間</label>
+                        <input type="time" id="editEndTime" class="input-unified" value="${eventData.endTime || ''}">
+                    </div>
+                </div>
+                
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-bold mb-2">予定件数</label>
+                        <input type="number" id="editEventCount" class="input-unified" min="0" max="999" value="${eventData.count || 0}">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-bold mb-2">必要人数</label>
+                        <input type="number" id="editRequiredPeople" class="input-unified" min="0" max="20" value="${eventData.requiredPeople || 1}">
+                    </div>
+                </div>
+                
+                <div>
+                    <label class="block text-sm font-bold mb-2">詳細</label>
+                    <textarea id="editDescription" class="input-unified" rows="3">${this.escapeHtmlAttribute(eventData.description || '')}</textarea>
+                </div>
+                
+                <div class="flex space-x-3">
+                    <button type="button" onclick="this.closest('.fixed').remove()" 
+                            class="btn-unified btn-outline-unified flex-1">キャンセル</button>
+                    <button type="button" onclick="window.scheduleManager.deleteEventConfirm('${dateKey}', '${eventId}', '${this.escapeHtmlAttribute(eventData.name || '')}')" 
+                            class="btn-unified btn-outline-unified text-red-600 border-red-600">
+                        <i class="fas fa-trash mr-1"></i>削除</button>
+                    <button type="submit" class="btn-unified btn-primary-unified flex-1">
+                        <i class="fas fa-save mr-2"></i>更新</button>
+                </div>
+            </form>
+        </div>
+    `;
+
+    document.body.appendChild(modal);
+
+    document.getElementById('editEventForm').onsubmit = (e) => {
+        e.preventDefault();
+        this.updateEventFromModal(dateKey, eventId, modal);
+    };
+}
+        
+        // 業務更新処理
+async updateEventFromModal(dateKey, eventId, modal) {
+    const name = document.getElementById('editEventName')?.value?.trim();
+    const department = document.getElementById('editEventDepartment')?.value;
+    const startTime = document.getElementById('editStartTime')?.value;
+    const endTime = document.getElementById('editEndTime')?.value;
+    const count = parseInt(document.getElementById('editEventCount')?.value) || 0;
+    const requiredPeople = parseInt(document.getElementById('editRequiredPeople')?.value) || 1;
+    const description = document.getElementById('editDescription')?.value?.trim();
+
+    if (!name || !department) {
+        window.showMessage('業務名と部門を入力してください', 'error');
+        return;
+    }
+
+    try {
+        await window.database.ref(`${window.DATA_ROOT}/events/byDate/${dateKey}/${eventId}`).update({
+            name, department, startTime: startTime || null, endTime: endTime || null,
+            count, requiredPeople, description: description || null,
+            updatedAt: firebase.database.ServerValue.TIMESTAMP,
+            updatedBy: window.currentUserData?.displayName || 'user'
+        });
+
+        modal.remove();
+        window.showMessage('業務を更新しました', 'success');
+        setTimeout(() => this.loadAndRenderEventsForSelectedDate(), 300);
+    } catch (error) {
+        console.error('業務更新エラー:', error);
+        window.showMessage('業務の更新に失敗しました', 'error');
+    }
+}
+
+// 業務削除確認
+async deleteEventConfirm(dateKey, eventId, eventName) {
+    if (!confirm(`業務「${eventName}」を削除してもよろしいですか？`)) return;
+    
+    try {
+        await window.database.ref(`${window.DATA_ROOT}/events/byDate/${dateKey}/${eventId}`).remove();
+        document.getElementById('editEventModal')?.remove();
+        window.showMessage('業務を削除しました', 'success');
+        setTimeout(() => this.loadAndRenderEventsForSelectedDate(), 300);
+    } catch (error) {
+        console.error('業務削除エラー:', error);
+        window.showMessage('業務の削除に失敗しました', 'error');
+    }
+}
+
+// セキュリティ向上：エスケープ処理
+escapeHtmlAttribute(str) {
+    if (typeof str !== 'string') return str;
+    return str.replace(/'/g, '&#39;').replace(/"/g, '&quot;');
+}
 
 // 月次業務編集モーダル（完全実装版）
 openEditMonthlyTaskModal(yearMonth, taskId, taskData) {
