@@ -83,11 +83,7 @@
     overflow: hidden;
     display: flex;
     flex-direction: column;
-    min-height: 0;
-}
-
-.schedule-main.sidebar-collapsed {
-    /* flexboxで自動拡大 */
+    transition: all 0.3s ease;
 }
 
         /* テーブルのスケール表示対応 */
@@ -98,9 +94,8 @@
     margin-top: 20px;
     position: relative;
     overflow: auto;
-    height: calc(100vh - 280px);
-    min-height: 500px;
-    padding: 8px;
+    height: calc(100vh - 200px);
+    min-height: 600px;
 }
 
         .work-schedule-table {
