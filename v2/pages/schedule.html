@@ -712,15 +712,17 @@
 
         // スケジュール管理クラス（dashboard.htmlから完全統合）
         class ScheduleManager {
-            constructor() {
-                this.isInitialized = false;
-                this.selectedDate = new Date();
-                this.monthlyTasks = {};
-                this.eventsRef = null;
-                this.eventsCallback = null;
-                this.monthlyRef = null;
-                this.monthlyCallback = null;
-            }
+constructor() {
+    this.isInitialized = false;
+    this.selectedDate = new Date();
+    this.monthlyTasks = {};
+    this.eventsRef = null;
+    this.eventsCallback = null;
+    this.monthlyRef = null;
+    this.monthlyCallback = null;
+    this.monthlyRenderTimeout = null; // デバウンス用タイマー
+    this.lastMonthlyUpdate = {}; // 更新制御用
+}
 
             async init() {
                 if (this.isInitialized) return;
@@ -1135,14 +1137,28 @@
                     }
                     
                     this.monthlyRef = window.database.ref(`${window.DATA_ROOT}/monthlyTasks/${yearMonth}`);
-                    this.monthlyCallback = async (snapshot) => {
-                        console.log('🔄 月次業務データ更新検知:', yearMonth);
-                        const data = snapshot.val() || {};
-                        this.monthlyTasks[yearMonth] = data;
-                        
-                        await this.renderMonthlyTasks();
-                        this.updateDailySummary().catch(console.error);
-                    };
+this.monthlyCallback = async (snapshot) => {
+    console.log('🔄 月次業務データ更新検知:', yearMonth);
+    const data = snapshot.val() || {};
+    
+    // データ変更検知（無限ループ防止）
+    const currentHash = JSON.stringify(this.monthlyTasks[yearMonth] || {});
+    const newHash = JSON.stringify(data);
+    
+    if (currentHash !== newHash) {
+        console.log('📊 月次業務データ実際に変更:', yearMonth);
+        this.monthlyTasks[yearMonth] = data;
+        
+        // デバウンス処理（連続更新防止）
+        clearTimeout(this.monthlyRenderTimeout);
+        this.monthlyRenderTimeout = setTimeout(async () => {
+            await this.renderMonthlyTasks();
+            this.updateDailySummary().catch(console.error);
+        }, 300);
+    } else {
+        console.log('📊 月次業務データ変更なし（更新スキップ）');
+    }
+};
                     this.monthlyRef.on('value', this.monthlyCallback);
                 };
                 
@@ -1848,9 +1864,13 @@ async renderMonthlyTasks() {
         const section = grid.querySelector(`.monthly-plans[data-department="${task.department}"]`);
         if (!section) continue;
 
-        // ★ 日別CE配置の取得（重要な変更点）
-        const dailyAssignments = task.assignedCEs || {};
-        const assignedList = Array.isArray(dailyAssignments[dateKey]) ? dailyAssignments[dateKey] : [];
+// ★ 日別CE配置の取得（データ構造統一版）
+let dailyAssignments = task.assignedCEs;
+if (!dailyAssignments || Array.isArray(dailyAssignments)) {
+    console.log('🔄 [データ正規化] 配列→オブジェクト形式に変換:', task.name);
+    dailyAssignments = {}; // 配列や不正値をオブジェクトに統一
+}
+const assignedList = Array.isArray(dailyAssignments[dateKey]) ? dailyAssignments[dateKey] : [];
         
         const normalizedAssigned = assignedList.map(entry => {
             if (typeof entry === 'string') {
@@ -2072,14 +2092,26 @@ async assignCEToMonthlyTask(yearMonth, taskId, ceData) {
             return;
         }
 
-        // 日別配置の取得
-        const assignedCEs = taskData.assignedCEs || {};
-        const currentDayAssigned = Array.isArray(assignedCEs[dateKey]) ? assignedCEs[dateKey] : [];
+// 日別配置の取得（正規化処理付き）
+let assignedCEs = taskData.assignedCEs;
+if (!assignedCEs || Array.isArray(assignedCEs)) {
+    console.log('🔄 [CE配置] データ構造を正規化:', { before: Array.isArray(assignedCEs) ? 'Array' : typeof assignedCEs });
+    assignedCEs = {}; // 配列や不正値をオブジェクトに統一
+}
+const currentDayAssigned = Array.isArray(assignedCEs[dateKey]) ? assignedCEs[dateKey] : [];
         
-        // 重複チェック
-        const exists = currentDayAssigned.some(x => 
-            (typeof x === 'string' ? x === ceData.ceId : x?.id === ceData.ceId)
-        );
+// 重複チェック（強化版）
+const exists = currentDayAssigned.some(x => {
+    const existingId = typeof x === 'string' ? x : x?.id;
+    return existingId === ceData.ceId;
+});
+
+console.log('🔍 [重複チェック]:', { 
+    exists, 
+    targetCE: ceData.ceId, 
+    currentCEs: currentDayAssigned.map(x => typeof x === 'string' ? x : x?.id || 'invalid'),
+    dateKey 
+});
         
         if (exists) {
             window.showMessage(`${ceData.ceName}は既に配置済みです`, 'warning');
@@ -2116,10 +2148,11 @@ async assignCEToMonthlyTask(yearMonth, taskId, ceData) {
             updatedBy: window.currentUserData?.displayName || 'user'
         });
 
-        window.showMessage(`${ceData.ceName}を月次業務（${dateKey}）に配置しました`, 'success');
-        console.log('✅ [月次CE配置] 完了:', ceData.ceName);
-        await this.renderMonthlyTasks();
-        this.updateDailySummary().catch(console.error);
+window.showMessage(`${ceData.ceName}を月次業務（${dateKey}）に配置しました`, 'success');
+console.log('✅ [月次CE配置] 完了:', ceData.ceName);
+
+// 手動更新は無限ループ防止のためFirebaseリアルタイム更新に委譲
+console.log('📊 手動更新スキップ（Firebaseリアルタイム更新待機）');
 
     } catch (error) {
         console.error('❌ 月次業務CE配置エラー:', error);
@@ -2141,8 +2174,12 @@ async unassignCEFromMonthlyTask(yearMonth, taskId, ceId, dateKey) {
             return;
         }
 
-        const assignedCEs = taskData.assignedCEs || {};
-        const currentDayAssigned = Array.isArray(assignedCEs[dateKey]) ? assignedCEs[dateKey] : [];
+let assignedCEs = taskData.assignedCEs;
+if (!assignedCEs || Array.isArray(assignedCEs)) {
+    console.log('🔄 [CE解除] データ構造を正規化');
+    assignedCEs = {};
+}
+const currentDayAssigned = Array.isArray(assignedCEs[dateKey]) ? assignedCEs[dateKey] : [];
         const updatedAssigned = currentDayAssigned.filter(x => 
             (typeof x === 'string' ? x !== ceId : x?.id !== ceId)
         );
