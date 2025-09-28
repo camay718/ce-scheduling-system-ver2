@@ -455,14 +455,43 @@
         };
 
         // 勤務表管理クラス
-        class CEScheduleManager {
-            constructor() {
-                this.schedules = [];
-                this.currentPeriodIndex = 0;
-                this.availablePeriods = [];
-                this.realtimeListener = null;
-                this.isInitialized = false;
-                this.currentFilter = 'future'; // デフォルトは今後の勤務表
+class CEScheduleManager {
+    constructor() {
+        this.schedules = [];
+        this.currentPeriodIndex = 0;
+        this.availablePeriods = [];
+        this.realtimeListener = null;
+        this.isInitialized = false;
+        this.currentFilter = 'future';
+        
+        // ★ この部分を追加 ★
+        this.footerTypes = [
+            {
+                label: 'OPE(A/A1)',
+                filter: (effectiveType, status) => effectiveType === 'OPE' && (status === 'A' || status === 'A1')
+            },
+            {
+                label: 'OPE(B)',
+                filter: (effectiveType, status) => effectiveType === 'OPE' && status === 'B'
+            },
+            {
+                label: 'ME(A/A1)',
+                filter: (effectiveType, status) => effectiveType === 'ME' && (status === 'A' || status === 'A1')
+            },
+            {
+                label: 'ME(B)',
+                filter: (effectiveType, status) => effectiveType === 'ME' && status === 'B'
+            },
+            {
+                label: 'HD勤務',
+                filter: (effectiveType, status) => effectiveType === 'HD' && ['A', 'A1', 'B'].includes(status)
+            },
+            {
+                label: 'FLEX勤務',
+                filter: (effectiveType, status) => effectiveType === 'FLEX' && ['A', 'A1', 'B'].includes(status)
+            }
+        ];
+    }
             }
 
             async init() {
@@ -968,8 +997,8 @@ fitTableToViewport() {
 
                 // フッター集計
 html += '<tfoot>';
-footerTypes.forEach(type => {
-    html += `<tr class="footer-summary-row"><th class="type-label" colspan="2">${type.label}</th>`;
+this.footerTypes.forEach(type => {  // ★ footerTypes → this.footerTypes に変更 ★
+    html += `<tr class="footer-summary-row"><th class="type-label" colspan="1">${type.label}</th>`;  // ★ colspan="2" → colspan="1" に変更 ★
     
     dates.forEach(date => {
         const dateKey = this.formatDate(date);
@@ -996,7 +1025,6 @@ footerTypes.forEach(type => {
     
     html += '</tr>';
 });
-
 html += '</tfoot>';
                 return html;
             }
