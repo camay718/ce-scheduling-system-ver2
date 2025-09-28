@@ -582,23 +582,24 @@
                         </div>
                     </div>
 
-                    <!-- 4. 公開・印刷 -->
-                    <div class="mb-6">
-                        <h3 class="text-sm font-semibold mb-3">
-                            <i class="fas fa-share mr-2"></i>公開・印刷
-                        </h3>
-                        <div class="space-y-2">
-                            <button id="publishScheduleBtn" class="btn-unified btn-primary-unified btn-small w-full">
-                                <i class="fas fa-bullhorn mr-1"></i>勤務表を公開
-                            </button>
-                            <button id="printScheduleBtn" class="btn-unified btn-outline-unified btn-small w-full">
-                                <i class="fas fa-print mr-1"></i>印刷（A4横）
-                            </button>
-                            <button id="exportExcelBtn" class="btn-unified btn-success btn-small w-full">
-                                <i class="fas fa-file-excel mr-1"></i>Excel出力
-                            </button>
-                        </div>
-                    </div>
+<!-- 4. 公開・印刷 -->
+<div class="mb-6">
+    <h3 class="text-sm font-semibold mb-3">
+        <i class="fas fa-share mr-2"></i>公開・印刷
+    </h3>
+    <div class="space-y-2">
+        <button id="publishScheduleBtn" class="btn-unified btn-primary-unified btn-small w-full">
+            <i class="fas fa-bullhorn mr-1"></i>勤務表を公開
+        </button>
+        <button id="printScheduleBtn" class="btn-unified btn-outline-unified btn-small w-full">
+            <i class="fas fa-print mr-1"></i>印刷（A4横）
+        </button>
+        <!-- 追加: Excel出力ボタン -->
+        <button id="exportExcelBtn" class="btn-unified btn-success btn-small w-full">
+            <i class="fas fa-file-excel mr-1"></i>Excel出力
+        </button>
+    </div>
+</div>
 
                     <!-- 5. CE管理 -->
                     <div class="mb-6">
@@ -655,14 +656,14 @@
                     </div>
                 </div>
 
-                <!-- ナビゲーション（常に最下部に固定） -->
-                <div class="sidebar-navigation">
-                    <div class="space-y-2">
-                      <a href="./home.html" class="btn-unified btn-outline-unified btn-small w-full">
+<!-- ナビゲーション（常に最下部に固定） -->
+<div class="sidebar-navigation">
+    <div class="space-y-2">
+        <a href="./home.html" class="btn-unified btn-outline-unified btn-small w-full">
             <i class="fas fa-home mr-1"></i>HOME
-                        </a>
-                    </div>
-                </div>
+        </a>
+    </div>
+</div>
             </div>
         </div>
 
@@ -756,25 +757,25 @@
         </div>
     </div>
 
-    <!-- CE編集メニュー -->
-    <div id="ceEditMenu" class="ce-edit-menu" style="display: none;">
-        <div class="flex items-center justify-between mb-3">
-            <span class="text-sm font-semibold">CE情報編集</span>
-            <button id="closeCEEditMenu" class="text-gray-500 hover:text-gray-700">
-                <i class="fas fa-times"></i>
-            </button>
+<!-- CE編集メニュー -->
+<div id="ceEditMenu" class="ce-edit-menu" style="display: none;">
+    <div class="flex items-center justify-between mb-3">
+        <span class="text-sm font-semibold">CE情報編集</span>
+        <button id="closeCEEditMenu" class="text-gray-500 hover:text-gray-700">
+            <i class="fas fa-times"></i>
+        </button>
+    </div>
+    
+    <div class="space-y-3">
+        <div>
+            <label class="block text-xs font-medium mb-1">氏名（勤務表表示名）</label>
+            <input type="text" id="editCEFullName" class="input-unified text-sm" placeholder="氏名を入力">
         </div>
-        
-        <div class="space-y-3">
-            <div>
-                <label class="block text-xs font-medium mb-1">氏名（勤務表表示名）</label>
-                <input type="text" id="editCEFullName" class="input-unified text-sm" placeholder="氏名を入力">
-            </div>
-            <div>
-                <label class="block text-xs font-medium mb-1">アイコン名（ダッシュボード表示名）</label>
-                <input type="text" id="editCEIconName" class="input-unified text-sm" placeholder="アイコン名を入力">
-            </div>
-                  <!-- 追加: 基本勤務区分選択 -->
+        <div>
+            <label class="block text-xs font-medium mb-1">アイコン名（ダッシュボード表示名）</label>
+            <input type="text" id="editCEIconName" class="input-unified text-sm" placeholder="アイコン名を入力">
+        </div>
+        <!-- 追加: 基本勤務区分選択 -->
         <div>
             <label class="block text-xs font-medium mb-1">基本勤務区分</label>
             <select id="editCEWorkType" class="input-unified text-sm">
@@ -784,14 +785,14 @@
                 <option value="FLEX">FLEX</option>
             </select>
         </div>
-        </div>
-
-        <div class="flex gap-2 mt-4">
-            <button id="saveCEEdit" class="btn-unified btn-primary-unified btn-small flex-1">
-                <i class="fas fa-save mr-1"></i>保存
-            </button>
-        </div>
     </div>
+
+    <div class="flex gap-2 mt-4">
+        <button id="saveCEEdit" class="btn-unified btn-primary-unified btn-small flex-1">
+            <i class="fas fa-save mr-1"></i>保存
+        </button>
+    </div>
+</div>
 
     <!-- 統一メッセージシステム -->
     <script src="../js/utils/ui-utils.js"></script>
@@ -1399,17 +1400,19 @@
             if (createBtn) createBtn.onclick = () => this.createNewSchedule();
             if (clearBtn) clearBtn.onclick = () => this.clearAllSchedule();
 
-            const saveBtn = document.getElementById('saveSnapshotBtn');
-            const loadBtn = document.getElementById('loadSnapshotBtn');
-            const deleteBtn = document.getElementById('deleteSnapshotBtn');
-            const publishBtn = document.getElementById('publishScheduleBtn');
-            const printBtn = document.getElementById('printScheduleBtn');
-            
-            if (saveBtn) saveBtn.onclick = () => this.saveSnapshot();
-            if (loadBtn) loadBtn.onclick = () => this.loadSnapshot();
-            if (deleteBtn) deleteBtn.onclick = () => this.deleteSnapshot();
-            if (publishBtn) publishBtn.onclick = () => this.publishSchedule();
-            if (printBtn) printBtn.onclick = () => this.printSchedule();
+const saveBtn = document.getElementById('saveSnapshotBtn');
+const loadBtn = document.getElementById('loadSnapshotBtn');
+const deleteBtn = document.getElementById('deleteSnapshotBtn');
+const publishBtn = document.getElementById('publishScheduleBtn');
+const printBtn = document.getElementById('printScheduleBtn');
+const exportBtn = document.getElementById('exportExcelBtn'); // 追加
+
+if (saveBtn) saveBtn.onclick = () => this.saveSnapshot();
+if (loadBtn) loadBtn.onclick = () => this.loadSnapshot();
+if (deleteBtn) deleteBtn.onclick = () => this.deleteSnapshot();
+if (publishBtn) publishBtn.onclick = () => this.publishSchedule();
+if (printBtn) printBtn.onclick = () => this.printSchedule();
+if (exportBtn) exportBtn.onclick = () => this.exportToExcel(); // 追加
 
             const closeMenuBtn = document.getElementById('closeStatusMenu');
             if (closeMenuBtn) {
@@ -2101,22 +2104,24 @@
             }
         }
 
-        openCEEditMenu(event, ce) {
-            const menu = document.getElementById('ceEditMenu');
-            const fullNameInput = document.getElementById('editCEFullName');
-            const iconNameInput = document.getElementById('editCEIconName');
-            const workTypeSelect = document.getElementById('editCEWorkType');
-            
-            if (!menu) return;
+openCEEditMenu(event, ce) {
+    const menu = document.getElementById('ceEditMenu');
+    const fullNameInput = document.getElementById('editCEFullName');
+    const iconNameInput = document.getElementById('editCEIconName');
+    const workTypeSelect = document.getElementById('editCEWorkType'); // 追加
+    
+    if (!menu) return;
 
-            this.currentCEEditTarget = ce;
+    this.currentCEEditTarget = ce;
 
-            fullNameInput.value = ce.fullName || '';
-            iconNameInput.value = ce.iconName || '';
-            workTypeSelect.value = ce.workType || 'ME';
+    fullNameInput.value = ce.fullName || '';
+    iconNameInput.value = ce.iconName || '';
+    if (workTypeSelect) {
+        workTypeSelect.value = ce.workType || 'ME'; // 追加：現在の勤務区分を設定
+    }
 
-            this.positionMenu(menu, event.target);
-        }
+    this.positionMenu(menu, event.target);
+}
 
         closeCEEditMenu() {
             const menu = document.getElementById('ceEditMenu');
@@ -2126,48 +2131,48 @@
             this.currentCEEditTarget = null;
         }
 
-        async saveCEEdit() {
-            if (!this.currentCEEditTarget) return;
+async saveCEEdit() {
+    if (!this.currentCEEditTarget) return;
 
-            const fullNameInput = document.getElementById('editCEFullName');
-            const iconNameInput = document.getElementById('editCEIconName');
-            const workTypeSelect = document.getElementById('editCEWorkType');
+    const fullNameInput = document.getElementById('editCEFullName');
+    const iconNameInput = document.getElementById('editCEIconName');
+    const workTypeSelect = document.getElementById('editCEWorkType'); // 追加
+    
+    const fullName = fullNameInput.value.trim();
+    const iconName = iconNameInput.value.trim();
+    const workType = workTypeSelect ? workTypeSelect.value : (this.currentCEEditTarget.workType || 'ME'); // 追加
+
+    if (!fullName || !iconName) {
+        window.showMessage('氏名とアイコン名を両方入力してください', 'warning');
+        return;
+    }
+
+    try {
+        const ce = this.currentCEEditTarget;
+        const ceIndex = this.ceList.findIndex(c => c.id === ce.id);
+        
+        if (ceIndex !== -1) {
+            this.ceList[ceIndex].fullName = fullName;
+            this.ceList[ceIndex].iconName = iconName;
+            this.ceList[ceIndex].displayName = iconName;
+            this.ceList[ceIndex].name = iconName;
+            this.ceList[ceIndex].workType = workType; // 追加：勤務区分を更新
             
-            const fullName = fullNameInput.value.trim();
-            const iconName = iconNameInput.value.trim();
-            const workType = workTypeSelect.value;
-
-            if (!fullName || !iconName) {
-                window.showMessage('氏名とアイコン名を両方入力してください', 'warning');
-                return;
-            }
-
-            try {
-                const ce = this.currentCEEditTarget;
-                const ceIndex = this.ceList.findIndex(c => c.id === ce.id);
-                
-                if (ceIndex !== -1) {
-                    this.ceList[ceIndex].fullName = fullName;
-                    this.ceList[ceIndex].iconName = iconName;
-                    this.ceList[ceIndex].displayName = iconName;
-                    this.ceList[ceIndex].name = iconName;
-                    this.ceList[ceIndex].workType = workType;
-                    
-                    await this.saveCEList();
-                    this.renderScheduleTable();
-                    this.updateRemoveCESelect();
-                    this.closeCEEditMenu();
-                    
-                    window.showMessage(`CE情報（${fullName}）を更新しました`, 'success');
-                } else {
-                    window.showMessage('CEが見つかりませんでした', 'error');
-                }
-                
-            } catch (error) {
-                console.error('❌ CE情報更新エラー:', error);
-                window.showMessage('CE情報の更新に失敗しました', 'error');
-            }
+            await this.saveCEList();
+            this.renderScheduleTable();
+            this.updateRemoveCESelect();
+            this.closeCEEditMenu();
+            
+            window.showMessage(`CE情報（${fullName}）を更新しました`, 'success');
+        } else {
+            window.showMessage('CEが見つかりませんでした', 'error');
         }
+        
+    } catch (error) {
+        console.error('❌ CE情報更新エラー:', error);
+        window.showMessage('CE情報の更新に失敗しました', 'error');
+    }
+}
 
         // Excel出力機能の実装
 async exportToExcel() {
@@ -2509,6 +2514,158 @@ getEffectiveWorkType(ceId, dateKey) {
 }
 
         printSchedule() {
+
+// ========== Excel出力機能の追加開始 ==========
+
+// Excel出力機能の実装
+async exportToExcel() {
+    try {
+        console.log('📊 Excel出力開始');
+        window.showMessage('Excel出力を準備中...', 'info');
+        
+        // SheetJSライブラリの動的読み込み
+        if (typeof XLSX === 'undefined') {
+            console.log('📦 SheetJSライブラリを読み込み中...');
+            await this.loadXLSXLibrary();
+        }
+        
+        const dates = this.generateDateRange(this.currentPeriod.startDate, this.currentPeriod.endDate);
+        const workbook = XLSX.utils.book_new();
+        
+        // ワークシートデータの作成
+        const wsData = [];
+        
+        // ヘッダー行
+        const headerRow = ['No', '氏名'];
+        dates.forEach(date => {
+            const dayOfWeek = ['日', '月', '火', '水', '木', '金', '土'][date.getDay()];
+            headerRow.push(`${date.getDate()}(${dayOfWeek})`);
+        });
+        
+        const summaryHeaders = ['A', 'A1', 'B', '非', '×', '年', '出', '研', '休日数', '実勤務', '当直回数'];
+        headerRow.push(...summaryHeaders);
+        wsData.push(headerRow);
+        
+        // CEデータ行
+        this.ceList.forEach((ce, index) => {
+            const row = [index + 1, ce.fullName || ce.name];
+            
+            const summary = { A: 0, A1: 0, B: 0, non: 0, off: 0, year: 0, trip: 0, training: 0, holidays: 0, actual: 0, night: 0 };
+            
+            dates.forEach(date => {
+                const dateKey = this.formatDateKey(date);
+                const workData = this.getWorkData(ce.id, dateKey);
+                const isWeekendOrHoliday = this.isWeekendOrHoliday(date);
+                const status = workData.customText?.trim() || workData.status || (isWeekendOrHoliday ? '×' : 'A');
+                
+                if (isWeekendOrHoliday) summary.holidays++;
+                switch (workData.status || (isWeekendOrHoliday ? '×' : 'A')) {
+                    case 'A': summary.A++; summary.actual++; break;
+                    case 'A1': summary.A1++; summary.actual++; break;
+                    case 'B': summary.B++; summary.actual++; summary.night++; break;
+                    case '非': summary.non++; summary.actual++; break;
+                    case '×': summary.off++; break;
+                    case '年': summary.year++; summary.actual++; break;
+                    case '出': summary.trip++; summary.actual++; break;
+                    case '研': summary.training++; summary.actual++; break;
+                }
+                
+                row.push(status);
+            });
+            
+            const summaryValues = [summary.A, summary.A1, summary.B, summary.non, summary.off, summary.year, summary.trip, summary.training, summary.holidays, summary.actual, summary.night];
+            row.push(...summaryValues);
+            
+            wsData.push(row);
+        });
+        
+        // ワークシート作成
+        const ws = XLSX.utils.aoa_to_sheet(wsData);
+        
+        // 列幅設定
+        const cols = [
+            { wch: 4 },  // No
+            { wch: 12 }, // 氏名
+            ...dates.map(() => ({ wch: 4 })), // 日付列
+            ...summaryHeaders.map(() => ({ wch: 6 })) // サマリー列
+        ];
+        ws['!cols'] = cols;
+        
+        // ワークシートをワークブックに追加
+        XLSX.utils.book_append_sheet(workbook, ws, '勤務表');
+        
+        // ファイル名生成
+        const startKey = this.formatDateKey(this.currentPeriod.startDate).replace(/-/g, '');
+        const endKey = this.formatDateKey(this.currentPeriod.endDate).replace(/-/g, '');
+        const filename = `CE勤務表_${startKey}-${endKey}.xlsx`;
+        
+        // ファイル出力
+        XLSX.writeFile(workbook, filename);
+        
+        window.showMessage('Excelファイルを出力しました', 'success');
+        console.log('✅ Excel出力完了:', filename);
+        
+    } catch (error) {
+        console.error('❌ Excel出力エラー:', error);
+        window.showMessage(`Excel出力に失敗しました: ${error.message}`, 'error');
+    }
+}
+
+// SheetJSライブラリの動的読み込み（堅牢版）
+async loadXLSXLibrary() {
+    return new Promise((resolve, reject) => {
+        if (typeof XLSX !== 'undefined') {
+            resolve();
+            return;
+        }
+        
+        const script = document.createElement('script');
+        script.src = 'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';
+        script.crossOrigin = 'anonymous';
+        
+        const timeoutId = setTimeout(() => {
+            reject(new Error('SheetJSライブラリの読み込みがタイムアウトしました'));
+        }, 15000);
+        
+        script.onload = () => {
+            clearTimeout(timeoutId);
+            if (typeof XLSX !== 'undefined') {
+                console.log('✅ SheetJSライブラリ読み込み成功');
+                resolve();
+            } else {
+                reject(new Error('ライブラリは読み込まれましたが、XLSXオブジェクトが利用できません'));
+            }
+        };
+        
+        script.onerror = () => {
+            clearTimeout(timeoutId);
+            // フォールバック CDN を試行
+            const fallbackScript = document.createElement('script');
+            fallbackScript.src = 'https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js';
+            fallbackScript.crossOrigin = 'anonymous';
+            
+            fallbackScript.onload = () => {
+                if (typeof XLSX !== 'undefined') {
+                    console.log('✅ フォールバックCDNでSheetJS読み込み成功');
+                    resolve();
+                } else {
+                    reject(new Error('フォールバックCDNでも読み込みに失敗しました'));
+                }
+            };
+            
+            fallbackScript.onerror = () => {
+                reject(new Error('すべてのCDNでSheetJSライブラリの読み込みに失敗しました'));
+            };
+            
+            document.head.appendChild(fallbackScript);
+        };
+        
+        document.head.appendChild(script);
+    });
+}
+
+// ========== Excel出力機能の追加終了 ==========
+            
             window.print();
         }
 
