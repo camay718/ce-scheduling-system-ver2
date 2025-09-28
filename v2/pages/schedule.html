@@ -355,6 +355,35 @@
             box-shadow: 0 4px 12px rgba(0,0,0,0.15);
         }
 
+        /* 月次業務カードのドラッグ&ドロップ視覚フィードバック強化 */
+.monthly-task-card {
+    border: 2px solid transparent !important;
+    cursor: pointer;
+}
+
+.monthly-task-card.drag-over {
+    border: 2px dashed #f59e0b !important; /* オレンジ色の点線 */
+    background: rgba(255, 247, 237, 0.9) !important; /* 薄いオレンジ背景 */
+    transform: scale(1.02) !important;
+    box-shadow: 0 4px 12px rgba(245, 158, 11, 0.3) !important;
+}
+
+/* 月次業務カード内の配置エリア強化 */
+.monthly-task-card .assigned-ces {
+    min-height: 28px;
+    border: 1px dashed rgba(0,0,0,0.1);
+    border-radius: 4px;
+    padding: 4px;
+    transition: all 0.2s ease;
+}
+
+.monthly-task-card .assigned-ces:empty::before {
+    content: "CEをここにドラッグ&ドロップ";
+    color: #9ca3af;
+    font-size: 10px;
+    font-style: italic;
+}
+
         .monthly-progress-bar {
             width: 100%;
             height: 4px;
@@ -1922,10 +1951,76 @@ async renderMonthlyTasks() {
 
 // 月次業務カードのイベントリスナー設定
 setupMonthlyCardEventListeners(monthlyCard, yearMonth, taskId, dateKey) {
-    // ドラッグ&ドロップ
-    monthlyCard.addEventListener('dragover', (e) => this.handleMonthlyTaskDragOver(e));
-    monthlyCard.addEventListener('dragleave', (e) => this.handleMonthlyTaskDragLeave(e));
-    monthlyCard.addEventListener('drop', (e) => this.handleMonthlyTaskDrop(e));
+    // ドロップ対象をカード本体と配置エリアの両方に設定
+    const dropZones = [monthlyCard, monthlyCard.querySelector('.assigned-ces')].filter(Boolean);
+    
+    dropZones.forEach(zone => {
+        zone.addEventListener('dragover', (e) => {
+            if (window.userRole === 'viewer') return;
+            e.preventDefault();
+            e.dataTransfer.dropEffect = 'copy';
+            
+            // カード要素を特定してスタイル適用
+            const card = zone.classList.contains('monthly-task-card') 
+                ? zone 
+                : zone.closest('.monthly-task-card');
+            if (card) card.classList.add('drag-over');
+        });
+
+        zone.addEventListener('dragleave', (e) => {
+            const card = zone.classList.contains('monthly-task-card') 
+                ? zone 
+                : zone.closest('.monthly-task-card');
+            if (card && !card.contains(e.relatedTarget)) {
+                card.classList.remove('drag-over');
+            }
+        });
+
+        zone.addEventListener('drop', async (e) => {
+            e.preventDefault();
+            
+            const card = zone.classList.contains('monthly-task-card') 
+                ? zone 
+                : zone.closest('.monthly-task-card');
+            if (card) card.classList.remove('drag-over');
+
+            if (window.userRole === 'viewer') {
+                window.showMessage('編集権限がありません', 'warning');
+                return;
+            }
+
+            try {
+                let ceDataStr = e.dataTransfer.getData('application/json') || 
+                                e.dataTransfer.getData('text/plain');
+                
+                if (!ceDataStr) {
+                    console.warn('⚠️ 月次業務ドラッグデータが見つかりません');
+                    return;
+                }
+
+                let ceData;
+                try {
+                    ceData = JSON.parse(ceDataStr);
+                } catch (parseError) {
+                    console.error('❌ 月次業務CEデータのパースに失敗:', parseError);
+                    return;
+                }
+
+                if (!ceData.ceId || !ceData.ceName) {
+                    console.error('❌ 月次業務必須データが不足:', ceData);
+                    window.showMessage('データが不完全です', 'error');
+                    return;
+                }
+
+                console.log('📥 月次業務ドロップ処理成功:', { ceData, taskId, yearMonth, dateKey });
+                await this.assignCEToMonthlyTask(yearMonth, taskId, ceData);
+
+            } catch (error) {
+                console.error('❌ 月次業務ドロップ処理エラー:', error);
+                window.showMessage(`月次業務CE配置に失敗しました: ${error.message}`, 'error');
+            }
+        });
+    });
 
     // 実施件数保存
     const saveBtn = monthlyCard.querySelector('.save-actual-btn');
@@ -1966,9 +2061,11 @@ setupMonthlyCardEventListeners(monthlyCard, yearMonth, taskId, dateKey) {
 async assignCEToMonthlyTask(yearMonth, taskId, ceData) {
     try {
         const dateKey = this.formatDate(this.selectedDate);
+        console.log('🔍 [月次CE配置] 開始:', { dateKey, taskId, ceData });
         const taskRef = window.database.ref(`${window.DATA_ROOT}/monthlyTasks/${yearMonth}/${taskId}`);
         const snapshot = await taskRef.once('value');
         const taskData = snapshot.val();
+        console.log('🔍 [月次CE配置] データ取得:', { taskData: !!taskData, assignedCEs: taskData?.assignedCEs });
 
         if (!taskData) {
             window.showMessage('月次業務データが見つかりません', 'error');
@@ -2012,6 +2109,7 @@ async assignCEToMonthlyTask(yearMonth, taskId, ceData) {
 
         // 日別配置を更新
         assignedCEs[dateKey] = upgradedAssigned;
+        console.log('🔍 [月次CE配置] 更新前:', { dateKey, updatedList: upgradedAssigned });
         await taskRef.update({
             assignedCEs: assignedCEs,
             updatedAt: firebase.database.ServerValue.TIMESTAMP,
@@ -2019,6 +2117,7 @@ async assignCEToMonthlyTask(yearMonth, taskId, ceData) {
         });
 
         window.showMessage(`${ceData.ceName}を月次業務（${dateKey}）に配置しました`, 'success');
+        console.log('✅ [月次CE配置] 完了:', ceData.ceName);
         await this.renderMonthlyTasks();
         this.updateDailySummary().catch(console.error);
 
