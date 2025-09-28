@@ -430,6 +430,84 @@
     padding-right: 12px;
 }
 
+/* 日別実施記録セクション */
+.daily-record-section {
+    margin-top: 8px;
+    padding: 10px;
+    background: rgba(255, 255, 255, 0.8);
+    border: 1px solid rgba(0,0,0,0.1);
+    border-radius: 6px;
+    font-size: 11px;
+}
+
+.daily-input-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+    margin-bottom: 8px;
+}
+
+.input-group {
+    display: flex;
+    flex-direction: column;
+}
+
+.input-label {
+    font-size: 10px;
+    color: #6b7280;
+    margin-bottom: 2px;
+    font-weight: 500;
+}
+
+.daily-count-input,
+.daily-start-time,
+.daily-end-time {
+    width: 100%;
+    padding: 4px 6px;
+    border: 1px solid #d1d5db;
+    border-radius: 4px;
+    font-size: 11px;
+}
+
+.daily-count-input {
+    text-align: center;
+}
+
+.daily-controls {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 8px;
+}
+
+.time-display {
+    font-size: 10px;
+    color: #6b7280;
+    font-style: italic;
+}
+
+.save-daily-record-btn {
+    padding: 4px 8px;
+    font-size: 10px;
+}
+
+/* モバイル対応 */
+@media (max-width: 768px) {
+    .daily-input-grid {
+        grid-template-columns: 1fr;
+        gap: 4px;
+    }
+    
+    .daily-controls {
+        flex-direction: column;
+        gap: 4px;
+    }
+    
+    .daily-record-section {
+        font-size: 10px;
+    }
+}
+        
         /* スマートフォン対応 */
         @media (max-width: 768px) {
             .fixed-taskbar {
@@ -1642,21 +1720,22 @@ this.monthlyCallback = async (snapshot) => {
                 try {
                     const taskRef = window.database.ref(`${window.DATA_ROOT}/monthlyTasks/${yearMonth}`).push();
 
-                    const taskData = {
-                        id: taskRef.key,
-                        name: name,
-                        department: department,
-                        yearMonth: yearMonth,
-                        goalCount: goalCount,
-                        actualCount: 0,
-                        requiredPeople: requiredPeople,
-                        description: description || null,
-                        assignedCEs: {},
-                        createdAt: firebase.database.ServerValue.TIMESTAMP,
-                        createdBy: window.currentUserData?.displayName || 'user',
-                        type: 'monthly',
-                        status: 'active'
-                    };
+const taskData = {
+    id: taskRef.key,
+    name: name,
+    department: department,
+    yearMonth: yearMonth,
+    goalCount: goalCount,
+    actualCount: 0, // 総実施件数（自動計算値・後方互換性のため保持）
+    requiredPeople: requiredPeople,
+    description: description || null,
+    assignedCEs: {}, // 日別CE配置: {dateKey: [ceArray]}
+    dailyActuals: {}, // 日別実施記録: {dateKey: {count, startTime, endTime}}
+    createdAt: firebase.database.ServerValue.TIMESTAMP,
+    createdBy: window.currentUserData?.displayName || 'user',
+    type: 'monthly',
+    status: 'active'
+};
 
                     await taskRef.set(taskData);
 
@@ -1841,7 +1920,7 @@ this.monthlyCallback = async (snapshot) => {
                 }
             }
 
-// renderMonthlyTasks メソッドの修正（assignedCEs処理部分）
+// renderMonthlyTasks メソッドの修正（日別実施件数・時間対応版）
 async renderMonthlyTasks() {
     const grid = document.getElementById('departmentGrid');
     if (!grid) return;
@@ -1864,14 +1943,32 @@ async renderMonthlyTasks() {
         const section = grid.querySelector(`.monthly-plans[data-department="${task.department}"]`);
         if (!section) continue;
 
-// ★ 日別CE配置の取得（データ構造統一版）
-let dailyAssignments = task.assignedCEs;
-if (!dailyAssignments || Array.isArray(dailyAssignments)) {
-    console.log('🔄 [データ正規化] 配列→オブジェクト形式に変換:', task.name);
-    dailyAssignments = {}; // 配列や不正値をオブジェクトに統一
-}
-const assignedList = Array.isArray(dailyAssignments[dateKey]) ? dailyAssignments[dateKey] : [];
-        
+        // データ構造の正規化
+        let dailyAssignments = task.assignedCEs;
+        if (!dailyAssignments || Array.isArray(dailyAssignments)) {
+            console.log('🔄 [データ正規化] CE配置: 配列→オブジェクト形式に変換:', task.name);
+            dailyAssignments = {};
+        }
+
+        let dailyActuals = task.dailyActuals;
+        if (!dailyActuals || Array.isArray(dailyActuals)) {
+            console.log('🔄 [データ正規化] 実施記録: 配列→オブジェクト形式に変換:', task.name);
+            dailyActuals = {};
+        }
+
+        // 当日のデータ取得
+        const assignedList = Array.isArray(dailyAssignments[dateKey]) ? dailyAssignments[dateKey] : [];
+        const todayActual = dailyActuals[dateKey] || { count: 0, startTime: '', endTime: '' };
+
+        // 月間累積実施件数の計算
+        let totalActualCount = 0;
+        Object.keys(dailyActuals).forEach(recordDate => {
+            if (recordDate.startsWith(yearMonth) && recordDate <= dateKey) {
+                totalActualCount += dailyActuals[recordDate].count || 0;
+            }
+        });
+
+        // CE配置の正規化
         const normalizedAssigned = assignedList.map(entry => {
             if (typeof entry === 'string') {
                 const ce = window.ceManager?.ceList?.find(c => c.id === entry);
@@ -1893,6 +1990,11 @@ const assignedList = Array.isArray(dailyAssignments[dateKey]) ? dailyAssignments
         const assignedCount = normalizedAssigned.length;
         const needCount = task.requiredPeople || 0;
         const deptColor = window.DEPARTMENT_COLORS?.[task.department] || '#6b7280';
+
+        // 進捗計算
+        const goalCount = task.goalCount || 0;
+        const progressPercent = goalCount > 0 ? Math.min((totalActualCount / goalCount) * 100, 100) : 0;
+        const remaining = Math.max(0, goalCount - totalActualCount);
 
         // CEチップの生成（勤務区分連動）
         const assignedCEChips = [];
@@ -1919,10 +2021,11 @@ const assignedList = Array.isArray(dailyAssignments[dateKey]) ? dailyAssignments
         }
 
         const assignedCEChipsHtml = assignedCEChips.join('');
-        const currentCount = task.actualCount || 0;
-        const goalCount = task.goalCount || 0;
-        const progressPercent = goalCount > 0 ? Math.min((currentCount / goalCount) * 100, 100) : 0;
-        const remaining = Math.max(0, goalCount - currentCount);
+
+        // 実施時間の表示用文字列
+        const timeDisplay = todayActual.startTime && todayActual.endTime 
+            ? `${todayActual.startTime}〜${todayActual.endTime}` 
+            : '';
 
         const monthlyCard = document.createElement('div');
         monthlyCard.className = 'monthly-task-card';
@@ -1930,7 +2033,7 @@ const assignedList = Array.isArray(dailyAssignments[dateKey]) ? dailyAssignments
         monthlyCard.style.borderColor = `${deptColor}40`;
         monthlyCard.dataset.taskId = task.id;
         monthlyCard.dataset.yearMonth = yearMonth;
-        monthlyCard.dataset.dateKey = dateKey; // 日付キーを追加
+        monthlyCard.dataset.dateKey = dateKey;
         monthlyCard.dataset.department = task.department;
 
         monthlyCard.innerHTML = `
@@ -1943,7 +2046,7 @@ const assignedList = Array.isArray(dailyAssignments[dateKey]) ? dailyAssignments
             </div>
             <div class="flex justify-between text-xs text-gray-600 mb-2">
                 <span>目標: ${goalCount}件</span>
-                <span>実施: ${currentCount}件</span>
+                <span>累計: ${totalActualCount}件</span>
                 <span>残: ${remaining}件</span>
             </div>
             <div class="monthly-progress-bar">
@@ -1952,13 +2055,35 @@ const assignedList = Array.isArray(dailyAssignments[dateKey]) ? dailyAssignments
             <div class="assigned-ces">
                 ${assignedCEChipsHtml}
             </div>
-            <div class="monthly-input-section">
-                <span>実施入力:</span>
-                <input type="number" class="actual-input" value="${currentCount}" min="0" max="999">
-                ${window.userRole !== 'viewer' ? `<button class="btn-unified btn-outline-unified save-actual-btn">保存</button>` : ''}
-                ${window.userRole !== 'viewer' ? `<button class="edit-monthly-btn text-blue-600 hover:text-blue-800 text-xs">
-                    <i class="fas fa-edit"></i>
-                </button>` : ''}
+            <div class="daily-record-section">
+                <div class="text-xs font-semibold text-gray-700 mb-2">
+                    <i class="fas fa-calendar-day mr-1"></i>${dateKey} の実施記録
+                </div>
+                <div class="daily-input-grid">
+                    <div class="input-group">
+                        <label class="input-label">実施件数</label>
+                        <input type="number" class="daily-count-input" value="${todayActual.count}" min="0" max="999">
+                    </div>
+                    <div class="input-group">
+                        <label class="input-label">開始時間</label>
+                        <input type="time" class="daily-start-time" value="${todayActual.startTime}">
+                    </div>
+                    <div class="input-group">
+                        <label class="input-label">終了時間</label>
+                        <input type="time" class="daily-end-time" value="${todayActual.endTime}">
+                    </div>
+                </div>
+                ${window.userRole !== 'viewer' ? `
+                <div class="daily-controls">
+                    <button class="btn-unified btn-outline-unified save-daily-record-btn">
+                        <i class="fas fa-save mr-1"></i>記録保存
+                    </button>
+                    <div class="time-display">${timeDisplay || '時間未記録'}</div>
+                    <button class="edit-monthly-btn text-blue-600 hover:text-blue-800 text-xs">
+                        <i class="fas fa-edit"></i>編集
+                    </button>
+                </div>` : `
+                <div class="time-display text-center">${timeDisplay || '時間未記録'}</div>`}
             </div>
             <div class="text-xs text-gray-400 mt-1 italic">CEをドラッグ&ドロップで配置（${dateKey}のみ）</div>
         `;
@@ -2042,16 +2167,28 @@ setupMonthlyCardEventListeners(monthlyCard, yearMonth, taskId, dateKey) {
         });
     });
 
-    // 実施件数保存
-    const saveBtn = monthlyCard.querySelector('.save-actual-btn');
-    if (saveBtn) {
-        saveBtn.addEventListener('click', async (e) => {
-            e.stopPropagation();
-            const input = monthlyCard.querySelector('.actual-input');
-            const newCount = parseInt(input.value) || 0;
-            await this.updateMonthlyTaskActual(yearMonth, taskId, newCount);
-        });
-    }
+// 日別実施記録保存
+const saveDailyBtn = monthlyCard.querySelector('.save-daily-record-btn');
+if (saveDailyBtn) {
+    saveDailyBtn.addEventListener('click', async (e) => {
+        e.stopPropagation();
+        const countInput = monthlyCard.querySelector('.daily-count-input');
+        const startTimeInput = monthlyCard.querySelector('.daily-start-time');
+        const endTimeInput = monthlyCard.querySelector('.daily-end-time');
+        
+        const count = parseInt(countInput.value) || 0;
+        const startTime = startTimeInput.value || '';
+        const endTime = endTimeInput.value || '';
+        
+        // 時間の妥当性チェック
+        if (startTime && endTime && startTime >= endTime) {
+            window.showMessage('終了時間は開始時間より後に設定してください', 'warning');
+            return;
+        }
+        
+        await this.saveDailyActual(yearMonth, taskId, dateKey, count, startTime, endTime);
+    });
+}
 
     // 編集ボタン
     const editBtn = monthlyCard.querySelector('.edit-monthly-btn');
@@ -2644,6 +2781,53 @@ const currentDayAssigned = Array.isArray(assignedCEs[dateKey]) ? assignedCEs[dat
                 }
             }
 
+            // 日別実施記録保存
+async saveDailyActual(yearMonth, taskId, dateKey, count, startTime, endTime) {
+    try {
+        const taskRef = window.database.ref(`${window.DATA_ROOT}/monthlyTasks/${yearMonth}/${taskId}`);
+        
+        // 日別実績を更新
+        const dailyRecord = {
+            count: Math.max(0, Math.min(999, count)),
+            startTime: startTime || null,
+            endTime: endTime || null,
+            updatedAt: firebase.database.ServerValue.TIMESTAMP,
+            updatedBy: window.currentUserData?.displayName || 'user'
+        };
+
+        await taskRef.child('dailyActuals').child(dateKey).set(dailyRecord);
+
+        // 月間総実施件数を再計算・更新
+        const snapshot = await taskRef.once('value');
+        const taskData = snapshot.val();
+        const dailyActuals = taskData.dailyActuals || {};
+        
+        let totalCount = 0;
+        Object.keys(dailyActuals).forEach(recordDate => {
+            if (recordDate.startsWith(yearMonth)) {
+                totalCount += dailyActuals[recordDate].count || 0;
+            }
+        });
+
+        await taskRef.child('actualCount').set(totalCount);
+
+        const timeText = startTime && endTime ? ` (${startTime}〜${endTime})` : '';
+        window.showMessage(`${dateKey}: ${count}件の実施記録を保存しました${timeText}`, 'success');
+
+        console.log('✅ 日別実施記録保存完了:', { 
+            dateKey, 
+            count, 
+            startTime, 
+            endTime, 
+            totalCount 
+        });
+
+    } catch (error) {
+        console.error('❌ 日別実施記録保存エラー:', error);
+        window.showMessage('実施記録の保存に失敗しました', 'error');
+    }
+}
+
 // 業務編集モーダル（完全実装版）
 openEditEventModal(dateKey, eventId, eventData) {
     if (window.userRole === 'viewer') {
@@ -2913,13 +3097,14 @@ async updateMonthlyTaskFromModal(originalYearMonth, taskId, modal) {
                 throw new Error('元の月次業務データが見つかりません');
             }
 
-            // 新しい月に移動（CE配置はリセット）
-            const newTaskRef = window.database.ref(`${window.DATA_ROOT}/monthlyTasks/${newYearMonth}/${taskId}`);
-            await newTaskRef.set({
-                ...oldTaskData,
-                ...updateData,
-                assignedCEs: {} // CE配置をリセット
-            });
+// 新しい月に移動（CE配置と日別実施記録をリセット）
+const newTaskRef = window.database.ref(`${window.DATA_ROOT}/monthlyTasks/${newYearMonth}/${taskId}`);
+await newTaskRef.set({
+    ...oldTaskData,
+    ...updateData,
+    assignedCEs: {}, // CE配置をリセット
+    dailyActuals: {} // 日別実施記録もリセット
+});
             
             // 古いデータを削除
             await oldTaskRef.remove();
