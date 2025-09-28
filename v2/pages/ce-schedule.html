@@ -39,9 +39,10 @@
             z-index: 90;
         }
 
-        .schedule-sidebar.collapsed {
-            transform: translateX(-240px);
-        }
+.schedule-sidebar.collapsed {
+    width: 60px;
+    transform: none;
+}
 
         .sidebar-content {
             padding: 20px;
@@ -76,25 +77,31 @@
             right: -45px;
         }
 
-        .schedule-main {
-            flex-grow: 1;
-            padding: 20px;
-            overflow: hidden;
-            display: flex;
-            flex-direction: column;
-            transition: margin-left 0.3s ease;
-        }
+.schedule-main {
+    flex-grow: 1;
+    padding: 20px;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+}
+
+.schedule-main.sidebar-collapsed {
+    /* flexboxで自動拡大 */
+}
 
         /* テーブルのスケール表示対応 */
-        .work-schedule-table-wrapper {
-            flex: 1;
-            overflow: hidden;
-            background: white;
-            border-radius: 12px;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-            margin-top: 20px;
-            position: relative;
-        }
+.work-schedule-table-wrapper {
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    margin-top: 20px;
+    position: relative;
+    overflow: auto;
+    height: calc(100vh - 280px);
+    min-height: 500px;
+    padding: 8px;
+}
 
         .work-schedule-table {
             width: 100%;
@@ -794,32 +801,39 @@
             }
 
             // テーブルを画面にフィット
-            fitTableToViewport() {
-                try {
-                    const wrapper = document.querySelector('.work-schedule-table-wrapper');
-                    const table = wrapper?.querySelector('.work-schedule-table');
-                    if (!wrapper || !table) return;
+            // テーブル最適表示（完全修正版）
+fitTableToViewport() {
+    setTimeout(() => {
+        const wrapper = document.querySelector('.work-schedule-table-wrapper');
+        const table = wrapper?.querySelector('.work-schedule-table');
+        if (!wrapper || !table) return;
 
-                    // 初期化
-                    table.style.transform = 'scale(1)';
+        // 初期化
+        table.style.transform = 'none';
+        table.style.fontSize = '9px';
 
-                    const wrapperW = wrapper.clientWidth - 8;
-                    const wrapperH = wrapper.clientHeight - 8;
-                    const tableW = table.scrollWidth;
-                    const tableH = table.scrollHeight;
+        // 利用可能領域の計算
+        const wrapperRect = wrapper.getBoundingClientRect();
+        const availableWidth = wrapperRect.width - 16;
+        const availableHeight = wrapperRect.height - 16;
+        
+        // テーブルの自然サイズ取得
+        const tableWidth = table.scrollWidth;
+        const tableHeight = table.scrollHeight;
+        
+        // スケール計算（最小0.6、最大1.2）
+        const scaleX = availableWidth / tableWidth;
+        const scaleY = availableHeight / tableHeight;
+        let scale = Math.min(scaleX, scaleY);
+        scale = Math.max(0.6, Math.min(1.2, scale));
 
-                    const scaleX = wrapperW / tableW;
-                    const scaleY = wrapperH / tableH;
-                    const scale = Math.min(1, scaleX, scaleY);
-
-                    if (scale < 1) {
-                        table.style.transform = `scale(${scale})`;
-                        console.log(`📏 テーブルスケール調整: ${scale.toFixed(3)}`);
-                    }
-                } catch (e) {
-                    console.warn('テーブルスケール調整失敗:', e);
-                }
-            }
+        // 適用
+        table.style.transform = `scale(${scale})`;
+        table.style.transformOrigin = 'top left';
+        
+        console.log(`📏 テーブル表示最適化: scale=${scale.toFixed(3)}, 領域=${Math.round(availableWidth)}x${Math.round(availableHeight)}`);
+    }, 150);
+}
 
             generateDateRange(startDate, endDate) {
                 const dates = [];
@@ -958,45 +972,37 @@
                 html += '</tbody>';
 
                 // フッター集計
-                html += '<tfoot>';
-                const footerTypes = [
-                    { label: 'OPE(A)', filter: (effectiveType, status) => effectiveType === 'OPE' && status === 'A' },
-                    { label: 'OPE(A1)', filter: (effectiveType, status) => effectiveType === 'OPE' && status === 'A1' },
-                    { label: 'ME', filter: (effectiveType, status) => effectiveType === 'ME' && ['A', 'A1', 'B', '非', '年', '出', '研'].includes(status) },
-                    { label: 'HD', filter: (effectiveType, status) => effectiveType === 'HD' && ['A', 'A1', 'B', '非', '年', '出', '研'].includes(status) },
-                    { label: 'FLEX', filter: (effectiveType, status) => effectiveType === 'FLEX' && ['A', 'A1', 'B', '非', '年', '出', '研'].includes(status) },
-                    { label: '当直', filter: (effectiveType, status) => status === 'B', target: 1 },
-                    { label: '非番', filter: (effectiveType, status) => status === '非', target: 1 }
-                ];
+html += '<tfoot>';
+footerTypes.forEach(type => {
+    html += `<tr class="footer-summary-row"><th class="type-label" colspan="2">${type.label}</th>`;
+    
+    dates.forEach(date => {
+        const dateKey = this.formatDate(date);
+        let count = 0;
+        ceList.forEach(ce => {
+            const workData = scheduleData[ce.id]?.[dateKey] || {};
+            const isWeekendOrHoliday = date.getDay() === 0 || date.getDay() === 6 || this.isJapaneseHoliday(date);
+            const status = workData.status || (isWeekendOrHoliday ? '×' : 'A');
+            const effectiveType = this.getEffectiveWorkType(ce.id, dateKey, ceList, workTypeOverrides);
+            
+            if (type.filter(effectiveType, status)) {
+                count++;
+            }
+        });
+        
+        const cellClass = (type.target !== undefined && count !== type.target) ? 'warning-count' : '';
+        html += `<td class="${cellClass}">${count}</td>`;
+    });
+    
+    // サマリー列は空白で統一（列数一致のため）
+    summaryHeaders.forEach(() => {
+        html += '<td class="summary-cell"></td>';
+    });
+    
+    html += '</tr>';
+});
 
-                footerTypes.forEach(type => {
-                    html += `<tr class="footer-summary-row"><th class="type-label">${type.label}</th>`;
-                    
-                    dates.forEach(date => {
-                        const dateKey = this.formatDate(date);
-                        let count = 0;
-                        ceList.forEach(ce => {
-                            const workData = scheduleData[ce.id]?.[dateKey] || {};
-                            const isWeekendOrHoliday = date.getDay() === 0 || date.getDay() === 6 || this.isJapaneseHoliday(date);
-                            const status = workData.status || (isWeekendOrHoliday ? '×' : 'A');
-                            const effectiveType = this.getEffectiveWorkType(ce.id, dateKey, ceList, workTypeOverrides);
-                            
-                            if (type.filter(effectiveType, status)) {
-                                count++;
-                            }
-                        });
-                        
-                        const cellClass = type.target && count !== type.target ? 'warning-count' : '';
-                        html += `<td class="${cellClass}">${count}</td>`;
-                    });
-                    
-                    for (let i = 0; i < summaryHeaders.length; i++) {
-                        html += '<td class="summary-cell"></td>';
-                    }
-                    html += '</tr>';
-                });
-                
-                html += '</tfoot>';
+html += '</tfoot>';
                 return html;
             }
 
