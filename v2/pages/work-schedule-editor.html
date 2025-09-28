@@ -2411,158 +2411,6 @@ getEffectiveWorkType(ceId, dateKey) {
 }
 
         printSchedule() {
-
-// ========== Excel出力機能の追加開始 ==========
-
-// Excel出力機能の実装
-async exportToExcel() {
-    try {
-        console.log('📊 Excel出力開始');
-        window.showMessage('Excel出力を準備中...', 'info');
-        
-        // SheetJSライブラリの動的読み込み
-        if (typeof XLSX === 'undefined') {
-            console.log('📦 SheetJSライブラリを読み込み中...');
-            await this.loadXLSXLibrary();
-        }
-        
-        const dates = this.generateDateRange(this.currentPeriod.startDate, this.currentPeriod.endDate);
-        const workbook = XLSX.utils.book_new();
-        
-        // ワークシートデータの作成
-        const wsData = [];
-        
-        // ヘッダー行
-        const headerRow = ['No', '氏名'];
-        dates.forEach(date => {
-            const dayOfWeek = ['日', '月', '火', '水', '木', '金', '土'][date.getDay()];
-            headerRow.push(`${date.getDate()}(${dayOfWeek})`);
-        });
-        
-        const summaryHeaders = ['A', 'A1', 'B', '非', '×', '年', '出', '研', '休日数', '実勤務', '当直回数'];
-        headerRow.push(...summaryHeaders);
-        wsData.push(headerRow);
-        
-        // CEデータ行
-        this.ceList.forEach((ce, index) => {
-            const row = [index + 1, ce.fullName || ce.name];
-            
-            const summary = { A: 0, A1: 0, B: 0, non: 0, off: 0, year: 0, trip: 0, training: 0, holidays: 0, actual: 0, night: 0 };
-            
-            dates.forEach(date => {
-                const dateKey = this.formatDateKey(date);
-                const workData = this.getWorkData(ce.id, dateKey);
-                const isWeekendOrHoliday = this.isWeekendOrHoliday(date);
-                const status = workData.customText?.trim() || workData.status || (isWeekendOrHoliday ? '×' : 'A');
-                
-                if (isWeekendOrHoliday) summary.holidays++;
-                switch (workData.status || (isWeekendOrHoliday ? '×' : 'A')) {
-                    case 'A': summary.A++; summary.actual++; break;
-                    case 'A1': summary.A1++; summary.actual++; break;
-                    case 'B': summary.B++; summary.actual++; summary.night++; break;
-                    case '非': summary.non++; summary.actual++; break;
-                    case '×': summary.off++; break;
-                    case '年': summary.year++; summary.actual++; break;
-                    case '出': summary.trip++; summary.actual++; break;
-                    case '研': summary.training++; summary.actual++; break;
-                }
-                
-                row.push(status);
-            });
-            
-            const summaryValues = [summary.A, summary.A1, summary.B, summary.non, summary.off, summary.year, summary.trip, summary.training, summary.holidays, summary.actual, summary.night];
-            row.push(...summaryValues);
-            
-            wsData.push(row);
-        });
-        
-        // ワークシート作成
-        const ws = XLSX.utils.aoa_to_sheet(wsData);
-        
-        // 列幅設定
-        const cols = [
-            { wch: 4 },  // No
-            { wch: 12 }, // 氏名
-            ...dates.map(() => ({ wch: 4 })), // 日付列
-            ...summaryHeaders.map(() => ({ wch: 6 })) // サマリー列
-        ];
-        ws['!cols'] = cols;
-        
-        // ワークシートをワークブックに追加
-        XLSX.utils.book_append_sheet(workbook, ws, '勤務表');
-        
-        // ファイル名生成
-        const startKey = this.formatDateKey(this.currentPeriod.startDate).replace(/-/g, '');
-        const endKey = this.formatDateKey(this.currentPeriod.endDate).replace(/-/g, '');
-        const filename = `CE勤務表_${startKey}-${endKey}.xlsx`;
-        
-        // ファイル出力
-        XLSX.writeFile(workbook, filename);
-        
-        window.showMessage('Excelファイルを出力しました', 'success');
-        console.log('✅ Excel出力完了:', filename);
-        
-    } catch (error) {
-        console.error('❌ Excel出力エラー:', error);
-        window.showMessage(`Excel出力に失敗しました: ${error.message}`, 'error');
-    }
-}
-
-// SheetJSライブラリの動的読み込み（堅牢版）
-async loadXLSXLibrary() {
-    return new Promise((resolve, reject) => {
-        if (typeof XLSX !== 'undefined') {
-            resolve();
-            return;
-        }
-        
-        const script = document.createElement('script');
-        script.src = 'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';
-        script.crossOrigin = 'anonymous';
-        
-        const timeoutId = setTimeout(() => {
-            reject(new Error('SheetJSライブラリの読み込みがタイムアウトしました'));
-        }, 15000);
-        
-        script.onload = () => {
-            clearTimeout(timeoutId);
-            if (typeof XLSX !== 'undefined') {
-                console.log('✅ SheetJSライブラリ読み込み成功');
-                resolve();
-            } else {
-                reject(new Error('ライブラリは読み込まれましたが、XLSXオブジェクトが利用できません'));
-            }
-        };
-        
-        script.onerror = () => {
-            clearTimeout(timeoutId);
-            // フォールバック CDN を試行
-            const fallbackScript = document.createElement('script');
-            fallbackScript.src = 'https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js';
-            fallbackScript.crossOrigin = 'anonymous';
-            
-            fallbackScript.onload = () => {
-                if (typeof XLSX !== 'undefined') {
-                    console.log('✅ フォールバックCDNでSheetJS読み込み成功');
-                    resolve();
-                } else {
-                    reject(new Error('フォールバックCDNでも読み込みに失敗しました'));
-                }
-            };
-            
-            fallbackScript.onerror = () => {
-                reject(new Error('すべてのCDNでSheetJSライブラリの読み込みに失敗しました'));
-            };
-            
-            document.head.appendChild(fallbackScript);
-        };
-        
-        document.head.appendChild(script);
-    });
-}
-
-// ========== Excel出力機能の追加終了 ==========
-            
             window.print();
         }
 
@@ -2594,7 +2442,6 @@ async loadXLSXLibrary() {
                 const workbook = XLSX.utils.book_new();
                 const wsData = [];
                 
-                // ヘッダー行
                 const headerRow = ['No', '氏名'];
                 dates.forEach(date => {
                     const dayOfWeek = ['日', '月', '火', '水', '木', '金', '土'][date.getDay()];
@@ -2605,7 +2452,6 @@ async loadXLSXLibrary() {
                 headerRow.push(...summaryHeaders);
                 wsData.push(headerRow);
                 
-                // CEデータ行
                 this.ceList.forEach((ce, index) => {
                     const row = [index + 1, ce.fullName || ce.name];
                     const summary = { A: 0, A1: 0, B: 0, non: 0, off: 0, year: 0, trip: 0, training: 0, holidays: 0, actual: 0, night: 0 };
@@ -2636,7 +2482,6 @@ async loadXLSXLibrary() {
                     wsData.push(row);
                 });
                 
-                // ワークシート作成
                 const ws = XLSX.utils.aoa_to_sheet(wsData);
                 ws['!cols'] = [
                     { wch: 4 }, { wch: 12 },
@@ -2659,7 +2504,6 @@ async loadXLSXLibrary() {
             }
         }
 
-        // SheetJSライブラリの動的読み込み
         async loadXLSXLibrary() {
             return new Promise((resolve, reject) => {
                 if (typeof XLSX !== 'undefined') {
@@ -2710,6 +2554,7 @@ async loadXLSXLibrary() {
     }
 
     let workScheduleEditor = null;
+        
     document.addEventListener('DOMContentLoaded', () => {
         workScheduleEditor = new WorkScheduleEditor();
     });
