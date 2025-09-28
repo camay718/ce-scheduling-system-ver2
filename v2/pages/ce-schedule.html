@@ -33,13 +33,14 @@
             border-right: 1px solid var(--glass-border);
             display: flex;
             flex-direction: column;
-            transition: width 0.3s ease;
+            transition: transform 0.3s ease;
             position: relative;
             flex-shrink: 0;
+            z-index: 90;
         }
 
         .schedule-sidebar.collapsed {
-            width: 60px;
+            transform: translateX(-240px);
         }
 
         .sidebar-content {
@@ -50,11 +51,6 @@
             overflow-y: auto;
             display: flex;
             flex-direction: column;
-        }
-
-        .schedule-sidebar.collapsed .sidebar-content {
-            opacity: 0;
-            pointer-events: none;
         }
 
         .sidebar-toggle {
@@ -73,24 +69,31 @@
             align-items: center;
             justify-content: center;
             box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+            transition: right 0.3s ease;
+        }
+
+        .schedule-sidebar.collapsed .sidebar-toggle {
+            right: -45px;
         }
 
         .schedule-main {
             flex-grow: 1;
             padding: 20px;
-            overflow-y: auto;
+            overflow: hidden;
             display: flex;
             flex-direction: column;
+            transition: margin-left 0.3s ease;
         }
 
-        /* 勤務表テーブル表示 */
+        /* テーブルのスケール表示対応 */
         .work-schedule-table-wrapper {
-            overflow: auto;
+            flex: 1;
+            overflow: hidden;
             background: white;
             border-radius: 12px;
             box-shadow: 0 4px 12px rgba(0,0,0,0.1);
             margin-top: 20px;
-            max-height: 70vh;
+            position: relative;
         }
 
         .work-schedule-table {
@@ -98,6 +101,7 @@
             border-collapse: collapse;
             font-size: 9px;
             min-width: 1000px;
+            transform-origin: top left;
         }
 
         .work-schedule-table th,
@@ -220,40 +224,6 @@
             background: #ffe6e6 !important;
         }
 
-        /* 勤務時間帯説明 */
-        .work-time-compact {
-            position: absolute;
-            top: 15px;
-            right: 15px;
-            background: rgba(248, 249, 250, 0.95);
-            border: 1px dashed #e0e0e0;
-            border-radius: 4px;
-            padding: 4px 6px;
-            font-size: 8px;
-            z-index: 50;
-            max-width: 300px;
-            line-height: 1.2;
-            white-space: nowrap;
-            pointer-events: none;
-        }
-
-        .work-time-compact table {
-            width: 100%;
-            border-collapse: collapse;
-        }
-
-        .work-time-compact th,
-        .work-time-compact td {
-            padding: 2px 4px;
-            font-size: 8px;
-            text-align: left;
-        }
-
-        .work-time-compact th {
-            background: #f2f5f7;
-            font-weight: 600;
-        }
-
         /* スマートフォン対応 */
         @media (max-width: 768px) {
             .schedule-sidebar {
@@ -299,13 +269,6 @@
                 padding-bottom: 80px;
                 width: 100%;
             }
-
-            .work-time-compact {
-                position: static;
-                margin-bottom: 16px;
-                max-width: 100%;
-                white-space: normal;
-            }
         }
     </style>
 </head>
@@ -323,7 +286,7 @@
         <!-- サイドバー -->
         <div id="sidebar" class="schedule-sidebar">
             <button id="toggleSidebar" class="sidebar-toggle" title="サイドバー表示/非表示">
-                <i class="fas fa-bars"></i>
+                <i class="fas fa-chevron-left"></i>
             </button>
             
             <div class="sidebar-content">
@@ -347,17 +310,14 @@
                     </div>
                 </div>
 
-                <!-- 勤務表操作 -->
-                <div class="mb-6">
+                <!-- 勤務表操作（管理者のみ） -->
+                <div id="adminScheduleActions" class="mb-6" style="display:none;">
                     <h3 class="text-sm font-semibold mb-3">
                         <i class="fas fa-plus mr-2"></i>勤務表操作
                     </h3>
                     <div class="space-y-2">
                         <button id="createScheduleBtn" class="btn-unified btn-primary-unified btn-small w-full">
-                            <i class="fas fa-plus mr-1"></i>新しい勤務表を作成
-                        </button>
-                        <button id="refreshScheduleBtn" class="btn-unified btn-outline-unified btn-small w-full">
-                            <i class="fas fa-sync mr-1"></i>勤務表を更新
+                            <i class="fas fa-edit mr-1"></i>勤務表を作成・編集
                         </button>
                     </div>
                 </div>
@@ -369,12 +329,16 @@
                     </h3>
                     <div class="space-y-2">
                         <div class="flex items-center">
-                            <input type="checkbox" id="showPublished" class="mr-2" checked>
-                            <label for="showPublished" class="text-xs">公開済み</label>
+                            <input type="radio" id="showFuture" name="timeFilter" class="mr-2" checked>
+                            <label for="showFuture" class="text-xs">今後の勤務表</label>
                         </div>
                         <div class="flex items-center">
-                            <input type="checkbox" id="showDrafts" class="mr-2" checked>
-                            <label for="showDrafts" class="text-xs">下書き</label>
+                            <input type="radio" id="showPast" name="timeFilter" class="mr-2">
+                            <label for="showPast" class="text-xs">以前の勤務表</label>
+                        </div>
+                        <div class="flex items-center">
+                            <input type="radio" id="showAll" name="timeFilter" class="mr-2">
+                            <label for="showAll" class="text-xs">公開済み全て</label>
                         </div>
                         <div class="flex items-center" id="adminFilterContainer" style="display:none;">
                             <input type="checkbox" id="showHidden" class="mr-2">
@@ -403,26 +367,7 @@
             <!-- ヘッダー -->
             <div class="mb-6">
                 <h2 class="text-2xl font-bold text-gray-800 mb-2">勤務表管理</h2>
-                <p class="text-gray-600">作成済みの勤務表の閲覧・編集・管理を行います</p>
-            </div>
-
-            <!-- 勤務時間帯説明 -->
-            <div class="work-time-compact">
-                <table>
-                    <thead>
-                        <tr>
-                            <th>区分</th>
-                            <th>勤務時間</th>
-                            <th>休憩時間</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr><td>A</td><td>8:00〜16:30</td><td>11:45～12:30</td></tr>
-                        <tr><td>A1</td><td>7:00〜15:30</td><td>11:45～12:30</td></tr>
-                        <tr><td>B</td><td>8:00〜翌8:00（0:00～6:30宿直相当勤務）</td><td>11:45～12:45及び16:45～17:45</td></tr>
-                        <tr><td>×</td><td>休日</td><td>-</td></tr>
-                    </tbody>
-                </table>
+                <p class="text-gray-600">作成済みの勤務表の閲覧・管理を行います</p>
             </div>
 
             <!-- 期間表示・操作 -->
@@ -443,9 +388,6 @@
                 </div>
                 
                 <div class="flex justify-center gap-3">
-                    <button id="openScheduleEditorBtn" class="btn-unified btn-primary-unified">
-                        <i class="fas fa-edit mr-2"></i>勤務表を作成・編集
-                    </button>
                     <div id="adminControlsContainer" class="flex gap-2" style="display:none;">
                         <!-- 管理者操作ボタンがここに動的生成 -->
                     </div>
@@ -453,15 +395,11 @@
             </div>
 
             <!-- 勤務表表示エリア -->
-            <div id="workScheduleDisplayArea" class="flex-grow">
+            <div id="workScheduleDisplayArea" class="flex-grow min-h-0">
                 <div class="text-center py-12 text-gray-500">
                     <i class="fas fa-table text-4xl mb-4"></i>
                     <h3 class="text-lg font-semibold mb-2">CE勤務表</h3>
                     <p class="mb-4">作成済みの勤務表がここに表示されます</p>
-                    <button onclick="document.getElementById('createScheduleBtn').click()" 
-                            class="btn-unified btn-primary-unified">
-                        <i class="fas fa-plus mr-2"></i>最初の勤務表を作成
-                    </button>
                 </div>
             </div>
         </div>
@@ -522,6 +460,7 @@
                 this.availablePeriods = [];
                 this.realtimeListener = null;
                 this.isInitialized = false;
+                this.currentFilter = 'future'; // デフォルトは今後の勤務表
             }
 
             async init() {
@@ -563,8 +502,9 @@
 
                 this.updateUserDisplay();
                 
-                // 管理者フィルタの表示制御
+                // 管理者のみの機能表示
                 if (window.userRole === 'admin') {
+                    document.getElementById('adminScheduleActions').style.display = 'block';
                     document.getElementById('adminFilterContainer').style.display = 'flex';
                 }
             }
@@ -583,36 +523,53 @@
                 // サイドバートグル
                 const toggle = document.getElementById('toggleSidebar');
                 const sidebar = document.getElementById('sidebar');
+                
                 if (toggle && sidebar) {
-                    toggle.onclick = () => sidebar.classList.toggle('expanded');
+                    let isCollapsed = false;
+                    toggle.onclick = () => {
+                        isCollapsed = !isCollapsed;
+                        if (isCollapsed) {
+                            sidebar.classList.add('collapsed');
+                            toggle.querySelector('i').className = 'fas fa-chevron-right';
+                        } else {
+                            sidebar.classList.remove('collapsed');
+                            toggle.querySelector('i').className = 'fas fa-chevron-left';
+                        }
+                        
+                        if (window.matchMedia('(max-width: 768px)').matches) {
+                            sidebar.classList.toggle('expanded');
+                        }
+                    };
                 }
 
-                // 勤務表操作
+                // 勤務表作成（管理者のみ）
                 const createBtn = document.getElementById('createScheduleBtn');
                 if (createBtn) {
                     createBtn.onclick = () => this.openScheduleEditor();
                 }
 
-                const refreshBtn = document.getElementById('refreshScheduleBtn');
-                if (refreshBtn) {
-                    refreshBtn.onclick = () => this.loadAvailablePeriods();
-                }
-
                 // 期間ナビゲーション
                 const prevBtn = document.getElementById('prevPeriodBtn');
                 const nextBtn = document.getElementById('nextPeriodBtn');
-                const editorBtn = document.getElementById('openScheduleEditorBtn');
                 
                 if (prevBtn) prevBtn.onclick = () => this.navigatePeriod(-1);
                 if (nextBtn) nextBtn.onclick = () => this.navigatePeriod(1);
-                if (editorBtn) editorBtn.onclick = () => this.openScheduleEditor();
 
                 // フィルタ変更
-                ['showPublished', 'showDrafts', 'showHidden'].forEach(id => {
-                    const checkbox = document.getElementById(id);
-                    if (checkbox) {
-                        checkbox.onchange = () => this.applyFilters();
+                ['showFuture', 'showPast', 'showAll', 'showHidden'].forEach(id => {
+                    const element = document.getElementById(id);
+                    if (element) {
+                        element.onchange = () => this.applyFilters();
                     }
+                });
+
+                // テーブルスケール調整（リサイズ時）
+                let resizeTimer = null;
+                window.addEventListener('resize', () => {
+                    clearTimeout(resizeTimer);
+                    resizeTimer = setTimeout(() => {
+                        if (this.isInitialized) this.fitTableToViewport();
+                    }, 250);
                 });
 
                 // リアルタイム更新
@@ -641,13 +598,21 @@
                     const snapshot = await window.database.ref(`${window.DATA_ROOT}/workSchedules`).once('value');
                     const data = snapshot.val() || {};
                     
+                    const today = new Date().toISOString().slice(0, 10);
+                    
                     this.availablePeriods = Object.keys(data)
                         .map(periodKey => ({
                             key: periodKey,
                             ...data[periodKey].metadata
                         }))
                         .filter(period => {
-                            return window.userRole === 'admin' || (period.isVisible !== false);
+                            // 管理者以外は非公開を除外
+                            if (window.userRole !== 'admin' && period.isVisible === false) {
+                                return false;
+                            }
+                            
+                            // フィルタ適用
+                            return this.applyTimeFilter(period, today);
                         })
                         .sort((a, b) => (b.publishedAt || b.createdAt || 0) - (a.publishedAt || a.createdAt || 0));
                     
@@ -665,6 +630,30 @@
                     console.error('❌ 期間データ読み込みエラー:', error);
                     window.showMessage('勤務表データの読み込みに失敗しました', 'error');
                 }
+            }
+
+            applyTimeFilter(period, today) {
+                const showFuture = document.getElementById('showFuture')?.checked;
+                const showPast = document.getElementById('showPast')?.checked;
+                const showAll = document.getElementById('showAll')?.checked;
+                
+                if (showAll) {
+                    return true;
+                }
+                
+                if (showFuture) {
+                    return period.endDate >= today; // 今日を含む以降
+                }
+                
+                if (showPast) {
+                    return period.endDate < today; // 今日を含まない以前
+                }
+                
+                return true; // デフォルト
+            }
+
+            applyFilters() {
+                this.loadAvailablePeriods();
             }
 
             navigatePeriod(direction) {
@@ -714,6 +703,9 @@
                 } else if (adminControlsEl) {
                     adminControlsEl.style.display = 'none';
                 }
+
+                // テーブルスケール調整
+                setTimeout(() => this.fitTableToViewport(), 100);
             }
 
             renderAdminControls(period) {
@@ -737,18 +729,21 @@
                 const areaEl = document.getElementById('workScheduleDisplayArea');
                 const adminControlsEl = document.getElementById('adminControlsContainer');
                 
-                if (displayEl) displayEl.textContent = '作成済みの期間なし';
+                if (displayEl) displayEl.textContent = '該当する勤務表なし';
                 if (detailsEl) detailsEl.textContent = '';
                 if (areaEl) {
+                    const createButton = window.userRole === 'admin' ? 
+                        `<button onclick="window.ceScheduleManager.openScheduleEditor()" 
+                                class="btn-unified btn-primary-unified">
+                            <i class="fas fa-plus mr-2"></i>最初の勤務表を作成
+                        </button>` : '';
+                    
                     areaEl.innerHTML = `
                         <div class="text-center py-12">
                             <i class="fas fa-calendar-plus text-4xl text-gray-400 mb-4"></i>
                             <h3 class="text-lg font-semibold text-gray-600 mb-2">CE勤務表</h3>
-                            <p class="text-gray-500 mb-4">まだ勤務表が作成されていません</p>
-                            <button onclick="window.ceScheduleManager.openScheduleEditor()" 
-                                    class="btn-unified btn-primary-unified">
-                                <i class="fas fa-plus mr-2"></i>最初の勤務表を作成
-                            </button>
+                            <p class="text-gray-500 mb-4">該当する勤務表がありません</p>
+                            ${createButton}
                         </div>
                     `;
                 }
@@ -795,6 +790,34 @@
                             <p class="text-gray-600">勤務表の読み込みでエラーが発生しました</p>
                         </div>
                     `;
+                }
+            }
+
+            // テーブルを画面にフィット
+            fitTableToViewport() {
+                try {
+                    const wrapper = document.querySelector('.work-schedule-table-wrapper');
+                    const table = wrapper?.querySelector('.work-schedule-table');
+                    if (!wrapper || !table) return;
+
+                    // 初期化
+                    table.style.transform = 'scale(1)';
+
+                    const wrapperW = wrapper.clientWidth - 8;
+                    const wrapperH = wrapper.clientHeight - 8;
+                    const tableW = table.scrollWidth;
+                    const tableH = table.scrollHeight;
+
+                    const scaleX = wrapperW / tableW;
+                    const scaleY = wrapperH / tableH;
+                    const scale = Math.min(1, scaleX, scaleY);
+
+                    if (scale < 1) {
+                        table.style.transform = `scale(${scale})`;
+                        console.log(`📏 テーブルスケール調整: ${scale.toFixed(3)}`);
+                    }
+                } catch (e) {
+                    console.warn('テーブルスケール調整失敗:', e);
                 }
             }
 
@@ -1026,8 +1049,8 @@
             }
 
             openScheduleEditor() {
-                if (window.userRole === 'viewer') {
-                    window.showMessage('編集権限がありません', 'warning');
+                if (window.userRole !== 'admin') {
+                    window.showMessage('管理者権限が必要です', 'warning');
                     return;
                 }
                 
