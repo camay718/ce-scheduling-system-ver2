@@ -1225,7 +1225,7 @@
                 const department = document.getElementById('simpleEventDepartment')?.value;
                 const startTime = document.getElementById('simpleStartTime')?.value;
                 const endTime = document.getElementById('simpleEndTime')?.value;
-                const count = parseInt(document.getElementById('bulkEventCount')?.value) || 0;
+                const count = parseInt(document.getElementById('simpleEventCount')?.value) || 0;
                 const requiredPeople = parseInt(document.getElementById('simpleRequiredPeople')?.value) || 1;
                 const description = document.getElementById('simpleDescription')?.value?.trim();
 
@@ -1247,7 +1247,7 @@
                         count: count,
                         requiredPeople: requiredPeople,
                         description: description || null,
-                        assignedCEs: {},
+                        assignedCEs: [],
                         createdAt: firebase.database.ServerValue.TIMESTAMP,
                         createdBy: window.currentUserData?.displayName || 'user'
                     };
@@ -1358,7 +1358,7 @@
                             <div class="grid grid-cols-2 gap-4">
                                 <div>
                                     <label class="block text-sm font-bold mb-2">予定件数</label>
-                                    <input type="number" id="bulkEventCount" class="input-unified" min="0" max="99" value="0">
+                                    <input type="number" id="bulkEventCount" class="input-unified" min="0" max="999" value="0">
                                 </div>
                                 <div>
                                     <label class="block text-sm font-bold mb-2">必要人数</label>
@@ -1459,7 +1459,7 @@
                             count: count,
                             requiredPeople: requiredPeople,
                             description: description || null,
-                            assignedCEs: {},
+                            assignedCEs: [],
                             createdAt: firebase.database.ServerValue.TIMESTAMP,
                             createdBy: window.currentUserData?.displayName || 'user',
                             bulkCreated: true
@@ -2496,93 +2496,6 @@ async unassignCEFromMonthlyTask(yearMonth, taskId, ceId, dateKey) {
                 }
             }
 
-                    // 重複チェック
-                    const exists = currentAssigned.some(x => 
-                        (typeof x === 'string' ? x === ceData.ceId : x?.id === ceData.ceId)
-                    );
-                    
-                    if (exists) {
-                        window.showMessage(`${ceData.ceName}は既に配置済みです`, 'warning');
-                        return;
-                    }
-
-                    // オブジェクト形式でCE情報を保存
-                    const ceEntry = {
-                        id: ceData.ceId,
-                        name: ceData.ceName,
-                        workType: ceData.workType || 'ME'
-                    };
-
-                    // 既存のID文字列をオブジェクト形式に変換（後方互換性）
-                    const upgradedAssigned = currentAssigned.map(x => {
-                        if (typeof x === 'string') {
-                            const ce = window.ceManager?.ceList?.find(c => c.id === x);
-                            return {
-                                id: x,
-                                name: ce?.iconName || ce?.displayName || x,
-                                workType: ce?.workType || 'ME'
-                            };
-                        }
-                        return x;
-                    });
-
-                    upgradedAssigned.push(ceEntry);
-
-                    await taskRef.update({
-                        assignedCEs: upgradedAssigned,
-                        updatedAt: firebase.database.ServerValue.TIMESTAMP,
-                        updatedBy: window.currentUserData?.displayName || 'user'
-                    });
-
-                    window.showMessage(`${ceData.ceName}を月次業務に配置しました`, 'success');
-                    console.log('✅ 月次業務CE配置完了:', ceData.ceName);
-                    await this.renderMonthlyTasks();
-                    this.updateDailySummary().catch(console.error);
-
-                } catch (error) {
-                    console.error('❌ 月次業務CE配置エラー:', error);
-                    window.showMessage('月次業務CE配置処理でエラーが発生しました', 'error');
-                }
-            }
-
-            // 月次業務CE配置解除
-            async unassignCEFromMonthlyTask(yearMonth, taskId, ceId) {
-                if (!confirm('このCEの配置を解除しますか？')) return;
-
-                try {
-                    const taskRef = window.database.ref(`${window.DATA_ROOT}/monthlyTasks/${yearMonth}/${taskId}`);
-                    const snapshot = await taskRef.once('value');
-                    const taskData = snapshot.val();
-
-                    if (!taskData) {
-                        window.showMessage('月次業務データが見つかりません', 'error');
-                        return;
-                    }
-
-                    const currentAssigned = Array.isArray(taskData.assignedCEs) ? taskData.assignedCEs : [];
-                    const updatedAssigned = currentAssigned.filter(x => 
-                        (typeof x === 'string' ? x !== ceId : x?.id !== ceId)
-                    );
-
-                    if (updatedAssigned.length !== currentAssigned.length) {
-                        await taskRef.update({
-                            assignedCEs: updatedAssigned,
-                            updatedAt: firebase.database.ServerValue.TIMESTAMP,
-                            updatedBy: window.currentUserData?.displayName || 'user'
-                        });
-
-                        window.showMessage('CEの配置を解除しました', 'success');
-                        await this.renderMonthlyTasks();
-                        this.updateDailySummary().catch(console.error);
-                    }
-
-                } catch (error) {
-                    console.error('❌ 月次業務CE配置解除エラー:', error);
-                    window.showMessage('CE配置解除に失敗しました', 'error');
-                }
-            }
-
-            // 月次業務実施件数更新
             async updateMonthlyTaskActual(yearMonth, taskId, newCount) {
                 try {
                     await window.database.ref(`${window.DATA_ROOT}/monthlyTasks/${yearMonth}/${taskId}/actualCount`).set(newCount);
