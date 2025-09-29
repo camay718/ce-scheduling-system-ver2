@@ -226,10 +226,10 @@
 
 
         /* 勤務区分別色分け */
-        .ce-item.worktype-ope { background-color: #dbeafe; border-color: #3b82f6; }
-        .ce-item.worktype-me { background-color: #dcfce7; border-color: #10b981; }
-        .ce-item.worktype-hd { background-color: #fce7f3; border-color: #ec4899; }
-        .ce-item.worktype-flex { background-color: #fef3c7; border-color: #f59e0b; }
+        .ce-item.worktype-ope { background-color: #07E1FF; border-color: #07B5CC; color: #1E3A8A; }
+        .ce-item.worktype-me { background-color: #CCFFCC; border-color: #99EE99; color: #006400; }
+        .ce-item.worktype-hd { background-color: #FFBCD4; border-color: #F28AB0; color: #8B008B; }
+        .ce-item.worktype-flex { background-color: #FFFF00; border-color: #E6E600; color: #B8860B; }
         .ce-item.worktype-error { background-color: #fee2e2; border-color: #ef4444; }
 
 
@@ -345,12 +345,23 @@
 
 
         /* 勤務区分別色分け */
-        .ce-chip.worktype-ope { background: #dbeafe; color: #1e40af; }
-        .ce-chip.worktype-me { background: #dcfce7; color: #166534; }
-        .ce-chip.worktype-hd { background: #fce7f3; color: #be185d; }
-        .ce-chip.worktype-flex { background: #fef3c7; color: #a16207; }
+        .ce-chip.worktype-ope { background: #07E1FF; color: #1E3A8A; }
+        .ce-chip.worktype-me { background: #CCFFCC; color: #006400; }
+        .ce-chip.worktype-hd { background: #FFBCD4; color: #8B008B; }
+        .ce-chip.worktype-flex { background: #FFFF00; color: #B8860B; }
         .ce-chip.worktype-error { background: #fee2e2; color: #dc2626; }
 
+       /* 週間ステータスバッジの配色 */
+        .weekly-status-badge.status-A1 { background: #0000FF !important; color: #FFFFFF !important; }
+        .weekly-status-badge.status-×,
+        .weekly-status-badge.status-年,
+        .weekly-status-badge.status-出,
+        .weekly-status-badge.status-研,
+        .weekly-status-badge.status-text {
+            background: #FFFFFF !important;
+            color: #333 !important;
+            border: 1px solid #ddd !important;
+        }
 
         /* 部門別集計バー */
         .dept-summary-container {
@@ -917,6 +928,9 @@
                 <!-- ナビゲーション -->
                 <div class="mt-auto pt-4 border-t border-gray-200">
                     <div class="space-y-2">
+                        <a href="./work-schedule-management.html" class="btn-unified btn-outline-unified btn-small w-full">
+                            <i class="fas fa-table mr-1"></i>勤務表管理
+                        </a>
                         <a href="./home.html" class="btn-unified btn-outline-unified btn-small w-full">
                             <i class="fas fa-home mr-1"></i>HOME
                         </a>
