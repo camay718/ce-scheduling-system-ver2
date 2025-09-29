@@ -42,7 +42,7 @@ body {
     min-height: 100vh;
 }
 
-.glassmorphism {
+.glass-card {
     background: rgba(255,255,255,0.85);
     backdrop-filter: blur(10px);
     border: 1px solid rgba(255,255,255,0.3);
@@ -77,14 +77,14 @@ body {
 @media print {
     .no-print { display: none !important; }
     body { background: white !important; color: #000 !important; }
-    .glassmorphism { background: white !important; border: 1px solid #ccc !important; }
+    .glass-card { background: white !important; border: 1px solid #ccc !important; }
 }
 </style>
 </head>
-<body class="bg-gradient-to-br from-emerald-50 to-teal-100 min-h-screen">
+<body class="theme-unified">
     <!-- ローディング -->
     <div id="loading" class="fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center z-50">
-        <div class="glassmorphism p-6 text-center">
+        <div class="glass-card p-6 text-center">
             <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-green-600 mx-auto mb-4"></div>
             <p class="text-gray-600">配置データを分析中...</p>
         </div>
@@ -93,12 +93,12 @@ body {
     <!-- メインコンテンツ -->
     <div id="mainContent" class="min-h-screen p-4" style="display:none;">
         <!-- ヘッダー -->
-        <div class="glassmorphism p-6 mb-6">
+        <div class="glass-card p-6 mb-6">
             <div class="flex justify-between items-center mb-4">
                 <div>
                     <h1 class="text-3xl font-bold text-gray-800 mb-2">
-                        <i class="fas fa-chart-pie text-green-600 mr-3"></i>
-                        総合配置分析
+    <i class="fas fa-clipboard-list text-green-600 mr-3"></i>
+    配置サマリ
                     </h1>
                     <p class="text-gray-600">配置サマリ・部門別充足率・時間帯別配置の総合分析</p>
                 </div>
@@ -110,17 +110,17 @@ body {
             
             <!-- ナビゲーション -->
             <div class="flex justify-center gap-4">
-                <a href="../pages/analytics.html" class="btn-primary">
+                <a href="../pages/analytics.html" class="btn-unified">
                     <i class="fas fa-arrow-left mr-2"></i>分析ハブに戻る
                 </a>
-                <button onclick="window.handleLogout()" class="btn-primary bg-red-500 hover:bg-red-600">
+                <button onclick="window.handleLogout()" class="btn-unified bg-red-500 hover:bg-red-600">
                     <i class="fas fa-sign-out-alt mr-2"></i>ログアウト
                 </button>
             </div>
         </div>
 
         <!-- 期間選択 -->
-        <div class="glassmorphism p-4 mb-6 no-print">
+        <div class="glass-card p-4 mb-6 no-print">
             <h2 class="text-lg font-semibold mb-4">
                 <i class="fas fa-calendar-alt mr-2"></i>分析期間設定
             </h2>
@@ -134,7 +134,7 @@ body {
                     <input type="date" id="endDate" class="w-full px-3 py-2 border rounded-lg">
                 </div>
                 <div class="flex items-end">
-                    <button onclick="analyzeData()" class="btn-primary w-full">
+                    <button onclick="analyzeData()" class="btn-unified w-full">
                         <i class="fas fa-search mr-2"></i>分析実行
                     </button>
                 </div>
@@ -144,10 +144,10 @@ body {
         <!-- V1版集計機能の統合 -->
         <div class="space-y-6">
             <!-- 配置サマリテーブル -->
-            <div class="glassmorphism p-6">
+            <div class="glass-card p-6">
                 <div class="flex items-center justify-between mb-3">
                     <h3 class="text-lg font-bold">配置サマリ</h3>
-                    <button class="btn-primary text-sm" onclick="printElement('placementSummaryTable')">
+                    <button class="btn-unified text-sm" onclick="printElement('placementSummaryTable')">
                         <i class="fas fa-print mr-1"></i>印刷
                     </button>
                 </div>
@@ -155,10 +155,10 @@ body {
             </div>
 
             <!-- 部門別充足率 -->
-            <div class="glassmorphism p-6">
+            <div class="glass-card p-6">
                 <div class="flex items-center justify-between mb-3">
                     <h3 class="text-lg font-bold">部門別充足率（%）</h3>
-                    <button class="btn-primary text-sm" onclick="printCanvas('departmentChart')">
+                    <button class="btn-unified text-sm" onclick="printCanvas('departmentChart')">
                         <i class="fas fa-print mr-1"></i>印刷
                     </button>
                 </div>
@@ -168,10 +168,10 @@ body {
             </div>
 
             <!-- 時間帯別配置人数（部門別） -->
-            <div class="glassmorphism p-6">
+            <div class="glass-card p-6">
                 <div class="flex items-center justify-between mb-3">
                     <h3 class="text-lg font-bold">時間帯別配置人数（部門別）</h3>
-                    <button class="btn-primary text-sm" onclick="printCanvas('timeSlotChartDept')">
+                    <button class="btn-unified text-sm" onclick="printCanvas('timeSlotChartDept')">
                         <i class="fas fa-print mr-1"></i>印刷
                     </button>
                 </div>
@@ -181,10 +181,10 @@ body {
             </div>
 
             <!-- 時間帯別配置人数（曜日別） -->
-            <div class="glassmorphism p-6">
+            <div class="glass-card p-6">
                 <div class="flex items-center justify-between mb-3">
                     <h3 class="text-lg font-bold">時間帯別配置人数（曜日別）</h3>
-                    <button class="btn-primary text-sm" onclick="printCanvas('timeSlotChartDay')">
+                    <button class="btn-unified text-sm" onclick="printCanvas('timeSlotChartDay')">
                         <i class="fas fa-print mr-1"></i>印刷
                     </button>
                 </div>
@@ -196,7 +196,27 @@ body {
     </div>
 
     <script>
-// グローバル変数とチャートインスタンス
+// V2統一配色定義
+const V2_COLORS = {
+    '血液浄化': '#FFB6C1',
+    '人工心肺・補助循環': '#4169E1', 
+    '心・カテーテル': '#32CD32',
+    '手術・麻酔': '#87CEEB',
+    '不整脈': '#9370DB',
+    '機器管理・人工呼吸': '#90EE90',
+    '会議・ミーティング・勉強会・打ち合わせ': '#FFD700',
+    '出張・研修内容': '#FFA07A',
+    'その他・連絡': '#D3D3D3'
+};
+
+// 特別カテゴリのキーワード定義
+const SPECIAL_KEYWORDS = {
+    '会議・ミーティング・勉強会・打ち合わせ': ['会議', 'ミーティング', '勉強会', '打ち合わせ', 'カンファレンス'],
+    '出張・研修内容': ['出張', '研修', '学会', 'セミナー', '講習'],
+    'その他・連絡': ['その他', '連絡', '雑務', '調整', '確認']
+};
+        
+        // グローバル変数とチャートインスタンス
 let chartInstances = {
     departmentChart: null,
     timeSlotChartDept: null,
@@ -343,15 +363,19 @@ function initCharts() {
 
     // 時間帯別配置チャート（部門別）
     const timeSlotDeptCtx = document.getElementById('timeSlotChartDept').getContext('2d');
-    chartInstances.timeSlotChartDept = new Chart(timeSlotDeptCtx, {
-        type: 'bar',
-        data: { labels: [], datasets: [] },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            scales: { x: { stacked: true }, y: { stacked: true, beginAtZero: true } }
-        }
-    });
+chartInstances.timeSlotChartDept = new Chart(timeSlotDeptCtx, {
+    type: 'line',
+    data: { labels: [], datasets: [] },
+    options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        scales: {
+            y: { beginAtZero: true, title: { display: true, text: '配置人数' } },
+            x: { title: { display: true, text: '時間帯' } }
+        },
+        plugins: { legend: { position: 'top' } }
+    }
+});
 
     // 時間帯別配置チャート（曜日別）
     const timeSlotDayCtx = document.getElementById('timeSlotChartDay').getContext('2d');
@@ -394,6 +418,8 @@ async function analyzeData() {
 function buildPlacementSummaryTable(events, monthlyTasks) {
     const container = document.getElementById('placementSummaryTable');
     const departments = ['血液浄化', '人工心肺・補助循環', '心・カテーテル', '手術・麻酔', '不整脈', '機器管理・人工呼吸'];
+const specialCategories = Object.keys(SPECIAL_KEYWORDS);
+const allCategories = [...departments, ...specialCategories];
     
     let tableHTML = `
         <div class="overflow-x-auto">
@@ -410,7 +436,17 @@ function buildPlacementSummaryTable(events, monthlyTasks) {
                 <tbody>
     `;
 
-    departments.forEach(dept => {
+    allCategories.forEach(category => {
+        // カテゴリ分類ロジックを追加
+    const categoryEvents = [...events, ...monthlyTasks].filter(e => {
+        if (departments.includes(category)) {
+            return e.department === category;
+        }
+        
+        const eventText = ((e.title || e.name || '') + ' ' + (e.content || e.description || '')).toLowerCase();
+        const keywords = SPECIAL_KEYWORDS[category] || [];
+        return keywords.some(keyword => eventText.includes(keyword));
+    });
         const deptEvents = [...events, ...monthlyTasks].filter(e => e.department === dept);
         const totalRequired = deptEvents.reduce((sum, e) => sum + (e.requiredPeople || 1), 0);
         const totalAssigned = deptEvents.reduce((sum, e) => sum + e.assignedCount, 0);
@@ -451,19 +487,23 @@ function updateDepartmentChart(events, monthlyTasks) {
 function updateTimeSlotCharts(events, monthlyTasks) {
     // 時間帯別のデータ集計と更新
     const timeSlots = Array.from({length: 12}, (_, i) => `${7+i}:00`);
-    const departments = ['血液浄化', '人工心肺・補助循環', '心・カテーテル', '手術・麻酔', '不整脈', '機器管理・人工呼吸'];
-    
-    // 部門別チャート更新
-    const deptData = calculateTimeSlotData([...events, ...monthlyTasks], timeSlots, departments, 'department');
-    
-    chartInstances.timeSlotChartDept.data.labels = timeSlots;
-    chartInstances.timeSlotChartDept.data.datasets = departments.map((dept, idx) => ({
-        label: dept,
-        data: timeSlots.map(slot => deptData[slot]?.[dept] || 0),
-        backgroundColor: ['#FFB6C180', '#4169E180', '#32CD3280', '#87CEEB80', '#9370DB80', '#90EE9080'][idx],
-        borderColor: ['#FFB6C1', '#4169E1', '#32CD32', '#87CEEB', '#9370DB', '#90EE90'][idx],
-        borderWidth: 1
-    }));
+const departments = ['血液浄化', '人工心肺・補助循環', '心・カテーテル', '手術・麻酔', '不整脈', '機器管理・人工呼吸'];
+const specialCategories = Object.keys(SPECIAL_KEYWORDS);
+const allCategories = [...departments, ...specialCategories];
+
+// 拡張カテゴリ別チャート更新（折線グラフ）
+const deptData = calculateTimeSlotDataExtended([...events, ...monthlyTasks], timeSlots, allCategories);
+
+chartInstances.timeSlotChartDept.data.labels = timeSlots;
+chartInstances.timeSlotChartDept.data.datasets = allCategories.map(category => ({
+    label: category,
+    data: timeSlots.map(slot => deptData[slot]?.[category] || 0),
+    borderColor: V2_COLORS[category],
+    backgroundColor: V2_COLORS[category] + '20',
+    fill: false,
+    tension: 0.4,
+    borderWidth: 2
+}));
     chartInstances.timeSlotChartDept.update();
 
     // 曜日別チャート更新
@@ -513,6 +553,48 @@ function calculateTimeSlotData(allEvents, timeSlots, groups, type) {
     return result;
 }
 
+        // 拡張カテゴリ対応の集計関数
+function calculateTimeSlotDataExtended(allEvents, timeSlots, categories) {
+    const result = {};
+    timeSlots.forEach(slot => {
+        result[slot] = {};
+        categories.forEach(category => result[slot][category] = 0);
+    });
+
+    allEvents.forEach(event => {
+        if (!event.startTime || !event.endTime) return;
+        
+        const startHour = parseInt(event.startTime.split(':')[0]);
+        const endHour = parseInt(event.endTime.split(':')[0]);
+        const assignedCount = event.assignedCEs ? event.assignedCEs.length : 0;
+        
+        // カテゴリ分類
+        let eventCategory = event.department;
+        
+        // 特別カテゴリの判定
+        const eventText = ((event.title || event.name || '') + ' ' + (event.content || event.description || '')).toLowerCase();
+        
+        for (const [category, keywords] of Object.entries(SPECIAL_KEYWORDS)) {
+            if (keywords.some(keyword => eventText.includes(keyword))) {
+                eventCategory = category;
+                break;
+            }
+        }
+        
+        // 時間帯別集計
+        timeSlots.forEach(slot => {
+            const slotHour = parseInt(slot.split(':')[0]);
+            if (slotHour >= startHour && slotHour <= endHour) {
+                if (categories.includes(eventCategory)) {
+                    result[slot][eventCategory] = (result[slot][eventCategory] || 0) + assignedCount;
+                }
+            }
+        });
+    });
+
+    return result;
+}
+
 // 印刷機能
 function printElement(elementId) {
     const element = document.getElementById(elementId);
@@ -528,6 +610,7 @@ function printElement(elementId) {
                 <title>印刷</title>
                 ${styles}
                 <style>body { margin: 20px; } .no-print { display: none !important; }</style>
+            <link rel="stylesheet" href="../css/theme-unified.css?v=20241217">
             </head>
             <body>${element.outerHTML}</body>
         </html>
