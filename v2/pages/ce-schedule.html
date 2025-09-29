@@ -94,8 +94,8 @@
     margin-top: 20px;
     position: relative;
     overflow: auto;
-    height: calc(100vh - 200px);
-    min-height: 600px;
+    height: calc(100vh - 100px);
+    min-height: 1200px;
 }
 
         .work-schedule-table {
@@ -130,7 +130,7 @@
         .work-schedule-table .name-header,
         .work-schedule-table .name-cell {
             position: sticky;
-            left: 0;
+            left: 30px;
             background: white;
             z-index: 15;
             width: 80px;
@@ -272,6 +272,53 @@
                 width: 100%;
             }
         }
+
+        /* サイドバー収納時の完全非表示 */
+.schedule-sidebar.collapsed .sidebar-content {
+    opacity: 0;
+    pointer-events: none;
+    overflow: hidden;
+}
+
+/* No列の固定スタイル */
+.work-schedule-table .no-header,
+.work-schedule-table .no-cell {
+    position: sticky;
+    left: 0;
+    background: white;
+    z-index: 15;
+    width: 30px;
+    min-width: 30px;
+    max-width: 30px;
+}
+
+.work-schedule-table .no-header {
+    background: linear-gradient(135deg, #f8f9fa, #e9ecef);
+    z-index: 20;
+}
+
+/* CE番号アイコン */
+.work-schedule-table .ce-number {
+    background: var(--brand-primary);
+    color: white;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 8px;
+    font-weight: bold;
+    margin: 0 auto;
+}
+
+/* 日付列幅統一 */
+.work-schedule-table .date-col {
+    width: 24px;
+    min-width: 24px;
+    max-width: 24px;
+}
+        
     </style>
 </head>
 <body class="theme-unified">
@@ -465,32 +512,15 @@ class CEScheduleManager {
         this.currentFilter = 'future';
         
         // ★ この部分を追加 ★
-        this.footerTypes = [
-            {
-                label: 'OPE(A/A1)',
-                filter: (effectiveType, status) => effectiveType === 'OPE' && (status === 'A' || status === 'A1')
-            },
-            {
-                label: 'OPE(B)',
-                filter: (effectiveType, status) => effectiveType === 'OPE' && status === 'B'
-            },
-            {
-                label: 'ME(A/A1)',
-                filter: (effectiveType, status) => effectiveType === 'ME' && (status === 'A' || status === 'A1')
-            },
-            {
-                label: 'ME(B)',
-                filter: (effectiveType, status) => effectiveType === 'ME' && status === 'B'
-            },
-            {
-                label: 'HD勤務',
-                filter: (effectiveType, status) => effectiveType === 'HD' && ['A', 'A1', 'B'].includes(status)
-            },
-            {
-                label: 'FLEX勤務',
-                filter: (effectiveType, status) => effectiveType === 'FLEX' && ['A', 'A1', 'B'].includes(status)
-            }
-        ];
+this.footerTypes = [
+    { label: '当直', filter: (ce, status, effectiveType) => status === 'B', target: 1 },
+    { label: '非番', filter: (ce, status, effectiveType) => status === '非', target: 1 },
+    { label: 'OPE(A)', filter: (ce, status, effectiveType) => effectiveType === 'OPE' && status === 'A', target: null },
+    { label: 'OPE(A1)', filter: (ce, status, effectiveType) => effectiveType === 'OPE' && status === 'A1', target: null },
+    { label: 'ME', filter: (ce, status, effectiveType) => effectiveType === 'ME' && ['A', 'A1', 'B', '非', '年', '出', '研'].includes(status), target: null },
+    { label: 'HD', filter: (ce, status, effectiveType) => effectiveType === 'HD' && ['A', 'A1', 'B', '非', '年', '出', '研'].includes(status), target: null },
+    { label: 'FLEX', filter: (ce, status, effectiveType) => effectiveType === 'FLEX' && ['A', 'A1', 'B', '非', '年', '出', '研'].includes(status), target: null }
+];
     }
 
             async init() {
@@ -918,115 +948,87 @@ fitTableToViewport() {
                 return ce.workType || 'ME';
             }
 
-            generateTableHTML(dates, scheduleData, ceList, workTypeOverrides) {
-                let html = '<thead><tr><th class="name-header">氏名</th>';
-                
-                dates.forEach(date => {
-                    const dayOfWeek = ['日', '月', '火', '水', '木', '金', '土'][date.getDay()];
-                    const isWeekend = date.getDay() === 0 || date.getDay() === 6;
-                    const isHoliday = this.isJapaneseHoliday(date);
-                    
-                    let headerClass = '';
-                    if (date.getDay() === 0 || isHoliday) {
-                        headerClass = 'text-red-600';
-                    } else if (date.getDay() === 6) {
-                        headerClass = 'text-blue-600';
-                    }
-                    
-                    html += `
-                        <th class="date-col">
-                            <div>${date.getDate()}</div>
-                            <div class="text-xs ${headerClass}">${dayOfWeek}</div>
-                        </th>
-                    `;
-                });
-                
-                const summaryHeaders = ['A', 'A1', 'B', '非', '×', '年', '出', '研', '休日数', '実勤務', '当直回数'];
-                summaryHeaders.forEach(header => {
-                    html += `<th class="summary-cell">${header}</th>`;
-                });
-                html += '</tr></thead>';
-                
-                html += '<tbody>';
-                ceList.forEach(ce => {
-                    const fullName = ce.fullName || ce.name || '';
-                    html += `<tr><td class="name-cell">
-                        <div class="font-medium">${fullName}</div>
-                    </td>`;
-                    
-                    const summary = { A: 0, A1: 0, B: 0, non: 0, off: 0, year: 0, trip: 0, training: 0, holidays: 0, actual: 0, night: 0 };
-                    
-                    dates.forEach(date => {
-                        const dateKey = this.formatDate(date);
-                        const workData = scheduleData[ce.id]?.[dateKey] || {};
-                        const isWeekendOrHoliday = date.getDay() === 0 || date.getDay() === 6 || this.isJapaneseHoliday(date);
-                        const status = workData.customText?.trim() || workData.status || (isWeekendOrHoliday ? '×' : 'A');
-                        const desired = workData.desired || false;
-                        
-                        const effectiveWorkType = this.getEffectiveWorkType(ce.id, dateKey, ceList, workTypeOverrides);
-                        
-                        if (isWeekendOrHoliday) summary.holidays++;
-                        switch (workData.status || (isWeekendOrHoliday ? '×' : 'A')) {
-                            case 'A': summary.A++; summary.actual++; break;
-                            case 'A1': summary.A1++; summary.actual++; break;
-                            case 'B': summary.B++; summary.actual++; summary.night++; break;
-                            case '非': summary.non++; summary.actual++; break;
-                            case '×': summary.off++; break;
-                            case '年': summary.year++; summary.actual++; break;
-                            case '出': summary.trip++; summary.actual++; break;
-                            case '研': summary.training++; summary.actual++; break;
-                        }
-                        
-                        let cellClass = `work-cell type-${effectiveWorkType.toLowerCase()}`;
-                        if (workData.status) cellClass += ` status-${workData.status}`;
-                        if (desired) cellClass += ' desired';
-                        if (isWeekendOrHoliday) cellClass += ' holiday';
-                        
-                        html += `<td class="${cellClass}">${status}</td>`;
-                    });
-                    
-                    const summaryValues = [summary.A, summary.A1, summary.B, summary.non, summary.off, summary.year, summary.trip, summary.training, summary.holidays, summary.actual, summary.night];
-                    summaryValues.forEach(value => {
-                        html += `<td class="summary-cell">${value}</td>`;
-                    });
-                    
-                    html += '</tr>';
-                });
-                html += '</tbody>';
-
-                // フッター集計
-html += '<tfoot>';
-this.footerTypes.forEach(type => {  // ★ footerTypes → this.footerTypes に変更 ★
-    html += `<tr class="footer-summary-row"><th class="type-label" colspan="1">${type.label}</th>`;  // ★ colspan="2" → colspan="1" に変更 ★
+generateTableHTML(dates, scheduleData, ceList, workTypeOverrides) {
+    // ヘッダー（No + 氏名）
+    let html = '<thead><tr><th class="no-header">No</th><th class="name-header">氏名</th>';
     
     dates.forEach(date => {
-        const dateKey = this.formatDate(date);
-        let count = 0;
-        ceList.forEach(ce => {
+        const dayOfWeek = ['日', '月', '火', '水', '木', '金', '土'][date.getDay()];
+        const isHoliday = this.isJapaneseHoliday(date);
+        let headerClass = '';
+        if (date.getDay() === 0 || isHoliday) headerClass = 'text-red-600';
+        else if (date.getDay() === 6) headerClass = 'text-blue-600';
+        
+        html += `<th class="date-col"><div>${date.getDate()}</div><div class="text-xs ${headerClass}">${dayOfWeek}</div></th>`;
+    });
+    
+    const summaryHeaders = ['A', 'A1', 'B', '非', '×', '休日数', '実勤務', '当直回数'];
+    summaryHeaders.forEach(h => html += `<th class="summary-cell">${h}</th>`);
+    html += '</tr></thead><tbody>';
+    
+    ceList.forEach((ce, index) => {
+        const fullName = ce.fullName || ce.name || '';
+        html += `<tr><td class="no-cell"><div class="ce-number">${index + 1}</div></td><td class="name-cell"><div class="font-medium">${fullName}</div></td>`;
+        
+        const summary = { A: 0, A1: 0, B: 0, non: 0, off: 0, holidays: 0, actual: 0, night: 0 };
+        
+        dates.forEach(date => {
+            const dateKey = this.formatDate(date);
             const workData = scheduleData[ce.id]?.[dateKey] || {};
             const isWeekendOrHoliday = date.getDay() === 0 || date.getDay() === 6 || this.isJapaneseHoliday(date);
-            const status = workData.status || (isWeekendOrHoliday ? '×' : 'A');
-            const effectiveType = this.getEffectiveWorkType(ce.id, dateKey, ceList, workTypeOverrides);
+            const status = workData.customText?.trim() || workData.status || (isWeekendOrHoliday ? '×' : 'A');
             
-            if (type.filter(effectiveType, status)) {
-                count++;
+            if (isWeekendOrHoliday) summary.holidays++;
+            switch (workData.status || (isWeekendOrHoliday ? '×' : 'A')) {
+                case 'A': summary.A++; summary.actual++; break;
+                case 'A1': summary.A1++; summary.actual++; break;
+                case 'B': summary.B++; summary.actual++; summary.night++; break;
+                case '非': summary.non++; summary.actual++; break;
+                case '×': summary.off++; break;
+                case '年': summary.actual++; break;
+                case '出': summary.actual++; break;
+                case '研': summary.actual++; break;
             }
+            
+            const effectiveWorkType = this.getEffectiveWorkType(ce.id, dateKey, ceList, workTypeOverrides);
+            let cellClass = `work-cell date-col type-${effectiveWorkType.toLowerCase()}`;
+            if (workData.status) cellClass += ` status-${workData.status}`;
+            if (workData.desired) cellClass += ' desired';
+            if (isWeekendOrHoliday) cellClass += ' holiday';
+            
+            html += `<td class="${cellClass}">${status}</td>`;
         });
         
-        const cellClass = (type.target !== undefined && count !== type.target) ? 'warning-count' : '';
-        html += `<td class="${cellClass}">${count}</td>`;
+        [summary.A, summary.A1, summary.B, summary.non, summary.off, summary.holidays, summary.actual, summary.night].forEach(v => {
+            html += `<td class="summary-cell">${v}</td>`;
+        });
+        html += '</tr>';
     });
     
-    // サマリー列は空白で統一（列数一致のため）
-    summaryHeaders.forEach(() => {
-        html += '<td class="summary-cell"></td>';
+    html += '</tbody><tfoot>';
+    this.footerTypes.forEach(type => {
+        html += `<tr class="footer-summary-row"><th class="type-label" colspan="2">${type.label}</th>`;
+        
+        dates.forEach(date => {
+            const dateKey = this.formatDate(date);
+            let count = 0;
+            ceList.forEach(ce => {
+                const workData = scheduleData[ce.id]?.[dateKey] || {};
+                const isWeekendOrHoliday = date.getDay() === 0 || date.getDay() === 6 || this.isJapaneseHoliday(date);
+                const status = workData.status || (isWeekendOrHoliday ? '×' : 'A');
+                const effectiveType = this.getEffectiveWorkType(ce.id, dateKey, ceList, workTypeOverrides);
+                if (type.filter(ce, status, effectiveType)) count++;
+            });
+            const warn = (type.target !== null && count !== type.target) ? 'warning-count' : '';
+            html += `<td class="date-col ${warn}">${count}</td>`;
+        });
+        
+        summaryHeaders.forEach(() => html += '<td class="summary-cell"></td>');
+        html += '</tr>';
     });
     
-    html += '</tr>';
-});
-html += '</tfoot>';
-                return html;
-            }
+    return html + '</tfoot>';
+}
 
             async toggleVisibility(periodKey) {
                 if (window.userRole !== 'admin') {
