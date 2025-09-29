@@ -2325,22 +2325,22 @@ async normalizeAssignedCEs(assignedCEs) {
     }).filter(Boolean);
 }
 
-// 勤務状態付きCEチップの生成
+// 勤務状態付きCEチップの生成（修正版）
 async generateCEChipsWithStatus(normalizedAssigned, dateKey) {
     const chips = [];
     
     for (const assigned of normalizedAssigned) {
         let effectiveWorkType = assigned.workType || 'ME';
         let statusBadge = '';
+        let statusText = ''; // ★追加：外側で宣言して安全なスコープを確保
         
         if (window.publishedScheduleResolver) {
             try {
                 const workStatus = await window.publishedScheduleResolver.getCEWorkStatusForDate(assigned.id, dateKey);
-                if (workStatus && workStatus.workType) {
+                if (workStatus?.workType) {
                     effectiveWorkType = workStatus.workType;
                 }
-                
-                const statusText = workStatus?.status;
+                statusText = workStatus?.status || ''; // ★修正：安全な代入
                 if (statusText && statusText !== 'A') {
                     statusBadge = `<span class="weekly-status-badge status-${statusText}">${statusText}</span>`;
                 }
@@ -2349,8 +2349,10 @@ async generateCEChipsWithStatus(normalizedAssigned, dateKey) {
             }
         }
         
+        // ★修正：statusTextが安全に参照できるようになった
+        const titleExtra = statusBadge ? ` (${statusText})` : '';
         chips.push(`
-            <span class="ce-chip worktype-${effectiveWorkType.toLowerCase()}" title="${assigned.name}${statusBadge ? ` (${statusText})` : ''}" style="position: relative;">
+            <span class="ce-chip worktype-${effectiveWorkType.toLowerCase()}" title="${assigned.name}${titleExtra}" style="position: relative;">
                 ${assigned.name}${statusBadge}
             </span>
         `);
