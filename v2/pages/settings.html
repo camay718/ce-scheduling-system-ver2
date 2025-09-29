@@ -1207,6 +1207,9 @@ const actionMap = {
             try {
                 window.settingsManager = new SettingsManager();
                 await window.settingsManager.init();
+                if (window.auditLogger) {
+                    await window.auditLogger.logPageAccess('settings');
+                    }
                 console.log('✅ 設定管理初期化完了');
             } catch (error) {
                 console.error('❌ 設定管理初期化エラー:', error);
