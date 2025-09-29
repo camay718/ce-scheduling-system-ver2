@@ -1198,6 +1198,9 @@ generateTableHTML(dates, scheduleData, ceList, workTypeOverrides) {
             try {
                 window.ceScheduleManager = new CEScheduleManager();
                 await window.ceScheduleManager.init();
+                if (window.auditLogger) {
+    await window.auditLogger.logPageAccess('ce-schedule');
+}
                 console.log('✅ 勤務表管理初期化完了');
             } catch (error) {
                 console.error('❌ 勤務表管理初期化エラー:', error);
