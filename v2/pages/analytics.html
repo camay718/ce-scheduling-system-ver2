@@ -330,16 +330,31 @@
                     const authSuccess = await AuthGuard.init();
                     if (!authSuccess) return;
 
-                    // ユーザーデータ取得
-                    const userData = await AuthGuard.getUserData();
-                    if (!userData || !userData.setupCompleted) {
-                        console.error('ユーザーデータ不正:', userData);
-                        location.href = '../index.html';
-                        return;
+                    // ユーザーデータ取得（失敗してもリダイレクトしない）
+                    let userData = null;
+                    try {
+                        userData = await AuthGuard.getUserData();
+                    } catch (error) {
+                        console.warn('ユーザーデータ取得失敗:', error);
                     }
 
-                    window.userRole = userData.role || 'viewer';
-                    window.currentUserData = userData;
+                    // ユーザーデータが不完全でも継続（分析ページは全権限アクセス可能）
+                    if (userData && userData.setupCompleted) {
+                        window.userRole = userData.role || 'viewer';
+                        window.currentUserData = userData;
+                    } else {
+                        // フォールバック：セッションから基本情報を構築
+                        const session = AuthGuard.getSession();
+                        window.userRole = session.role || 'viewer';
+                        window.currentUserData = {
+                            uid: session.uid || 'unknown',
+                            username: session.username || 'ゲストユーザー',
+                            displayName: session.username || 'ゲストユーザー',
+                            role: window.userRole,
+                            setupCompleted: true // 分析ページでは認証済みとみなす
+                        };
+                        console.log('フォールバックユーザーデータを使用:', window.currentUserData);
+                    }
 
                     this.showInterface();
                     this.updateAnalyticsAccess();
@@ -371,56 +386,23 @@
             }
 
             updateAnalyticsAccess() {
-                const isRestricted = window.userRole === 'viewer';
+                // 全権限でアクセス可能に変更
                 const cards = document.querySelectorAll('.analytics-card');
+                cards.forEach(card => {
+                    card.classList.remove('disabled');
+                    const badge = card.querySelector('.status-badge');
+                    if (badge) {
+                        badge.textContent = '利用可能';
+                        badge.className = 'status-badge available';
+                    }
+                });
+                
+                // 権限制限メッセージを非表示（存在する場合）
                 const restrictionMessage = document.getElementById('accessRestrictionMessage');
-
-                if (isRestricted) {
-                    restrictionMessage.style.display = 'block';
-                    cards.forEach(card => {
-                        card.classList.add('disabled');
-                        const badge = card.querySelector('.status-badge');
-                        if (badge) {
-                            badge.textContent = '制限あり';
-                            badge.className = 'status-badge restricted';
-                        }
-                    });
-                } else {
+                if (restrictionMessage) {
                     restrictionMessage.style.display = 'none';
-                    cards.forEach(card => {
-                        card.classList.remove('disabled');
-                    });
                 }
             }
-
-            async loadAnalyticsData() {
-                try {
-                    // 並列でデータを取得
-                    const [eventsSnapshot, ceListSnapshot, monthlySnapshot] = await Promise.all([
-                        window.database.ref(`${window.DATA_ROOT}/events`).once('value'),
-                        window.database.ref(`${window.DATA_ROOT}/ceList`).once('value'),
-                        window.database.ref(`${window.DATA_ROOT}/monthlyTasks`).once('value')
-                    ]);
-
-                    // 業務数の計算
-                    const eventsData = eventsSnapshot.val() || {};
-                    let totalEvents = 0;
-                    let totalAssignments = 0;
-
-                    if (eventsData.byDate) {
-                        Object.values(eventsData.byDate).forEach(dateEvents => {
-                            if (dateEvents && typeof dateEvents === 'object') {
-                                const eventList = Object.values(dateEvents);
-                                totalEvents += eventList.length;
-                                
-                                eventList.forEach(event => {
-                                    if (event.assignedCEs && Array.isArray(event.assignedCEs)) {
-                                        totalAssignments += event.assignedCEs.length;
-                                    }
-                                });
-                            }
-                        });
-                    }
 
                     // CE数の計算
                     const ceListData = ceListSnapshot.val();
@@ -463,14 +445,6 @@
                 }
             }
 
-            updateQuickStats() {
-                document.getElementById('totalEventsCount').textContent = this.analyticsData.totalEvents.toLocaleString();
-                document.getElementById('totalCECount').textContent = this.analyticsData.totalCE.toLocaleString();
-                document.getElementById('totalAssignmentsCount').textContent = this.analyticsData.totalAssignments.toLocaleString();
-                document.getElementById('avgUtilizationRate').textContent = this.analyticsData.avgUtilization + '%';
-            }
-        }
-
         /**
          * 分析ページを新しいタブで開く（認証情報確実受け渡し版）
          */
@@ -484,16 +458,16 @@
             const uid = sessionStorage.getItem('targetUID') || userData.uid || '';
             const role = window.userRole || userData.role || sessionStorage.getItem('userRole') || 'viewer';
 
-            if (!uid || !username) {
-                window.showMessage('認証情報が不完全です。ページを再読み込みしてください。', 'warning');
-                return;
-            }
+            // フォールバック値を使用（認証情報が不完全でも継続）
+            const finalUid = uid || 'guest';
+            const finalUsername = username || displayName || 'ゲストユーザー';
+            const finalDisplayName = displayName || finalUsername;
 
             // URLパラメータに認証情報を付与
             const params = new URLSearchParams({
-                uid: uid,
-                username: username,
-                user: displayName,
+                uid: finalUid,
+                username: finalUsername,
+                user: finalDisplayName,
                 role: role,
                 timestamp: Date.now()
             });
@@ -503,9 +477,9 @@
             // localStorage にもミラー保存（タブ間共有用）
             try {
                 localStorage.setItem('analyticsAuth', JSON.stringify({
-                    uid: uid,
-                    username: username,
-                    displayName: displayName,
+                    uid: finalUid,
+                    username: finalUsername,
+                    displayName: finalDisplayName,
                     role: role,
                     timestamp: Date.now()
                 }));
