@@ -9,6 +9,18 @@
             try {
                 await window.waitForFirebase?.();
                 
+                // 分析ページは全権限でアクセス許可
+                const analyticsPages = [
+                    '/pages/analytics.html',
+                    '/analytics/assignment-summary.html',
+                    '/analytics/department-timeline.html',
+                    '/analytics/personal-timeline.html'
+                ];
+                
+                const isAnalyticsPage = analyticsPages.some(path => 
+                    location.pathname.endsWith(path) || location.pathname.includes(path)
+                );
+                
                 // セッション復元（URL→sessionStorage→localStorageの順）
                 const params = new URLSearchParams(location.search);
                 const uid = params.get('uid') || sessionStorage.getItem('targetUID') || 
@@ -25,7 +37,14 @@
                     console.log('✅ 認証情報復元完了:', { uid: uid.substring(0,8) + '...', username, role });
                 }
                 
-                if (requireAuth && (!sessionStorage.getItem('targetUID') || !sessionStorage.getItem('currentUsername'))) {
+                // 分析ページの場合はログイン済みのみチェック
+                if (isAnalyticsPage) {
+                    if (!sessionStorage.getItem('targetUID') || !sessionStorage.getItem('currentUsername')) {
+                        console.warn('認証が必要です。ログインに戻ります。');
+                        location.href = '../index.html';
+                        return false;
+                    }
+                } else if (requireAuth && (!sessionStorage.getItem('targetUID') || !sessionStorage.getItem('currentUsername'))) {
                     console.warn('認証が必要です。ログインに戻ります。');
                     location.href = '../index.html';
                     return false;
