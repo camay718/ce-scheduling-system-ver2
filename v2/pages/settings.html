@@ -17,6 +17,10 @@
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
     <script src="../js/config/firebase-config.js"></script>
 
+    <!-- 監査ログシステム -->
+<script src="../js/utils/audit-logger.js"></script>
+
+
     <!-- 共通モジュール -->
     <script src="../js/utils/ui-utils.js"></script>
     <script src="../js/core/auth-guard.js"></script>
@@ -358,13 +362,17 @@
                         </div>
                         <div>
                             <label class="block text-xs font-medium mb-1">アクション</label>
-                            <select id="actionFilter" class="input-unified text-xs">
-                                <option value="">全て</option>
-                                <option value="login">ログイン/ログアウト</option>
-                                <option value="event">業務操作</option>
-                                <option value="ce">CE配置</option>
-                                <option value="schedule">勤務表操作</option>
-                            </select>
+<select id="actionFilter" class="input-unified text-xs">
+    <option value="">全て</option>
+    <option value="login">ログイン/ログアウト</option>
+    <option value="event">業務操作</option>
+    <option value="ce">CE配置</option>
+    <option value="schedule">勤務表操作</option>
+    <option value="monthly">月次業務</option>
+    <option value="user">ユーザー管理</option>
+    <option value="navigation">ページ遷移</option>
+    <option value="system">システム操作</option>
+</select>
                         </div>
                         <div>
                             <label class="block text-xs font-medium mb-1">ユーザー</label>
@@ -531,6 +539,11 @@
                     await this.loadUsers();
                     await this.setupRealtimeActivityLog();
                     this.updateStats();
+                    
+// ページアクセスログ記録
+if (window.auditLogger) {
+    await window.auditLogger.logPageAccess('settings');
+}
 
                     console.log('✅ 設定システム初期化完了');
                 } catch (error) {
@@ -697,9 +710,9 @@
 
                 // 最新のログをリアルタイムで監視
                 const latestTimestamp = this.activityLogs.length > 0 ? this.activityLogs[0].timestamp : 0;
-                this.realtimeRef = window.database.ref(`${window.DATA_ROOT}/auditLogs`)
-                    .orderByChild('timestamp')
-                    .startAfter(latestTimestamp);
+this.realtimeRef = window.database.ref(`${window.DATA_ROOT}/auditLogs`)
+    .orderByChild('timestamp')
+    .startAt(latestTimestamp ? latestTimestamp + 1 : 0);
 
                 this.realtimeRef.on('child_added', (snapshot) => {
                     if (!this.isPaused) {
@@ -828,13 +841,17 @@
                 this.renderActivityLog();
             }
 
-            getActionCategory(action) {
-                if (['login', 'logout'].includes(action)) return 'login';
-                if (['event-add', 'event-edit', 'event-delete'].includes(action)) return 'event';
-                if (['ce-assign', 'ce-unassign'].includes(action)) return 'ce';
-                if (['schedule-create', 'schedule-edit', 'schedule-publish'].includes(action)) return 'schedule';
-                return 'other';
-            }
+ getActionCategory(action) {
+    if (['login', 'logout'].includes(action)) return 'login';
+    if (['event-add', 'event-edit', 'event-delete', 'event-bulk-add'].includes(action)) return 'event';
+    if (['ce-assign', 'ce-unassign'].includes(action)) return 'ce';
+    if (['schedule-create', 'schedule-edit', 'schedule-publish'].includes(action)) return 'schedule';
+    if (action.startsWith('monthly-')) return 'monthly';
+    if (['user-create', 'user-delete', 'user-role-change'].includes(action)) return 'user';
+    if (['page-access'].includes(action)) return 'navigation';
+    if (['system-log-export', 'system-log-cleanup'].includes(action)) return 'system';
+    return 'other';
+}
 
             clearFilters() {
                 document.getElementById('timeFilter').value = 'week';
@@ -922,18 +939,29 @@
             }
 
             getActionText(log) {
-                const actionMap = {
-                    'login': 'ログイン',
-                    'logout': 'ログアウト',
-                    'event-add': '業務追加',
-                    'event-edit': '業務編集',
-                    'event-delete': '業務削除',
-                    'ce-assign': 'CE配置',
-                    'ce-unassign': 'CE配置解除',
-                    'schedule-create': '勤務表作成',
-                    'schedule-edit': '勤務表編集',
-                    'schedule-publish': '勤務表公開'
-                };
+const actionMap = {
+    'login': 'ログイン',
+    'logout': 'ログアウト',
+    'event-add': '業務追加',
+    'event-edit': '業務編集',
+    'event-delete': '業務削除',
+    'ce-assign': 'CE配置',
+    'ce-unassign': 'CE配置解除',
+    'schedule-create': '勤務表作成',
+    'schedule-edit': '勤務表編集',
+    'schedule-publish': '勤務表公開',
+    'page-access': 'ページアクセス',
+    'event-bulk-add': '業務一括追加',
+    'monthly-create': '月次業務作成',
+    'monthly-edit': '月次業務編集',
+    'monthly-delete': '月次業務削除',
+    'monthly-daily-record': '月次実績記録',
+    'user-create': 'ユーザー作成',
+    'user-delete': 'ユーザー削除',
+    'user-role-change': '権限変更',
+    'system-log-export': 'ログエクスポート',
+    'system-log-cleanup': 'ログクリーンアップ'
+};
 
                 return actionMap[log.action] || log.action || '不明な操作';
             }
