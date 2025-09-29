@@ -92,11 +92,9 @@
     border-radius: 12px;
     box-shadow: 0 4px 12px rgba(0,0,0,0.1);
     margin-top: 20px;
-    margin-bottom: 40px;  /* 下部余白を追加 */
+    margin-bottom: 40px;
     position: relative;
-    /* overflow: auto; を削除 */
-    /* height: calc(100vh - 100px); を削除 */
-    /* min-height: 1200px; を削除 */
+    /* overflow, height, min-height は全て削除のまま */
 }
 
         .work-schedule-table {
@@ -320,6 +318,68 @@
     max-width: 24px;
 }
         
+        /* ページ全体スクロール有効化 */
+html, body {
+    height: auto;
+    overflow-y: auto;
+}
+
+.schedule-main { 
+    overflow: visible; 
+}
+
+/* コンパクトヘッダーレイアウト */
+.compact-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 20px;
+    margin-bottom: 20px;
+}
+
+.header-info {
+    flex: 1;
+}
+
+.header-controls {
+    flex-shrink: 0;
+    min-width: 400px;
+    background: var(--glass-bg);
+    backdrop-filter: blur(10px);
+    border: 1px solid var(--glass-border);
+    border-radius: 8px;
+    padding: 16px;
+}
+
+.period-display {
+    font-size: 16px;
+    font-weight: bold;
+    margin-bottom: 4px;
+}
+
+.period-details {
+    font-size: 12px;
+    color: #666;
+    margin-bottom: 12px;
+}
+
+.control-buttons {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+}
+
+@media (max-width: 1200px) {
+    .compact-header {
+        flex-direction: column;
+    }
+    
+    .header-controls {
+        min-width: auto;
+        width: 100%;
+    }
+}
+        
     </style>
 </head>
 <body class="theme-unified">
@@ -414,37 +474,32 @@
 
         <!-- メインコンテンツ -->
         <div class="schedule-main">
-            <!-- ヘッダー -->
-            <div class="mb-6">
-                <h2 class="text-2xl font-bold text-gray-800 mb-2">勤務表管理</h2>
-                <p class="text-gray-600">作成済みの勤務表の閲覧・管理を行います</p>
-            </div>
-
-            <!-- 期間表示・操作 -->
-            <div class="glass-card p-6 mb-6">
-                <div class="flex justify-between items-center mb-4">
-                    <div>
-                        <h3 id="currentPeriodDisplay" class="text-xl font-bold">期間を読み込み中...</h3>
-                        <div id="periodDetails" class="text-sm text-gray-600"></div>
-                    </div>
-                    <div class="flex gap-2">
-                        <button id="prevPeriodBtn" class="btn-unified btn-outline-unified">
-                            <i class="fas fa-chevron-left mr-1"></i>前の期間
-                        </button>
-                        <button id="nextPeriodBtn" class="btn-unified btn-outline-unified">
-                            次の期間<i class="fas fa-chevron-right ml-1"></i>
-                        </button>
-                    </div>
-                </div>
-                
-                <div class="flex justify-center gap-3">
-                    <div id="adminControlsContainer" class="flex gap-2" style="display:none;">
-                        <!-- 管理者操作ボタンがここに動的生成 -->
-                    </div>
-                </div>
-            </div>
 
             <!-- 勤務表表示エリア -->
+            <!-- コンパクトヘッダー -->
+<div class="compact-header">
+    <div class="header-info">
+        <h2 class="text-2xl font-bold text-gray-800 mb-2">勤務表管理</h2>
+        <p class="text-gray-600">作成済みの勤務表の閲覧・管理を行います</p>
+    </div>
+    
+    <div class="header-controls">
+        <div id="currentPeriodDisplay" class="period-display">期間を読み込み中...</div>
+        <div id="periodDetails" class="period-details"></div>
+        
+        <div class="control-buttons">
+            <button id="prevPeriodBtn" class="btn-unified btn-outline-unified btn-small">
+                <i class="fas fa-chevron-left mr-1"></i>前の期間
+            </button>
+            <button id="nextPeriodBtn" class="btn-unified btn-outline-unified btn-small">
+                次の期間<i class="fas fa-chevron-right ml-1"></i>
+            </button>
+            <span id="adminControlsContainer" class="flex gap-2" style="display:none;">
+                <!-- 管理者操作ボタンがここに表示 -->
+            </span>
+        </div>
+    </div>
+</div>
             <div id="workScheduleDisplayArea" class="flex-grow min-h-0">
                 <div class="text-center py-12 text-gray-500">
                     <i class="fas fa-table text-4xl mb-4"></i>
@@ -857,36 +912,14 @@ this.footerTypes = [
             // テーブルを画面にフィット
             // テーブル最適表示（完全修正版）
 fitTableToViewport() {
-    setTimeout(() => {
-        const wrapper = document.querySelector('.work-schedule-table-wrapper');
-        const table = wrapper?.querySelector('.work-schedule-table');
-        if (!wrapper || !table) return;
-
-        // 初期化
-        table.style.transform = 'none';
-        table.style.fontSize = '9px';
-
-        // 利用可能領域の計算
-        const wrapperRect = wrapper.getBoundingClientRect();
-        const availableWidth = wrapperRect.width - 16;
-        const availableHeight = wrapperRect.height - 16;
-        
-        // テーブルの自然サイズ取得
-        const tableWidth = table.scrollWidth;
-        const tableHeight = table.scrollHeight;
-        
-        // スケール計算（最小0.6、最大1.2）
-        const scaleX = availableWidth / tableWidth;
-        const scaleY = availableHeight / tableHeight;
-        let scale = Math.min(scaleX, scaleY);
-        scale = Math.max(0.6, Math.min(1.2, scale));
-
-        // 適用
-        table.style.transform = `scale(${scale})`;
-        table.style.transformOrigin = 'top left';
-        
-        console.log(`📏 テーブル表示最適化: scale=${scale.toFixed(3)}, 領域=${Math.round(availableWidth)}x${Math.round(availableHeight)}`);
-    }, 150);
+    const table = document.querySelector('.work-schedule-table');
+    if (!table) return;
+    
+    // スケーリングを無効化して実寸表示
+    table.style.transform = 'none';
+    table.style.fontSize = '9px';
+    
+    console.log('📏 テーブル実寸表示モード');
 }
 
             generateDateRange(startDate, endDate) {
