@@ -270,14 +270,12 @@
                 <p class="text-gray-600">CE個人ごとの業務スケジュールと勤務状態を時間軸で可視化</p>
             </div>
             <div class="flex gap-3 mt-4 md:mt-0">
-                <button id="exportBtn" class="btn-primary">
-                    <i class="fas fa-download mr-2"></i>エクスポート
-                </button>
-                <button onclick="window.print()" class="btn-primary">
+<button onclick="window.print()" class="btn-primary">
                     <i class="fas fa-print mr-2"></i>印刷
                 </button>
-                <button onclick="history.back()" class="bg-gray-500 text-white px-4 py-2 rounded-lg hover:bg-gray-600">
-                    <i class="fas fa-arrow-left mr-2"></i>戻る
+                <button onclick="window.location.href='../pages/analytics.html'" 
+                        class="bg-gray-100 hover:bg-gray-200 px-4 py-2 rounded-lg text-gray-700 transition-colors">
+                    <i class="fas fa-arrow-left mr-2"></i>集計・分析に戻る
                 </button>
             </div>
         </div>
@@ -837,7 +835,6 @@
             // その他のイベントリスナー
             document.getElementById('applyFiltersBtn').addEventListener('click', loadTimelineData);
             document.getElementById('resetFiltersBtn').addEventListener('click', resetFilters);
-            document.getElementById('exportBtn').addEventListener('click', exportTimeline);
             
             setTimeout(() => {
                 const allDeptCheckbox = document.querySelector('.department-filter[value="all"]');
@@ -943,26 +940,44 @@
             displayEndHour = parseInt(endTime.split(':')[0]);
         }
 
-        function generateCEFilterList() {
-            const container = document.getElementById('ceFilterContainer');
-            const countEl = document.getElementById('totalCECount');
-            
-            if (!container || !globalCEList) return;
-            
-            container.innerHTML = '';
-            if (countEl) countEl.textContent = globalCEList.length;
-            
-            globalCEList.forEach(ce => {
-                const label = document.createElement('label');
-                label.className = 'flex items-center text-sm';
-                label.title = ce.fullName;
-                label.innerHTML = `
-                    <input type="checkbox" class="ce-filter" value="${ce.id}" checked>
-                    <span class="ml-1 truncate">${ce.name}</span>
-                `;
-                container.appendChild(label);
-            });
+function generateCEFilterList() {
+    const container = document.getElementById('ceFilterContainer');
+    const countEl = document.getElementById('totalCECount');
+    if (!container || !globalCEList) return;
 
+    // 既存選択を保持
+    const preselected = new Set(Array.from(container.querySelectorAll('.ce-filter:checked')).map(cb => cb.value));
+
+    container.innerHTML = '';
+    if (countEl) countEl.textContent = globalCEList.length;
+
+    globalCEList.forEach(ce => {
+        const label = document.createElement('label');
+        label.className = 'flex items-center text-sm';
+        label.title = ce.fullName;
+        const shouldCheck = preselected.size > 0 ? preselected.has(ce.id) : true;
+        label.innerHTML = `
+            <input type="checkbox" class="ce-filter" value="${ce.id}" ${shouldCheck ? 'checked' : ''}>
+            <span class="ml-1 truncate">${ce.name}</span>
+        `;
+        container.appendChild(label);
+    });
+
+    // 全選択チェックボックスの状態を更新
+    const selectAllCEs = document.getElementById('selectAllCEs');
+    if (selectAllCEs) {
+        const checkedCount = container.querySelectorAll('.ce-filter:checked').length;
+        selectAllCEs.checked = checkedCount === globalCEList.length;
+        selectAllCEs.onchange = function() {
+            const isChecked = this.checked;
+            container.querySelectorAll('.ce-filter').forEach(cb => cb.checked = isChecked);
+        };
+    }
+
+    container.querySelectorAll('.ce-filter').forEach(cb => {
+        cb.addEventListener('change', updateAllCECheckbox);
+    });
+}
             const selectAllCEs = document.getElementById('selectAllCEs');
             if (selectAllCEs) {
                 selectAllCEs.addEventListener('change', function() {
@@ -1480,10 +1495,6 @@
                     <div class="text-xs">${statusSummaryHtml || '状態データなし'}</div>
                 </div>
             `;
-        }
-
-        function exportTimeline() {
-            showMessage('エクスポート機能は開発中です', 'info');
         }
 
         function printCanvas(canvasId) {
