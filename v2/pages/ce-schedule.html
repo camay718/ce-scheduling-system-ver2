@@ -560,33 +560,25 @@ html, body {
         };
 
         // ログアウト処理
-        window.handleLogout = async () => {
-            try {
-                try {
-                    const entry = {
-                        action: 'logout',
-                        details: {},
-                        uid: window.currentUserData?.uid || null,
-                        username: window.currentUserData?.username || 'unknown',
-                        displayName: window.currentUserData?.displayName || 'unknown',
-                        timestamp: firebase.database.ServerValue.TIMESTAMP,
-                        userAgent: navigator.userAgent.substring(0, 100)
-                    };
-                    await window.database.ref(`${window.DATA_ROOT}/auditLogs`).push(entry);
-                } catch (logError) {
-                    console.warn('監査ログ記録失敗:', logError);
-                }
-                if (window.auth && window.auth.currentUser) {
-                    await window.auth.signOut();
-                }
-            } catch (error) {
-                console.error('ログアウトエラー:', error);
-            } finally {
-                sessionStorage.clear();
-                localStorage.clear();
-                window.location.href = '../index.html';
-            }
-        };
+window.handleLogout = async () => {
+    try {
+        // 監査ログ記録（共通ロガー使用）
+        if (window.auditLogger) {
+            await window.auditLogger.logAction('logout');
+        }
+
+        if (window.auth && window.auth.currentUser) {
+            await window.auth.signOut();
+        }
+    } catch (error) {
+        console.error('ログアウトエラー:', error);
+    } finally {
+        sessionStorage.clear();
+        localStorage.clear();
+        window.location.href = '../index.html';
+    }
+};
+
 
         // 勤務表管理クラス
 class CEScheduleManager {
