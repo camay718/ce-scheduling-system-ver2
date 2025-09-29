@@ -17,6 +17,9 @@
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
     <script src="../js/config/firebase-config.js"></script>
 
+    <!-- 監査ログシステム -->
+<script src="../js/utils/audit-logger.js"></script>
+
 
     <!-- 既存モジュール（順序重要） -->
     <script src="../js/data/constants.js?v=20241213"></script>
@@ -1051,8 +1054,14 @@ constructor() {
                     window.currentUserData = userData;
 
 
-                    await this.initializeScheduleSystem();
-                    console.log('✅ スケジュール管理初期化完了');
+await this.initializeScheduleSystem();
+
+// ページアクセスログ記録
+if (window.auditLogger) {
+    await window.auditLogger.logPageAccess('schedule');
+}
+
+console.log('✅ スケジュール管理初期化完了');
                 } catch (error) {
                     console.error('スケジュール初期化エラー:', error);
                     location.href = '../index.html';
@@ -1671,11 +1680,15 @@ this.monthlyRenderTimeout = setTimeout(async () => {
                     };
 
 
-                    await eventRef.set(eventData);
+await eventRef.set(eventData);
 
+// 監査ログ記録
+if (window.auditLogger) {
+    await window.auditLogger.logEventAction('add', eventData, dateKey);
+}
 
-                    modal.remove();
-                    window.showMessage('業務を追加しました', 'success');
+modal.remove();
+window.showMessage('業務を追加しました', 'success');
 
 
                     // 画面を再描画
@@ -1906,12 +1919,22 @@ this.monthlyRenderTimeout = setTimeout(async () => {
                         addedCount++;
                     }
 
+modal.remove();
+window.showMessage(`${addedCount}件の業務を一括追加しました`, 'success');
 
-                    modal.remove();
-                    window.showMessage(`${addedCount}件の業務を一括追加しました`, 'success');
+// 監査ログ記録
+if (window.auditLogger) {
+    await window.auditLogger.logAction('event-bulk-add', {
+        eventName: name,
+        department: department,
+        startDate: startDate,
+        endDate: endDate,
+        addedCount: addedCount,
+        selectedDays: selectedDays
+    });
+}
 
-
-                    // 現在の日付が範囲内なら画面を再描画
+// 現在の日付が範囲内なら画面を再描画
                     const currentDateKey = this.formatDate(this.selectedDate);
                     if (currentDateKey >= startDate && currentDateKey <= endDate) {
                         setTimeout(() => {
@@ -2063,13 +2086,16 @@ const taskData = {
 };
 
 
-                    await taskRef.set(taskData);
+await taskRef.set(taskData);
 
+// 監査ログ記録
+if (window.auditLogger) {
+    await window.auditLogger.logMonthlyTaskAction('create', taskData);
+}
 
-                    // ローカルデータに即座に反映
-                    this.monthlyTasks[yearMonth] = this.monthlyTasks[yearMonth] || {};
-                    this.monthlyTasks[yearMonth][taskRef.key] = taskData;
-
+// ローカルデータに即座に反映
+this.monthlyTasks[yearMonth] = this.monthlyTasks[yearMonth] || {};
+this.monthlyTasks[yearMonth][taskRef.key] = taskData;
 
                     modal.remove();
                     window.showMessage(`月次業務「${name}」を${department}に追加しました`, 'success');
@@ -3383,15 +3409,24 @@ const currentDayAssigned = Array.isArray(assignedCEs[dateKey]) ? assignedCEs[dat
 
 
                     // データベース更新
-                    await eventRef.update({
-                        assignedCEs: upgradedAssigned,
-                        updatedAt: firebase.database.ServerValue.TIMESTAMP,
-                        updatedBy: window.currentUserData?.displayName || 'user'
-                    });
+await eventRef.update({
+    assignedCEs: upgradedAssigned,
+    updatedAt: firebase.database.ServerValue.TIMESTAMP,
+    updatedBy: window.currentUserData?.displayName || 'user'
+});
 
+// 監査ログ記録
+if (window.auditLogger) {
+    const eventSnapshot = await eventRef.once('value');
+    const eventData = eventSnapshot.val();
+    await window.auditLogger.logCEAssignment('assign', ceData, {
+        name: eventData.name,
+        department: eventData.department,
+        type: 'event'
+    }, dateKey);
+}
 
-                    // 成功通知と画面更新
-                    window.showMessage(`${ceData.ceName}を配置しました`, 'success');
+window.showMessage(`${ceData.ceName}を配置しました`, 'success');
                     console.log('✅ CE配置完了:', ceData.ceName);
 
 
@@ -3568,11 +3603,25 @@ async saveDailyActual(yearMonth, taskId, dateKey, count, startTime, endTime) {
         });
 
 
-        await taskRef.child('actualCount').set(totalCount);
+await taskRef.child('actualCount').set(totalCount);
 
+// 監査ログ記録
+if (window.auditLogger) {
+    const taskSnapshot = await taskRef.once('value');
+    const taskData = taskSnapshot.val();
+    await window.auditLogger.logAction('monthly-daily-record', {
+        taskName: taskData.name,
+        taskId: taskId,
+        yearMonth: yearMonth,
+        dateKey: dateKey,
+        count: count,
+        startTime: startTime || null,
+        endTime: endTime || null
+    });
+}
 
-        const timeText = startTime && endTime ? ` (${startTime}〜${endTime})` : '';
-        window.showMessage(`${dateKey}: ${count}件の実施記録を保存しました${timeText}`, 'success');
+const timeText = startTime && endTime ? ` (${startTime}〜${endTime})` : '';
+window.showMessage(`${dateKey}: ${count}件の実施記録を保存しました${timeText}`, 'success');
 
 
         console.log('✅ 日別実施記録保存完了:', { 
@@ -3697,14 +3746,22 @@ async updateEventFromModal(dateKey, eventId, modal) {
 
 
     try {
-        await window.database.ref(`${window.DATA_ROOT}/events/byDate/${dateKey}/${eventId}`).update({
-            name, department, startTime: startTime || null, endTime: endTime || null,
-            count, requiredPeople, description: description || null,
-            updatedAt: firebase.database.ServerValue.TIMESTAMP,
-            updatedBy: window.currentUserData?.displayName || 'user'
-        });
+await window.database.ref(`${window.DATA_ROOT}/events/byDate/${dateKey}/${eventId}`).update({
+    name, department, startTime: startTime || null, endTime: endTime || null,
+    count, requiredPeople, description: description || null,
+    updatedAt: firebase.database.ServerValue.TIMESTAMP,
+    updatedBy: window.currentUserData?.displayName || 'user'
+});
 
-
+// 監査ログ記録
+if (window.auditLogger) {
+    await window.auditLogger.logEventAction('edit', {
+        id: eventId,
+        name: name,
+        department: department
+    }, dateKey);
+}
+        
         modal.remove();
         window.showMessage('業務を更新しました', 'success');
         setTimeout(() => this.loadAndRenderEventsForSelectedDate(), 300);
@@ -3720,7 +3777,17 @@ async deleteEventConfirm(dateKey, eventId, eventName) {
     if (!confirm(`業務「${eventName}」を削除してもよろしいですか？`)) return;
     
     try {
+        // 削除前に情報を取得
+        const eventSnapshot = await window.database.ref(`${window.DATA_ROOT}/events/byDate/${dateKey}/${eventId}`).once('value');
+        const eventData = eventSnapshot.val();
+        
         await window.database.ref(`${window.DATA_ROOT}/events/byDate/${dateKey}/${eventId}`).remove();
+        
+        // 監査ログ記録
+        if (window.auditLogger && eventData) {
+            await window.auditLogger.logEventAction('delete', eventData, dateKey);
+        }
+
         document.getElementById('editEventModal')?.remove();
         window.showMessage('業務を削除しました', 'success');
         setTimeout(() => this.loadAndRenderEventsForSelectedDate(), 300);
