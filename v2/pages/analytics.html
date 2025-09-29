@@ -283,34 +283,26 @@
             setTimeout(() => div.remove(), 5000);
         };
 
-        // ログアウト処理
-        window.handleLogout = async () => {
-            try {
-                try {
-                    const entry = {
-                        action: 'logout',
-                        details: {},
-                        uid: window.currentUserData?.uid || null,
-                        username: window.currentUserData?.username || 'unknown',
-                        displayName: window.currentUserData?.displayName || 'unknown',
-                        timestamp: firebase.database.ServerValue.TIMESTAMP,
-                        userAgent: navigator.userAgent.substring(0, 100)
-                    };
-                    await window.database.ref(`${window.DATA_ROOT}/auditLogs`).push(entry);
-                } catch (logError) {
-                    console.warn('監査ログ記録失敗:', logError);
-                }
-                if (window.auth && window.auth.currentUser) {
-                    await window.auth.signOut();
-                }
-            } catch (error) {
-                console.error('ログアウトエラー:', error);
-            } finally {
-                sessionStorage.clear();
-                localStorage.clear();
-                window.location.href = '../index.html';
-            }
-        };
+// ログアウト処理
+window.handleLogout = async () => {
+    try {
+        // 監査ログ記録（共通ロガー使用）
+        if (window.auditLogger) {
+            await window.auditLogger.logAction('logout');
+        }
+
+        if (window.auth && window.auth.currentUser) {
+            await window.auth.signOut();
+        }
+    } catch (error) {
+        console.error('ログアウトエラー:', error);
+    } finally {
+        sessionStorage.clear();
+        localStorage.clear();
+        window.location.href = '../index.html';
+    }
+};
+
 
         // 分析ハブクラス
         class AnalyticsHub {
@@ -411,6 +403,15 @@
         /*** 分析ページを新しいタブで開く（認証情報確実受け渡し版）*/
         function openAnalyticsPage(pageName) {
             console.log(`分析ページを開いています: ${pageName}`);
+            console.log(`分析ページを開いています: ${pageName}`);
+
+// ★推奨追加：分析ページアクセスログ記録
+if (window.auditLogger) {
+    window.auditLogger.logAction('analytics-page-access', {
+        targetPage: pageName,
+        openMethod: 'new-tab'
+    }).catch(error => console.warn('分析ページアクセスログ記録失敗:', error));
+}
 
             // 認証情報の取得
             const userData = window.currentUserData || {};
@@ -478,16 +479,23 @@
 
         // 初期化
         window.analyticsHub = null;
-        document.addEventListener('DOMContentLoaded', async () => {
-            try {
-                window.analyticsHub = new AnalyticsHub();
-                await window.analyticsHub.init();
-                console.log('✅ 分析ハブ初期化完了');
-            } catch (error) {
-                console.error('❌ 分析ハブ初期化エラー:', error);
-                window.showMessage('分析ハブの初期化に失敗しました', 'error');
-            }
-        });
+document.addEventListener('DOMContentLoaded', async () => {
+    try {
+        window.analyticsHub = new AnalyticsHub();
+        await window.analyticsHub.init();
+
+        // ★追加：ページアクセスログ記録
+        if (window.auditLogger) {
+            await window.auditLogger.logPageAccess('analytics');
+        }
+
+        console.log('✅ 分析ハブ初期化完了');
+    } catch (error) {
+        console.error('❌ 分析ハブ初期化エラー:', error);
+        window.showMessage('分析ハブの初期化に失敗しました', 'error');
+    }
+});
+
     </script>
 </body>
 </html>
