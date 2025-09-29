@@ -403,51 +403,9 @@
                     restrictionMessage.style.display = 'none';
                 }
             }
+        }
 
-                    // CE数の計算
-                    const ceListData = ceListSnapshot.val();
-                    const totalCE = ceListData?.list?.length || 0;
-
-                    // 月次業務の配置も含める
-                    const monthlyData = monthlySnapshot.val() || {};
-                    Object.values(monthlyData).forEach(monthTasks => {
-                        if (monthTasks && typeof monthTasks === 'object') {
-                            const taskList = Object.values(monthTasks);
-                            totalEvents += taskList.length;
-                            
-                            taskList.forEach(task => {
-                                if (task.assignedCEs && Array.isArray(task.assignedCEs)) {
-                                    totalAssignments += task.assignedCEs.length;
-                                }
-                            });
-                        }
-                    });
-
-                    // 稼働率の計算
-                    const avgUtilization = totalCE > 0 && totalEvents > 0 ? 
-                        Math.round((totalAssignments / (totalEvents * Math.max(1, totalCE))) * 100) : 0;
-
-                    // データ更新
-                    this.analyticsData = {
-                        totalEvents,
-                        totalCE,
-                        totalAssignments,
-                        avgUtilization: Math.min(100, avgUtilization)
-                    };
-
-                    this.updateQuickStats();
-                    
-                    console.log('✅ 分析データ読み込み完了:', this.analyticsData);
-                } catch (error) {
-                    console.error('❌ 分析データ読み込みエラー:', error);
-                    // エラーが発生してもUIは表示する
-                    this.updateQuickStats();
-                }
-            }
-
-        /**
-         * 分析ページを新しいタブで開く（認証情報確実受け渡し版）
-         */
+        /*** 分析ページを新しいタブで開く（認証情報確実受け渡し版）*/
         function openAnalyticsPage(pageName) {
             console.log(`分析ページを開いています: ${pageName}`);
 
