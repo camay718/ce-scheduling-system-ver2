@@ -108,13 +108,15 @@ body {
                 </div>
             </div>
             
-            <!-- ナビゲーション -->
+              <!-- ナビゲーション -->
             <div class="flex justify-center gap-4">
-                <a href="../pages/analytics.html" class="btn-unified">
-                    <i class="fas fa-arrow-left mr-2"></i>分析ハブに戻る
-                </a>
-                <button onclick="window.handleLogout()" class="btn-unified bg-red-500 hover:bg-red-600">
-                    <i class="fas fa-sign-out-alt mr-2"></i>ログアウト
+                <button onclick="window.location.href='../pages/analytics.html'" 
+                        class="bg-gray-100 hover:bg-gray-200 px-4 py-2 rounded-lg text-gray-700 transition-colors">
+                    <i class="fas fa-arrow-left mr-2"></i>集計・分析に戻る
+                </button>
+                <button onclick="window.print()" 
+                        class="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg transition-colors">
+                    <i class="fas fa-print mr-2"></i>印刷
                 </button>
             </div>
         </div>
@@ -137,6 +139,69 @@ body {
                     <button onclick="analyzeData()" class="btn-unified w-full">
                         <i class="fas fa-search mr-2"></i>分析実行
                     </button>
+                </div>
+            </div>
+        </div>
+
+                <!-- 統計サマリー -->
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6 mb-6">
+            <div class="glass-card p-6">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-sm font-medium text-gray-600">総業務数</p>
+                        <p class="text-2xl font-bold text-emerald-600" id="totalTasks">0件</p>
+                    </div>
+                    <div class="bg-emerald-100 p-3 rounded-full">
+                        <i class="fas fa-tasks text-emerald-600 text-xl"></i>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="glass-card p-6">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-sm font-medium text-gray-600">登録CE数</p>
+                        <p class="text-2xl font-bold text-blue-600" id="registeredCEs">0名</p>
+                    </div>
+                    <div class="bg-blue-100 p-3 rounded-full">
+                        <i class="fas fa-user-md text-blue-600 text-xl"></i>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="glass-card p-6">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-sm font-medium text-gray-600">総配置数</p>
+                        <p class="text-2xl font-bold text-purple-600" id="totalAssignments">0件</p>
+                    </div>
+                    <div class="bg-purple-100 p-3 rounded-full">
+                        <i class="fas fa-users text-purple-600 text-xl"></i>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="glass-card p-6">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-sm font-medium text-gray-600">平均稼働率</p>
+                        <p class="text-2xl font-bold text-yellow-600" id="avgUtilization">0%</p>
+                    </div>
+                    <div class="bg-yellow-100 p-3 rounded-full">
+                        <i class="fas fa-percentage text-yellow-600 text-xl"></i>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="glass-card p-6">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-sm font-medium text-gray-600">総勤務時間</p>
+                        <p class="text-2xl font-bold text-red-600" id="totalHours">0時間</p>
+                    </div>
+                    <div class="bg-red-100 p-3 rounded-full">
+                        <i class="fas fa-clock text-red-600 text-xl"></i>
+                    </div>
                 </div>
             </div>
         </div>
@@ -230,6 +295,9 @@ let allData = {
     workSchedules: []
 };
 
+// CE数とQuick Stats更新用
+let globalCECount = 0;
+
 // 認証とログアウト処理
 window.handleLogout = async () => {
     try {
@@ -288,9 +356,10 @@ function setupDateInputs() {
 // データロード（V2構造対応）
 async function loadAllData() {
     try {
-        const [eventsSnapshot, monthlySnapshot] = await Promise.all([
+        const [eventsSnapshot, monthlySnapshot, ceListSnapshot] = await Promise.all([
             window.database.ref(`${window.DATA_ROOT}/events`).once('value'),
-            window.database.ref(`${window.DATA_ROOT}/monthlyTasks`).once('value')
+            window.database.ref(`${window.DATA_ROOT}/monthlyTasks`).once('value'),
+            window.database.ref(`${window.DATA_ROOT}/ceList`).once('value')
         ]);
 
         // 日別業務データの処理
@@ -325,7 +394,18 @@ async function loadAllData() {
             }
         });
 
-        console.log('データ読み込み完了:', allData);
+        // CE数の算出（V1/V2両対応）
+        const ceListData = ceListSnapshot.val() || {};
+        if (Array.isArray(ceListData.list)) {
+            // V2形式: ceList.list配列
+            globalCECount = ceListData.list.filter(Boolean).length;
+        } else {
+            // V1形式: ルート直下のオブジェクト
+            const denyList = new Set(['list','updatedAt','lastUpdated','timestamp','state','templates','metadata','default','scheduleData','workTypeOverrides']);
+            globalCECount = Object.keys(ceListData).filter(k => !denyList.has(k)).length;
+        }
+
+        console.log('データ読み込み完了:', allData, 'CE数:', globalCECount);
     } catch (error) {
         console.error('データ読み込みエラー:', error);
     }
@@ -390,6 +470,47 @@ chartInstances.timeSlotChartDept = new Chart(timeSlotDeptCtx, {
     });
 }
 
+// 統計カード更新関数
+function updateQuickStats(filteredEvents, filteredMonthlyTasks) {
+    const all = [...filteredEvents, ...filteredMonthlyTasks];
+    const totalTasks = all.length;
+    
+    // 総配置数の計算
+    const totalAssignments = all.reduce((sum, e) => {
+        if (Array.isArray(e.assignedCEs)) {
+            return sum + e.assignedCEs.length;
+        }
+        return sum + (e.assignedCount || 0);
+    }, 0);
+
+    // 総勤務時間の計算（時間×配置人数で算出）
+    const totalHours = all.reduce((sum, e) => {
+        if (e.startTime && e.endTime) {
+            const [startHour, startMin = 0] = e.startTime.split(':').map(Number);
+            const [endHour, endMin = 0] = e.endTime.split(':').map(Number);
+            const startMinutes = startHour * 60 + startMin;
+            const endMinutes = endHour * 60 + endMin;
+            const duration = (endMinutes > startMinutes) ? (endMinutes - startMinutes) / 60 : 0;
+            const assignedCount = Array.isArray(e.assignedCEs) ? e.assignedCEs.length : (e.assignedCount || 0);
+            return sum + (duration * assignedCount);
+        }
+        return sum;
+    }, 0);
+
+    // 平均稼働率の計算
+    const totalCEs = globalCECount || 0;
+    const avgUtil = (totalCEs > 0 && totalTasks > 0)
+        ? Math.min(100, Math.round((totalAssignments / (totalTasks * totalCEs)) * 100))
+        : 0;
+
+    // DOM要素の更新
+    document.getElementById('totalTasks').textContent = `${totalTasks}件`;
+    document.getElementById('registeredCEs').textContent = `${totalCEs}名`;
+    document.getElementById('totalAssignments').textContent = `${totalAssignments}件`;
+    document.getElementById('avgUtilization').textContent = `${avgUtil}%`;
+    document.getElementById('totalHours').textContent = `${Math.round(totalHours * 10) / 10}時間`;
+}
+        
 // 分析実行
 async function analyzeData() {
     const startDate = document.getElementById('startDate').value;
@@ -418,6 +539,9 @@ const filteredMonthlyTasks = allData.monthlyTasks.filter(task => {
     }
     return false;
 });
+    // 統計カード更新
+    updateQuickStats(filteredEvents, filteredMonthlyTasks);
+    
     // V1形式のデータ構造に変換して分析
     buildPlacementSummaryTable(filteredEvents, filteredMonthlyTasks);
     updateDepartmentChart(filteredEvents, filteredMonthlyTasks);
