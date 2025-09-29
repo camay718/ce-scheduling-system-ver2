@@ -22,8 +22,7 @@
         /* 勤務表管理専用スタイル */
 .schedule-layout {
     display: flex;
-    min-height: 100vh;  /* height → min-height に変更 */
-    /* overflow: hidden; を削除 */
+    /* min-height: 100vh; を削除 */
 }
 
         .schedule-sidebar {
@@ -78,9 +77,8 @@
         }
 
 .schedule-main {
-    flex-grow: 1;
+    /* flex-grow: 1; を削除 */
     padding: 20px;
-    /* overflow: hidden; を削除 */
     display: flex;
     flex-direction: column;
     transition: all 0.3s ease;
@@ -94,7 +92,8 @@
     margin-top: 20px;
     margin-bottom: 40px;
     position: relative;
-    /* overflow, height, min-height は全て削除のまま */
+    min-height: calc(800px + 336px); /* 14行分(336px)を追加 */
+    overflow: visible; /* スクロール完全無効化 */
 }
 
         .work-schedule-table {
@@ -380,6 +379,23 @@ html, body {
     }
 }
         
+        /* ページ全体スクロール有効化 */
+html, body {
+    height: auto;
+    overflow-y: auto;
+}
+
+/* テーブル内スクロール完全無効化 */
+.work-schedule-table-wrapper {
+    overflow: visible !important;
+    height: auto !important;
+}
+
+.work-schedule-table {
+    overflow: visible !important;
+    height: auto !important;
+}
+        
     </style>
 </head>
 <body class="theme-unified">
@@ -500,7 +516,7 @@ html, body {
         </div>
     </div>
 </div>
-            <div id="workScheduleDisplayArea" class="flex-grow min-h-0">
+            <div id="workScheduleDisplayArea">
                 <div class="text-center py-12 text-gray-500">
                     <i class="fas fa-table text-4xl mb-4"></i>
                     <h3 class="text-lg font-semibold mb-2">CE勤務表</h3>
@@ -820,8 +836,8 @@ this.footerTypes = [
                     adminControlsEl.style.display = 'none';
                 }
 
-                // テーブルスケール調整
-                setTimeout(() => this.fitTableToViewport(), 100);
+// テーブルスケール調整 - 無効化
+// setTimeout(() => this.fitTableToViewport(), 100);
             }
 
             renderAdminControls(period) {
