@@ -635,11 +635,6 @@
                                 </button>
                             </div>
                             
-                            <!-- 27名初期化ボタン -->
-                            <button id="init27CEBtn" class="btn-unified btn-outline-unified btn-small w-full">
-                                <i class="fas fa-users mr-1"></i>27名で初期化
-                            </button>
-                            
                             <!-- 並び替えボタン -->
                             <div class="border-t pt-2">
                                 <button id="sortCENormalBtn" class="btn-unified btn-outline-unified btn-small w-full mb-1">
@@ -961,11 +956,6 @@
             const removeCEBtn = document.getElementById('removeCEBtn');
             if (removeCEBtn) {
                 removeCEBtn.onclick = () => this.removeCE();
-            }
-
-            const init27CEBtn = document.getElementById('init27CEBtn');
-            if (init27CEBtn) {
-                init27CEBtn.onclick = () => this.initialize27CE();
             }
 
             this.updateRemoveCESelect();
