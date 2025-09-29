@@ -229,29 +229,29 @@
             box-shadow: 0 2px 8px rgba(0,0,0,0.15);
         }
 
-        /* 勤務区分別背景色 */
+        /* 勤務区分別背景色（統一配色） */
         .work-cell.type-ope { 
-            background: #87CEEB; 
+            background: #07E1FF; 
             color: #1E3A8A; 
         }
 
         .work-cell.type-ope.status-A1 { 
-            background: #1E3A8A !important; 
+            background: #0000FF !important; 
             color: white !important; 
         }
 
         .work-cell.type-me { 
-            background: #90EE90; 
+            background: #CCFFCC; 
             color: #006400; 
         }
 
         .work-cell.type-hd { 
-            background: #FFB6C1; 
+            background: #FFBCD4; 
             color: #8B008B; 
         }
 
         .work-cell.type-flex { 
-            background: #FFFF99; 
+            background: #FFFF00; 
             color: #B8860B; 
         }
 
@@ -262,6 +262,14 @@
         .work-cell.status-出,
         .work-cell.status-研 {
             background: white !important;
+            color: #333 !important;
+            border: 1px solid #ddd !important;
+        }
+
+        /* 【追加】 */
+        /* 自由入力テキスト（白色表示） */
+        .work-cell.status-text {
+            background: #FFFFFF !important;
             color: #333 !important;
             border: 1px solid #ddd !important;
         }
@@ -391,22 +399,22 @@
         }
 
         .work-type-btn.type-ope {
-            border-color: #87CEEB;
+            border-color: #07E1FF;
             color: #1E3A8A;
         }
 
         .work-type-btn.type-me {
-            border-color: #90EE90;
+            border-color: #CCFFCC;
             color: #006400;
         }
 
         .work-type-btn.type-hd {
-            border-color: #FFB6C1;
+            border-color: #FFBCD4;
             color: #8B008B;
         }
 
         .work-type-btn.type-flex {
-            border-color: #FFFF99;
+            border-color: #FFFF00;
             color: #B8860B;
         }
 
@@ -652,13 +660,16 @@
                 </div>
 
 <!-- ナビゲーション（常に最下部に固定） -->
-<div class="sidebar-navigation">
-    <div class="space-y-2">
-        <a href="./home.html" class="btn-unified btn-outline-unified btn-small w-full">
-            <i class="fas fa-home mr-1"></i>HOME
-        </a>
-    </div>
-</div>
+                <div class="sidebar-navigation">
+                    <div class="space-y-2">
+                        <a href="./work-schedule-management.html" class="btn-unified btn-outline-unified btn-small w-full">
+                            <i class="fas fa-table mr-1"></i>勤務表管理
+                        </a>
+                        <a href="./home.html" class="btn-unified btn-outline-unified btn-small w-full">
+                            <i class="fas fa-home mr-1"></i>HOME
+                        </a>
+                    </div>
+                </div>
             </div>
         </div>
 
@@ -686,9 +697,14 @@
     <div id="workStatusMenu" class="work-status-menu" style="display: none;">
         <div class="flex items-center justify-between mb-2">
             <span class="text-xs font-semibold">勤務状態選択</span>
-            <button id="closeStatusMenu" class="text-gray-500 hover:text-gray-700">
-                <i class="fas fa-times"></i>
-            </button>
+            <div class="flex items-center gap-2">
+                <button id="refreshStatusMenu" class="text-green-600 hover:text-green-800" title="リフレッシュ">
+                    <i class="fas fa-sync-alt"></i>
+                </button>
+                <button id="closeStatusMenu" class="text-gray-500 hover:text-gray-700">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
         </div>
         <div class="flex items-center gap-2 mb-2">
             <input type="checkbox" id="desireWorkCheck" class="text-xs">
@@ -831,6 +847,15 @@
                 '和田彩花', '伊藤大稀', '佐藤千優', '桑島亜依', '村田七星', 
                 '小林将己', '寒河江悠輝'
             ];
+            
+             // 【追加】統一配色定義
+            this.colorMap = {
+                'OPE': { base: '07E1FF', A1: '0000FF' },
+                'ME': 'CCFFCC',
+                'HD': 'FFBCD4',
+                'FLEX': 'FFFF00',
+                'WHITE': 'FFFFFF'
+            };
             
             this.init();
         }
@@ -1423,6 +1448,16 @@ if (exportBtn) exportBtn.onclick = () => this.exportToExcel(); // 追加
             if (clearOverrideBtn) {
                 clearOverrideBtn.onclick = () => this.clearWorkTypeOverride();
             }
+            
+             // 【追加】リフレッシュボタンのイベント
+            const refreshBtn = document.getElementById('refreshStatusMenu');
+            if (refreshBtn) {
+                refreshBtn.onclick = () => {
+                    this.closeStatusMenu();
+                    this.renderScheduleTable();
+                    window.showMessage('表示を更新しました', 'success');
+                };
+            }
 
             const closeCEEditMenuBtn = document.getElementById('closeCEEditMenu');
             if (closeCEEditMenuBtn) {
@@ -1728,14 +1763,18 @@ if (exportBtn) exportBtn.onclick = () => this.exportToExcel(); // 追加
         createWorkCell(ce, date, dateKey, workData) {
             const cell = document.createElement('td');
             const isWeekendOrHoliday = this.isWeekendOrHoliday(date);
-            
             const effectiveWorkType = this.getEffectiveWorkType(ce.id, dateKey);
             
-            let cellClass = `work-cell date-col type-${effectiveWorkType.toLowerCase()}`;
-            const status = workData.status || (isWeekendOrHoliday ? '×' : 'A');
+            // テキスト優先表示
+            const displayStatus = workData.customText?.trim() || workData.status || (isWeekendOrHoliday ? '×' : 'A');
             
-            if (status) {
-                cellClass += ` status-${status}`;
+            let cellClass = `work-cell date-col type-${effectiveWorkType.toLowerCase()}`;
+            
+            if (workData.status) {
+                cellClass += ` status-${workData.status}`;
+            }
+            if (workData.customText?.trim()) {
+                cellClass += ' status-text';
             }
             if (workData.desired) {
                 cellClass += ' desired';
@@ -1744,7 +1783,7 @@ if (exportBtn) exportBtn.onclick = () => this.exportToExcel(); // 追加
                 cellClass += ' holiday';
             }
             
-            cell.textContent = status;
+            cell.textContent = displayStatus;
             cell.className = cellClass;
             cell.onclick = (e) => this.openStatusMenu(e, ce, dateKey);
             
@@ -1891,9 +1930,9 @@ if (exportBtn) exportBtn.onclick = () => this.exportToExcel(); // 追加
                 const desired = desireCheck ? desireCheck.checked : false;
                 
                 const workData = {
-                    status: status,
+                    status: status === 'text' ? null : status,
+                    customText: status === 'text' ? (customText || (customTextInput ? customTextInput.value.trim() : '')) : null,
                     desired: desired,
-                    customText: status === 'text' ? (customText || (customTextInput ? customTextInput.value.trim() : '')) : '',
                     updatedAt: firebase.database.ServerValue.TIMESTAMP,
                     updatedBy: 'editor'
                 };
@@ -2425,7 +2464,7 @@ getEffectiveWorkType(ceId, dateKey) {
                 window.showMessage('Excel出力を準備中...', 'info');
                 
                 if (typeof XLSX === 'undefined') {
-                    await this.loadXLSXLibrary();
+                    await this.loadXLSXStyleLibrary();
                 }
                 
                 const dates = this.generateDateRange(this.currentPeriod.startDate, this.currentPeriod.endDate);
@@ -2473,6 +2512,47 @@ getEffectiveWorkType(ceId, dateKey) {
                 });
                 
                 const ws = XLSX.utils.aoa_to_sheet(wsData);
+                
+                // セル配色設定
+                this.ceList.forEach((ce, rowIndex) => {
+                    dates.forEach((date, colIndex) => {
+                        const dateKey = this.formatDateKey(date);
+                        const workData = this.getWorkData(ce.id, dateKey);
+                        const isWeekendOrHoliday = this.isWeekendOrHoliday(date);
+                        const effectiveWorkType = this.getEffectiveWorkType(ce.id, dateKey);
+                        const status = workData.status || (isWeekendOrHoliday ? '×' : 'A');
+                        
+                        let bgColor = this.colorMap.WHITE;
+                        
+                        if (workData.customText?.trim() || ['非', '×', '年', '出', '研'].includes(status) || isWeekendOrHoliday) {
+                            bgColor = this.colorMap.WHITE;
+                        } else if (effectiveWorkType === 'OPE' && status === 'A1') {
+                            bgColor = this.colorMap.OPE.A1;
+                        } else {
+                            switch (effectiveWorkType) {
+                                case 'OPE': bgColor = this.colorMap.OPE.base; break;
+                                case 'ME': bgColor = this.colorMap.ME; break;
+                                case 'HD': bgColor = this.colorMap.HD; break;
+                                case 'FLEX': bgColor = this.colorMap.FLEX; break;
+                            }
+                        }
+                        
+                        const cellAddress = XLSX.utils.encode_cell({ r: rowIndex + 1, c: colIndex + 2 });
+                        if (ws[cellAddress]) {
+                            ws[cellAddress].s = {
+                                fill: { fgColor: { rgb: bgColor } },
+                                alignment: { horizontal: 'center', vertical: 'center' },
+                                border: {
+                                    top: { style: 'thin' },
+                                    bottom: { style: 'thin' },
+                                    left: { style: 'thin' },
+                                    right: { style: 'thin' }
+                                }
+                            };
+                        }
+                    });
+                });
+                
                 ws['!cols'] = [
                     { wch: 4 }, { wch: 12 },
                     ...dates.map(() => ({ wch: 4 })),
@@ -2486,7 +2566,7 @@ getEffectiveWorkType(ceId, dateKey) {
                 const filename = `CE勤務表_${startKey}-${endKey}.xlsx`;
                 
                 XLSX.writeFile(workbook, filename);
-                window.showMessage('Excelファイルを出力しました', 'success');
+                window.showMessage('配色付きExcelファイルを出力しました', 'success');
                 
             } catch (error) {
                 console.error('❌ Excel出力エラー:', error);
@@ -2494,25 +2574,25 @@ getEffectiveWorkType(ceId, dateKey) {
             }
         }
 
-        async loadXLSXLibrary() {
+        async loadXLSXStyleLibrary() {
             return new Promise((resolve, reject) => {
-                if (typeof XLSX !== 'undefined') {
+                if (typeof XLSX !== 'undefined' && XLSX.writeFile) {
                     resolve();
                     return;
                 }
                 
                 const script = document.createElement('script');
-                script.src = 'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';
+                script.src = 'https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js';
                 script.crossOrigin = 'anonymous';
                 
                 const timeoutId = setTimeout(() => {
-                    reject(new Error('SheetJSライブラリの読み込みがタイムアウトしました'));
+                    reject(new Error('xlsx-js-styleライブラリの読み込みがタイムアウトしました'));
                 }, 15000);
                 
                 script.onload = () => {
                     clearTimeout(timeoutId);
                     if (typeof XLSX !== 'undefined') {
-                        console.log('✅ SheetJSライブラリ読み込み成功');
+                        console.log('✅ xlsx-js-styleライブラリ読み込み成功');
                         resolve();
                     } else {
                         reject(new Error('XLSXオブジェクトが利用できません'));
@@ -2521,21 +2601,7 @@ getEffectiveWorkType(ceId, dateKey) {
                 
                 script.onerror = () => {
                     clearTimeout(timeoutId);
-                    const fallback = document.createElement('script');
-                    fallback.src = 'https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js';
-                    fallback.crossOrigin = 'anonymous';
-                    
-                    fallback.onload = () => {
-                        if (typeof XLSX !== 'undefined') {
-                            console.log('✅ フォールバックCDN成功');
-                            resolve();
-                        } else {
-                            reject(new Error('フォールバックも失敗'));
-                        }
-                    };
-                    
-                    fallback.onerror = () => reject(new Error('SheetJS読み込み完全失敗'));
-                    document.head.appendChild(fallback);
+                    reject(new Error('xlsx-js-styleライブラリの読み込みに失敗しました'));
                 };
                 
                 document.head.appendChild(script);
