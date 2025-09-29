@@ -346,46 +346,43 @@
                     document.getElementById('adminLink').style.display = 'flex';
                 }
 
-                // 画面表示
-                document.getElementById('loading').style.display = 'none';
-                document.getElementById('mainContent').style.display = 'flex';
+// 画面表示
+document.getElementById('loading').style.display = 'none';
+document.getElementById('mainContent').style.display = 'flex';
 
-            } catch (error) {
+// ページアクセスログ記録
+if (window.auditLogger) {
+    await window.auditLogger.logPageAccess('home');
+}
+
+} catch (error) {
+
                 console.error('HOME初期化エラー:', error);
                 alert('初期化に失敗しました。ログイン画面に戻ります。');
                 location.href = '../index.html';
             }
         }
 
-        // ログアウト処理
-        async function handleLogout() {
-            try {
-                // 監査ログ記録
-                try {
-                    const entry = {
-                        action: 'logout',
-                        uid: sessionStorage.getItem('targetUID') || null,
-                        username: sessionStorage.getItem('currentUsername') || 'unknown',
-                        displayName: document.getElementById('userNameDisplay')?.textContent || 'unknown',
-                        timestamp: firebase.database.ServerValue.TIMESTAMP,
-                        userAgent: navigator.userAgent.substring(0, 100)
-                    };
-                    await window.database.ref(`${window.DATA_ROOT}/auditLogs`).push(entry);
-                } catch (logError) {
-                    console.warn('監査ログ記録失敗:', logError);
-                }
-
-                if (window.auth && window.auth.currentUser) {
-                    await window.auth.signOut();
-                }
-            } catch (error) {
-                console.warn('ログアウトエラー:', error);
-            } finally {
-                sessionStorage.clear();
-                localStorage.clear();
-                location.href = '../index.html';
-            }
+// ログアウト処理
+async function handleLogout() {
+    try {
+        // 監査ログ記録（共通ロガー使用）
+        if (window.auditLogger) {
+            await window.auditLogger.logAction('logout');
         }
+
+        if (window.auth && window.auth.currentUser) {
+            await window.auth.signOut();
+        }
+    } catch (error) {
+        console.error('ログアウトエラー:', error);
+    } finally {
+        sessionStorage.clear();
+        localStorage.clear();
+        location.href = '../index.html';
+    }
+}
+
 
         // 初期化実行
         document.addEventListener('DOMContentLoaded', initHome);
