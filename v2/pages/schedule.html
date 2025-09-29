@@ -4041,6 +4041,10 @@ async deleteMonthlyTaskConfirm(yearMonth, taskId, taskName) {
             try {
                 window.scheduleManager = new ScheduleManager();
                 await window.scheduleManager.init();
+                if (window.auditLogger) {
+                 await window.auditLogger.logPageAccess('schedule');
+                }
+                
                 console.log('✅ スケジュール管理初期化完了');
             } catch (error) {
                 console.error('❌ スケジュール管理初期化エラー:', error);
