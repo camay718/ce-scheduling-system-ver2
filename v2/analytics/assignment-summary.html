@@ -3,1101 +3,563 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>配置サマリー - CEスケジュール管理システムV2</title>
+    <title>総合配置分析 - CEスケジュール管理システムV2</title>
     
-    <!-- Tailwind CSS -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    
-    <!-- Font Awesome -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-    
-    <!-- Chart.js -->
+    <!-- 外部ライブラリ -->
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@3.0.0/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
     
-    <!-- Firebase -->
-    <script type="module">
-        import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
-        import { getDatabase } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js';
-        import { getAuth, signInAnonymously } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';
-        
-        const firebaseConfig = {
-            apiKey: "AIzaSyCRUvvs0OSz_9L9bXtqteVFIIze1OaZObE",
-            authDomain: "ce-scheduling-system-v2.firebaseapp.com",
-            databaseURL: "https://ce-scheduling-system-v2-default-rtdb.asia-southeast1.firebasedatabase.app",
-            projectId: "ce-scheduling-system-v2",
-            storageBucket: "ce-scheduling-system-v2.firebasestorage.app",
-            messagingSenderId: "288279598010",
-            appId: "1:288279598010:web:d545ee1d4d854513084383",
-            measurementId: "G-LSEEMJE2R0"
-        };
-        
-        const app = initializeApp(firebaseConfig);
-        window.database = getDatabase(app);
-        window.auth = getAuth(app);
-        
-        // Anonymous authentication
-        signInAnonymously(window.auth).catch(console.error);
-    </script>
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+    <script src="../js/config/firebase-config.js"></script>
+    <script src="../js/core/auth-guard.js"></script>
     
-    <style>
-        @media print {
-            .no-print { display: none !important; }
-            body { background: white !important; }
-            .bg-gradient-to-br { background: white !important; }
-            .shadow-lg { box-shadow: none !important; }
-            .page-break { page-break-after: always; }
-        }
-        
-        .summary-chart {
-            background: white;
-            border-radius: 0.5rem;
-            padding: 1rem;
-        }
-        
-        .stats-card {
-            transition: transform 0.2s;
-        }
-        
-        .stats-card:hover {
-            transform: translateY(-2px);
-        }
-        
-        .department-badge {
-            display: inline-flex;
-            align-items: center;
-            padding: 0.25rem 0.5rem;
-            border-radius: 0.375rem;
-            font-size: 0.75rem;
-            font-weight: 500;
-        }
-        
-        .coverage-indicator {
-            width: 100%;
-            height: 8px;
-            border-radius: 4px;
-            overflow: hidden;
-            background: #e5e7eb;
-        }
-        
-        .coverage-fill {
-            height: 100%;
-            transition: width 0.3s ease;
-        }
-        
-        .coverage-excellent { background: #10b981; }
-        .coverage-good { background: #f59e0b; }
-        .coverage-poor { background: #ef4444; }
-        
-        .heatmap-cell {
-            display: inline-block;
-            width: 30px;
-            height: 30px;
-            margin: 1px;
-            border-radius: 4px;
-            text-align: center;
-            line-height: 30px;
-            font-size: 12px;
-            font-weight: bold;
-            color: white;
-        }
-        
-        .intensity-0 { background: #f3f4f6; color: #6b7280; }
-        .intensity-1 { background: #dbeafe; color: #1e40af; }
-        .intensity-2 { background: #93c5fd; color: #1e40af; }
-        .intensity-3 { background: #3b82f6; color: white; }
-        .intensity-4 { background: #1e40af; color: white; }
-        .intensity-5 { background: #1e3a8a; color: white; }
-    </style>
+<style>
+/* V1版デザイン統合 */
+:root {
+    --primary-gradient: linear-gradient(135deg, #E8F5E8 0%, #D4F1D4 100%);
+    --accent-color: #B8E6B8;
+    --text-color: #2C3E50;
+    --shadow: 0 4px 12px rgba(0,0,0,0.1);
+    
+    /* 統一配色 */
+    --color-ope: #07E1FF;
+    --color-ope-a1: #0000FF;
+    --color-me: #CCFFCC;
+    --color-hd: #FFBCD4;
+    --color-flex: #FFFF00;
+    --color-white: #FFFFFF;
+}
+
+body {
+    background: var(--primary-gradient);
+    font-family: 'Noto Sans JP', sans-serif;
+    color: var(--text-color);
+    min-height: 100vh;
+}
+
+.glassmorphism {
+    background: rgba(255,255,255,0.85);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255,255,255,0.3);
+    border-radius: 16px;
+    box-shadow: var(--shadow);
+}
+
+/* 部門カラー定義 */
+.dept-血液浄化 { --dept-color: var(--color-hd); }
+.dept-人工心肺・補助循環 { --dept-color: #4169E1; }
+.dept-心・カテーテル { --dept-color: #32CD32; }
+.dept-手術・麻酔 { --dept-color: var(--color-ope); }
+.dept-不整脈 { --dept-color: #9370DB; }
+.dept-機器管理・人工呼吸 { --dept-color: var(--color-me); }
+
+.department-area {
+    background: rgba(255,255,255,0.85);
+    border-radius: 14px;
+    padding: 12px;
+    box-shadow: var(--shadow);
+    border-left: 4px solid var(--dept-color);
+    min-height: 120px;
+    transition: all 0.3s ease;
+}
+
+.department-area:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px rgba(0,0,0,0.15);
+}
+
+/* 印刷対応 */
+@media print {
+    .no-print { display: none !important; }
+    body { background: white !important; color: #000 !important; }
+    .glassmorphism { background: white !important; border: 1px solid #ccc !important; }
+}
+</style>
 </head>
 <body class="bg-gradient-to-br from-emerald-50 to-teal-100 min-h-screen">
-    <!-- Header -->
-    <header class="bg-white shadow-sm border-b no-print">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div class="flex justify-between items-center py-4">
-                <div class="flex items-center space-x-4">
-                    <i class="fas fa-users-cog text-2xl text-emerald-600"></i>
-                    <div>
-                        <h1 class="text-2xl font-bold text-gray-900">配置サマリー</h1>
-                        <p class="text-sm text-gray-600">CEスケジュール管理システムV2</p>
-                    </div>
+    <!-- ローディング -->
+    <div id="loading" class="fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center z-50">
+        <div class="glassmorphism p-6 text-center">
+            <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-green-600 mx-auto mb-4"></div>
+            <p class="text-gray-600">配置データを分析中...</p>
+        </div>
+    </div>
+
+    <!-- メインコンテンツ -->
+    <div id="mainContent" class="min-h-screen p-4" style="display:none;">
+        <!-- ヘッダー -->
+        <div class="glassmorphism p-6 mb-6">
+            <div class="flex justify-between items-center mb-4">
+                <div>
+                    <h1 class="text-3xl font-bold text-gray-800 mb-2">
+                        <i class="fas fa-chart-pie text-green-600 mr-3"></i>
+                        総合配置分析
+                    </h1>
+                    <p class="text-gray-600">配置サマリ・部門別充足率・時間帯別配置の総合分析</p>
                 </div>
-                <div class="flex items-center space-x-4">
-                    <div class="flex items-center space-x-2 text-sm text-gray-600">
-                        <i class="fas fa-user-circle"></i>
-                        <span id="currentUser">読み込み中...</span>
-                    </div>
-                   <button onclick="window.location.href='../dashboard.html'" 
-        class="bg-gray-100 hover:bg-gray-200 px-4 py-2 rounded-lg text-gray-700 transition-colors">
-    <i class="fas fa-arrow-left mr-2"></i>ダッシュボードに戻る
-</button>
+                <div class="text-right">
+                    <div class="text-sm text-gray-500">ログイン中</div>
+                    <div id="currentUserDisplay" class="font-semibold text-gray-800"></div>
                 </div>
             </div>
+            
+            <!-- ナビゲーション -->
+            <div class="flex justify-center gap-4">
+                <a href="../pages/analytics.html" class="btn-primary">
+                    <i class="fas fa-arrow-left mr-2"></i>分析ハブに戻る
+                </a>
+                <button onclick="window.handleLogout()" class="btn-primary bg-red-500 hover:bg-red-600">
+                    <i class="fas fa-sign-out-alt mr-2"></i>ログアウト
+                </button>
+            </div>
         </div>
-    </header>
 
-    <!-- Main Content -->
-    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-        <!-- Filter Section -->
-        <div class="bg-white rounded-lg shadow-lg p-6 mb-6 no-print">
-            <h2 class="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-                <i class="fas fa-filter mr-2 text-emerald-600"></i>分析設定
+        <!-- 期間選択 -->
+        <div class="glassmorphism p-4 mb-6 no-print">
+            <h2 class="text-lg font-semibold mb-4">
+                <i class="fas fa-calendar-alt mr-2"></i>分析期間設定
             </h2>
-            
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                <!-- Date Range -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div>
-                    <label for="startDate" class="block text-sm font-medium text-gray-700 mb-2">
-                        <i class="fas fa-calendar-alt mr-1"></i>開始日
-                    </label>
-                    <input type="date" id="startDate" 
-                           class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500">
+                    <label class="block text-sm font-medium mb-2">開始日</label>
+                    <input type="date" id="startDate" class="w-full px-3 py-2 border rounded-lg">
                 </div>
-                
                 <div>
-                    <label for="endDate" class="block text-sm font-medium text-gray-700 mb-2">
-                        <i class="fas fa-calendar-alt mr-1"></i>終了日
-                    </label>
-                    <input type="date" id="endDate" 
-                           class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500">
+                    <label class="block text-sm font-medium mb-2">終了日</label>
+                    <input type="date" id="endDate" class="w-full px-3 py-2 border rounded-lg">
                 </div>
-                
-                <!-- Department Filter -->
-                <div>
-                    <label for="departmentFilter" class="block text-sm font-medium text-gray-700 mb-2">
-                        <i class="fas fa-building mr-1"></i>部門フィルター
-                    </label>
-                    <select id="departmentFilter" 
-                            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500">
-                        <option value="">すべての部門</option>
-                    </select>
-                </div>
-                
-                <!-- View Type -->
-                <div>
-                    <label for="viewType" class="block text-sm font-medium text-gray-700 mb-2">
-                        <i class="fas fa-eye mr-1"></i>表示タイプ
-                    </label>
-                    <select id="viewType" 
-                            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500">
-                        <option value="summary">総合サマリー</option>
-                        <option value="department">部門別詳細</option>
-                        <option value="hourly">時間帯別分析</option>
-                        <option value="coverage">充足率分析</option>
-                    </select>
-                </div>
-            </div>
-            
-            <div class="flex flex-wrap gap-2 mt-4">
-                <button onclick="generateSummary()" 
-                        class="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-lg transition-colors">
-                    <i class="fas fa-chart-pie mr-2"></i>サマリー生成
-                </button>
-                <button onclick="resetFilters()" 
-                        class="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded-lg transition-colors">
-                    <i class="fas fa-undo mr-2"></i>リセット
-                </button>
-                <button onclick="exportSummary()" 
-                        class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors">
-                    <i class="fas fa-download mr-2"></i>レポート出力
-                </button>
-                <button onclick="window.print()" 
-                        class="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg transition-colors">
-                    <i class="fas fa-print mr-2"></i>印刷
-                </button>
-            </div>
-        </div>
-
-        <!-- Overview Statistics -->
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
-            <div class="stats-card bg-white rounded-lg shadow-lg p-6">
-                <div class="flex items-center justify-between">
-                    <div>
-                        <p class="text-sm font-medium text-gray-600">総配置人数</p>
-                        <p class="text-2xl font-bold text-emerald-600" id="totalAssignments">0人</p>
-                    </div>
-                    <div class="bg-emerald-100 p-3 rounded-full">
-                        <i class="fas fa-users text-emerald-600 text-xl"></i>
-                    </div>
-                </div>
-            </div>
-            
-            <div class="stats-card bg-white rounded-lg shadow-lg p-6">
-                <div class="flex items-center justify-between">
-                    <div>
-                        <p class="text-sm font-medium text-gray-600">活動部門数</p>
-                        <p class="text-2xl font-bold text-blue-600" id="activeDepartments">0部門</p>
-                    </div>
-                    <div class="bg-blue-100 p-3 rounded-full">
-                        <i class="fas fa-building text-blue-600 text-xl"></i>
-                    </div>
-                </div>
-            </div>
-            
-            <div class="stats-card bg-white rounded-lg shadow-lg p-6">
-                <div class="flex items-center justify-between">
-                    <div>
-                        <p class="text-sm font-medium text-gray-600">平均充足率</p>
-                        <p class="text-2xl font-bold text-yellow-600" id="avgCoverage">0%</p>
-                    </div>
-                    <div class="bg-yellow-100 p-3 rounded-full">
-                        <i class="fas fa-percentage text-yellow-600 text-xl"></i>
-                    </div>
-                </div>
-            </div>
-            
-            <div class="stats-card bg-white rounded-lg shadow-lg p-6">
-                <div class="flex items-center justify-between">
-                    <div>
-                        <p class="text-sm font-medium text-gray-600">総勤務時間</p>
-                        <p class="text-2xl font-bold text-purple-600" id="totalHours">0時間</p>
-                    </div>
-                    <div class="bg-purple-100 p-3 rounded-full">
-                        <i class="fas fa-clock text-purple-600 text-xl"></i>
-                    </div>
+                <div class="flex items-end">
+                    <button onclick="analyzeData()" class="btn-primary w-full">
+                        <i class="fas fa-search mr-2"></i>分析実行
+                    </button>
                 </div>
             </div>
         </div>
 
-        <!-- Main Charts Section -->
-        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-            <!-- Department Distribution -->
-            <div class="bg-white rounded-lg shadow-lg p-6">
-                <h3 class="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-                    <i class="fas fa-chart-pie mr-2 text-emerald-600"></i>部門別配置分布
-                </h3>
-                <canvas id="departmentChart" style="height: 300px;"></canvas>
+        <!-- V1版集計機能の統合 -->
+        <div class="space-y-6">
+            <!-- 配置サマリテーブル -->
+            <div class="glassmorphism p-6">
+                <div class="flex items-center justify-between mb-3">
+                    <h3 class="text-lg font-bold">配置サマリ</h3>
+                    <button class="btn-primary text-sm" onclick="printElement('placementSummaryTable')">
+                        <i class="fas fa-print mr-1"></i>印刷
+                    </button>
+                </div>
+                <div id="placementSummaryTable"></div>
             </div>
-            
-            <!-- Hourly Coverage -->
-            <div class="bg-white rounded-lg shadow-lg p-6">
-                <h3 class="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-                    <i class="fas fa-chart-line mr-2 text-emerald-600"></i>時間帯別人員配置
-                </h3>
-                <canvas id="hourlyChart" style="height: 300px;"></canvas>
-            </div>
-        </div>
 
-        <!-- Coverage Analysis -->
-        <div class="bg-white rounded-lg shadow-lg p-6 mb-6">
-            <h3 class="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-                <i class="fas fa-tachometer-alt mr-2 text-emerald-600"></i>部門別充足率分析
-            </h3>
-            <div id="coverageAnalysis" class="space-y-4">
-                <!-- Dynamic coverage cards will be inserted here -->
+            <!-- 部門別充足率 -->
+            <div class="glassmorphism p-6">
+                <div class="flex items-center justify-between mb-3">
+                    <h3 class="text-lg font-bold">部門別充足率（%）</h3>
+                    <button class="btn-primary text-sm" onclick="printCanvas('departmentChart')">
+                        <i class="fas fa-print mr-1"></i>印刷
+                    </button>
+                </div>
+                <div class="h-72">
+                    <canvas id="departmentChart"></canvas>
+                </div>
             </div>
-        </div>
 
-        <!-- Heatmap Section -->
-        <div class="bg-white rounded-lg shadow-lg p-6 mb-6">
-            <h3 class="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-                <i class="fas fa-th mr-2 text-emerald-600"></i>配置密度ヒートマップ
-            </h3>
-            <div class="mb-4 text-sm text-gray-600">
-                <span class="mr-4">配置密度:</span>
-                <span class="heatmap-cell intensity-0">0</span>
-                <span class="heatmap-cell intensity-1">1-2</span>
-                <span class="heatmap-cell intensity-2">3-4</span>
-                <span class="heatmap-cell intensity-3">5-6</span>
-                <span class="heatmap-cell intensity-4">7-8</span>
-                <span class="heatmap-cell intensity-5">9+</span>
+            <!-- 時間帯別配置人数（部門別） -->
+            <div class="glassmorphism p-6">
+                <div class="flex items-center justify-between mb-3">
+                    <h3 class="text-lg font-bold">時間帯別配置人数（部門別）</h3>
+                    <button class="btn-primary text-sm" onclick="printCanvas('timeSlotChartDept')">
+                        <i class="fas fa-print mr-1"></i>印刷
+                    </button>
+                </div>
+                <div class="h-72">
+                    <canvas id="timeSlotChartDept"></canvas>
+                </div>
             </div>
-            <div id="heatmapContainer">
-                <!-- Heatmap will be generated here -->
-            </div>
-        </div>
 
-        <!-- Work Type Analysis -->
-        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6 page-break">
-            <div class="bg-white rounded-lg shadow-lg p-6">
-                <h3 class="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-                    <i class="fas fa-briefcase mr-2 text-emerald-600"></i>業務タイプ分布
-                </h3>
-                <canvas id="workTypeChart" style="height: 300px;"></canvas>
-            </div>
-            
-            <div class="bg-white rounded-lg shadow-lg p-6">
-                <h3 class="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-                    <i class="fas fa-chart-bar mr-2 text-emerald-600"></i>日別配置推移
-                </h3>
-                <canvas id="dailyTrendChart" style="height: 300px;"></canvas>
-            </div>
-        </div>
-
-        <!-- Detailed Statistics Table -->
-        <div class="bg-white rounded-lg shadow-lg p-6 mb-6">
-            <h3 class="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-                <i class="fas fa-table mr-2 text-emerald-600"></i>詳細統計テーブル
-            </h3>
-            <div class="overflow-x-auto">
-                <table class="min-w-full divide-y divide-gray-200">
-                    <thead class="bg-gray-50">
-                        <tr>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">部門</th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">配置人数</th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">総勤務時間</th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">平均勤務時間</th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">充足率</th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ステータス</th>
-                        </tr>
-                    </thead>
-                    <tbody id="statisticsTableBody" class="bg-white divide-y divide-gray-200">
-                        <!-- Dynamic table rows will be inserted here -->
-                    </tbody>
-                </table>
-            </div>
-        </div>
-    </main>
-
-    <!-- Loading Modal -->
-    <div id="loadingModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 hidden items-center justify-center z-50">
-        <div class="bg-white rounded-lg p-6 max-w-sm w-full mx-4">
-            <div class="flex items-center">
-                <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-emerald-600 mr-4"></div>
-                <span class="text-gray-700">データを分析中...</span>
+            <!-- 時間帯別配置人数（曜日別） -->
+            <div class="glassmorphism p-6">
+                <div class="flex items-center justify-between mb-3">
+                    <h3 class="text-lg font-bold">時間帯別配置人数（曜日別）</h3>
+                    <button class="btn-primary text-sm" onclick="printCanvas('timeSlotChartDay')">
+                        <i class="fas fa-print mr-1"></i>印刷
+                    </button>
+                </div>
+                <div class="h-72">
+                    <canvas id="timeSlotChartDay"></canvas>
+                </div>
             </div>
         </div>
     </div>
 
     <script>
-        // Global variables
-        let departmentChart = null;
-        let hourlyChart = null;
-        let workTypeChart = null;
-        let dailyTrendChart = null;
-        let allSchedules = [];
-        let allEmployees = [];
-        let allDepartments = [];
-        
-        // Authentication check
-        function checkAuth() {
-            let user = sessionStorage.getItem('currentUser') || sessionStorage.getItem('currentUsername');
+// グローバル変数とチャートインスタンス
+let chartInstances = {
+    departmentChart: null,
+    timeSlotChartDept: null,
+    timeSlotChartDay: null
+};
 
-            // URLパラメータから取得
-            if (!user) {
-                const params = new URLSearchParams(location.search);
-                const qpUser = params.get('user') || params.get('username');
-                const qpUid = params.get('uid');
-                const qpRole = params.get('role');
-                if (qpUser) {
-                    user = qpUser;
-                    try {
-                        sessionStorage.setItem('currentUser', qpUser);
-                        sessionStorage.setItem('currentUsername', qpUser);
-                        if (qpUid) sessionStorage.setItem('targetUID', qpUid);
-                        if (qpRole) sessionStorage.setItem('userRole', qpRole);
-                    } catch (e) {
-                        console.warn('sessionStorage保存エラー:', e);
-                    }
-                }
-            }
+let currentUserData = null;
+let allData = {
+    events: [],
+    monthlyTasks: [],
+    workSchedules: []
+};
 
-            // localStorageから取得
-            if (!user) {
-                try {
-                    const authData = localStorage.getItem('analyticsAuth');
-                    if (authData) {
-                        const parsed = JSON.parse(authData);
-                        if (Date.now() - parsed.timestamp < 5 * 60 * 1000) {
-                            user = parsed.displayName;
-                            sessionStorage.setItem('currentUser', parsed.displayName);
-                            sessionStorage.setItem('currentUsername', parsed.username);
-                            sessionStorage.setItem('targetUID', parsed.uid);
-                            sessionStorage.setItem('userRole', parsed.role);
-                        }
-                    }
-                } catch (e) {
-                    console.warn('localStorage読み込みエラー:', e);
-                }
-            }
-
-            if (!user) {
-                alert('認証が必要です。ダッシュボードからアクセスしてください。');
-                window.location.href = '../dashboard.html';
-                return false;
-            }
-
-            const headerUserEl = document.getElementById('currentUser');
-            if (headerUserEl) headerUserEl.textContent = user;
-            return true;
+// 認証とログアウト処理
+window.handleLogout = async () => {
+    try {
+        if (window.auth && window.auth.currentUser) {
+            await window.auth.signOut();
         }
-        
-        // Initialize application
-        async function init() {
-            if (!checkAuth()) return;
-            
-            showLoading(true);
-            
-            try {
-                await Promise.all([
-                    loadEmployees(),
-                    loadDepartments(),
-                    loadSchedules()
-                ]);
-                
-                setupDateInputs();
-                populateDepartmentFilter();
-                initializeCharts();
-            } catch (error) {
-                console.error('初期化エラー:', error);
-                alert('データの読み込みに失敗しました。ページをリロードしてください。');
-            } finally {
-                showLoading(false);
-            }
+    } catch (error) {
+        console.error('ログアウトエラー:', error);
+    } finally {
+        sessionStorage.clear();
+        localStorage.clear();
+        window.location.href = '../index.html';
+    }
+};
+
+// 初期化
+async function init() {
+    try {
+        const authSuccess = await AuthGuard.init();
+        if (!authSuccess) return;
+
+        const userData = await AuthGuard.getUserData();
+        if (!userData || !userData.setupCompleted) {
+            location.href = '../index.html';
+            return;
         }
+
+        currentUserData = userData;
+        showInterface();
+        await loadAllData();
+        setupDateInputs();
+        initCharts();
         
-        // Load data functions
-        async function loadEmployees() {
-            try {
-                const { ref, get } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js');
-                const snapshot = await get(ref(window.database, 'employees'));
-                
-                if (snapshot.exists()) {
-                    allEmployees = Object.entries(snapshot.val()).map(([id, data]) => ({
+    } catch (error) {
+        console.error('初期化エラー:', error);
+        location.href = '../index.html';
+    }
+}
+
+function showInterface() {
+    document.getElementById('loading').style.display = 'none';
+    document.getElementById('mainContent').style.display = 'block';
+    
+    const displayName = currentUserData.displayName || currentUserData.username || 'ユーザー';
+    document.getElementById('currentUserDisplay').textContent = displayName;
+}
+
+function setupDateInputs() {
+    const today = new Date();
+    const oneWeekAgo = new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000);
+    
+    document.getElementById('startDate').value = oneWeekAgo.toISOString().split('T')[0];
+    document.getElementById('endDate').value = today.toISOString().split('T')[0];
+}
+
+// データロード（V2構造対応）
+async function loadAllData() {
+    try {
+        const [eventsSnapshot, monthlySnapshot] = await Promise.all([
+            window.database.ref(`${window.DATA_ROOT}/events`).once('value'),
+            window.database.ref(`${window.DATA_ROOT}/monthlyTasks`).once('value')
+        ]);
+
+        // 日別業務データの処理
+        const eventsData = eventsSnapshot.val() || {};
+        if (eventsData.byDate) {
+            Object.entries(eventsData.byDate).forEach(([date, events]) => {
+                if (events && typeof events === 'object') {
+                    Object.entries(events).forEach(([id, event]) => {
+                        allData.events.push({
+                            ...event,
+                            id,
+                            date,
+                            assignedCount: event.assignedCEs ? event.assignedCEs.length : 0
+                        });
+                    });
+                }
+            });
+        }
+
+        // 月次業務データの処理
+        const monthlyData = monthlySnapshot.val() || {};
+        Object.entries(monthlyData).forEach(([month, tasks]) => {
+            if (tasks && typeof tasks === 'object') {
+                Object.entries(tasks).forEach(([id, task]) => {
+                    allData.monthlyTasks.push({
+                        ...task,
                         id,
-                        ...data
-                    }));
-                }
-            } catch (error) {
-                console.error('従業員データの読み込みエラー:', error);
+                        month,
+                        assignedCount: task.assignedCEs ? task.assignedCEs.length : 0
+                    });
+                });
             }
-        }
-        
-        async function loadDepartments() {
-            try {
-                const { ref, get } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js');
-                const snapshot = await get(ref(window.database, 'departments'));
-                
-                if (snapshot.exists()) {
-                    allDepartments = Object.entries(snapshot.val()).map(([id, data]) => ({
-                        id,
-                        ...data
-                    }));
+        });
+
+        console.log('データ読み込み完了:', allData);
+    } catch (error) {
+        console.error('データ読み込みエラー:', error);
+    }
+}
+
+// チャート初期化
+function initCharts() {
+    // 部門別充足率チャート
+    const deptCtx = document.getElementById('departmentChart').getContext('2d');
+    chartInstances.departmentChart = new Chart(deptCtx, {
+        type: 'bar',
+        data: {
+            labels: ['血液浄化', '人工心肺・補助循環', '心・カテーテル', '手術・麻酔', '不整脈', '機器管理・人工呼吸'],
+            datasets: [{
+                label: '充足率(%)',
+                data: [],
+                backgroundColor: ['#FFB6C180', '#4169E180', '#32CD3280', '#87CEEB80', '#9370DB80', '#90EE9080'],
+                borderColor: ['#FFB6C1', '#4169E1', '#32CD32', '#87CEEB', '#9370DB', '#90EE90'],
+                borderWidth: 2
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                y: { 
+                    beginAtZero: true, 
+                    max: 120, 
+                    ticks: { callback: v => v + '%' } 
                 }
-            } catch (error) {
-                console.error('部門データの読み込みエラー:', error);
-            }
+            },
+            plugins: { legend: { display: false } }
         }
+    });
+
+    // 時間帯別配置チャート（部門別）
+    const timeSlotDeptCtx = document.getElementById('timeSlotChartDept').getContext('2d');
+    chartInstances.timeSlotChartDept = new Chart(timeSlotDeptCtx, {
+        type: 'bar',
+        data: { labels: [], datasets: [] },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: { x: { stacked: true }, y: { stacked: true, beginAtZero: true } }
+        }
+    });
+
+    // 時間帯別配置チャート（曜日別）
+    const timeSlotDayCtx = document.getElementById('timeSlotChartDay').getContext('2d');
+    chartInstances.timeSlotChartDay = new Chart(timeSlotDayCtx, {
+        type: 'line',
+        data: { labels: [], datasets: [] },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: { y: { beginAtZero: true } }
+        }
+    });
+}
+
+// 分析実行
+async function analyzeData() {
+    const startDate = document.getElementById('startDate').value;
+    const endDate = document.getElementById('endDate').value;
+    
+    if (!startDate || !endDate) {
+        alert('期間を選択してください');
+        return;
+    }
+
+    // データフィルタリング
+    const filteredEvents = allData.events.filter(event => 
+        event.date >= startDate && event.date <= endDate
+    );
+    const filteredMonthlyTasks = allData.monthlyTasks.filter(task =>
+        task.date && task.date >= startDate && task.date <= endDate
+    );
+
+    // V1形式のデータ構造に変換して分析
+    buildPlacementSummaryTable(filteredEvents, filteredMonthlyTasks);
+    updateDepartmentChart(filteredEvents, filteredMonthlyTasks);
+    updateTimeSlotCharts(filteredEvents, filteredMonthlyTasks);
+}
+
+// V1版から移植した集計関数群
+function buildPlacementSummaryTable(events, monthlyTasks) {
+    const container = document.getElementById('placementSummaryTable');
+    const departments = ['血液浄化', '人工心肺・補助循環', '心・カテーテル', '手術・麻酔', '不整脈', '機器管理・人工呼吸'];
+    
+    let tableHTML = `
+        <div class="overflow-x-auto">
+            <table class="w-full border-collapse border border-gray-300 text-sm">
+                <thead>
+                    <tr class="bg-gray-100">
+                        <th class="border border-gray-300 p-2 text-left">部門</th>
+                        <th class="border border-gray-300 p-2 text-center">業務数</th>
+                        <th class="border border-gray-300 p-2 text-center">必要人数</th>
+                        <th class="border border-gray-300 p-2 text-center">配置人数</th>
+                        <th class="border border-gray-300 p-2 text-center">充足率</th>
+                    </tr>
+                </thead>
+                <tbody>
+    `;
+
+    departments.forEach(dept => {
+        const deptEvents = [...events, ...monthlyTasks].filter(e => e.department === dept);
+        const totalRequired = deptEvents.reduce((sum, e) => sum + (e.requiredPeople || 1), 0);
+        const totalAssigned = deptEvents.reduce((sum, e) => sum + e.assignedCount, 0);
+        const coverage = totalRequired > 0 ? (totalAssigned / totalRequired * 100) : 0;
         
-        async function loadSchedules() {
-            try {
-                const { ref, get } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js');
-                const snapshot = await get(ref(window.database, 'schedules'));
-                
-                if (snapshot.exists()) {
-                    allSchedules = Object.entries(snapshot.val()).map(([id, data]) => ({
-                        id,
-                        ...data
-                    }));
+        const colorClass = coverage >= 100 ? 'text-green-600' : 
+                          coverage >= 80 ? 'text-yellow-600' : 'text-red-600';
+
+        tableHTML += `
+            <tr>
+                <td class="border border-gray-300 p-2 font-bold">${dept}</td>
+                <td class="border border-gray-300 p-2 text-center">${deptEvents.length}</td>
+                <td class="border border-gray-300 p-2 text-center">${totalRequired}</td>
+                <td class="border border-gray-300 p-2 text-center">${totalAssigned}</td>
+                <td class="border border-gray-300 p-2 text-center font-bold ${colorClass}">${coverage.toFixed(1)}%</td>
+            </tr>
+        `;
+    });
+
+    tableHTML += '</tbody></table></div>';
+    container.innerHTML = tableHTML;
+}
+
+function updateDepartmentChart(events, monthlyTasks) {
+    const departments = ['血液浄化', '人工心肺・補助循環', '心・カテーテル', '手術・麻酔', '不整脈', '機器管理・人工呼吸'];
+    
+    const coverageData = departments.map(dept => {
+        const deptEvents = [...events, ...monthlyTasks].filter(e => e.department === dept);
+        const totalRequired = deptEvents.reduce((sum, e) => sum + (e.requiredPeople || 1), 0);
+        const totalAssigned = deptEvents.reduce((sum, e) => sum + e.assignedCount, 0);
+        return totalRequired > 0 ? (totalAssigned / totalRequired * 100) : 0;
+    });
+
+    chartInstances.departmentChart.data.datasets[0].data = coverageData;
+    chartInstances.departmentChart.update();
+}
+
+function updateTimeSlotCharts(events, monthlyTasks) {
+    // 時間帯別のデータ集計と更新
+    const timeSlots = Array.from({length: 12}, (_, i) => `${7+i}:00`);
+    const departments = ['血液浄化', '人工心肺・補助循環', '心・カテーテル', '手術・麻酔', '不整脈', '機器管理・人工呼吸'];
+    
+    // 部門別チャート更新
+    const deptData = calculateTimeSlotData([...events, ...monthlyTasks], timeSlots, departments, 'department');
+    
+    chartInstances.timeSlotChartDept.data.labels = timeSlots;
+    chartInstances.timeSlotChartDept.data.datasets = departments.map((dept, idx) => ({
+        label: dept,
+        data: timeSlots.map(slot => deptData[slot]?.[dept] || 0),
+        backgroundColor: ['#FFB6C180', '#4169E180', '#32CD3280', '#87CEEB80', '#9370DB80', '#90EE9080'][idx],
+        borderColor: ['#FFB6C1', '#4169E1', '#32CD32', '#87CEEB', '#9370DB', '#90EE90'][idx],
+        borderWidth: 1
+    }));
+    chartInstances.timeSlotChartDept.update();
+
+    // 曜日別チャート更新
+    const dayData = calculateTimeSlotData([...events, ...monthlyTasks], timeSlots, ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'], 'day');
+    const dayLabels = ['月', '火', '水', '木', '金', '土', '日'];
+    const dayColors = ['#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', '#FFEAA7', '#A1BBE6', '#D4A6E1'];
+    
+    chartInstances.timeSlotChartDay.data.labels = timeSlots;
+    chartInstances.timeSlotChartDay.data.datasets = dayLabels.map((label, idx) => ({
+        label: label,
+        data: timeSlots.map(slot => dayData[slot]?.[['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'][idx]] || 0),
+        borderColor: dayColors[idx],
+        backgroundColor: dayColors[idx] + '20',
+        fill: false,
+        tension: 0.4
+    }));
+    chartInstances.timeSlotChartDay.update();
+}
+
+function calculateTimeSlotData(allEvents, timeSlots, groups, type) {
+    const result = {};
+    timeSlots.forEach(slot => {
+        result[slot] = {};
+        groups.forEach(group => result[slot][group] = 0);
+    });
+
+    allEvents.forEach(event => {
+        if (!event.startTime || !event.endTime) return;
+        
+        const startHour = parseInt(event.startTime.split(':')[0]);
+        const endHour = parseInt(event.endTime.split(':')[0]);
+        
+        timeSlots.forEach(slot => {
+            const slotHour = parseInt(slot.split(':')[0]);
+            if (slotHour >= startHour && slotHour <= endHour) {
+                if (type === 'department') {
+                    result[slot][event.department] = (result[slot][event.department] || 0) + event.assignedCount;
+                } else if (type === 'day' && event.date) {
+                    const dayOfWeek = new Date(event.date).getDay();
+                    const dayKey = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'][dayOfWeek];
+                    result[slot][dayKey] = (result[slot][dayKey] || 0) + event.assignedCount;
                 }
-            } catch (error) {
-                console.error('スケジュールデータの読み込みエラー:', error);
             }
-        }
-        
-        // Setup functions
-        function setupDateInputs() {
-            const startDate = document.getElementById('startDate');
-            const endDate = document.getElementById('endDate');
-            const today = new Date();
-            const oneWeekAgo = new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000);
-            
-            startDate.value = oneWeekAgo.toISOString().split('T')[0];
-            endDate.value = today.toISOString().split('T')[0];
-        }
-        
-        function populateDepartmentFilter() {
-            const select = document.getElementById('departmentFilter');
-            select.innerHTML = '<option value="">すべての部門</option>';
-            
-            allDepartments.forEach(dept => {
-                const option = document.createElement('option');
-                option.value = dept.id;
-                option.textContent = dept.name;
-                select.appendChild(option);
-            });
-        }
-        
-        function showLoading(show) {
-            const modal = document.getElementById('loadingModal');
-            if (show) {
-                modal.classList.remove('hidden');
-                modal.classList.add('flex');
-            } else {
-                modal.classList.add('hidden');
-                modal.classList.remove('flex');
-            }
-        }
-        
-        // Initialize charts
-        function initializeCharts() {
-            initializeDepartmentChart();
-            initializeHourlyChart();
-            initializeWorkTypeChart();
-            initializeDailyTrendChart();
-        }
-        
-        function initializeDepartmentChart() {
-            const ctx = document.getElementById('departmentChart').getContext('2d');
-            
-            departmentChart = new Chart(ctx, {
-                type: 'doughnut',
-                data: {
-                    labels: [],
-                    datasets: [{
-                        data: [],
-                        backgroundColor: [
-                            '#10B981', '#3B82F6', '#F59E0B', '#EF4444', 
-                            '#8B5CF6', '#EC4899', '#06B6D4', '#84CC16'
-                        ]
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                        legend: {
-                            position: 'bottom'
-                        },
-                        tooltip: {
-                            callbacks: {
-                                label: function(context) {
-                                    const label = context.label || '';
-                                    const value = context.parsed;
-                                    const total = context.dataset.data.reduce((a, b) => a + b, 0);
-                                    const percentage = ((value / total) * 100).toFixed(1);
-                                    return `${label}: ${value}人 (${percentage}%)`;
-                                }
-                            }
-                        }
-                    }
-                }
-            });
-        }
-        
-        function initializeHourlyChart() {
-            const ctx = document.getElementById('hourlyChart').getContext('2d');
-            
-            hourlyChart = new Chart(ctx, {
-                type: 'line',
-                data: {
-                    labels: Array.from({length: 24}, (_, i) => `${i}:00`),
-                    datasets: [{
-                        label: '配置人数',
-                        data: new Array(24).fill(0),
-                        borderColor: '#10B981',
-                        backgroundColor: 'rgba(16, 185, 129, 0.1)',
-                        fill: true,
-                        tension: 0.4
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    scales: {
-                        y: {
-                            beginAtZero: true,
-                            title: {
-                                display: true,
-                                text: '配置人数'
-                            }
-                        },
-                        x: {
-                            title: {
-                                display: true,
-                                text: '時間帯'
-                            }
-                        }
-                    }
-                }
-            });
-        }
-        
-        function initializeWorkTypeChart() {
-            const ctx = document.getElementById('workTypeChart').getContext('2d');
-            
-            workTypeChart = new Chart(ctx, {
-                type: 'bar',
-                data: {
-                    labels: [],
-                    datasets: [{
-                        label: '配置数',
-                        data: [],
-                        backgroundColor: '#3B82F6',
-                        borderColor: '#1E40AF',
-                        borderWidth: 1
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    scales: {
-                        y: {
-                            beginAtZero: true,
-                            title: {
-                                display: true,
-                                text: '配置数'
-                            }
-                        }
-                    }
-                }
-            });
-        }
-        
-        function initializeDailyTrendChart() {
-            const ctx = document.getElementById('dailyTrendChart').getContext('2d');
-            
-            dailyTrendChart = new Chart(ctx, {
-                type: 'line',
-                data: {
-                    labels: [],
-                    datasets: [{
-                        label: '日別配置数',
-                        data: [],
-                        borderColor: '#F59E0B',
-                        backgroundColor: 'rgba(245, 158, 11, 0.1)',
-                        fill: true,
-                        tension: 0.4
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    scales: {
-                        y: {
-                            beginAtZero: true,
-                            title: {
-                                display: true,
-                                text: '配置数'
-                            }
-                        },
-                        x: {
-                            title: {
-                                display: true,
-                                text: '日付'
-                            }
-                        }
-                    }
-                }
-            });
-        }
-        
-        // Generate summary
-        function generateSummary() {
-            const startDate = document.getElementById('startDate').value;
-            const endDate = document.getElementById('endDate').value;
-            const departmentFilter = document.getElementById('departmentFilter').value;
-            
-            if (!startDate || !endDate) {
-                alert('期間を指定してください。');
-                return;
-            }
-            
-            showLoading(true);
-            
-            try {
-                const filteredSchedules = filterSchedules(startDate, endDate, departmentFilter);
-                updateAllAnalytics(filteredSchedules);
-            } catch (error) {
-                console.error('サマリー生成エラー:', error);
-                alert('サマリーの生成中にエラーが発生しました。');
-            } finally {
-                showLoading(false);
-            }
-        }
-        
-        // Filter schedules
-        function filterSchedules(startDate, endDate, departmentFilter) {
-            return allSchedules.filter(schedule => {
-                // Date range filter
-                if (schedule.date < startDate || schedule.date > endDate) return false;
-                
-                // Department filter
-                if (departmentFilter) {
-                    const employee = allEmployees.find(e => e.id === schedule.employeeId);
-                    if (!employee || employee.departmentId !== departmentFilter) return false;
-                }
-                
-                return true;
-            });
-        }
-        
-        // Update all analytics
-        function updateAllAnalytics(schedules) {
-            updateOverviewStats(schedules);
-            updateDepartmentChart(schedules);
-            updateHourlyChart(schedules);
-            updateWorkTypeChart(schedules);
-            updateDailyTrendChart(schedules);
-            updateCoverageAnalysis(schedules);
-            updateHeatmap(schedules);
-            updateStatisticsTable(schedules);
-        }
-        
-        // Update overview statistics
-        function updateOverviewStats(schedules) {
-            const totalAssignments = schedules.length;
-            const activeDepartments = new Set(schedules.map(s => {
-                const employee = allEmployees.find(e => e.id === s.employeeId);
-                return employee?.departmentId;
-            }).filter(Boolean)).size;
-            
-            const totalHours = schedules.reduce((sum, schedule) => {
-                return sum + calculateWorkHours(schedule.startTime, schedule.endTime);
-            }, 0);
-            
-            // Calculate average coverage (simplified)
-            const avgCoverage = Math.min((totalAssignments / (allEmployees.length * 0.7)) * 100, 100);
-            
-            document.getElementById('totalAssignments').textContent = `${totalAssignments}人`;
-            document.getElementById('activeDepartments').textContent = `${activeDepartments}部門`;
-            document.getElementById('avgCoverage').textContent = `${avgCoverage.toFixed(1)}%`;
-            document.getElementById('totalHours').textContent = `${totalHours.toFixed(1)}時間`;
-        }
-        
-        // Update department chart
-        function updateDepartmentChart(schedules) {
-            const departmentCounts = {};
-            
-            schedules.forEach(schedule => {
-                const employee = allEmployees.find(e => e.id === schedule.employeeId);
-                if (employee) {
-                    const dept = allDepartments.find(d => d.id === employee.departmentId);
-                    const deptName = dept?.name || '不明';
-                    departmentCounts[deptName] = (departmentCounts[deptName] || 0) + 1;
-                }
-            });
-            
-            departmentChart.data.labels = Object.keys(departmentCounts);
-            departmentChart.data.datasets[0].data = Object.values(departmentCounts);
-            departmentChart.update();
-        }
-        
-        // Update hourly chart
-        function updateHourlyChart(schedules) {
-            const hourlyCounts = new Array(24).fill(0);
-            
-            schedules.forEach(schedule => {
-                const startHour = parseInt(schedule.startTime.split(':')[0]);
-                const endHour = parseInt(schedule.endTime.split(':')[0]);
-                
-                for (let hour = startHour; hour <= endHour; hour++) {
-                    if (hour < 24) hourlyCounts[hour]++;
-                }
-            });
-            
-            hourlyChart.data.datasets[0].data = hourlyCounts;
-            hourlyChart.update();
-        }
-        
-        // Update work type chart
-        function updateWorkTypeChart(schedules) {
-            const workTypeCounts = {};
-            
-            schedules.forEach(schedule => {
-                const workType = schedule.workType || '通常勤務';
-                workTypeCounts[workType] = (workTypeCounts[workType] || 0) + 1;
-            });
-            
-            workTypeChart.data.labels = Object.keys(workTypeCounts);
-            workTypeChart.data.datasets[0].data = Object.values(workTypeCounts);
-            workTypeChart.update();
-        }
-        
-        // Update daily trend chart
-        function updateDailyTrendChart(schedules) {
-            const dailyCounts = {};
-            
-            schedules.forEach(schedule => {
-                const date = schedule.date;
-                dailyCounts[date] = (dailyCounts[date] || 0) + 1;
-            });
-            
-            const sortedDates = Object.keys(dailyCounts).sort();
-            const counts = sortedDates.map(date => dailyCounts[date]);
-            
-            dailyTrendChart.data.labels = sortedDates;
-            dailyTrendChart.data.datasets[0].data = counts;
-            dailyTrendChart.update();
-        }
-        
-        // Update coverage analysis
-        function updateCoverageAnalysis(schedules) {
-            const container = document.getElementById('coverageAnalysis');
-            container.innerHTML = '';
-            
-            const departmentStats = {};
-            
-            // Calculate department statistics
-            schedules.forEach(schedule => {
-                const employee = allEmployees.find(e => e.id === schedule.employeeId);
-                if (employee) {
-                    const deptId = employee.departmentId;
-                    if (!departmentStats[deptId]) {
-                        departmentStats[deptId] = {
-                            name: allDepartments.find(d => d.id === deptId)?.name || '不明',
-                            assignments: 0,
-                            totalHours: 0,
-                            employees: new Set()
-                        };
-                    }
-                    
-                    departmentStats[deptId].assignments++;
-                    departmentStats[deptId].totalHours += calculateWorkHours(schedule.startTime, schedule.endTime);
-                    departmentStats[deptId].employees.add(schedule.employeeId);
-                }
-            });
-            
-            // Create coverage cards
-            Object.values(departmentStats).forEach(dept => {
-                const coverage = Math.min((dept.assignments / (dept.employees.size * 5)) * 100, 100);
-                const coverageClass = coverage >= 80 ? 'excellent' : coverage >= 60 ? 'good' : 'poor';
-                
-                const card = document.createElement('div');
-                card.className = 'bg-gray-50 rounded-lg p-4';
-                card.innerHTML = `
-                    <div class="flex items-center justify-between mb-2">
-                        <h4 class="font-semibold text-gray-900">${dept.name}</h4>
-                        <span class="department-badge bg-blue-100 text-blue-800">${dept.employees.size}名</span>
-                    </div>
-                    <div class="grid grid-cols-2 gap-4 mb-3">
-                        <div class="text-sm text-gray-600">
-                            配置数: <span class="font-medium">${dept.assignments}</span>
-                        </div>
-                        <div class="text-sm text-gray-600">
-                            総時間: <span class="font-medium">${dept.totalHours.toFixed(1)}h</span>
-                        </div>
-                    </div>
-                    <div class="mb-2">
-                        <div class="flex justify-between text-sm mb-1">
-                            <span class="text-gray-600">充足率</span>
-                            <span class="font-medium">${coverage.toFixed(1)}%</span>
-                        </div>
-                        <div class="coverage-indicator">
-                            <div class="coverage-fill coverage-${coverageClass}" style="width: ${coverage}%"></div>
-                        </div>
-                    </div>
-                `;
-                container.appendChild(card);
-            });
-        }
-        
-        // Update heatmap
-        function updateHeatmap(schedules) {
-            const container = document.getElementById('heatmapContainer');
-            container.innerHTML = '';
-            
-            // Create date range
-            const startDate = new Date(document.getElementById('startDate').value);
-            const endDate = new Date(document.getElementById('endDate').value);
-            const dateRange = [];
-            
-            for (let d = new Date(startDate); d <= endDate; d.setDate(d.getDate() + 1)) {
-                dateRange.push(d.toISOString().split('T')[0]);
-            }
-            
-            // Count assignments per date-hour
-            const heatmapData = {};
-            schedules.forEach(schedule => {
-                const startHour = parseInt(schedule.startTime.split(':')[0]);
-                const endHour = parseInt(schedule.endTime.split(':')[0]);
-                
-                for (let hour = startHour; hour <= endHour; hour++) {
-                    const key = `${schedule.date}-${hour}`;
-                    heatmapData[key] = (heatmapData[key] || 0) + 1;
-                }
-            });
-            
-            // Generate heatmap HTML
-            const heatmapHTML = `
-                <div class="grid grid-cols-25 gap-1 text-xs">
-                    <div></div>
-                    ${Array.from({length: 24}, (_, i) => `<div class="text-center">${i}</div>`).join('')}
-                    ${dateRange.map(date => {
-                        const dayRow = `<div class="text-right pr-2">${new Date(date).getMonth() + 1}/${new Date(date).getDate()}</div>`;
-                        const hourCells = Array.from({length: 24}, (_, hour) => {
-                            const key = `${date}-${hour}`;
-                            const count = heatmapData[key] || 0;
-                            const intensity = Math.min(Math.floor(count / 2), 5);
-                            return `<div class="heatmap-cell intensity-${intensity}">${count}</div>`;
-                        }).join('');
-                        return dayRow + hourCells;
-                    }).join('')}
-                </div>
-            `;
-            
-            container.innerHTML = heatmapHTML;
-        }
-        
-        // Update statistics table
-        function updateStatisticsTable(schedules) {
-            const tbody = document.getElementById('statisticsTableBody');
-            tbody.innerHTML = '';
-            
-            const departmentStats = {};
-            
-            // Calculate statistics
-            schedules.forEach(schedule => {
-                const employee = allEmployees.find(e => e.id === schedule.employeeId);
-                if (employee) {
-                    const deptId = employee.departmentId;
-                    const dept = allDepartments.find(d => d.id === deptId);
-                    const deptName = dept?.name || '不明';
-                    
-                    if (!departmentStats[deptId]) {
-                        departmentStats[deptId] = {
-                            name: deptName,
-                            assignments: 0,
-                            totalHours: 0,
-                            employees: new Set()
-                        };
-                    }
-                    
-                    departmentStats[deptId].assignments++;
-                    departmentStats[deptId].totalHours += calculateWorkHours(schedule.startTime, schedule.endTime);
-                    departmentStats[deptId].employees.add(schedule.employeeId);
-                }
-            });
-            
-            // Create table rows
-            Object.values(departmentStats).forEach(dept => {
-                const avgHours = dept.assignments > 0 ? (dept.totalHours / dept.assignments) : 0;
-                const coverage = Math.min((dept.assignments / (dept.employees.size * 5)) * 100, 100);
-                const statusClass = coverage >= 80 ? 'text-green-600' : coverage >= 60 ? 'text-yellow-600' : 'text-red-600';
-                const statusText = coverage >= 80 ? '良好' : coverage >= 60 ? '注意' : '不足';
-                
-                const row = document.createElement('tr');
-                row.innerHTML = `
-                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">${dept.name}</td>
-                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${dept.assignments}人</td>
-                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${dept.totalHours.toFixed(1)}時間</td>
-                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${avgHours.toFixed(1)}時間</td>
-                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${coverage.toFixed(1)}%</td>
-                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium ${statusClass}">${statusText}</td>
-                `;
-                tbody.appendChild(row);
-            });
-        }
-        
-        // Helper functions
-        function calculateWorkHours(startTime, endTime) {
-            const [startHour, startMin] = startTime.split(':').map(Number);
-            const [endHour, endMin] = endTime.split(':').map(Number);
-            
-            const startMinutes = startHour * 60 + startMin;
-            const endMinutes = endHour * 60 + endMin;
-            
-            let diffMinutes = endMinutes - startMinutes;
-            if (diffMinutes < 0) {
-                diffMinutes += 24 * 60;
-            }
-            
-            return diffMinutes / 60;
-        }
-        
-        // Reset filters
-        function resetFilters() {
-            document.getElementById('departmentFilter').value = '';
-            document.getElementById('viewType').value = 'summary';
-            setupDateInputs();
-            
-            // Clear all displays
-            document.getElementById('totalAssignments').textContent = '0人';
-            document.getElementById('activeDepartments').textContent = '0部門';
-            document.getElementById('avgCoverage').textContent = '0%';
-            document.getElementById('totalHours').textContent = '0時間';
-            
-            // Reset charts
-            if (departmentChart) {
-                departmentChart.data.labels = [];
-                departmentChart.data.datasets[0].data = [];
-                departmentChart.update();
-            }
-            
-            if (hourlyChart) {
-                hourlyChart.data.datasets[0].data = new Array(24).fill(0);
-                hourlyChart.update();
-            }
-            
-            if (workTypeChart) {
-                workTypeChart.data.labels = [];
-                workTypeChart.data.datasets[0].data = [];
-                workTypeChart.update();
-            }
-            
-            if (dailyTrendChart) {
-                dailyTrendChart.data.labels = [];
-                dailyTrendChart.data.datasets[0].data = [];
-                dailyTrendChart.update();
-            }
-            
-            // Clear other displays
-            document.getElementById('coverageAnalysis').innerHTML = '';
-            document.getElementById('heatmapContainer').innerHTML = '';
-            document.getElementById('statisticsTableBody').innerHTML = '';
-        }
-        
-        // Export summary
-        function exportSummary() {
-            const startDate = document.getElementById('startDate').value;
-            const endDate = document.getElementById('endDate').value;
-            
-            if (!startDate || !endDate) {
-                alert('期間を指定してから出力してください。');
-                return;
-            }
-            
-            const departmentFilter = document.getElementById('departmentFilter').value;
-            const filteredSchedules = filterSchedules(startDate, endDate, departmentFilter);
-            
-            // Create CSV content
-            let csvContent = '\uFEFF'; // BOM for UTF-8
-            csvContent += '配置サマリー分析結果\n';
-            csvContent += `分析期間: ${startDate} - ${endDate}\n`;
-            csvContent += `部門フィルター: ${departmentFilter ? allDepartments.find(d => d.id === departmentFilter)?.name || '不明' : 'すべて'}\n`;
-            csvContent += `生成日時: ${new Date().toLocaleString('ja-JP')}\n\n`;
-            
-            // Overview stats
-            const totalAssignments = filteredSchedules.length;
-            const activeDepartments = new Set(filteredSchedules.map(s => {
-                const employee = allEmployees.find(e => e.id === s.employeeId);
-                return employee?.departmentId;
-            }).filter(Boolean)).size;
-            const totalHours = filteredSchedules.reduce((sum, schedule) => {
-                return sum + calculateWorkHours(schedule.startTime, schedule.endTime);
-            }, 0);
-            
-            csvContent += '概要統計\n';
-            csvContent += `総配置人数,${totalAssignments}人\n`;
-            csvContent += `活動部門数,${activeDepartments}部門\n`;
-            csvContent += `総勤務時間,${totalHours.toFixed(1)}時間\n\n`;
-            
-            // Detailed data
-            csvContent += '詳細データ\n';
-            csvContent += '日付,従業員名,部門,開始時間,終了時間,業務タイプ,勤務時間\n';
-            
-            filteredSchedules.forEach(schedule => {
-                const employee = allEmployees.find(e => e.id === schedule.employeeId);
-                const department = employee ? allDepartments.find(d => d.id === employee.departmentId)?.name || '不明' : '不明';
-                const workHours = calculateWorkHours(schedule.startTime, schedule.endTime);
-                
-                csvContent += `${schedule.date},${employee?.name || '不明'},${department},${schedule.startTime},${schedule.endTime},${schedule.workType || '通常勤務'},${workHours.toFixed(1)}\n`;
-            });
-            
-            // Download CSV
-            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-            const link = document.createElement('a');
-            const url = URL.createObjectURL(blob);
-            link.setAttribute('href', url);
-            link.setAttribute('download', `配置サマリー_${startDate}_${endDate}_${new Date().toISOString().split('T')[0]}.csv`);
-            link.style.visibility = 'hidden';
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-        }
-        
-        // Initialize when page loads
-        document.addEventListener('DOMContentLoaded', init);
+        });
+    });
+
+    return result;
+}
+
+// 印刷機能
+function printElement(elementId) {
+    const element = document.getElementById(elementId);
+    if (!element) return;
+    
+    const printWindow = window.open('', 'printWindow');
+    const styles = Array.from(document.querySelectorAll('link[rel="stylesheet"], style'))
+                    .map(link => link.outerHTML).join('');
+
+    printWindow.document.write(`
+        <html>
+            <head>
+                <title>印刷</title>
+                ${styles}
+                <style>body { margin: 20px; } .no-print { display: none !important; }</style>
+            </head>
+            <body>${element.outerHTML}</body>
+        </html>
+    `);
+    printWindow.document.close();
+    printWindow.print();
+}
+
+function printCanvas(canvasId) {
+    const canvas = document.getElementById(canvasId);
+    if (!canvas) return;
+    
+    const printWindow = window.open('', 'printCanvas');
+    printWindow.document.write(`
+        <html>
+            <head><title>グラフ印刷</title></head>
+            <body style="margin: 20px; text-align: center;">
+                <img src="${canvas.toDataURL('image/png')}" style="max-width: 100%; height: auto;"/>
+            </body>
+        </html>
+    `);
+    printWindow.document.close();
+    printWindow.print();
+}
+
+// グローバル関数の登録
+window.analyzeData = analyzeData;
+window.printElement = printElement;
+window.printCanvas = printCanvas;
+
+// 初期化実行
+document.addEventListener('DOMContentLoaded', init);
     </script>
 </body>
 </html>
