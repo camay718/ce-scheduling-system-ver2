@@ -145,22 +145,27 @@
 
         /* 勤務区分別背景色 */
         .work-schedule-table .work-cell.type-ope { 
-            background: #87CEEB; 
+            background: #07E1FF; 
             color: #1E3A8A; 
         }
 
+        .work-schedule-table .work-cell.type-ope.status-A1 { 
+            background: #0000FF !important; 
+            color: white !important; 
+        }
+
         .work-schedule-table .work-cell.type-me { 
-            background: #90EE90; 
+            background: #CCFFCC; 
             color: #006400; 
         }
 
         .work-schedule-table .work-cell.type-hd { 
-            background: #FFB6C1; 
+            background: #FFBCD4; 
             color: #8B008B; 
         }
 
         .work-schedule-table .work-cell.type-flex { 
-            background: #FFFF99; 
+            background: #FFFF00; 
             color: #B8860B; 
         }
 
@@ -171,6 +176,13 @@
         .work-schedule-table .work-cell.status-出,
         .work-schedule-table .work-cell.status-研 {
             background: white !important;
+            color: #333 !important;
+            border: 1px solid #ddd !important;
+        }
+
+                /* 自由入力テキスト（白色表示） */
+        .work-schedule-table .work-cell.status-text {
+            background: #FFFFFF !important;
             color: #333 !important;
             border: 1px solid #ddd !important;
         }
@@ -1026,7 +1038,9 @@ generateTableHTML(dates, scheduleData, ceList, workTypeOverrides) {
             const dateKey = this.formatDate(date);
             const workData = scheduleData[ce.id]?.[dateKey] || {};
             const isWeekendOrHoliday = date.getDay() === 0 || date.getDay() === 6 || this.isJapaneseHoliday(date);
-            const status = workData.customText?.trim() || workData.status || (isWeekendOrHoliday ? '×' : 'A');
+            
+            // テキスト優先表示の修正
+            const displayStatus = workData.customText?.trim() || workData.status || (isWeekendOrHoliday ? '×' : 'A');
             
             if (isWeekendOrHoliday) summary.holidays++;
             switch (workData.status || (isWeekendOrHoliday ? '×' : 'A')) {
@@ -1042,11 +1056,21 @@ generateTableHTML(dates, scheduleData, ceList, workTypeOverrides) {
             
             const effectiveWorkType = this.getEffectiveWorkType(ce.id, dateKey, ceList, workTypeOverrides);
             let cellClass = `work-cell date-col type-${effectiveWorkType.toLowerCase()}`;
-            if (workData.status) cellClass += ` status-${workData.status}`;
-            if (workData.desired) cellClass += ' desired';
-            if (isWeekendOrHoliday) cellClass += ' holiday';
             
-            html += `<td class="${cellClass}">${status}</td>`;
+            if (workData.status) {
+                cellClass += ` status-${workData.status}`;
+            }
+            if (workData.customText?.trim()) {
+                cellClass += ' status-text';
+            }
+            if (workData.desired) {
+                cellClass += ' desired';
+            }
+            if (isWeekendOrHoliday) {
+                cellClass += ' holiday';
+            }
+            
+            html += `<td class="${cellClass}">${displayStatus}</td>`;
         });
         
         [summary.A, summary.A1, summary.B, summary.non, summary.off, summary.holidays, summary.actual, summary.night].forEach(v => {
