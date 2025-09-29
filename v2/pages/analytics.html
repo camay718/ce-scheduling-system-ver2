@@ -234,34 +234,6 @@
             </div>
         </div>
 
-        <!-- 統計サマリー -->
-        <div id="quickStats" class="quick-stats">
-            <div class="stat-card">
-                <div class="stat-value" id="totalEventsCount">-</div>
-                <div class="stat-label">総業務数</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-value" id="totalCECount">-</div>
-                <div class="stat-label">登録CE数</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-value" id="totalAssignmentsCount">-</div>
-                <div class="stat-label">総配置数</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-value" id="avgUtilizationRate">-%</div>
-                <div class="stat-label">平均稼働率</div>
-            </div>
-        </div>
-
-        <!-- 権限制限メッセージ -->
-        <div id="accessRestrictionMessage" class="glass-card p-6 mb-6 text-center" style="display:none;">
-            <i class="fas fa-lock text-yellow-600 text-3xl mb-4"></i>
-            <h3 class="text-lg font-semibold text-yellow-800 mb-2">分析機能の利用制限</h3>
-            <p class="text-yellow-700">閲覧者権限では一部の分析機能が制限されています。</p>
-            <p class="text-sm text-yellow-600 mt-2">詳細な分析を行うには、管理者に編集権限の付与を依頼してください。</p>
-        </div>
-
         <!-- 分析機能グリッド -->
         <div class="analytics-grid">
             <!-- 業務別タイムライン -->
@@ -370,7 +342,6 @@
                     window.currentUserData = userData;
 
                     this.showInterface();
-                    await this.loadAnalyticsData();
                     this.updateAnalyticsAccess();
                     
                     console.log('✅ 分析ハブ初期化完了');
@@ -505,12 +476,6 @@
          */
         function openAnalyticsPage(pageName) {
             console.log(`分析ページを開いています: ${pageName}`);
-
-            // 権限チェック
-            if (window.userRole === 'viewer') {
-                window.showMessage('分析機能の利用には編集権限以上が必要です', 'warning');
-                return;
-            }
 
             // 認証情報の取得
             const userData = window.currentUserData || {};
