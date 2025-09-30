@@ -861,11 +861,15 @@
 
 
             <!-- 右側：業務追加ボタン -->
-            <div class="taskbar-right">
-                <button id="addBulkEventBtn" class="btn-unified btn-primary-unified btn-small">
-                    <i class="fas fa-calendar-plus mr-1"></i>期間一括追加
-                </button>
-            </div>
+<div class="taskbar-right">
+    <button id="addBulkEventBtn" class="btn-unified btn-primary-unified btn-small">
+        <i class="fas fa-calendar-plus mr-1"></i>期間一括追加
+    </button>
+    <button id="templateManagerBtn" class="btn-unified btn-outline-unified btn-small">
+        <i class="fas fa-bookmark mr-1"></i>テンプレート編集
+    </button>
+</div>
+
         </div>
     </div>
 
@@ -1023,6 +1027,9 @@ constructor() {
     this.monthlyCallback = null;
     this.monthlyRenderTimeout = null;
     this.lastMonthlyUpdate = {};
+    this.templates = {};
+    this.templatesRef = null;
+    this.templatesCallback = null;
 }
 
 
@@ -1381,6 +1388,15 @@ switchView(view) {
                 console.log('✅ CEリスト表示完了:', window.ceManager.ceList.length, '名');
             }
 
+            // テンプレート編集ボタン
+const templateManagerBtn = document.getElementById('templateManagerBtn');
+if (templateManagerBtn && !templateManagerBtn.dataset.bound) {
+    templateManagerBtn.dataset.bound = 'true';
+    templateManagerBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        this.openTemplateManagerModal();
+    });
+}
 
             renderDailySchedule() {
                 const title = document.getElementById('scheduleTitle');
@@ -1445,15 +1461,20 @@ switchView(view) {
                             <h3 class="font-bold text-sm">${dept}</h3>
                         </div>
                         ${window.userRole !== 'viewer' ? `
-                        <div class="flex items-center gap-1">
-                            <button class="btn-unified btn-primary-unified btn-small" onclick="window.scheduleManager.openQuickAddEvent('${dept}')">
-                                <i class="fas fa-plus mr-1"></i>業務追加
-                            </button>
-                            <button class="btn-unified btn-outline-unified btn-small" onclick="window.scheduleManager.openMonthlyTaskModal('${dept}')" 
-                                    title="この部門の月次業務を追加">
-                                <i class="fas fa-calendar-alt mr-1"></i>月次
-                            </button>
-                        </div>` : ''}
+<div class="flex items-center gap-1">
+    <button class="btn-unified btn-primary-unified btn-small" onclick="window.scheduleManager.openQuickAddEvent('${dept}')">
+        <i class="fas fa-plus mr-1"></i>業務追加
+    </button>
+    <button class="btn-unified btn-outline-unified btn-small" onclick="window.scheduleManager.openMonthlyTaskModal('${dept}')" 
+            title="この部門の月次業務を追加">
+        <i class="fas fa-calendar-alt mr-1"></i>月次
+    </button>
+    <button class="btn-unified btn-outline-unified btn-small" onclick="window.scheduleManager.openSaveTemplateModal('${dept}')" 
+            title="この部門の業務をテンプレート保存">
+        <i class="fas fa-bookmark mr-1"></i>テンプレ保存
+    </button>
+</div>
+
                     </div>
                     <!-- 部門別集計バー -->
                     <div class="dept-summary-container">
@@ -1538,6 +1559,19 @@ this.monthlyRenderTimeout = setTimeout(async () => {
                 updateEvents();
             }
 
+            // テンプレートのリアルタイム更新
+const setupTemplates = () => {
+    if (this.templatesRef && this.templatesCallback) {
+        this.templatesRef.off('value', this.templatesCallback);
+    }
+    this.templatesRef = window.database.ref(`${window.DATA_ROOT}/templates`);
+    this.templatesCallback = (snapshot) => {
+        this.templates = snapshot.val() || {};
+        console.log('🔄 テンプレート更新');
+    };
+    this.templatesRef.on('value', this.templatesCallback);
+};
+setupTemplates();
 
             // dashboard.htmlから業務追加機能を完全移植
             openQuickAddEvent(department) {
@@ -1567,12 +1601,23 @@ this.monthlyRenderTimeout = setTimeout(async () => {
                             </button>
                         </div>
                         
-                        <form id="simpleAddEventForm" class="space-y-4">
-                            <div>
-                                <label class="block text-sm font-bold mb-2">業務名 *</label>
-                                <input type="text" id="simpleEventName" class="input-unified" required placeholder="業務名を入力">
-                            </div>
-                            
+<form id="simpleAddEventForm" class="space-y-4">
+    <div class="mb-3">
+        <label class="block text-sm font-bold mb-1">
+            <i class="fas fa-bookmark mr-1"></i>テンプレート適用
+        </label>
+        <div class="flex gap-2">
+            <select id="simpleTemplateSelect" class="input-unified flex-1"></select>
+            <button type="button" id="applySimpleTemplateBtn" class="btn-unified btn-primary-unified btn-small">
+                適用
+            </button>
+        </div>
+        <div class="text-xs text-gray-500 mt-1">選択テンプレートの業務を当日に一括追加（重複はスキップ）</div>
+    </div>
+    <div>
+        <label class="block text-sm font-bold mb-2">業務名 *</label>
+        <input type="text" id="simpleEventName" class="input-unified" required placeholder="業務名を入力">
+    </div>                  
                             <div>
                                 <label class="block text-sm font-bold mb-2">部門 *</label>
                                 <select id="simpleEventDepartment" class="input-unified" required>
@@ -1630,6 +1675,24 @@ this.monthlyRenderTimeout = setTimeout(async () => {
                 };
             }
 
+            // テンプレート機能の初期化
+const deptSelect = document.getElementById('simpleEventDepartment');
+const tplSelect = document.getElementById('simpleTemplateSelect');
+this.populateTemplateSelect(tplSelect, deptSelect.value);
+
+deptSelect.addEventListener('change', () => {
+    this.populateTemplateSelect(tplSelect, deptSelect.value);
+});
+
+document.getElementById('applySimpleTemplateBtn').onclick = async () => {
+    const tplId = tplSelect.value;
+    if (!tplId) return window.showMessage('テンプレートを選択してください', 'warning');
+    const dateKey = this.formatDate(this.selectedDate);
+    const dept = deptSelect.value;
+    await this.applyTemplateToDate(dateKey, dept, tplId);
+    modal.remove();
+    setTimeout(() => this.loadAndRenderEventsForSelectedDate(), 300);
+};
 
             buildDepartmentOptions(selectedDept = '') {
                 const departments = window.DEPARTMENTS || ['機器管理・人工呼吸', '血液浄化', '不整脈', '心・カテーテル', '人工心肺・補助循環', '手術・麻酔'];
@@ -1660,10 +1723,27 @@ this.monthlyRenderTimeout = setTimeout(async () => {
                 }
 
 
-                try {
-                    const dateKey = this.formatDate(this.selectedDate);
-                    const eventRef = window.database.ref(`${window.DATA_ROOT}/events/byDate/${dateKey}`).push();
+try {
+    const dateKey = this.formatDate(this.selectedDate);
+    
+    // 重複チェック
+    const existingEventsSnapshot = await window.database.ref(`${window.DATA_ROOT}/events/byDate/${dateKey}`).once('value');
+    const existingEvents = existingEventsSnapshot.val() || {};
+    const isDuplicate = Object.values(existingEvents).some(event =>
+        event.name === name &&
+        event.department === department &&
+        event.startTime === (startTime || null) &&
+        event.endTime === (endTime || null) &&
+        event.count === count &&
+        event.requiredPeople === requiredPeople
+    );
 
+    if (isDuplicate) {
+        window.showMessage('同じ業務名、部門、時間、件数、人数の業務が既に存在します', 'warning');
+        return;
+    }
+    
+    const eventRef = window.database.ref(`${window.DATA_ROOT}/events/byDate/${dateKey}`).push();
 
                     const eventData = {
                         id: eventRef.key,
@@ -1727,11 +1807,24 @@ window.showMessage('業務を追加しました', 'success');
                             </button>
                         </div>
                         
-                        <form id="bulkAddEventForm" class="space-y-4">
-                            <div>
-                                <label class="block text-sm font-bold mb-2">業務名 *</label>
-                                <input type="text" id="bulkEventName" class="input-unified" required placeholder="業務名を入力">
-                            </div>
+<form id="bulkAddEventForm" class="space-y-4">
+    <div class="mb-3">
+        <label class="block text-sm font-bold mb-1">
+            <i class="fas fa-bookmark mr-1"></i>テンプレート適用
+        </label>
+        <div class="grid grid-cols-2 gap-2 mb-2">
+            <select id="bulkTemplateDept" class="input-unified"></select>
+            <select id="bulkTemplateSelect" class="input-unified"></select>
+        </div>
+        <button type="button" id="applyBulkTemplateBtn" class="btn-unified btn-primary-unified btn-small w-full">
+            選択期間にテンプレート適用
+        </button>
+        <div class="text-xs text-gray-500 mt-1">選択部門のテンプレートを期間内の指定曜日に適用（重複はスキップ）</div>
+    </div>
+    <div>
+        <label class="block text-sm font-bold mb-2">業務名 *</label>
+        <input type="text" id="bulkEventName" class="input-unified" required placeholder="業務名を入力">
+    </div>
                             
                             <div>
                                 <label class="block text-sm font-bold mb-2">部門 *</label>
@@ -1836,6 +1929,49 @@ window.showMessage('業務を追加しました', 'success');
                     e.preventDefault();
                     this.addBulkEvents(modal);
                 };
+
+                // テンプレート機能の初期化
+const bulkTplDept = document.getElementById('bulkTemplateDept');
+const bulkTplSelect = document.getElementById('bulkTemplateSelect');
+bulkTplDept.innerHTML = this.buildDepartmentOptions();
+this.populateTemplateSelect(bulkTplSelect, bulkTplDept.value);
+
+bulkTplDept.addEventListener('change', () => {
+    this.populateTemplateSelect(bulkTplSelect, bulkTplDept.value);
+});
+
+document.getElementById('applyBulkTemplateBtn').onclick = async () => {
+    const tplId = bulkTplSelect.value;
+    const dept = bulkTplDept.value;
+    if (!tplId || !dept) return window.showMessage('部門とテンプレートを選択してください', 'warning');
+    
+    const startDate = document.getElementById('bulkStartDate').value;
+    const endDate = document.getElementById('bulkEndDate').value;
+    const excludeHolidays = document.getElementById('excludeHolidays')?.checked || false;
+
+    // 曜日選択の収集
+    const selectedDays = [];
+    const dayCheckboxes = ['bulkMon','bulkTue','bulkWed','bulkThu','bulkFri','bulkSat','bulkSun'];
+    dayCheckboxes.forEach((id, idx) => {
+        if (document.getElementById(id)?.checked) {
+            selectedDays.push((idx + 1) % 7); // 月=1, 日=0
+        }
+    });
+    
+    if (selectedDays.length === 0) {
+        return window.showMessage('実施曜日を選択してください', 'warning');
+    }
+
+    await this.applyTemplateToRange(startDate, endDate, selectedDays, excludeHolidays, dept, tplId);
+    modal.remove();
+    
+    // 現在表示日が範囲内なら再描画
+    const current = this.formatDate(this.selectedDate);
+    if (current >= startDate && current <= endDate) {
+        setTimeout(() => this.loadAndRenderEventsForSelectedDate(), 300);
+    }
+};
+                
             }
 
 
@@ -3705,15 +3841,18 @@ openEditEventModal(dateKey, eventId, eventData) {
                     <textarea id="editDescription" class="input-unified" rows="3">${this.escapeHtmlAttribute(eventData.description || '')}</textarea>
                 </div>
                 
-                <div class="flex space-x-3">
-                    <button type="button" onclick="this.closest('.fixed').remove()" 
-                            class="btn-unified btn-outline-unified flex-1">キャンセル</button>
-                    <button type="button" onclick="window.scheduleManager.deleteEventConfirm('${dateKey}', '${eventId}', '${this.escapeHtmlAttribute(eventData.name || '')}')" 
-                            class="btn-unified btn-outline-unified text-red-600 border-red-600">
-                        <i class="fas fa-trash mr-1"></i>削除</button>
-                    <button type="submit" class="btn-unified btn-primary-unified flex-1">
-                        <i class="fas fa-save mr-2"></i>更新</button>
-                </div>
+<div class="flex space-x-2">
+    <button type="button" onclick="this.closest('.fixed').remove()" 
+            class="btn-unified btn-outline-unified flex-1">キャンセル</button>
+    <button type="button" onclick="window.scheduleManager.openCopyEventModal('${dateKey}', '${eventId}')" 
+            class="btn-unified btn-outline-unified">
+        <i class="fas fa-copy mr-1"></i>コピー</button>
+    <button type="button" onclick="window.scheduleManager.deleteEventConfirm('${dateKey}', '${eventId}', '${this.escapeHtmlAttribute(eventData.name || '')}')" 
+            class="btn-unified btn-outline-unified text-red-600 border-red-600">
+        <i class="fas fa-trash mr-1"></i>削除</button>
+    <button type="submit" class="btn-unified btn-primary-unified flex-1">
+        <i class="fas fa-save mr-2"></i>更新</button>
+</div>
             </form>
         </div>
     `;
@@ -4001,6 +4140,342 @@ async deleteMonthlyTaskConfirm(yearMonth, taskId, taskName) {
     }
 }
 
+// テンプレート一覧をセレクトに反映
+populateTemplateSelect(selectEl, department) {
+    const list = (this.templates?.[department]) ? Object.values(this.templates[department]) : [];
+    list.sort((a,b) => (a.order ?? 0) - (b.order ?? 0));
+    selectEl.innerHTML = '<option value="">（選択）</option>' + 
+        list.map(t => `<option value="${t.id}">${this.escapeHtmlAttribute(t.name)}</option>`).join('');
+}
+
+// 重複判定ヘルパー
+isSameEvent(a, b) {
+    const norm = v => (v ?? null);
+    return (a.name === b.name) &&
+           (a.department === b.department) &&
+           (norm(a.startTime) === norm(b.startTime)) &&
+           (norm(a.endTime) === norm(b.endTime)) &&
+           ((a.requiredPeople|0) === (b.requiredPeople|0)) &&
+           ((a.count|0) === (b.count|0));
+}
+
+// テンプレート適用（単日）
+async applyTemplateToDate(dateKey, department, templateId) {
+    const tpl = this.templates?.[department]?.[templateId];
+    if (!tpl) return { added: 0, skipped: 0 };
+
+    const ref = window.database.ref(`${window.DATA_ROOT}/events/byDate/${dateKey}`);
+    const snap = await ref.once('value');
+    const existingById = snap.val() || {};
+    const existing = Object.values(existingById).filter(ev => ev.department === department);
+
+    let added = 0, skipped = 0;
+    for (const item of (tpl.items || [])) {
+        const exists = existing.some(ev => this.isSameEvent(item, ev));
+        if (exists) { skipped++; continue; }
+        
+        const newRef = ref.push();
+        const data = {
+            id: newRef.key,
+            name: item.name,
+            department,
+            startTime: item.startTime || null,
+            endTime: item.endTime || null,
+            count: item.count|0,
+            requiredPeople: item.requiredPeople|0,
+            description: item.description || null,
+            assignedCEs: [],
+            createdAt: firebase.database.ServerValue.TIMESTAMP,
+            createdBy: window.currentUserData?.displayName || 'user',
+            templateApplied: true
+        };
+        await newRef.set(data);
+        added++;
+    }
+    
+    if (window.auditLogger) {
+        await window.auditLogger.logAction('template-apply', { department, dateKey, templateId, added, skipped });
+    }
+    
+    return { added, skipped };
+}
+
+// テンプレート期間適用
+async applyTemplateToRange(startDate, endDate, selectedDays, excludeHolidays, department, templateId) {
+    const start = new Date(startDate + 'T00:00:00');
+    const end = new Date(endDate + 'T00:00:00');
+    let totalAdded = 0, totalSkipped = 0, totalDays = 0;
+
+    for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
+        const dow = d.getDay();
+        if (!selectedDays.includes(dow)) continue;
+        if (excludeHolidays && window.isJapaneseHoliday && window.isJapaneseHoliday(d)) continue;
+
+        const dateKey = this.formatDate(d);
+        const { added, skipped } = await this.applyTemplateToDate(dateKey, department, templateId);
+        totalAdded += added;
+        totalSkipped += skipped;
+        totalDays++;
+    }
+
+    if (window.auditLogger) {
+        await window.auditLogger.logAction('template-apply', {
+            department, templateId, startDate, endDate,
+            days: selectedDays, excludeHolidays,
+            totalDays, totalAdded, totalSkipped
+        });
+    }
+
+    window.showMessage(`テンプレ一括適用: ${totalDays}日対象 / ${totalAdded}件追加（${totalSkipped}件スキップ）`, 'success');
+}
+
+// テンプレート保存モーダル
+openSaveTemplateModal(defaultDepartment) {
+    if (window.userRole === 'viewer') {
+        return window.showMessage('編集権限がありません', 'warning');
+    }
+    
+    const dateKey = this.formatDate(this.selectedDate);
+    const cards = Array.from(document.querySelectorAll(`.task-list[data-department="${defaultDepartment}"] .event-card`));
+    const items = cards.map(card => {
+        const evId = card.dataset.eventId;
+        const title = card.querySelector('.font-semibold')?.textContent?.trim() || '';
+        return { id: evId, display: title };
+    });
+
+    const modal = document.createElement('div');
+    modal.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50';
+    modal.innerHTML = `
+        <div class="glass-card p-6 max-w-lg w-full mx-4 max-h-[90vh] overflow-y-auto">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-lg font-bold"><i class="fas fa-bookmark mr-2"></i>テンプレート保存</h3>
+                <button onclick="this.closest('.fixed').remove()" class="text-gray-500 hover:text-gray-700">
+                    <i class="fas fa-times text-xl"></i>
+                </button>
+            </div>
+            
+            <form id="saveTplForm" class="space-y-4">
+                <div>
+                    <label class="block text-sm font-bold mb-1">部門</label>
+                    <select id="tplDept" class="input-unified">
+                        ${this.buildDepartmentOptions(defaultDepartment)}
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-sm font-bold mb-1">テンプレート名 *</label>
+                    <input type="text" id="tplName" class="input-unified" placeholder="例: 午前OPE一式" required>
+                </div>
+                <div>
+                    <label class="block text-sm font-bold mb-2">保存する業務（チェックで選択）</label>
+                    <div id="tplEventList" class="space-y-1 max-h-64 overflow-y-auto border rounded p-2">
+                        ${items.length ? items.map(it => `
+                            <label class="flex items-center gap-2 text-sm">
+                                <input type="checkbox" class="tpl-choose" data-ev-id="${it.id}" checked>
+                                <span>${this.escapeHtmlAttribute(it.display)}</span>
+                            </label>
+                        `).join('') : '<div class="text-xs text-gray-500">この部門に当日の業務カードがありません</div>'}
+                    </div>
+                </div>
+                <div class="flex gap-3">
+                    <button type="button" class="btn-unified btn-outline-unified flex-1" onclick="this.closest('.fixed').remove()">キャンセル</button>
+                    <button type="submit" class="btn-unified btn-primary-unified flex-1"><i class="fas fa-save mr-2"></i>保存</button>
+                </div>
+            </form>
+        </div>
+    `;
+    document.body.appendChild(modal);
+
+    document.getElementById('saveTplForm').onsubmit = async (e) => {
+        e.preventDefault();
+        const dept = (document.getElementById('tplDept')?.value) || defaultDepartment;
+        const name = document.getElementById('tplName').value.trim();
+        if (!name) return window.showMessage('テンプレート名を入力してください', 'warning');
+
+        const evIds = Array.from(modal.querySelectorAll('.tpl-choose:checked')).map(x => x.dataset.evId);
+        const daySnap = await window.database.ref(`${window.DATA_ROOT}/events/byDate/${dateKey}`).once('value');
+        const byId = daySnap.val() || {};
+        const selectedEvents = Object.values(byId).filter(ev => ev.department === dept && evIds.includes(ev.id));
+
+        const items = selectedEvents.map(ev => ({
+            name: ev.name || '',
+            department: dept,
+            startTime: ev.startTime || null,
+            endTime: ev.endTime || null,
+            requiredPeople: Number.isFinite(ev.requiredPeople) ? ev.requiredPeople : 0,
+            count: Number.isFinite(ev.count) ? ev.count : 0,
+            description: ev.description || null
+        }));
+
+        const tplRef = window.database.ref(`${window.DATA_ROOT}/templates/${dept}`).push();
+        const templateData = {
+            id: tplRef.key,
+            name,
+            department: dept,
+            order: Date.now(),
+            items,
+            createdAt: firebase.database.ServerValue.TIMESTAMP,
+            createdBy: window.currentUserData?.displayName || 'user'
+        };
+        await tplRef.set(templateData);
+        
+        if (window.auditLogger) {
+            await window.auditLogger.logAction('template-create', { name, department: dept, items: items.length });
+        }
+        
+        window.showMessage('テンプレートを保存しました', 'success');
+        modal.remove();
+    };
+}
+
+// テンプレート管理モーダル
+openTemplateManagerModal() {
+    if (window.userRole === 'viewer') {
+        return window.showMessage('編集権限がありません', 'warning');
+    }
+    
+    const modal = document.createElement('div');
+    modal.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50';
+    
+    const departments = window.DEPARTMENTS || [];
+    const content = departments.map(dept => {
+        const list = (this.templates?.[dept]) ? Object.values(this.templates[dept]).sort((a,b)=>(a.order??0)-(b.order??0)) : [];
+        return `
+        <div class="mb-4 p-3 border rounded">
+            <div class="font-semibold mb-2"><i class="fas fa-folder-open mr-1"></i>${dept}</div>
+            ${list.length ? list.map((t, idx) => `
+                <div class="flex items-center gap-2 mb-2">
+                    <input class="tpl-name input-unified flex-1" data-dept="${dept}" data-id="${t.id}" value="${this.escapeHtmlAttribute(t.name)}">
+                    <button class="btn-unified btn-outline-unified btn-small tpl-up" data-dept="${dept}" data-id="${t.id}" ${idx===0?'disabled':''}><i class="fas fa-arrow-up"></i></button>
+                    <button class="btn-unified btn-outline-unified btn-small tpl-down" data-dept="${dept}" data-id="${t.id}" ${idx===list.length-1?'disabled':''}><i class="fas fa-arrow-down"></i></button>
+                    <button class="btn-unified btn-outline-unified btn-small text-red-600 border-red-600 tpl-del" data-dept="${dept}" data-id="${t.id}"><i class="fas fa-trash"></i></button>
+                </div>
+            `).join('') : '<div class="text-xs text-gray-500">この部門のテンプレートはありません</div>'}
+        </div>`;
+    }).join('');
+    
+    modal.innerHTML = `
+        <div class="glass-card p-6 max-w-3xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-lg font-bold"><i class="fas fa-bookmark mr-2"></i>テンプレート編集</h3>
+                <button onclick="this.closest('.fixed').remove()" class="text-gray-500 hover:text-gray-700">
+                    <i class="fas fa-times text-xl"></i>
+                </button>
+            </div>
+            ${content}
+            <div class="text-right">
+                <button class="btn-unified btn-outline-unified" onclick="this.closest('.fixed').remove()">閉じる</button>
+            </div>
+        </div>
+    `;
+    document.body.appendChild(modal);
+
+    // イベントリスナー設定
+    modal.querySelectorAll('.tpl-name').forEach(input => {
+        input.addEventListener('change', async (e) => {
+            const dept = e.target.dataset.dept, id = e.target.dataset.id, name = e.target.value.trim();
+            await window.database.ref(`${window.DATA_ROOT}/templates/${dept}/${id}/name`).set(name || '名称未設定');
+            if (window.auditLogger) await window.auditLogger.logAction('template-rename', { department: dept, id, name });
+        });
+    });
+
+    // 並び替え・削除機能
+    const reorder = async (dept, id, dir) => {
+        const list = Object.values(this.templates?.[dept] || {}).sort((a,b)=>(a.order??0)-(b.order??0));
+        const idx = list.findIndex(x => x.id === id);
+        const swapIdx = idx + (dir==='up' ? -1 : 1);
+        if (swapIdx < 0 || swapIdx >= list.length) return;
+        const a = list[idx], b = list[swapIdx];
+        const updates = {};
+        updates[`${window.DATA_ROOT}/templates/${dept}/${a.id}/order`] = b.order ?? 0;
+        updates[`${window.DATA_ROOT}/templates/${dept}/${b.id}/order`] = a.order ?? 0;
+        await window.database.ref().update(updates);
+        if (window.auditLogger) await window.auditLogger.logAction('template-reorder', { department: dept, a:a.id, b:b.id });
+        modal.remove();
+        this.openTemplateManagerModal();
+    };
+    
+    modal.querySelectorAll('.tpl-up').forEach(btn => btn.addEventListener('click', () => reorder(btn.dataset.dept, btn.dataset.id, 'up')));
+    modal.querySelectorAll('.tpl-down').forEach(btn => btn.addEventListener('click', () => reorder(btn.dataset.dept, btn.dataset.id, 'down')));
+    modal.querySelectorAll('.tpl-del').forEach(btn => btn.addEventListener('click', async () => {
+        if (!confirm('このテンプレートを削除しますか？')) return;
+        await window.database.ref(`${window.DATA_ROOT}/templates/${btn.dataset.dept}/${btn.dataset.id}`).remove();
+        if (window.auditLogger) await window.auditLogger.logAction('template-delete', { department: btn.dataset.dept, id: btn.dataset.id });
+        modal.remove();
+        this.openTemplateManagerModal();
+    }));
+}
+
+// コピー機能
+openCopyEventModal(srcDateKey, eventId) {
+    const modal = document.createElement('div');
+    modal.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50';
+    modal.innerHTML = `
+        <div class="glass-card p-6 w-full max-w-sm mx-4">
+            <div class="flex justify-between items-center mb-3">
+                <h3 class="text-lg font-bold"><i class="fas fa-copy mr-2"></i>業務コピー</h3>
+                <button onclick="this.closest('.fixed').remove()"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="space-y-3">
+                <div>
+                    <label class="block text-sm font-bold mb-1">配置日付</label>
+                    <input type="date" id="copyEventTarget" class="input-unified" value="${this.formatDate(this.selectedDate)}">
+                </div>
+                <div class="flex gap-2">
+                    <button class="btn-unified btn-outline-unified flex-1" onclick="this.closest('.fixed').remove()">キャンセル</button>
+                    <button class="btn-unified btn-primary-unified flex-1" id="doCopyEventBtn"><i class="fas fa-check mr-1"></i>作成</button>
+                </div>
+            </div>
+        </div>`;
+    document.body.appendChild(modal);
+    
+    document.getElementById('doCopyEventBtn').onclick = async () => {
+        const dateKey = document.getElementById('copyEventTarget').value;
+        
+        // 元イベントデータ取得
+        const eventSnap = await window.database.ref(`${window.DATA_ROOT}/events/byDate/${srcDateKey}/${eventId}`).once('value');
+        const eventData = eventSnap.val();
+        
+        if (!eventData) {
+            window.showMessage('コピー元業務が見つかりません', 'error');
+            return;
+        }
+        
+        // 重複チェック
+        const existingSnap = await window.database.ref(`${window.DATA_ROOT}/events/byDate/${dateKey}`).once('value');
+        const existing = Object.values(existingSnap.val() || {});
+        const isDuplicate = existing.some(e => this.isSameEvent(eventData, e));
+        
+        if (isDuplicate) {
+            window.showMessage('コピー先に同じ業務が既に存在します', 'warning');
+            return;
+        }
+        
+        const ref = window.database.ref(`${window.DATA_ROOT}/events/byDate/${dateKey}`).push();
+        const data = {
+            id: ref.key,
+            name: eventData.name,
+            department: eventData.department,
+            startTime: eventData.startTime || null,
+            endTime: eventData.endTime || null,
+            count: eventData.count|0,
+            requiredPeople: eventData.requiredPeople|0,
+            description: eventData.description || null,
+            assignedCEs: [],
+            createdAt: firebase.database.ServerValue.TIMESTAMP,
+            createdBy: window.currentUserData?.displayName || 'user',
+            copiedFrom: { dateKey: srcDateKey, eventId }
+        };
+        await ref.set(data);
+        
+        if (window.auditLogger) {
+            await window.auditLogger.logAction('event-copy', { from: srcDateKey, to: dateKey, name: data.name });
+        }
+        
+        window.showMessage('コピーを作成しました', 'success');
+        modal.remove();
+        setTimeout(()=>this.loadAndRenderEventsForSelectedDate(), 300);
+    };
+}
 
         }
 
