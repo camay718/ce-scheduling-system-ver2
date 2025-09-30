@@ -34,7 +34,8 @@ class AuditLogger {
             };
 
             // 重要操作は同期記録、その他は非同期記録
-            const criticalActions = ['login', 'logout', 'user-create', 'user-delete', 'schedule-publish'];
+            const criticalActions = ['login', 'logout', 'user-create', 'user-delete', 'schedule-publish', 'template-delete'];
+
             
             if (criticalActions.includes(action)) {
                 await this.writeLogEntry(entry);
@@ -125,6 +126,46 @@ class AuditLogger {
             changes: scheduleData.changes || {}
         });
     }
+
+    async logTemplateAction(action, data = {}) {
+    // action: 'create' | 'rename' | 'delete' | 'apply' | 'reorder'
+    await this.logAction(`template-${action}`, {
+        department: data.department || 'unknown',
+        templateId: data.templateId || data.id || '',
+        name: data.name || '',
+        // 単日適用
+        dateKey: data.dateKey || '',
+        added: data.added ?? null,
+        skipped: data.skipped ?? null,
+        // 期間適用
+        startDate: data.startDate || '',
+        endDate: data.endDate || '',
+        totalDays: data.totalDays ?? null,
+        totalAdded: data.totalAdded ?? null,
+        totalSkipped: data.totalSkipped ?? null,
+        // その他
+        items: data.items ?? null
+    });
+}
+
+async logEventCopy(data = {}) {
+    await this.logAction('event-copy', {
+        name: data.name || '',
+        from: data.from || data.srcDateKey || '',
+        to: data.to || data.destDateKey || '',
+        department: data.department || 'unknown'
+    });
+}
+
+async logMonthlyTaskCopy(data = {}) {
+    await this.logAction('monthly-task-copy', {
+        name: data.name || '',
+        fromYearMonth: data.fromYearMonth || '',
+        toYearMonth: data.toYearMonth || '',
+        department: data.department || 'unknown'
+    });
+}
+
 }
 
 // グローバルインスタンス作成
