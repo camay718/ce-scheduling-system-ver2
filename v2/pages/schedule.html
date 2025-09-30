@@ -1388,16 +1388,6 @@ switchView(view) {
                 console.log('✅ CEリスト表示完了:', window.ceManager.ceList.length, '名');
             }
 
-            // テンプレート編集ボタン
-const templateManagerBtn = document.getElementById('templateManagerBtn');
-if (templateManagerBtn && !templateManagerBtn.dataset.bound) {
-    templateManagerBtn.dataset.bound = 'true';
-    templateManagerBtn.addEventListener('click', (e) => {
-        e.preventDefault();
-        this.openTemplateManagerModal();
-    });
-}
-
             renderDailySchedule() {
                 const title = document.getElementById('scheduleTitle');
                 const grid = document.getElementById('departmentGrid');
@@ -1460,22 +1450,22 @@ if (templateManagerBtn && !templateManagerBtn.dataset.bound) {
                             <i class="fas fa-${window.DEPARTMENT_ICONS?.[dept] || 'cog'}" style="color: ${deptColor}"></i>
                             <h3 class="font-bold text-sm">${dept}</h3>
                         </div>
-                        ${window.userRole !== 'viewer' ? `
-<div class="flex items-center gap-1">
-    <button class="btn-unified btn-primary-unified btn-small" onclick="window.scheduleManager.openQuickAddEvent('${dept}')">
-        <i class="fas fa-plus mr-1"></i>業務追加
-    </button>
-    <button class="btn-unified btn-outline-unified btn-small" onclick="window.scheduleManager.openMonthlyTaskModal('${dept}')" 
-            title="この部門の月次業務を追加">
-        <i class="fas fa-calendar-alt mr-1"></i>月次
-    </button>
-    <button class="btn-unified btn-outline-unified btn-small" onclick="window.scheduleManager.openSaveTemplateModal('${dept}')" 
-            title="この部門の業務をテンプレート保存">
-        <i class="fas fa-bookmark mr-1"></i>テンプレ保存
-    </button>
-</div>
-
+                ${window.userRole !== 'viewer' ? `
+                        <div class="flex items-center gap-1">
+                            <button class="btn-unified btn-primary-unified btn-small" onclick="window.scheduleManager.openQuickAddEvent('${dept}')">
+                                <i class="fas fa-plus mr-1"></i>業務追加
+                            </button>
+                            <button class="btn-unified btn-outline-unified btn-small" onclick="window.scheduleManager.openMonthlyTaskModal('${dept}')" 
+                                    title="この部門の月次業務を追加">
+                                <i class="fas fa-calendar-alt mr-1"></i>月次
+                            </button>
+                            <button class="btn-unified btn-outline-unified btn-small" onclick="window.scheduleManager.openSaveTemplateModal('${dept}')" 
+                                    title="この部門の業務をテンプレート保存">
+                                <i class="fas fa-bookmark mr-1"></i>テンプレ保存
+                            </button>
+                        </div>` : ''}
                     </div>
+
                     <!-- 部門別集計バー -->
                     <div class="dept-summary-container">
                         <span class="text-xs dept-summary-text">0/0名</span>
@@ -1556,10 +1546,7 @@ this.monthlyRenderTimeout = setTimeout(async () => {
                     this.monthlyRef.on('value', this.monthlyCallback);
                 };
                 
-                updateEvents();
-            }
-
-            // テンプレートのリアルタイム更新
+// テンプレートのリアルタイム更新
 const setupTemplates = () => {
     if (this.templatesRef && this.templatesCallback) {
         this.templatesRef.off('value', this.templatesCallback);
@@ -1572,6 +1559,10 @@ const setupTemplates = () => {
     this.templatesRef.on('value', this.templatesCallback);
 };
 setupTemplates();
+
+updateEvents();
+            }
+
 
             // dashboard.htmlから業務追加機能を完全移植
             openQuickAddEvent(department) {
@@ -1673,9 +1664,8 @@ setupTemplates();
                     e.preventDefault();
                     this.addSimpleEvent(modal);
                 };
-            }
 
-            // テンプレート機能の初期化
+                // テンプレート機能の初期化
 const deptSelect = document.getElementById('simpleEventDepartment');
 const tplSelect = document.getElementById('simpleTemplateSelect');
 this.populateTemplateSelect(tplSelect, deptSelect.value);
@@ -1693,6 +1683,8 @@ document.getElementById('applySimpleTemplateBtn').onclick = async () => {
     modal.remove();
     setTimeout(() => this.loadAndRenderEventsForSelectedDate(), 300);
 };
+
+            }
 
             buildDepartmentOptions(selectedDept = '') {
                 const departments = window.DEPARTMENTS || ['機器管理・人工呼吸', '血液浄化', '不整脈', '心・カテーテル', '人工心肺・補助循環', '手術・麻酔'];
