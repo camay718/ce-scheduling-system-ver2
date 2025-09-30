@@ -1266,6 +1266,17 @@ if (todayWeekBtn) todayWeekBtn.onclick = () => this.goToCurrentWeek();
                     monthlyBtn.dataset.bound = 'true';
                     monthlyBtn.onclick = () => this.openMonthlyTaskModal();
                 }
+                // テンプレート編集ボタン
+const templateManagerBtn = document.getElementById('templateManagerBtn');
+if (templateManagerBtn && !templateManagerBtn.dataset.bound) {
+    templateManagerBtn.dataset.bound = 'true';
+    templateManagerBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        this.openTemplateManagerModal();
+    });
+}
+
             }
 
 
