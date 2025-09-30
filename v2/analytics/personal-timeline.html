@@ -841,21 +841,26 @@
             document.getElementById('applyFiltersBtn').addEventListener('click', loadTimelineData);
             document.getElementById('resetFiltersBtn').addEventListener('click', resetFilters);
             
-            setTimeout(() => {
-                const allDeptCheckbox = document.querySelector('.department-filter[value="all"]');
-                if (allDeptCheckbox) {
-                    allDeptCheckbox.addEventListener('change', function() {
-                        const isChecked = this.checked;
-                        document.querySelectorAll('.department-filter:not([value="all"])').forEach(cb => {
-                            cb.checked = isChecked;
-                        });
-                    });
-                }
-                
-                document.querySelectorAll('.department-filter:not([value="all"])').forEach(cb => {
-                    cb.addEventListener('change', updateAllDepartmentCheckbox);
-                });
-            }, 100);
+setTimeout(() => {
+    const allDeptCheckbox = document.querySelector('.department-filter[value="all"]');
+    if (allDeptCheckbox) {
+        allDeptCheckbox.addEventListener('change', function() {
+            const isChecked = this.checked;
+            document.querySelectorAll('.department-filter:not([value="all"])').forEach(cb => {
+                cb.checked = isChecked;
+            });
+            regenerateViews(); // 即時更新追加
+        });
+    }
+    
+    document.querySelectorAll('.department-filter:not([value="all"])').forEach(cb => {
+        cb.addEventListener('change', () => {
+            updateAllDepartmentCheckbox();
+            regenerateViews(); // 即時更新追加
+        });
+    });
+}, 100);
+
         }
 
         // ========== データ読み込み ==========
@@ -887,40 +892,75 @@
                 console.error('❌ タイムライン読み込みエラー:', error);
                 showMessage('データの読み込みに失敗しました', 'error');
             } finally {
+                // CEフィルター確実生成
+setTimeout(() => {
+    generateCEFilterList();
+    updateSummary();
+}, 200);
                 showLoading(false);
             }
         }
 
-        async function loadDataFromFirebase() {
-            if (!database) throw new Error('Firebase未接続');
-            
-            try {
-                console.log('🔄 Firebaseからデータ読み込み中...');
-                
-                const [eventsByDateSnapshot, latestSchedule] = await Promise.all([
-                    database.ref(`${DATA_ROOT}/events/byDate`).once('value'),
-                    loadLatestWorkSchedule()
-                ]);
-                
-                v2EventsByDate = eventsByDateSnapshot.val() || {};
-                
-                if (latestSchedule) {
-                    globalCEList = buildCEListFromWorkSchedule(latestSchedule);
-                    globalWorkStatusData = buildWorkStatusMap(latestSchedule, globalCEList, currentDateRange);
-                    console.log('✅ 勤務表から全CE取得:', globalCEList.length, '名');
-                } else {
-                    console.warn('⚠️ 公開勤務表が見つかりません');
-                    globalCEList = [];
-                    globalWorkStatusData = {};
-                }
-                
-                console.log('✅ Firebaseデータ読み込み完了');
-                
-            } catch (error) {
-                console.error('❌ Firebase読み込みエラー:', error);
-                throw error;
-            }
+async function loadDataFromFirebase() {
+    if (!database) throw new Error('Firebase未接続');
+    
+    try {
+        console.log('🔄 Firebaseからデータ読み込み中...');
+        
+        const [eventsByDateSnapshot, latestSchedule] = await Promise.all([
+            database.ref(`${DATA_ROOT}/events/byDate`).once('value'),
+            loadLatestWorkSchedule()
+        ]);
+        
+        v2EventsByDate = eventsByDateSnapshot.val() || {};
+        console.log('📊 イベントデータ:', Object.keys(v2EventsByDate).length, '日分');
+        
+        if (latestSchedule && latestSchedule.ceList) {
+            globalCEList = buildCEListFromWorkSchedule(latestSchedule);
+            globalWorkStatusData = buildWorkStatusMap(latestSchedule, globalCEList, currentDateRange);
+            console.log('✅ 勤務表からCE取得:', globalCEList.length, '名');
+        } else {
+            console.warn('⚠️ 公開勤務表未発見 - CEリストからフォールバック読み込み');
+            await loadCEListFallback();
         }
+        
+        console.log('✅ Firebaseデータ読み込み完了 - CE数:', globalCEList.length);
+        
+    } catch (error) {
+        console.error('❌ Firebase読み込みエラー:', error);
+        throw error;
+    }
+}
+
+// フォールバック用CE読み込み関数を追加
+async function loadCEListFallback() {
+    try {
+        const ceListSnapshot = await database.ref(`${DATA_ROOT}/ceList`).once('value');
+        const ceListData = ceListSnapshot.val();
+        
+        if (ceListData && ceListData.list && Array.isArray(ceListData.list)) {
+            globalCEList = ceListData.list
+                .filter(ce => ce && ce.id && (ce.fullName || ce.iconName || ce.name))
+                .map(ce => ({
+                    id: ce.id,
+                    name: ce.fullName || ce.iconName || ce.displayName || ce.name,
+                    fullName: ce.fullName || ce.iconName || ce.displayName || ce.name,
+                    iconName: ce.iconName || ce.displayName || ce.name,
+                    workType: ce.workType || 'ME'
+                }));
+            console.log('✅ フォールバック: CEリスト読み込み完了:', globalCEList.length, '名');
+        } else {
+            globalCEList = [];
+            console.error('❌ CEリストデータが見つかりません');
+        }
+        
+        globalWorkStatusData = {}; // フォールバック時は勤務状態なし
+    } catch (error) {
+        console.error('❌ CEリストフォールバック読み込みエラー:', error);
+        globalCEList = [];
+        globalWorkStatusData = {};
+    }
+}
 
         function generateDateRange(startDateStr, endDateStr) {
             const dates = [];
@@ -948,41 +988,62 @@
 function generateCEFilterList() {
     const container = document.getElementById('ceFilterContainer');
     const countEl = document.getElementById('totalCECount');
-    if (!container || !globalCEList) return;
+    if (!container) return;
+
+    console.log('🔄 CEフィルター生成:', { globalCEList: globalCEList.length });
 
     // 既存選択を保持
-    const preselected = new Set(Array.from(container.querySelectorAll('.ce-filter:checked')).map(cb => cb.value));
+    const preselected = new Set(
+        Array.from(container.querySelectorAll('.ce-filter:checked')).map(cb => cb.value)
+    );
 
     container.innerHTML = '';
     if (countEl) countEl.textContent = globalCEList.length;
 
+    if (globalCEList.length === 0) {
+        container.innerHTML = '<div class="text-gray-500 text-xs p-2">CEリストを読み込み中...</div>';
+        return;
+    }
+
     globalCEList.forEach(ce => {
         const label = document.createElement('label');
         label.className = 'flex items-center text-sm';
-        label.title = ce.fullName;
+        label.title = ce.fullName || ce.name;
         const shouldCheck = preselected.size > 0 ? preselected.has(ce.id) : true;
         label.innerHTML = `
             <input type="checkbox" class="ce-filter" value="${ce.id}" ${shouldCheck ? 'checked' : ''}>
-            <span class="ml-1 truncate">${ce.name}</span>
+            <span class="ml-1 truncate">${ce.fullName || ce.name}</span>
         `;
         container.appendChild(label);
     });
 
-    // 全選択チェックボックスの状態を更新
+    // 全選択チェックボックス設定
     const selectAllCEs = document.getElementById('selectAllCEs');
     if (selectAllCEs) {
-        const checkedCount = container.querySelectorAll('.ce-filter:checked').length;
-        selectAllCEs.checked = checkedCount === globalCEList.length;
-        selectAllCEs.onchange = function() {
+        const total = container.querySelectorAll('.ce-filter').length;
+        const checked = container.querySelectorAll('.ce-filter:checked').length;
+        selectAllCEs.checked = total > 0 && checked === total;
+
+        // 既存イベントクリア
+        selectAllCEs.onchange = null;
+        selectAllCEs.addEventListener('change', function() {
             const isChecked = this.checked;
             container.querySelectorAll('.ce-filter').forEach(cb => cb.checked = isChecked);
-        };
+            regenerateViews(); // 即時更新
+        });
     }
 
+    // 個別CE変更で即時更新
     container.querySelectorAll('.ce-filter').forEach(cb => {
-        cb.addEventListener('change', updateAllCECheckbox);
+        cb.addEventListener('change', () => {
+            updateAllCECheckbox();
+            regenerateViews(); // 即時更新
+        });
     });
+
+    console.log('✅ CEフィルター生成完了:', globalCEList.length, '名');
 }
+        
             const selectAllCEs = document.getElementById('selectAllCEs');
             if (selectAllCEs) {
                 selectAllCEs.addEventListener('change', function() {
@@ -1417,6 +1478,18 @@ function generateCEFilterList() {
                 allCheckbox.checked = checkedCount === deptCheckboxes.length;
             }
         }
+
+        // 即時更新ヘルパー関数
+function regenerateViews() {
+    try {
+        generateIndividualChart();
+        generateTimeline();
+        updateSummary();
+        console.log('🔄 ビュー再生成完了');
+    } catch (error) {
+        console.error('❌ ビュー再生成エラー:', error);
+    }
+}
 
         function showLoading(show) {
             document.getElementById('loadingIndicator').style.display = show ? 'block' : 'none';
