@@ -20,8 +20,6 @@
     <script src="../js/core/auth-guard.js"></script>
     <script src="../js/utils/date-utils.js"></script>
     <script src="../js/utils/audit-logger.js"></script>
-    <script src="../js/utils/ui-utils.js"></script>
-    <script src="../js/constants.js"></script>
 
     <style>
         :root {
@@ -674,6 +672,48 @@
     </div>
 
     <script>
+        // 部門色定義（constants.jsの代わりにインライン定義）
+        const DEPARTMENT_COLORS = {
+            '機器管理・人工呼吸': '#90EE90',
+            '血液浄化': '#FFB6C1',
+            '不整脈': '#9370DB',
+            '心・カテーテル': '#32CD32',
+            '人工心肺・補助循環': '#4169E1',
+            '手術・麻酔': '#87CEEB',
+            '会議・ミーティング・勉強会・打ち合わせ': '#9E9E9E',
+            '出張・研修内容': '#9E9E9E',
+            'その他・連絡': '#9E9E9E'
+        };
+
+        // showMessage のダミー実装
+        if (!window.showMessage) {
+            window.showMessage = (msg, type) => {
+                console.log(`[${type}] ${msg}`);
+                const colors = {
+                    'success': '#4CAF50',
+                    'error': '#f44336',
+                    'warning': '#FF9800',
+                    'info': '#2196F3'
+                };
+                const div = document.createElement('div');
+                div.style.cssText = `
+                    position: fixed;
+                    top: 20px;
+                    right: 20px;
+                    background: ${colors[type] || '#333'};
+                    color: white;
+                    padding: 16px 24px;
+                    border-radius: 8px;
+                    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+                    z-index: 10000;
+                    font-weight: 600;
+                `;
+                div.textContent = msg;
+                document.body.appendChild(div);
+                setTimeout(() => div.remove(), 3000);
+            };
+        }
+
         class StaffingAdjustmentSystem {
             constructor() {
                 this.selectedDate = null;
@@ -683,21 +723,20 @@
                 this.assignments = {}; // 配置データ {taskId: {hour: [ceNames]}}
                 this.pendingAssignments = []; // 保留リスト
                 this.currentModal = null; // 現在のモーダルコンテキスト
-                this.departmentColors = {}; // 部門色マップ
+                this.departmentColors = DEPARTMENT_COLORS;
                 this.init();
             }
 
             async init() {
                 try {
                     await this.waitForDependencies();
-                    this.setupDepartmentColors();
                     this.setupEventListeners();
                     this.renderTimelineHeader();
                     this.loadPendingList();
                     console.log('✅ 人員配置調整システム初期化完了');
                 } catch (error) {
                     console.error('❌ 初期化エラー:', error);
-                    window.showMessage && window.showMessage('システムの初期化に失敗しました', 'error');
+                    window.showMessage('システムの初期化に失敗しました', 'error');
                 }
             }
 
@@ -705,34 +744,12 @@
                 let attempts = 0;
                 while (attempts < 50) {
                     if (window.database && window.DATA_ROOT) {
-                        // showMessageがない場合はダミー関数を作成
-                        if (!window.showMessage) {
-                            window.showMessage = (msg, type) => {
-                                console.log(`[${type}] ${msg}`);
-                                alert(msg);
-                            };
-                        }
                         return;
                     }
                     await new Promise(resolve => setTimeout(resolve, 100));
                     attempts++;
                 }
                 throw new Error('依存関係の初期化タイムアウト');
-            }
-
-            setupDepartmentColors() {
-                // constants.jsから部門色を取得、なければデフォルト色を設定
-                this.departmentColors = window.DEPARTMENT_COLORS || {
-                    '機器管理・人工呼吸': '#90EE90',
-                    '血液浄化': '#FFB6C1',
-                    '不整脈': '#9370DB',
-                    '心・カテーテル': '#32CD32',
-                    '人工心肺・補助循環': '#4169E1',
-                    '手術・麻酔': '#87CEEB',
-                    '会議・ミーティング・勉強会・打ち合わせ': '#9E9E9E',
-                    '出張・研修内容': '#9E9E9E',
-                    'その他・連絡': '#9E9E9E'
-                };
             }
 
             setupEventListeners() {
@@ -772,18 +789,37 @@
                 }
 
                 this.selectedDate = new Date(dateInput.value + 'T00:00:00');
-                const dateKey = this.formatDate(this.selectedDate).replace(/-/g, '');
+                const dateKeyFormatted = this.formatDate(this.selectedDate);
+                const dateKey = dateKeyFormatted.replace(/-/g, '');
 
                 try {
                     window.showMessage('データを読み込んでいます...', 'info');
 
-                    // CEリストを取得
+                    // 🔧 修正: assignment-summary.htmlと同じ方法でCEリストを取得
                     const ceListSnap = await window.database.ref(`${window.DATA_ROOT}/ceList`).once('value');
-                    const ceData = ceListSnap.val();
-                    this.ceList = Array.isArray(ceData) ? ceData : (ceData?.list || []);
+                    const ceListData = ceListSnap.val() || {};
+                    
+                    if (Array.isArray(ceListData.list)) {
+                        // V2形式: ceList.list配列
+                        this.ceList = ceListData.list.filter(Boolean);
+                    } else if (Array.isArray(ceListData)) {
+                        // V1形式: 配列
+                        this.ceList = ceListData.filter(Boolean);
+                    } else {
+                        // オブジェクト形式
+                        const denyList = new Set(['list','updatedAt','lastUpdated','timestamp','state','templates','metadata','default','scheduleData','workTypeOverrides']);
+                        this.ceList = Object.entries(ceListData)
+                            .filter(([key]) => !denyList.has(key))
+                            .map(([id, data]) => ({
+                                id,
+                                name: data.name || data.displayName || id,
+                                workType: data.workType || 'OPE'
+                            }));
+                    }
+
+                    console.log('✅ CEリスト取得:', this.ceList.length, '名');
 
                     // CE勤務状態を取得
-                    const dateKeyFormatted = this.formatDate(this.selectedDate);
                     const statusSnap = await window.database.ref(`${window.DATA_ROOT}/ceStatus/byDate/${dateKeyFormatted}`).once('value');
                     this.ceStatus = statusSnap.val() || {};
 
@@ -864,7 +900,7 @@
                     window.showMessage('データを読み込みました', 'success');
                 } catch (error) {
                     console.error('❌ データ読み込みエラー:', error);
-                    window.showMessage('データの読み込みに失敗しました', 'error');
+                    window.showMessage('データの読み込みに失敗しました: ' + error.message, 'error');
                 }
             }
 
@@ -1375,7 +1411,7 @@
 
                     window.showMessage('✅ 配置を確定してスケジュールに反映しました', 'success');
                     
-                    // 3秒後に再読み込みして反映を確認
+                    // 1秒後に再読み込みして反映を確認
                     setTimeout(() => {
                         this.loadData();
                     }, 1000);
