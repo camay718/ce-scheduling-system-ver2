@@ -772,7 +772,7 @@
                 }
 
                 this.selectedDate = new Date(dateInput.value + 'T00:00:00');
-                const dateKey = this.formatDate(this.selectedDate);
+                const dateKey = this.formatDate(this.selectedDate).replace(/-/g, '');
 
                 try {
                     window.showMessage('データを読み込んでいます...', 'info');
@@ -783,11 +783,12 @@
                     this.ceList = Array.isArray(ceData) ? ceData : (ceData?.list || []);
 
                     // CE勤務状態を取得
-                    const statusSnap = await window.database.ref(`${window.DATA_ROOT}/ceStatus/byDate/${dateKey}`).once('value');
+                    const dateKeyFormatted = this.formatDate(this.selectedDate);
+                    const statusSnap = await window.database.ref(`${window.DATA_ROOT}/ceStatus/byDate/${dateKeyFormatted}`).once('value');
                     this.ceStatus = statusSnap.val() || {};
 
                     // 業務データを取得
-                    const eventsSnap = await window.database.ref(`${window.DATA_ROOT}/events/byDate/${dateKey}`).once('value');
+                    const eventsSnap = await window.database.ref(`${window.DATA_ROOT}/events/byDate/${dateKeyFormatted}`).once('value');
                     const eventsData = eventsSnap.val() || {};
                     
                     this.tasks = Object.keys(eventsData).map(eventId => ({
@@ -795,21 +796,53 @@
                         ...eventsData[eventId]
                     }));
 
+                    console.log('📊 読み込んだ業務データ:', this.tasks.length, '件');
+
                     // 配置データを初期化
                     this.assignments = {};
                     this.tasks.forEach(task => {
                         this.assignments[task.id] = {};
                         
-                        // 既存の配置を読み込み（assignedCEsまたはassignments配列から）
-                        const assignedList = task.assignedCEs || task.assignments || [];
+                        // 🔧 修正: assignedCEsのデータ構造を判定して適切に抽出
+                        let assignedList = [];
                         
-                        if (Array.isArray(assignedList) && assignedList.length > 0) {
+                        if (task.assignedCEs) {
+                            if (Array.isArray(task.assignedCEs)) {
+                                // 配列形式（通常イベント）
+                                assignedList = task.assignedCEs;
+                                console.log(`✅ [${task.name}] 配列形式のassignedCEs:`, assignedList);
+                            } else if (typeof task.assignedCEs === 'object') {
+                                // オブジェクト形式（月次業務） - dateKeyでアクセス
+                                assignedList = task.assignedCEs[dateKey] || [];
+                                console.log(`✅ [${task.name}] オブジェクト形式のassignedCEs[${dateKey}]:`, assignedList);
+                            }
+                        }
+                        
+                        // assignmentsもチェック
+                        if (!assignedList.length && task.assignments) {
+                            if (Array.isArray(task.assignments)) {
+                                assignedList = task.assignments;
+                                console.log(`✅ [${task.name}] assignments配列:`, assignedList);
+                            } else if (typeof task.assignments === 'object') {
+                                assignedList = task.assignments[dateKey] || [];
+                                console.log(`✅ [${task.name}] assignmentsオブジェクト[${dateKey}]:`, assignedList);
+                            }
+                        }
+                        
+                        if (assignedList.length > 0) {
                             const startHour = this.parseTimeToHour(task.startTime);
                             const endHour = this.parseTimeToHour(task.endTime);
                             
                             assignedList.forEach(assignment => {
-                                // assignment は文字列(CE名)またはオブジェクト{ceName: "xxx"}
-                                const ceName = typeof assignment === 'string' ? assignment : assignment.ceName;
+                                // assignment は文字列(CE名)またはオブジェクト{ceName: "xxx", id: "xxx", name: "xxx", workType: "xxx"}
+                                let ceName = '';
+                                
+                                if (typeof assignment === 'string') {
+                                    ceName = assignment;
+                                } else if (assignment && typeof assignment === 'object') {
+                                    // オブジェクトの場合、複数のプロパティ名をチェック
+                                    ceName = assignment.ceName || assignment.name || '';
+                                }
                                 
                                 if (ceName) {
                                     for (let h = startHour; h < endHour; h++) {
@@ -820,6 +853,7 @@
                                             this.assignments[task.id][h].push(ceName);
                                         }
                                     }
+                                    console.log(`  ➡️ ${ceName}さんを${startHour}:00-${endHour}:00に配置`);
                                 }
                             });
                         }
