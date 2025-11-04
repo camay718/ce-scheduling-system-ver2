@@ -9,8 +9,6 @@
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css">
-    <link rel="stylesheet" href="../css/theme-unified.css?v=20241217">
-    <link rel="stylesheet" href="../css/main.css">
     
     <!-- Firebase SDK -->
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
@@ -18,25 +16,25 @@
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
     <script src="../js/config/firebase-config.js"></script>
     <script src="../js/core/auth-guard.js"></script>
-    <script src="../js/utils/date-utils.js"></script>
-    <script src="../js/utils/audit-logger.js"></script>
 
     <style>
         :root {
             --timeline-start: 7;
             --timeline-end: 18;
             --timeline-hours: 12;
-            --hour-width: 120px;
+            --hour-width: 100px;
         }
 
         body {
             font-family: 'Noto Sans JP', sans-serif;
             background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
             min-height: 100vh;
+            margin: 0;
+            padding: 0;
         }
 
         .container-main {
-            max-width: 1800px;
+            max-width: 1900px;
             margin: 0 auto;
             padding: 20px;
         }
@@ -84,16 +82,6 @@
             color: white;
         }
 
-        .btn-secondary:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(33, 150, 243, 0.3);
-        }
-
-        .btn-danger {
-            background: linear-gradient(135deg, #f44336 0%, #d32f2f 100%);
-            color: white;
-        }
-
         .btn-warning {
             background: linear-gradient(135deg, #FF9800 0%, #F57C00 100%);
             color: white;
@@ -106,10 +94,12 @@
             padding: 24px;
             box-shadow: 0 2px 8px rgba(0,0,0,0.1);
             overflow-x: auto;
+            position: relative;
         }
 
         .timeline-wrapper {
             min-width: calc(var(--hour-width) * var(--timeline-hours) + 250px);
+            position: relative;
         }
 
         /* 時間軸ヘッダー */
@@ -118,6 +108,10 @@
             margin-bottom: 16px;
             border-bottom: 2px solid #4CAF50;
             padding-bottom: 8px;
+            position: sticky;
+            top: 0;
+            background: white;
+            z-index: 10;
         }
 
         .timeline-label {
@@ -132,6 +126,7 @@
         .timeline-hours {
             display: flex;
             flex: 1;
+            position: relative;
         }
 
         .hour-slot {
@@ -141,15 +136,22 @@
             color: #555;
             border-left: 1px solid #e0e0e0;
             padding: 8px 4px;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .hour-slot:hover {
+            background: rgba(76, 175, 80, 0.1);
         }
 
         /* 業務行 */
         .task-row {
             display: flex;
-            margin-bottom: 12px;
+            margin-bottom: 8px;
             border-radius: 8px;
             transition: all 0.3s;
             border: 2px solid transparent;
+            min-height: 60px;
         }
 
         .task-row:hover {
@@ -205,58 +207,50 @@
             border-radius: 0 8px 8px 0;
         }
 
+        /* 時間セル（背景グリッド） */
         .hour-cell {
             width: var(--hour-width);
             border-left: 1px solid #e0e0e0;
             position: relative;
-            min-height: 80px;
-            cursor: pointer;
-            transition: background 0.2s;
+            min-height: 60px;
         }
 
-        .hour-cell:hover {
-            background: rgba(76, 175, 80, 0.08);
-        }
-
-        .hour-cell.has-shortage {
-            background: #ffebee;
-        }
-
-        .hour-cell.has-shortage:hover {
-            background: #ffcdd2;
-        }
-
-        /* 人員配置バー */
-        .staffing-bar {
+        /* 業務バー（時間範囲を結合） */
+        .task-bar {
             position: absolute;
             top: 4px;
-            left: 4px;
-            right: 4px;
-            height: calc(100% - 8px);
+            bottom: 4px;
             background: white;
             border-radius: 6px;
-            padding: 6px;
+            padding: 8px;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.15);
             display: flex;
             flex-direction: column;
-            gap: 4px;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            gap: 6px;
+            overflow: visible;
+        }
+
+        .task-bar-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding-bottom: 6px;
+            border-bottom: 1px solid #e0e0e0;
         }
 
         .staff-required {
-            font-size: 0.7rem;
+            font-size: 0.75rem;
             font-weight: 700;
             color: #1976D2;
-            text-align: center;
-            padding: 3px;
             background: #E3F2FD;
+            padding: 3px 8px;
             border-radius: 4px;
         }
 
         .staff-assigned {
-            font-size: 0.7rem;
+            font-size: 0.75rem;
             font-weight: 600;
-            text-align: center;
-            padding: 3px;
+            padding: 3px 8px;
             border-radius: 4px;
         }
 
@@ -270,40 +264,19 @@
             color: #C62828;
         }
 
-        .shortage-indicator {
-            font-size: 0.7rem;
-            font-weight: 700;
-            color: #d32f2f;
-            text-align: center;
-            padding: 3px;
-            background: #ffebee;
-            border-radius: 4px;
-            border: 1px solid #ef5350;
-            animation: pulse 2s infinite;
-        }
-
-        @keyframes pulse {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.7; }
-        }
-
         /* 配置アイコンリスト */
         .staff-icons {
             display: flex;
             flex-wrap: wrap;
-            gap: 4px;
-            padding: 4px 2px;
-            min-height: 28px;
-            flex: 1;
-            align-content: flex-start;
+            gap: 6px;
+            padding: 4px 0;
+            align-items: flex-start;
         }
 
         .staff-icon {
-            background: linear-gradient(135deg, #4CAF50, #66bb6a);
-            color: white;
-            padding: 4px 10px;
-            border-radius: 12px;
-            font-size: 0.75rem;
+            padding: 5px 12px;
+            border-radius: 14px;
+            font-size: 0.8rem;
             font-weight: 600;
             cursor: pointer;
             transition: all 0.2s;
@@ -311,175 +284,228 @@
             align-items: center;
             gap: 6px;
             box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+            color: white;
+        }
+
+        /* 勤務タイプ別の色分け */
+        .staff-icon.OPE {
+            background: linear-gradient(135deg, #07E1FF, #0BC5E0);
+        }
+
+        .staff-icon.ME {
+            background: linear-gradient(135deg, #66BB6A, #4CAF50);
+        }
+
+        .staff-icon.HD {
+            background: linear-gradient(135deg, #FF80AB, #F06292);
+        }
+
+        .staff-icon.FLEX {
+            background: linear-gradient(135deg, #FFD54F, #FFC107);
+            color: #333;
         }
 
         .staff-icon:hover {
             transform: scale(1.05) translateY(-2px);
-            box-shadow: 0 4px 8px rgba(76, 175, 80, 0.4);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.3);
         }
 
         .staff-icon .remove-btn {
             cursor: pointer;
-            margin-left: 2px;
+            margin-left: 4px;
             opacity: 0.8;
             font-weight: 700;
-            font-size: 0.9rem;
+            font-size: 1rem;
         }
 
         .staff-icon .remove-btn:hover {
             opacity: 1;
-            transform: scale(1.2);
+            transform: scale(1.3);
         }
 
-        /* 配置可能人員モーダル */
-        .available-staff-modal {
-            display: none;
-            position: fixed;
+        /* 縦ラインとメニュー */
+        .vertical-line {
+            position: absolute;
             top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0,0,0,0.6);
-            z-index: 1000;
-            align-items: center;
-            justify-content: center;
-            backdrop-filter: blur(4px);
+            bottom: 0;
+            width: 3px;
+            background: linear-gradient(180deg, #4CAF50, #2196F3);
+            box-shadow: 0 0 8px rgba(76, 175, 80, 0.6);
+            pointer-events: none;
+            z-index: 100;
+            opacity: 0;
+            transition: opacity 0.2s;
         }
 
-        .available-staff-modal.active {
-            display: flex;
+        .vertical-line.active {
+            opacity: 1;
         }
 
-        .modal-content {
+        /* 箱ひげメニュー */
+        .whisker-menu {
+            position: absolute;
+            width: 320px;
             background: white;
-            border-radius: 16px;
-            padding: 32px;
-            max-width: 700px;
-            width: 90%;
-            max-height: 85vh;
+            border-radius: 12px;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.3);
+            z-index: 200;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.2s;
+            max-height: 500px;
             overflow-y: auto;
-            box-shadow: 0 12px 48px rgba(0,0,0,0.3);
         }
 
-        .modal-header {
-            font-size: 1.5rem;
+        .whisker-menu.active {
+            opacity: 1;
+            pointer-events: all;
+        }
+
+        .whisker-menu-header {
+            background: linear-gradient(135deg, #4CAF50, #2196F3);
+            color: white;
+            padding: 12px 16px;
+            border-radius: 12px 12px 0 0;
             font-weight: 700;
-            color: #2e7d32;
-            margin-bottom: 24px;
+            font-size: 0.95rem;
+        }
+
+        /* 部門状況サマリー */
+        .dept-status-summary {
+            padding: 12px;
+            border-bottom: 2px solid #e0e0e0;
+            background: #f9f9f9;
+        }
+
+        .dept-status-title {
+            font-size: 0.75rem;
+            font-weight: 700;
+            color: #555;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .dept-status-item {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            border-bottom: 2px solid #e0e0e0;
-            padding-bottom: 16px;
+            padding: 4px 0;
+            font-size: 0.75rem;
         }
 
-        .modal-close {
-            cursor: pointer;
-            font-size: 1.5rem;
-            color: #999;
-            transition: all 0.2s;
-            width: 36px;
-            height: 36px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            border-radius: 50%;
-        }
-
-        .modal-close:hover {
+        .dept-name {
+            font-weight: 600;
             color: #333;
-            background: #f0f0f0;
+            flex: 1;
         }
 
-        .staff-section {
-            margin-bottom: 28px;
+        .dept-fill-rate {
+            font-weight: 700;
+            padding: 2px 8px;
+            border-radius: 4px;
+            min-width: 50px;
+            text-align: center;
         }
 
-        .section-title {
-            font-size: 1.05rem;
+        .dept-fill-rate.high {
+            background: #C8E6C9;
+            color: #2E7D32;
+        }
+
+        .dept-fill-rate.medium {
+            background: #FFF9C4;
+            color: #F57F17;
+        }
+
+        .dept-fill-rate.low {
+            background: #FFCDD2;
+            color: #C62828;
+        }
+
+        /* 人員リスト */
+        .whisker-staff-section {
+            padding: 12px;
+        }
+
+        .whisker-section-title {
+            font-size: 0.85rem;
             font-weight: 600;
             color: #555;
-            margin-bottom: 14px;
-            padding-bottom: 10px;
-            border-bottom: 2px solid #e0e0e0;
+            margin-bottom: 8px;
+            padding-bottom: 6px;
+            border-bottom: 1px solid #e0e0e0;
             display: flex;
             align-items: center;
-            gap: 8px;
+            gap: 6px;
         }
 
-        .staff-list {
+        .whisker-staff-list {
             display: flex;
-            flex-wrap: wrap;
-            gap: 10px;
+            flex-direction: column;
+            gap: 6px;
         }
 
-        .available-staff-item {
+        .whisker-staff-item {
             background: #f5f5f5;
             border: 2px solid #e0e0e0;
-            padding: 10px 18px;
-            border-radius: 8px;
+            padding: 8px 12px;
+            border-radius: 6px;
             cursor: pointer;
             transition: all 0.2s;
+            font-size: 0.8rem;
             font-weight: 600;
             display: flex;
             align-items: center;
             gap: 8px;
         }
 
-        .available-staff-item:hover {
+        .whisker-staff-item:hover {
             background: #4CAF50;
             color: white;
             border-color: #4CAF50;
-            transform: translateY(-3px);
-            box-shadow: 0 4px 12px rgba(76, 175, 80, 0.3);
+            transform: translateX(4px);
         }
 
-        .available-staff-item.concurrent {
+        .whisker-staff-item.concurrent {
             background: #FFF3E0;
             border-color: #FFB300;
         }
 
-        .available-staff-item.concurrent:hover {
+        .whisker-staff-item.concurrent:hover {
             background: #FF9800;
-            color: white;
             border-color: #FF9800;
         }
 
-        /* 保留リスト */
-        .pending-list-section {
-            background: white;
-            border-radius: 12px;
-            padding: 24px;
-            margin-top: 24px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        .work-type-badge {
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 0.7rem;
+            font-weight: 600;
         }
 
-        .pending-item {
-            background: #f9f9f9;
-            border: 2px solid #e0e0e0;
-            border-radius: 8px;
-            padding: 18px;
-            margin-bottom: 12px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            transition: all 0.2s;
+        .work-type-badge.OPE {
+            background: #B3E5FC;
+            color: #01579B;
         }
 
-        .pending-item:hover {
-            border-color: #4CAF50;
-            box-shadow: 0 2px 8px rgba(76, 175, 80, 0.2);
+        .work-type-badge.ME {
+            background: #C8E6C9;
+            color: #1B5E20;
         }
 
-        .pending-info {
-            flex: 1;
+        .work-type-badge.HD {
+            background: #F8BBD0;
+            color: #880E4F;
         }
 
-        .pending-actions {
-            display: flex;
-            gap: 8px;
+        .work-type-badge.FLEX {
+            background: #FFF9C4;
+            color: #F57F17;
         }
 
+        /* サマリーセクション */
         .summary-section {
             background: white;
             border-radius: 12px;
@@ -519,66 +545,43 @@
             font-weight: 600;
         }
 
-        .summary-card.shortage {
-            background: linear-gradient(135deg, #FFEBEE, #FFCDD2);
-        }
-
         .summary-card.shortage .summary-value {
             color: #C62828;
         }
 
-        /* 勤務タイプバッジ */
-        .work-type-badge {
-            display: inline-block;
-            padding: 3px 8px;
-            border-radius: 4px;
-            font-size: 0.7rem;
-            font-weight: 600;
-            margin-left: 4px;
+        /* 保留リスト */
+        .pending-list-section {
+            background: white;
+            border-radius: 12px;
+            padding: 24px;
+            margin-top: 24px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
         }
 
-        .work-type-badge.OPE {
-            background: #87CEEB;
-            color: #1E3A8A;
+        .pending-item {
+            background: #f9f9f9;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            padding: 18px;
+            margin-bottom: 12px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: all 0.2s;
         }
 
-        .work-type-badge.ME {
-            background: #90EE90;
-            color: #006400;
+        .pending-item:hover {
+            border-color: #4CAF50;
+            box-shadow: 0 2px 8px rgba(76, 175, 80, 0.2);
         }
 
-        .work-type-badge.HD {
-            background: #FFB6C1;
-            color: #8B008B;
+        .pending-info {
+            flex: 1;
         }
 
-        .work-type-badge.FLEX {
-            background: #FFFF99;
-            color: #B8860B;
-        }
-
-        /* レスポンシブ */
-        @media (max-width: 768px) {
-            .container-main {
-                padding: 12px;
-            }
-
-            .controls-bar {
-                flex-direction: column;
-                align-items: stretch;
-            }
-
-            .btn {
-                justify-content: center;
-            }
-
-            .timeline-label {
-                width: 180px;
-            }
-
-            .task-info {
-                width: 180px;
-            }
+        .pending-actions {
+            display: flex;
+            gap: 8px;
         }
     </style>
 </head>
@@ -623,7 +626,7 @@
 
         <!-- タイムラインコンテナ -->
         <div class="timeline-container">
-            <div class="timeline-wrapper">
+            <div class="timeline-wrapper" id="timelineWrapper">
                 <div class="timeline-header">
                     <div class="timeline-label">
                         <i class="fas fa-tasks"></i> 業務名 / 部門
@@ -631,6 +634,43 @@
                     <div class="timeline-hours" id="timelineHours"></div>
                 </div>
                 <div id="taskRows"></div>
+
+                <!-- 縦ライン -->
+                <div class="vertical-line" id="verticalLine"></div>
+
+                <!-- 箱ひげメニュー -->
+                <div class="whisker-menu" id="whiskerMenu">
+                    <div class="whisker-menu-header" id="whiskerMenuHeader">
+                        8:00 の配置調整
+                    </div>
+                    
+                    <!-- 部門状況サマリー -->
+                    <div class="dept-status-summary">
+                        <div class="dept-status-title">
+                            <i class="fas fa-chart-pie"></i>
+                            <span>各部門の配置状況</span>
+                        </div>
+                        <div id="deptStatusList"></div>
+                    </div>
+
+                    <!-- 空き人員 -->
+                    <div class="whisker-staff-section">
+                        <div class="whisker-section-title">
+                            <i class="fas fa-user-check"></i>
+                            <span>空き人員</span>
+                        </div>
+                        <div class="whisker-staff-list" id="whiskerAvailableList"></div>
+                    </div>
+
+                    <!-- 兼務可能人員 -->
+                    <div class="whisker-staff-section">
+                        <div class="whisker-section-title">
+                            <i class="fas fa-user-clock"></i>
+                            <span>兼務可能人員</span>
+                        </div>
+                        <div class="whisker-staff-list" id="whiskerConcurrentList"></div>
+                    </div>
+                </div>
             </div>
         </div>
 
@@ -643,36 +683,8 @@
         </div>
     </div>
 
-    <!-- 配置可能人員モーダル -->
-    <div class="available-staff-modal" id="availableStaffModal">
-        <div class="modal-content">
-            <div class="modal-header">
-                <span id="modalTitle">配置可能人員</span>
-                <span class="modal-close" onclick="staffingAdjustment.closeModal()">
-                    <i class="fas fa-times"></i>
-                </span>
-            </div>
-
-            <div class="staff-section">
-                <div class="section-title">
-                    <i class="fas fa-user-check"></i>
-                    <span>空き人員</span>
-                </div>
-                <div class="staff-list" id="availableStaffList"></div>
-            </div>
-
-            <div class="staff-section">
-                <div class="section-title">
-                    <i class="fas fa-user-clock"></i>
-                    <span>兼務可能人員（1時間以上の業務担当中）</span>
-                </div>
-                <div class="staff-list" id="concurrentStaffList"></div>
-            </div>
-        </div>
-    </div>
-
     <script>
-        // 部門色定義（constants.jsの代わりにインライン定義）
+        // 部門色定義
         const DEPARTMENT_COLORS = {
             '機器管理・人工呼吸': '#90EE90',
             '血液浄化': '#FFB6C1',
@@ -717,13 +729,14 @@
         class StaffingAdjustmentSystem {
             constructor() {
                 this.selectedDate = null;
-                this.tasks = []; // 業務データ
-                this.ceList = []; // CE一覧
-                this.ceStatus = {}; // CE勤務状態
-                this.assignments = {}; // 配置データ {taskId: {hour: [ceNames]}}
-                this.pendingAssignments = []; // 保留リスト
-                this.currentModal = null; // 現在のモーダルコンテキスト
+                this.tasks = [];
+                this.ceList = [];
+                this.ceStatus = {};
+                this.assignments = {};
+                this.pendingAssignments = [];
                 this.departmentColors = DEPARTMENT_COLORS;
+                this.currentHour = null;
+                this.currentTargetTask = null;
                 this.init();
             }
 
@@ -733,6 +746,7 @@
                     this.setupEventListeners();
                     this.renderTimelineHeader();
                     this.loadPendingList();
+                    this.setupInteractiveTimeline();
                     console.log('✅ 人員配置調整システム初期化完了');
                 } catch (error) {
                     console.error('❌ 初期化エラー:', error);
@@ -755,7 +769,6 @@
             setupEventListeners() {
                 const dateInput = document.getElementById('targetDate');
                 if (dateInput) {
-                    // 今日の日付をデフォルトに設定
                     const today = new Date();
                     dateInput.value = this.formatDate(today);
                     this.selectedDate = today;
@@ -777,7 +790,226 @@
                     const hourSlot = document.createElement('div');
                     hourSlot.className = 'hour-slot';
                     hourSlot.textContent = `${hour}:00`;
+                    hourSlot.dataset.hour = hour;
                     hoursContainer.appendChild(hourSlot);
+                }
+            }
+
+            setupInteractiveTimeline() {
+                const timelineWrapper = document.getElementById('timelineWrapper');
+                const verticalLine = document.getElementById('verticalLine');
+                const whiskerMenu = document.getElementById('whiskerMenu');
+                
+                let isMenuOpen = false;
+                let menuTimeout = null;
+
+                timelineWrapper.addEventListener('mousemove', (e) => {
+                    const rect = timelineWrapper.getBoundingClientRect();
+                    const x = e.clientX - rect.left;
+                    const timelineHours = document.getElementById('timelineHours');
+                    const hoursRect = timelineHours.getBoundingClientRect();
+                    const hoursX = e.clientX - hoursRect.left;
+
+                    // 時間軸の範囲内かチェック
+                    if (hoursX >= 0 && hoursX <= hoursRect.width) {
+                        const hourWidth = 100; // var(--hour-width)
+                        const hourIndex = Math.floor(hoursX / hourWidth);
+                        const hour = 7 + hourIndex;
+
+                        if (hour >= 7 && hour <= 18) {
+                            this.currentHour = hour;
+                            
+                            // 縦ラインの位置を更新
+                            const lineX = 250 + (hourIndex * hourWidth) + (hourWidth / 2);
+                            verticalLine.style.left = `${lineX}px`;
+                            verticalLine.classList.add('active');
+
+                            // メニューの位置を更新
+                            const menuX = Math.min(lineX + 10, rect.width - 340);
+                            whiskerMenu.style.left = `${menuX}px`;
+                            whiskerMenu.style.top = '80px';
+
+                            // メニュー内容を更新
+                            this.updateWhiskerMenu(hour);
+                        }
+                    }
+                });
+
+                // メニューのクリックで固定表示
+                timelineWrapper.addEventListener('click', (e) => {
+                    const rect = timelineWrapper.getBoundingClientRect();
+                    const timelineHours = document.getElementById('timelineHours');
+                    const hoursRect = timelineHours.getBoundingClientRect();
+                    const hoursX = e.clientX - hoursRect.left;
+
+                    if (hoursX >= 0 && hoursX <= hoursRect.width) {
+                        isMenuOpen = !isMenuOpen;
+                        whiskerMenu.classList.toggle('active', isMenuOpen);
+                    }
+                });
+
+                // メニュー外をクリックで閉じる
+                document.addEventListener('click', (e) => {
+                    if (!timelineWrapper.contains(e.target)) {
+                        isMenuOpen = false;
+                        whiskerMenu.classList.remove('active');
+                        verticalLine.classList.remove('active');
+                    }
+                });
+
+                // マウスが離れたら縦ラインを非表示
+                timelineWrapper.addEventListener('mouseleave', () => {
+                    if (!isMenuOpen) {
+                        verticalLine.classList.remove('active');
+                    }
+                });
+            }
+
+            updateWhiskerMenu(hour) {
+                const whiskerMenuHeader = document.getElementById('whiskerMenuHeader');
+                whiskerMenuHeader.textContent = `${hour}:00 の配置調整`;
+
+                // 部門状況を更新
+                this.updateDepartmentStatus(hour);
+
+                // 空き人員を更新
+                this.updateAvailableStaff(hour);
+
+                // 兼務可能人員を更新
+                this.updateConcurrentStaff(hour);
+            }
+
+            updateDepartmentStatus(hour) {
+                const deptStatusList = document.getElementById('deptStatusList');
+                deptStatusList.innerHTML = '';
+
+                // 部門ごとに集計
+                const departments = ['機器管理・人工呼吸', '血液浄化', '不整脈', '心・カテーテル', '人工心肺・補助循環', '手術・麻酔'];
+                
+                departments.forEach(dept => {
+                    const deptTasks = this.tasks.filter(t => t.department === dept);
+                    let totalRequired = 0;
+                    let totalAssigned = 0;
+
+                    deptTasks.forEach(task => {
+                        const startHour = this.parseTimeToHour(task.startTime);
+                        const endHour = this.parseTimeToHour(task.endTime);
+
+                        if (hour >= startHour && hour < endHour) {
+                            const required = task.requiredStaff || task.requiredPeople || 1;
+                            const assigned = this.assignments[task.id]?.[hour]?.length || 0;
+                            totalRequired += required;
+                            totalAssigned += assigned;
+                        }
+                    });
+
+                    if (totalRequired > 0) {
+                        const fillRate = Math.round((totalAssigned / totalRequired) * 100);
+                        const rateClass = fillRate >= 80 ? 'high' : fillRate >= 50 ? 'medium' : 'low';
+
+                        const item = document.createElement('div');
+                        item.className = 'dept-status-item';
+                        item.innerHTML = `
+                            <div class="dept-name">${this.getDepartmentShortName(dept)}</div>
+                            <div class="dept-fill-rate ${rateClass}">${fillRate}%</div>
+                        `;
+                        deptStatusList.appendChild(item);
+                    }
+                });
+            }
+
+            updateAvailableStaff(hour) {
+                const availableList = document.getElementById('whiskerAvailableList');
+                availableList.innerHTML = '';
+
+                const available = this.getAvailableStaff(hour);
+
+                if (available.length === 0) {
+                    availableList.innerHTML = '<p style="color: #999; padding: 8px; font-size: 0.75rem;">空き人員がいません</p>';
+                    return;
+                }
+
+                available.forEach(ce => {
+                    const item = document.createElement('div');
+                    item.className = 'whisker-staff-item';
+                    item.innerHTML = `
+                        <i class="fas fa-user-plus"></i>
+                        <span style="flex: 1;">${ce.name}</span>
+                        <span class="work-type-badge ${ce.workType}">${ce.workType}</span>
+                    `;
+                    item.onclick = () => this.showTaskSelectionForAssignment(ce.name, hour);
+                    availableList.appendChild(item);
+                });
+            }
+
+            updateConcurrentStaff(hour) {
+                const concurrentList = document.getElementById('whiskerConcurrentList');
+                concurrentList.innerHTML = '';
+
+                const concurrent = this.getConcurrentStaff(hour, null);
+
+                if (concurrent.length === 0) {
+                    concurrentList.innerHTML = '<p style="color: #999; padding: 8px; font-size: 0.75rem;">兼務可能な人員がいません</p>';
+                    return;
+                }
+
+                concurrent.forEach(ce => {
+                    const item = document.createElement('div');
+                    item.className = 'whisker-staff-item concurrent';
+                    item.innerHTML = `
+                        <i class="fas fa-user-clock"></i>
+                        <span style="flex: 1;">${ce.name}</span>
+                        <span class="work-type-badge ${ce.workType}">${ce.workType}</span>
+                    `;
+                    item.onclick = () => this.showTaskSelectionForAssignment(ce.name, hour);
+                    concurrentList.appendChild(item);
+                });
+            }
+
+            showTaskSelectionForAssignment(ceName, hour) {
+                // この時間帯の業務一覧を表示して選択
+                const tasksAtHour = this.tasks.filter(task => {
+                    const startHour = this.parseTimeToHour(task.startTime);
+                    const endHour = this.parseTimeToHour(task.endTime);
+                    return hour >= startHour && hour < endHour;
+                });
+
+                if (tasksAtHour.length === 0) {
+                    window.showMessage('この時間帯に業務がありません', 'warning');
+                    return;
+                }
+
+                if (tasksAtHour.length === 1) {
+                    // 業務が1つだけの場合は直接配置
+                    this.assignStaffToTask(tasksAtHour[0].id, hour, ceName);
+                    return;
+                }
+
+                // 複数業務がある場合は選択メニューを表示
+                const taskNames = tasksAtHour.map(t => `${t.name} (${this.getDepartmentShortName(t.department)})`).join('\n');
+                const selected = confirm(`${ceName}さんを配置する業務を選んでください:\n\n${taskNames}\n\n最初の業務に配置しますか？`);
+                
+                if (selected) {
+                    this.assignStaffToTask(tasksAtHour[0].id, hour, ceName);
+                }
+            }
+
+            assignStaffToTask(taskId, hour, ceName) {
+                if (!this.assignments[taskId]) {
+                    this.assignments[taskId] = {};
+                }
+                if (!this.assignments[taskId][hour]) {
+                    this.assignments[taskId][hour] = [];
+                }
+
+                if (!this.assignments[taskId][hour].includes(ceName)) {
+                    this.assignments[taskId][hour].push(ceName);
+                    this.renderTasks();
+                    this.renderSummary();
+                    window.showMessage(`${ceName}さんを配置しました`, 'success');
+                    
+                    // メニューを更新
+                    this.updateWhiskerMenu(hour);
                 }
             }
 
@@ -795,18 +1027,15 @@
                 try {
                     window.showMessage('データを読み込んでいます...', 'info');
 
-                    // 🔧 修正: assignment-summary.htmlと同じ方法でCEリストを取得
+                    // CEリストを取得
                     const ceListSnap = await window.database.ref(`${window.DATA_ROOT}/ceList`).once('value');
                     const ceListData = ceListSnap.val() || {};
                     
                     if (Array.isArray(ceListData.list)) {
-                        // V2形式: ceList.list配列
                         this.ceList = ceListData.list.filter(Boolean);
                     } else if (Array.isArray(ceListData)) {
-                        // V1形式: 配列
                         this.ceList = ceListData.filter(Boolean);
                     } else {
-                        // オブジェクト形式
                         const denyList = new Set(['list','updatedAt','lastUpdated','timestamp','state','templates','metadata','default','scheduleData','workTypeOverrides']);
                         this.ceList = Object.entries(ceListData)
                             .filter(([key]) => !denyList.has(key))
@@ -839,29 +1068,21 @@
                     this.tasks.forEach(task => {
                         this.assignments[task.id] = {};
                         
-                        // 🔧 修正: assignedCEsのデータ構造を判定して適切に抽出
                         let assignedList = [];
                         
                         if (task.assignedCEs) {
                             if (Array.isArray(task.assignedCEs)) {
-                                // 配列形式（通常イベント）
                                 assignedList = task.assignedCEs;
-                                console.log(`✅ [${task.name}] 配列形式のassignedCEs:`, assignedList);
                             } else if (typeof task.assignedCEs === 'object') {
-                                // オブジェクト形式（月次業務） - dateKeyでアクセス
                                 assignedList = task.assignedCEs[dateKey] || [];
-                                console.log(`✅ [${task.name}] オブジェクト形式のassignedCEs[${dateKey}]:`, assignedList);
                             }
                         }
                         
-                        // assignmentsもチェック
                         if (!assignedList.length && task.assignments) {
                             if (Array.isArray(task.assignments)) {
                                 assignedList = task.assignments;
-                                console.log(`✅ [${task.name}] assignments配列:`, assignedList);
                             } else if (typeof task.assignments === 'object') {
                                 assignedList = task.assignments[dateKey] || [];
-                                console.log(`✅ [${task.name}] assignmentsオブジェクト[${dateKey}]:`, assignedList);
                             }
                         }
                         
@@ -870,13 +1091,11 @@
                             const endHour = this.parseTimeToHour(task.endTime);
                             
                             assignedList.forEach(assignment => {
-                                // assignment は文字列(CE名)またはオブジェクト{ceName: "xxx", id: "xxx", name: "xxx", workType: "xxx"}
                                 let ceName = '';
                                 
                                 if (typeof assignment === 'string') {
                                     ceName = assignment;
                                 } else if (assignment && typeof assignment === 'object') {
-                                    // オブジェクトの場合、複数のプロパティ名をチェック
                                     ceName = assignment.ceName || assignment.name || '';
                                 }
                                 
@@ -889,7 +1108,6 @@
                                             this.assignments[task.id][h].push(ceName);
                                         }
                                     }
-                                    console.log(`  ➡️ ${ceName}さんを${startHour}:00-${endHour}:00に配置`);
                                 }
                             });
                         }
@@ -968,55 +1186,70 @@
                     const startHour = this.parseTimeToHour(task.startTime);
                     const endHour = this.parseTimeToHour(task.endTime);
 
+                    // 背景グリッド
                     for (let hour = 7; hour <= 18; hour++) {
                         const hourCell = document.createElement('div');
                         hourCell.className = 'hour-cell';
+                        taskTimeline.appendChild(hourCell);
+                    }
 
-                        // 業務時間範囲内かチェック
-                        if (hour >= startHour && hour < endHour) {
-                            const required = task.requiredStaff || task.requiredPeople || 1;
-                            const assigned = this.assignments[task.id]?.[hour]?.length || 0;
-                            const shortage = required - assigned;
+                    // 業務バー（結合表示）
+                    if (endHour > startHour) {
+                        const barLeft = (startHour - 7) * 100;
+                        const barWidth = (endHour - startHour) * 100;
 
-                            if (shortage > 0) {
-                                hourCell.classList.add('has-shortage');
-                            }
-
-                            const staffingBar = document.createElement('div');
-                            staffingBar.className = 'staffing-bar';
-                            staffingBar.innerHTML = `
-                                <div class="staff-required">必要: ${required}名</div>
-                                <div class="staff-assigned ${shortage > 0 ? 'shortage' : 'sufficient'}">
-                                    配置: ${assigned}名
-                                </div>
-                                ${shortage > 0 ? `<div class="shortage-indicator"><i class="fas fa-exclamation-triangle"></i> 不足 ${shortage}名</div>` : ''}
-                            `;
-
-                            // 配置済みアイコン
-                            if (assigned > 0) {
-                                const iconsDiv = document.createElement('div');
-                                iconsDiv.className = 'staff-icons';
-                                this.assignments[task.id][hour].forEach(ceName => {
-                                    const icon = document.createElement('span');
-                                    icon.className = 'staff-icon';
-                                    icon.innerHTML = `
-                                        <i class="fas fa-user"></i> ${ceName}
-                                        <span class="remove-btn" onclick="event.stopPropagation(); staffingAdjustment.removeAssignment('${task.id}', ${hour}, '${ceName}')">×</span>
-                                    `;
-                                    iconsDiv.appendChild(icon);
+                        // 配置されている全CEを取得（重複排除）
+                        const assignedCEs = new Set();
+                        for (let h = startHour; h < endHour; h++) {
+                            if (this.assignments[task.id]?.[h]) {
+                                this.assignments[task.id][h].forEach(ceName => {
+                                    assignedCEs.add(ceName);
                                 });
-                                staffingBar.appendChild(iconsDiv);
                             }
-
-                            hourCell.appendChild(staffingBar);
-
-                            // クリックで配置モーダルを開く
-                            hourCell.addEventListener('click', () => {
-                                this.openAssignmentModal(task, hour);
-                            });
                         }
 
-                        taskTimeline.appendChild(hourCell);
+                        const required = task.requiredStaff || task.requiredPeople || 1;
+                        const assigned = assignedCEs.size;
+                        const shortage = required - assigned;
+
+                        const taskBar = document.createElement('div');
+                        taskBar.className = 'task-bar';
+                        taskBar.style.left = `${barLeft}px`;
+                        taskBar.style.width = `${barWidth - 8}px`;
+
+                        // ヘッダー
+                        taskBar.innerHTML = `
+                            <div class="task-bar-header">
+                                <div class="staff-required">必要: ${required}名</div>
+                                <div class="staff-assigned ${shortage > 0 ? 'shortage' : 'sufficient'}">
+                                    配置: ${assigned}名 ${shortage > 0 ? `(不足 ${shortage}名)` : ''}
+                                </div>
+                            </div>
+                        `;
+
+                        // 配置済みCEアイコン
+                        if (assignedCEs.size > 0) {
+                            const iconsDiv = document.createElement('div');
+                            iconsDiv.className = 'staff-icons';
+                            
+                            assignedCEs.forEach(ceName => {
+                                // CEの勤務タイプを取得
+                                const ce = this.ceList.find(c => c.name === ceName);
+                                const workType = ce?.workType || 'OPE';
+
+                                const icon = document.createElement('span');
+                                icon.className = `staff-icon ${workType}`;
+                                icon.innerHTML = `
+                                    <i class="fas fa-user"></i> ${ceName}
+                                    <span class="remove-btn" onclick="event.stopPropagation(); staffingAdjustment.removeAssignmentFromTask('${task.id}', '${ceName}')">×</span>
+                                `;
+                                iconsDiv.appendChild(icon);
+                            });
+                            
+                            taskBar.appendChild(iconsDiv);
+                        }
+
+                        taskTimeline.appendChild(taskBar);
                     }
 
                     taskRow.appendChild(taskInfo);
@@ -1025,7 +1258,21 @@
                 });
             }
 
-            // 色を明るく/暗くする補助関数
+            removeAssignmentFromTask(taskId, ceName) {
+                // この業務の全時間帯からCEを削除
+                if (this.assignments[taskId]) {
+                    Object.keys(this.assignments[taskId]).forEach(hour => {
+                        const index = this.assignments[taskId][hour].indexOf(ceName);
+                        if (index > -1) {
+                            this.assignments[taskId][hour].splice(index, 1);
+                        }
+                    });
+                }
+                this.renderTasks();
+                this.renderSummary();
+                window.showMessage(`${ceName}さんの配置を解除しました`, 'success');
+            }
+
             adjustColor(color, amount) {
                 const clamp = (val) => Math.min(Math.max(val, 0), 255);
                 const num = parseInt(color.replace('#', ''), 16);
@@ -1035,75 +1282,15 @@
                 return '#' + ((r << 16) | (g << 8) | b).toString(16).padStart(6, '0');
             }
 
-            openAssignmentModal(task, hour) {
-                this.currentModal = { task, hour };
-
-                // モーダルタイトル
-                document.getElementById('modalTitle').textContent = 
-                    `${task.name} (${this.getDepartmentShortName(task.department)}) - ${hour}:00～${hour + 1}:00`;
-
-                // 配置可能な人員を計算
-                const availableStaff = this.getAvailableStaff(hour);
-                const concurrentStaff = this.getConcurrentStaff(hour, task.id);
-
-                // 空き人員リスト
-                const availableList = document.getElementById('availableStaffList');
-                availableList.innerHTML = '';
-                
-                if (availableStaff.length === 0) {
-                    availableList.innerHTML = '<p style="color: #999; padding: 12px;">空き人員がいません</p>';
-                } else {
-                    availableStaff.forEach(ce => {
-                        const item = document.createElement('div');
-                        item.className = 'available-staff-item';
-                        item.innerHTML = `
-                            <i class="fas fa-user-plus"></i>
-                            <span>${ce.name}</span>
-                            <span class="work-type-badge ${ce.workType}">${ce.workType}</span>
-                        `;
-                        item.onclick = () => this.assignStaff(task.id, hour, ce.name);
-                        availableList.appendChild(item);
-                    });
-                }
-
-                // 兼務可能人員リスト
-                const concurrentList = document.getElementById('concurrentStaffList');
-                concurrentList.innerHTML = '';
-                
-                if (concurrentStaff.length === 0) {
-                    concurrentList.innerHTML = '<p style="color: #999; padding: 12px;">兼務可能な人員がいません</p>';
-                } else {
-                    concurrentStaff.forEach(ce => {
-                        const item = document.createElement('div');
-                        item.className = 'available-staff-item concurrent';
-                        item.innerHTML = `
-                            <i class="fas fa-user-clock"></i>
-                            <span>${ce.name}</span>
-                            <span class="work-type-badge ${ce.workType}">${ce.workType}</span>
-                            <div style="font-size: 0.7rem; color: #666; margin-top: 4px; width: 100%;">
-                                <i class="fas fa-briefcase"></i> ${ce.currentTask}
-                            </div>
-                        `;
-                        item.onclick = () => this.assignStaff(task.id, hour, ce.name);
-                        concurrentList.appendChild(item);
-                    });
-                }
-
-                // モーダル表示
-                document.getElementById('availableStaffModal').classList.add('active');
-            }
-
             getAvailableStaff(hour) {
                 const available = [];
 
                 this.ceList.forEach(ce => {
-                    // 勤務状態チェック
                     const status = this.ceStatus[ce.id] || '';
                     if (status === '非' || status === '×' || status === '年' || status === 'B') {
-                        return; // 勤務不可
+                        return;
                     }
 
-                    // 既に配置されているかチェック
                     let isAssigned = false;
                     this.tasks.forEach(task => {
                         if (this.assignments[task.id]?.[hour]?.includes(ce.name)) {
@@ -1124,21 +1311,18 @@
                 const addedNames = new Set();
 
                 this.ceList.forEach(ce => {
-                    // 勤務状態チェック
                     const status = this.ceStatus[ce.id] || '';
                     if (status === '非' || status === '×' || status === '年' || status === 'B') {
                         return;
                     }
 
-                    // 長時間業務に配置されているかチェック
                     this.tasks.forEach(task => {
-                        if (task.id === currentTaskId) return; // 同じ業務は除外
+                        if (task.id === currentTaskId) return;
 
                         const startHour = this.parseTimeToHour(task.startTime);
                         const endHour = this.parseTimeToHour(task.endTime);
                         const duration = endHour - startHour;
 
-                        // 1時間以上の業務かつ、その時間に配置されている
                         if (duration >= 1 && 
                             this.assignments[task.id]?.[hour]?.includes(ce.name) &&
                             !addedNames.has(ce.name)) {
@@ -1152,40 +1336,6 @@
                 });
 
                 return concurrent;
-            }
-
-            assignStaff(taskId, hour, ceName) {
-                if (!this.assignments[taskId]) {
-                    this.assignments[taskId] = {};
-                }
-                if (!this.assignments[taskId][hour]) {
-                    this.assignments[taskId][hour] = [];
-                }
-
-                if (!this.assignments[taskId][hour].includes(ceName)) {
-                    this.assignments[taskId][hour].push(ceName);
-                    this.renderTasks();
-                    this.renderSummary();
-                    window.showMessage(`${ceName}さんを配置しました`, 'success');
-                    this.closeModal();
-                }
-            }
-
-            removeAssignment(taskId, hour, ceName) {
-                if (this.assignments[taskId]?.[hour]) {
-                    const index = this.assignments[taskId][hour].indexOf(ceName);
-                    if (index > -1) {
-                        this.assignments[taskId][hour].splice(index, 1);
-                        this.renderTasks();
-                        this.renderSummary();
-                        window.showMessage(`${ceName}さんの配置を解除しました`, 'success');
-                    }
-                }
-            }
-
-            closeModal() {
-                document.getElementById('availableStaffModal').classList.remove('active');
-                this.currentModal = null;
             }
 
             renderSummary() {
@@ -1207,16 +1357,25 @@
                     const startHour = this.parseTimeToHour(task.startTime);
                     const endHour = this.parseTimeToHour(task.endTime);
                     
-                    for (let hour = startHour; hour < endHour; hour++) {
-                        const required = task.requiredStaff || task.requiredPeople || 1;
-                        const assigned = this.assignments[task.id]?.[hour]?.length || 0;
-                        
-                        totalRequired += required;
-                        totalAssigned += assigned;
-                        
-                        if (assigned < required) {
-                            shortageSlots += (required - assigned);
+                    const required = task.requiredStaff || task.requiredPeople || 1;
+                    const duration = endHour - startHour;
+                    totalRequired += required * duration;
+
+                    // 配置されている全CEを取得（重複排除）
+                    const assignedCEs = new Set();
+                    for (let h = startHour; h < endHour; h++) {
+                        if (this.assignments[task.id]?.[h]) {
+                            this.assignments[task.id][h].forEach(ceName => {
+                                assignedCEs.add(ceName);
+                            });
                         }
+                    }
+                    
+                    totalAssigned += assignedCEs.size * duration;
+                    
+                    const shortage = required - assignedCEs.size;
+                    if (shortage > 0) {
+                        shortageSlots += shortage * duration;
                     }
                 });
 
@@ -1333,11 +1492,9 @@
                     return;
                 }
 
-                // 日付を設定
                 document.getElementById('targetDate').value = pending.date;
                 this.selectedDate = new Date(pending.date + 'T00:00:00');
 
-                // データを読み込んでから配置を復元
                 this.loadData().then(() => {
                     this.assignments = JSON.parse(JSON.stringify(pending.assignments));
                     this.renderTasks();
@@ -1374,12 +1531,10 @@
                     const dateKey = this.formatDate(this.selectedDate);
                     const updates = {};
 
-                    // 各業務の配置を更新
                     for (const task of this.tasks) {
                         const taskAssignments = [];
                         const hours = Object.keys(this.assignments[task.id] || {});
                         
-                        // 時間ごとの配置を統合（重複排除）
                         const ceSet = new Set();
                         hours.forEach(hour => {
                             this.assignments[task.id][hour].forEach(ceName => {
@@ -1387,20 +1542,16 @@
                             });
                         });
 
-                        // assignments配列を作成（スケジュール画面と互換性のある形式）
                         ceSet.forEach(ceName => {
                             taskAssignments.push({ ceName });
                         });
 
-                        // assignedCEsとassignments両方を更新（互換性のため）
                         updates[`${window.DATA_ROOT}/events/byDate/${dateKey}/${task.id}/assignedCEs`] = Array.from(ceSet);
                         updates[`${window.DATA_ROOT}/events/byDate/${dateKey}/${task.id}/assignments`] = taskAssignments;
                     }
 
-                    // Firebaseに一括更新
                     await window.database.ref().update(updates);
 
-                    // 監査ログ
                     if (window.auditLogger) {
                         window.auditLogger.log('staffing_adjustment_confirm', {
                             date: dateKey,
@@ -1411,7 +1562,6 @@
 
                     window.showMessage('✅ 配置を確定してスケジュールに反映しました', 'success');
                     
-                    // 1秒後に再読み込みして反映を確認
                     setTimeout(() => {
                         this.loadData();
                     }, 1000);
@@ -1422,19 +1572,10 @@
             }
         }
 
-        // グローバル変数として初期化
         let staffingAdjustment;
 
         window.addEventListener('DOMContentLoaded', () => {
             staffingAdjustment = new StaffingAdjustmentSystem();
-        });
-
-        // モーダル外クリックで閉じる
-        document.addEventListener('click', (e) => {
-            const modal = document.getElementById('availableStaffModal');
-            if (e.target === modal) {
-                staffingAdjustment.closeModal();
-            }
         });
     </script>
 </body>
