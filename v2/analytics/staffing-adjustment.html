@@ -1,0 +1,1216 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>人員配置調整 - CEスケジュール管理システム V2</title>
+    
+    <!-- 外部ライブラリ -->
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="../css/theme-unified.css?v=20241217">
+    <link rel="stylesheet" href="../css/main.css">
+    
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+    <script src="../js/config/firebase-config.js"></script>
+    <script src="../js/core/auth-guard.js"></script>
+    <script src="../js/utils/date-utils.js"></script>
+    <script src="../js/utils/audit-logger.js"></script>
+    <script src="../js/utils/ui-utils.js"></script>
+    <script src="../js/constants.js"></script>
+
+    <style>
+        :root {
+            --timeline-start: 7;
+            --timeline-end: 18;
+            --timeline-hours: 11;
+            --hour-width: 120px;
+        }
+
+        body {
+            font-family: 'Noto Sans JP', sans-serif;
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            min-height: 100vh;
+        }
+
+        .container-main {
+            max-width: 1600px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .header-section {
+            background: white;
+            border-radius: 12px;
+            padding: 24px;
+            margin-bottom: 24px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        .controls-bar {
+            display: flex;
+            gap: 16px;
+            align-items: center;
+            flex-wrap: wrap;
+            margin-bottom: 16px;
+        }
+
+        .btn {
+            padding: 10px 20px;
+            border-radius: 8px;
+            border: none;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(76, 175, 80, 0.3);
+        }
+
+        .btn-secondary {
+            background: linear-gradient(135deg, #2196F3 0%, #1976D2 100%);
+            color: white;
+        }
+
+        .btn-secondary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(33, 150, 243, 0.3);
+        }
+
+        .btn-danger {
+            background: linear-gradient(135deg, #f44336 0%, #d32f2f 100%);
+            color: white;
+        }
+
+        .btn-warning {
+            background: linear-gradient(135deg, #FF9800 0%, #F57C00 100%);
+            color: white;
+        }
+
+        /* タイムラインコンテナ */
+        .timeline-container {
+            background: white;
+            border-radius: 12px;
+            padding: 24px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            overflow-x: auto;
+        }
+
+        .timeline-wrapper {
+            min-width: calc(var(--hour-width) * var(--timeline-hours) + 200px);
+        }
+
+        /* 時間軸ヘッダー */
+        .timeline-header {
+            display: flex;
+            margin-bottom: 16px;
+            border-bottom: 2px solid #4CAF50;
+            padding-bottom: 8px;
+        }
+
+        .timeline-label {
+            width: 200px;
+            font-weight: 700;
+            color: #2e7d32;
+            display: flex;
+            align-items: center;
+        }
+
+        .timeline-hours {
+            display: flex;
+            flex: 1;
+        }
+
+        .hour-slot {
+            width: var(--hour-width);
+            text-align: center;
+            font-weight: 600;
+            color: #555;
+            border-left: 1px solid #e0e0e0;
+            padding: 8px 4px;
+        }
+
+        /* 業務行 */
+        .task-row {
+            display: flex;
+            margin-bottom: 12px;
+            border-radius: 8px;
+            background: #f9f9f9;
+            transition: all 0.3s;
+        }
+
+        .task-row:hover {
+            background: #f0f0f0;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        }
+
+        .task-info {
+            width: 200px;
+            padding: 12px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+
+        .task-name {
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 4px;
+        }
+
+        .task-meta {
+            font-size: 0.75rem;
+            color: #666;
+        }
+
+        .task-timeline {
+            display: flex;
+            flex: 1;
+            position: relative;
+        }
+
+        .hour-cell {
+            width: var(--hour-width);
+            border-left: 1px solid #e0e0e0;
+            position: relative;
+            min-height: 60px;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .hour-cell:hover {
+            background: #e8f5e9;
+        }
+
+        .hour-cell.has-shortage {
+            background: #ffebee;
+        }
+
+        .hour-cell.has-shortage:hover {
+            background: #ffcdd2;
+        }
+
+        /* 人員配置バー */
+        .staffing-bar {
+            position: absolute;
+            top: 4px;
+            left: 4px;
+            right: 4px;
+            height: calc(100% - 8px);
+            background: white;
+            border-radius: 6px;
+            padding: 4px;
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+
+        .staff-required {
+            font-size: 0.7rem;
+            font-weight: 700;
+            color: #1976D2;
+            text-align: center;
+            padding: 2px;
+            background: #E3F2FD;
+            border-radius: 4px;
+        }
+
+        .staff-assigned {
+            font-size: 0.7rem;
+            font-weight: 600;
+            text-align: center;
+            padding: 2px;
+            border-radius: 4px;
+        }
+
+        .staff-assigned.sufficient {
+            background: #C8E6C9;
+            color: #2E7D32;
+        }
+
+        .staff-assigned.shortage {
+            background: #FFCDD2;
+            color: #C62828;
+        }
+
+        .shortage-indicator {
+            font-size: 0.65rem;
+            font-weight: 700;
+            color: #d32f2f;
+            text-align: center;
+            padding: 2px;
+            background: #ffebee;
+            border-radius: 4px;
+            border: 1px solid #ef5350;
+        }
+
+        /* 配置アイコンリスト */
+        .staff-icons {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 4px;
+            padding: 4px;
+            min-height: 24px;
+        }
+
+        .staff-icon {
+            background: linear-gradient(135deg, #4CAF50, #66bb6a);
+            color: white;
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 0.7rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .staff-icon:hover {
+            transform: scale(1.1);
+            box-shadow: 0 2px 6px rgba(76, 175, 80, 0.4);
+        }
+
+        .staff-icon .remove-btn {
+            cursor: pointer;
+            margin-left: 4px;
+            opacity: 0.7;
+        }
+
+        .staff-icon .remove-btn:hover {
+            opacity: 1;
+        }
+
+        /* 配置可能人員モーダル */
+        .available-staff-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .available-staff-modal.active {
+            display: flex;
+        }
+
+        .modal-content {
+            background: white;
+            border-radius: 16px;
+            padding: 32px;
+            max-width: 600px;
+            width: 90%;
+            max-height: 80vh;
+            overflow-y: auto;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.2);
+        }
+
+        .modal-header {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #2e7d32;
+            margin-bottom: 24px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .modal-close {
+            cursor: pointer;
+            font-size: 1.5rem;
+            color: #999;
+            transition: color 0.2s;
+        }
+
+        .modal-close:hover {
+            color: #333;
+        }
+
+        .staff-section {
+            margin-bottom: 24px;
+        }
+
+        .section-title {
+            font-size: 1rem;
+            font-weight: 600;
+            color: #555;
+            margin-bottom: 12px;
+            padding-bottom: 8px;
+            border-bottom: 2px solid #e0e0e0;
+        }
+
+        .staff-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        .available-staff-item {
+            background: #f5f5f5;
+            border: 2px solid #e0e0e0;
+            padding: 8px 16px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-weight: 600;
+        }
+
+        .available-staff-item:hover {
+            background: #4CAF50;
+            color: white;
+            border-color: #4CAF50;
+            transform: translateY(-2px);
+        }
+
+        .available-staff-item.concurrent {
+            background: #FFF3E0;
+            border-color: #FFB300;
+        }
+
+        .available-staff-item.concurrent:hover {
+            background: #FF9800;
+            color: white;
+            border-color: #FF9800;
+        }
+
+        /* 保留リスト */
+        .pending-list-section {
+            background: white;
+            border-radius: 12px;
+            padding: 24px;
+            margin-top: 24px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        .pending-item {
+            background: #f9f9f9;
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            padding: 16px;
+            margin-bottom: 12px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .pending-info {
+            flex: 1;
+        }
+
+        .pending-actions {
+            display: flex;
+            gap: 8px;
+        }
+
+        .summary-section {
+            background: white;
+            border-radius: 12px;
+            padding: 24px;
+            margin-bottom: 24px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        .summary-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 16px;
+        }
+
+        .summary-card {
+            background: linear-gradient(135deg, #f5f5f5, #e0e0e0);
+            padding: 16px;
+            border-radius: 8px;
+            text-align: center;
+        }
+
+        .summary-value {
+            font-size: 2rem;
+            font-weight: 700;
+            margin-bottom: 8px;
+        }
+
+        .summary-label {
+            font-size: 0.875rem;
+            color: #666;
+        }
+
+        .summary-card.shortage {
+            background: linear-gradient(135deg, #FFEBEE, #FFCDD2);
+        }
+
+        .summary-card.shortage .summary-value {
+            color: #C62828;
+        }
+
+        /* 勤務タイプバッジ */
+        .work-type-badge {
+            display: inline-block;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 0.7rem;
+            font-weight: 600;
+            margin-left: 4px;
+        }
+
+        .work-type-badge.OPE {
+            background: #87CEEB;
+            color: #1E3A8A;
+        }
+
+        .work-type-badge.ME {
+            background: #90EE90;
+            color: #006400;
+        }
+
+        .work-type-badge.HD {
+            background: #FFB6C1;
+            color: #8B008B;
+        }
+
+        .work-type-badge.FLEX {
+            background: #FFFF99;
+            color: #B8860B;
+        }
+
+        /* レスポンシブ */
+        @media (max-width: 768px) {
+            .container-main {
+                padding: 12px;
+            }
+
+            .controls-bar {
+                flex-direction: column;
+                align-items: stretch;
+            }
+
+            .btn {
+                justify-content: center;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container-main">
+        <!-- ヘッダー -->
+        <div class="header-section">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+                <h1 style="font-size: 1.75rem; font-weight: 700; color: #2e7d32;">
+                    <i class="fas fa-users-cog"></i> 人員配置調整
+                </h1>
+                <button class="btn btn-secondary" onclick="window.location.href='analytics.html'">
+                    <i class="fas fa-arrow-left"></i> 分析ハブに戻る
+                </button>
+            </div>
+
+            <!-- コントロールバー -->
+            <div class="controls-bar">
+                <div>
+                    <label style="font-weight: 600; margin-right: 8px;">対象日:</label>
+                    <input type="date" id="targetDate" class="form-input" style="padding: 8px; border-radius: 6px; border: 1px solid #ddd;">
+                </div>
+                <button class="btn btn-primary" onclick="staffingAdjustment.loadData()">
+                    <i class="fas fa-sync-alt"></i> データ読み込み
+                </button>
+                <button class="btn btn-warning" onclick="staffingAdjustment.saveAsPending()">
+                    <i class="fas fa-save"></i> 保留
+                </button>
+                <button class="btn btn-primary" onclick="staffingAdjustment.confirmAndSave()">
+                    <i class="fas fa-check-circle"></i> 確定して保存
+                </button>
+            </div>
+        </div>
+
+        <!-- サマリーセクション -->
+        <div class="summary-section" id="summarySection" style="display: none;">
+            <h3 style="font-size: 1.25rem; font-weight: 700; margin-bottom: 16px; color: #2e7d32;">
+                <i class="fas fa-chart-bar"></i> 配置サマリー
+            </h3>
+            <div class="summary-grid" id="summaryGrid"></div>
+        </div>
+
+        <!-- タイムラインコンテナ -->
+        <div class="timeline-container">
+            <div class="timeline-wrapper">
+                <div class="timeline-header">
+                    <div class="timeline-label">
+                        <i class="fas fa-tasks"></i> 業務名 / 時間
+                    </div>
+                    <div class="timeline-hours" id="timelineHours"></div>
+                </div>
+                <div id="taskRows"></div>
+            </div>
+        </div>
+
+        <!-- 保留リスト -->
+        <div class="pending-list-section">
+            <h3 style="font-size: 1.25rem; font-weight: 700; margin-bottom: 16px; color: #2e7d32;">
+                <i class="fas fa-clock"></i> 保留中の配置
+            </h3>
+            <div id="pendingList"></div>
+        </div>
+    </div>
+
+    <!-- 配置可能人員モーダル -->
+    <div class="available-staff-modal" id="availableStaffModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <span id="modalTitle">配置可能人員</span>
+                <span class="modal-close" onclick="staffingAdjustment.closeModal()">
+                    <i class="fas fa-times"></i>
+                </span>
+            </div>
+
+            <div class="staff-section">
+                <div class="section-title">
+                    <i class="fas fa-user-check"></i> 空き人員
+                </div>
+                <div class="staff-list" id="availableStaffList"></div>
+            </div>
+
+            <div class="staff-section">
+                <div class="section-title">
+                    <i class="fas fa-user-clock"></i> 兼務可能人員（1時間以上の業務担当中）
+                </div>
+                <div class="staff-list" id="concurrentStaffList"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        class StaffingAdjustmentSystem {
+            constructor() {
+                this.selectedDate = null;
+                this.tasks = []; // 業務データ
+                this.ceList = []; // CE一覧
+                this.ceStatus = {}; // CE勤務状態
+                this.assignments = {}; // 配置データ {taskId: {hour: [ceNames]}}
+                this.pendingAssignments = []; // 保留リスト
+                this.currentModal = null; // 現在のモーダルコンテキスト
+                this.init();
+            }
+
+            async init() {
+                try {
+                    await this.waitForDependencies();
+                    this.setupEventListeners();
+                    this.renderTimelineHeader();
+                    this.loadPendingList();
+                    console.log('✅ 人員配置調整システム初期化完了');
+                } catch (error) {
+                    console.error('❌ 初期化エラー:', error);
+                    window.showMessage('システムの初期化に失敗しました', 'error');
+                }
+            }
+
+            async waitForDependencies() {
+                let attempts = 0;
+                while (attempts < 50) {
+                    if (window.database && window.DATA_ROOT && window.showMessage) {
+                        return;
+                    }
+                    await new Promise(resolve => setTimeout(resolve, 100));
+                    attempts++;
+                }
+                throw new Error('依存関係の初期化タイムアウト');
+            }
+
+            setupEventListeners() {
+                const dateInput = document.getElementById('targetDate');
+                if (dateInput) {
+                    // 今日の日付をデフォルトに設定
+                    const today = new Date();
+                    dateInput.value = this.formatDate(today);
+                    this.selectedDate = today;
+                }
+            }
+
+            formatDate(date) {
+                const year = date.getFullYear();
+                const month = String(date.getMonth() + 1).padStart(2, '0');
+                const day = String(date.getDate()).padStart(2, '0');
+                return `${year}-${month}-${day}`;
+            }
+
+            renderTimelineHeader() {
+                const hoursContainer = document.getElementById('timelineHours');
+                hoursContainer.innerHTML = '';
+                
+                for (let hour = 7; hour <= 18; hour++) {
+                    const hourSlot = document.createElement('div');
+                    hourSlot.className = 'hour-slot';
+                    hourSlot.textContent = `${hour}:00`;
+                    hoursContainer.appendChild(hourSlot);
+                }
+            }
+
+            async loadData() {
+                const dateInput = document.getElementById('targetDate');
+                if (!dateInput.value) {
+                    window.showMessage('日付を選択してください', 'warning');
+                    return;
+                }
+
+                this.selectedDate = new Date(dateInput.value + 'T00:00:00');
+                const dateKey = this.formatDate(this.selectedDate);
+
+                try {
+                    window.showMessage('データを読み込んでいます...', 'info');
+
+                    // CEリストを取得
+                    const ceListSnap = await window.database.ref(`${window.DATA_ROOT}/ceList`).once('value');
+                    const ceData = ceListSnap.val();
+                    this.ceList = Array.isArray(ceData) ? ceData : (ceData?.list || []);
+
+                    // CE勤務状態を取得
+                    const statusSnap = await window.database.ref(`${window.DATA_ROOT}/ceStatus/byDate/${dateKey}`).once('value');
+                    this.ceStatus = statusSnap.val() || {};
+
+                    // 業務データを取得
+                    const eventsSnap = await window.database.ref(`${window.DATA_ROOT}/events/byDate/${dateKey}`).once('value');
+                    const eventsData = eventsSnap.val() || {};
+                    
+                    this.tasks = Object.keys(eventsData).map(eventId => ({
+                        id: eventId,
+                        ...eventsData[eventId]
+                    }));
+
+                    // 配置データを初期化
+                    this.assignments = {};
+                    this.tasks.forEach(task => {
+                        this.assignments[task.id] = {};
+                        // 既存の配置を読み込み
+                        if (task.assignments && Array.isArray(task.assignments)) {
+                            task.assignments.forEach(assignment => {
+                                const ceName = assignment.ceName || assignment;
+                                if (ceName) {
+                                    const startHour = this.parseTimeToHour(task.startTime);
+                                    const endHour = this.parseTimeToHour(task.endTime);
+                                    
+                                    for (let h = startHour; h < endHour; h++) {
+                                        if (!this.assignments[task.id][h]) {
+                                            this.assignments[task.id][h] = [];
+                                        }
+                                        if (!this.assignments[task.id][h].includes(ceName)) {
+                                            this.assignments[task.id][h].push(ceName);
+                                        }
+                                    }
+                                }
+                            });
+                        }
+                    });
+
+                    this.renderTasks();
+                    this.renderSummary();
+                    window.showMessage('データを読み込みました', 'success');
+                } catch (error) {
+                    console.error('❌ データ読み込みエラー:', error);
+                    window.showMessage('データの読み込みに失敗しました', 'error');
+                }
+            }
+
+            parseTimeToHour(timeStr) {
+                if (!timeStr) return 8;
+                const match = timeStr.match(/(\d+):(\d+)/);
+                if (match) {
+                    return parseInt(match[1]);
+                }
+                return 8;
+            }
+
+            renderTasks() {
+                const taskRowsContainer = document.getElementById('taskRows');
+                taskRowsContainer.innerHTML = '';
+
+                if (this.tasks.length === 0) {
+                    taskRowsContainer.innerHTML = '<p style="text-align: center; padding: 40px; color: #999;">業務データがありません</p>';
+                    return;
+                }
+
+                this.tasks.forEach(task => {
+                    const taskRow = document.createElement('div');
+                    taskRow.className = 'task-row';
+
+                    // 業務情報
+                    const taskInfo = document.createElement('div');
+                    taskInfo.className = 'task-info';
+                    taskInfo.innerHTML = `
+                        <div class="task-name">${task.name || '無題'}</div>
+                        <div class="task-meta">
+                            ${task.startTime || '8:00'} - ${task.endTime || '17:00'} | 
+                            必要人数: ${task.requiredStaff || 1}名
+                        </div>
+                    `;
+
+                    // タイムライン
+                    const taskTimeline = document.createElement('div');
+                    taskTimeline.className = 'task-timeline';
+
+                    const startHour = this.parseTimeToHour(task.startTime);
+                    const endHour = this.parseTimeToHour(task.endTime);
+
+                    for (let hour = 7; hour <= 18; hour++) {
+                        const hourCell = document.createElement('div');
+                        hourCell.className = 'hour-cell';
+
+                        // 業務時間範囲内かチェック
+                        if (hour >= startHour && hour < endHour) {
+                            const required = task.requiredStaff || 1;
+                            const assigned = this.assignments[task.id]?.[hour]?.length || 0;
+                            const shortage = required - assigned;
+
+                            if (shortage > 0) {
+                                hourCell.classList.add('has-shortage');
+                            }
+
+                            const staffingBar = document.createElement('div');
+                            staffingBar.className = 'staffing-bar';
+                            staffingBar.innerHTML = `
+                                <div class="staff-required">必要: ${required}名</div>
+                                <div class="staff-assigned ${shortage > 0 ? 'shortage' : 'sufficient'}">
+                                    配置: ${assigned}名
+                                </div>
+                                ${shortage > 0 ? `<div class="shortage-indicator">不足 ${shortage}名</div>` : ''}
+                            `;
+
+                            // 配置済みアイコン
+                            if (assigned > 0) {
+                                const iconsDiv = document.createElement('div');
+                                iconsDiv.className = 'staff-icons';
+                                this.assignments[task.id][hour].forEach(ceName => {
+                                    const icon = document.createElement('span');
+                                    icon.className = 'staff-icon';
+                                    icon.innerHTML = `
+                                        ${ceName}
+                                        <span class="remove-btn" onclick="staffingAdjustment.removeAssignment('${task.id}', ${hour}, '${ceName}')">×</span>
+                                    `;
+                                    iconsDiv.appendChild(icon);
+                                });
+                                staffingBar.appendChild(iconsDiv);
+                            }
+
+                            hourCell.appendChild(staffingBar);
+
+                            // クリックで配置モーダルを開く
+                            hourCell.addEventListener('click', () => {
+                                this.openAssignmentModal(task, hour);
+                            });
+                        }
+
+                        taskTimeline.appendChild(hourCell);
+                    }
+
+                    taskRow.appendChild(taskInfo);
+                    taskRow.appendChild(taskTimeline);
+                    taskRowsContainer.appendChild(taskRow);
+                });
+            }
+
+            openAssignmentModal(task, hour) {
+                this.currentModal = { task, hour };
+
+                // モーダルタイトル
+                document.getElementById('modalTitle').textContent = 
+                    `${task.name} - ${hour}:00～${hour + 1}:00 の人員配置`;
+
+                // 配置可能な人員を計算
+                const availableStaff = this.getAvailableStaff(hour);
+                const concurrentStaff = this.getConcurrentStaff(hour, task.id);
+
+                // 空き人員リスト
+                const availableList = document.getElementById('availableStaffList');
+                availableList.innerHTML = '';
+                
+                if (availableStaff.length === 0) {
+                    availableList.innerHTML = '<p style="color: #999; padding: 12px;">空き人員がいません</p>';
+                } else {
+                    availableStaff.forEach(ce => {
+                        const item = document.createElement('div');
+                        item.className = 'available-staff-item';
+                        item.innerHTML = `
+                            ${ce.name}
+                            <span class="work-type-badge ${ce.workType}">${ce.workType}</span>
+                        `;
+                        item.onclick = () => this.assignStaff(task.id, hour, ce.name);
+                        availableList.appendChild(item);
+                    });
+                }
+
+                // 兼務可能人員リスト
+                const concurrentList = document.getElementById('concurrentStaffList');
+                concurrentList.innerHTML = '';
+                
+                if (concurrentStaff.length === 0) {
+                    concurrentList.innerHTML = '<p style="color: #999; padding: 12px;">兼務可能な人員がいません</p>';
+                } else {
+                    concurrentStaff.forEach(ce => {
+                        const item = document.createElement('div');
+                        item.className = 'available-staff-item concurrent';
+                        item.innerHTML = `
+                            ${ce.name}
+                            <span class="work-type-badge ${ce.workType}">${ce.workType}</span>
+                            <div style="font-size: 0.7rem; color: #666; margin-top: 4px;">
+                                ${ce.currentTask}
+                            </div>
+                        `;
+                        item.onclick = () => this.assignStaff(task.id, hour, ce.name);
+                        concurrentList.appendChild(item);
+                    });
+                }
+
+                // モーダル表示
+                document.getElementById('availableStaffModal').classList.add('active');
+            }
+
+            getAvailableStaff(hour) {
+                const available = [];
+
+                this.ceList.forEach(ce => {
+                    // 勤務状態チェック
+                    const status = this.ceStatus[ce.id] || '';
+                    if (status === '非' || status === '×' || status === '年' || status === 'B') {
+                        return; // 勤務不可
+                    }
+
+                    // 既に配置されているかチェック
+                    let isAssigned = false;
+                    this.tasks.forEach(task => {
+                        if (this.assignments[task.id]?.[hour]?.includes(ce.name)) {
+                            isAssigned = true;
+                        }
+                    });
+
+                    if (!isAssigned) {
+                        available.push(ce);
+                    }
+                });
+
+                return available;
+            }
+
+            getConcurrentStaff(hour, currentTaskId) {
+                const concurrent = [];
+
+                this.ceList.forEach(ce => {
+                    // 勤務状態チェック
+                    const status = this.ceStatus[ce.id] || '';
+                    if (status === '非' || status === '×' || status === '年' || status === 'B') {
+                        return;
+                    }
+
+                    // 長時間業務に配置されているかチェック
+                    this.tasks.forEach(task => {
+                        if (task.id === currentTaskId) return; // 同じ業務は除外
+
+                        const startHour = this.parseTimeToHour(task.startTime);
+                        const endHour = this.parseTimeToHour(task.endTime);
+                        const duration = endHour - startHour;
+
+                        // 1時間以上の業務かつ、その時間に配置されている
+                        if (duration >= 1 && 
+                            this.assignments[task.id]?.[hour]?.includes(ce.name)) {
+                            concurrent.push({
+                                ...ce,
+                                currentTask: task.name
+                            });
+                        }
+                    });
+                });
+
+                return concurrent;
+            }
+
+            assignStaff(taskId, hour, ceName) {
+                if (!this.assignments[taskId]) {
+                    this.assignments[taskId] = {};
+                }
+                if (!this.assignments[taskId][hour]) {
+                    this.assignments[taskId][hour] = [];
+                }
+
+                if (!this.assignments[taskId][hour].includes(ceName)) {
+                    this.assignments[taskId][hour].push(ceName);
+                    this.renderTasks();
+                    this.renderSummary();
+                    window.showMessage(`${ceName}さんを配置しました`, 'success');
+                    this.closeModal();
+                }
+            }
+
+            removeAssignment(taskId, hour, ceName) {
+                if (this.assignments[taskId]?.[hour]) {
+                    const index = this.assignments[taskId][hour].indexOf(ceName);
+                    if (index > -1) {
+                        this.assignments[taskId][hour].splice(index, 1);
+                        this.renderTasks();
+                        this.renderSummary();
+                        window.showMessage(`${ceName}さんの配置を解除しました`, 'success');
+                    }
+                }
+            }
+
+            closeModal() {
+                document.getElementById('availableStaffModal').classList.remove('active');
+                this.currentModal = null;
+            }
+
+            renderSummary() {
+                const summarySection = document.getElementById('summarySection');
+                const summaryGrid = document.getElementById('summaryGrid');
+                
+                if (this.tasks.length === 0) {
+                    summarySection.style.display = 'none';
+                    return;
+                }
+
+                summarySection.style.display = 'block';
+
+                let totalRequired = 0;
+                let totalAssigned = 0;
+                let shortageSlots = 0;
+
+                this.tasks.forEach(task => {
+                    const startHour = this.parseTimeToHour(task.startTime);
+                    const endHour = this.parseTimeToHour(task.endTime);
+                    
+                    for (let hour = startHour; hour < endHour; hour++) {
+                        const required = task.requiredStaff || 1;
+                        const assigned = this.assignments[task.id]?.[hour]?.length || 0;
+                        
+                        totalRequired += required;
+                        totalAssigned += assigned;
+                        
+                        if (assigned < required) {
+                            shortageSlots += (required - assigned);
+                        }
+                    }
+                });
+
+                summaryGrid.innerHTML = `
+                    <div class="summary-card">
+                        <div class="summary-value" style="color: #1976D2;">${totalRequired}</div>
+                        <div class="summary-label">必要人員数（延べ）</div>
+                    </div>
+                    <div class="summary-card">
+                        <div class="summary-value" style="color: #2E7D32;">${totalAssigned}</div>
+                        <div class="summary-label">配置済み人員数</div>
+                    </div>
+                    <div class="summary-card ${shortageSlots > 0 ? 'shortage' : ''}">
+                        <div class="summary-value">${shortageSlots}</div>
+                        <div class="summary-label">不足人員数</div>
+                    </div>
+                    <div class="summary-card">
+                        <div class="summary-value" style="color: #7B1FA2;">${Math.round((totalAssigned / totalRequired) * 100)}%</div>
+                        <div class="summary-label">配置充足率</div>
+                    </div>
+                `;
+            }
+
+            saveAsPending() {
+                if (!this.selectedDate) {
+                    window.showMessage('日付を選択してください', 'warning');
+                    return;
+                }
+
+                const pendingData = {
+                    id: `pending_${Date.now()}`,
+                    date: this.formatDate(this.selectedDate),
+                    timestamp: Date.now(),
+                    assignments: JSON.parse(JSON.stringify(this.assignments)),
+                    tasks: this.tasks.map(t => ({ id: t.id, name: t.name })),
+                    savedBy: window.currentUserData?.displayName || 'unknown'
+                };
+
+                this.pendingAssignments.push(pendingData);
+                this.savePendingToLocalStorage();
+                this.renderPendingList();
+                window.showMessage('配置を保留しました', 'success');
+            }
+
+            savePendingToLocalStorage() {
+                try {
+                    localStorage.setItem('staffing_pending', JSON.stringify(this.pendingAssignments));
+                } catch (error) {
+                    console.error('❌ 保留データ保存エラー:', error);
+                }
+            }
+
+            loadPendingList() {
+                try {
+                    const saved = localStorage.getItem('staffing_pending');
+                    if (saved) {
+                        this.pendingAssignments = JSON.parse(saved);
+                        this.renderPendingList();
+                    }
+                } catch (error) {
+                    console.error('❌ 保留データ読み込みエラー:', error);
+                }
+            }
+
+            renderPendingList() {
+                const pendingListContainer = document.getElementById('pendingList');
+                
+                if (this.pendingAssignments.length === 0) {
+                    pendingListContainer.innerHTML = '<p style="color: #999; text-align: center; padding: 20px;">保留中の配置はありません</p>';
+                    return;
+                }
+
+                pendingListContainer.innerHTML = '';
+                
+                this.pendingAssignments.forEach(pending => {
+                    const item = document.createElement('div');
+                    item.className = 'pending-item';
+                    
+                    const date = new Date(pending.timestamp);
+                    const dateStr = date.toLocaleString('ja-JP');
+                    
+                    item.innerHTML = `
+                        <div class="pending-info">
+                            <div style="font-weight: 600; margin-bottom: 4px;">
+                                ${pending.date} の配置
+                            </div>
+                            <div style="font-size: 0.875rem; color: #666;">
+                                保存日時: ${dateStr} | 保存者: ${pending.savedBy}
+                            </div>
+                        </div>
+                        <div class="pending-actions">
+                            <button class="btn btn-secondary" style="padding: 6px 12px; font-size: 0.875rem;" 
+                                    onclick="staffingAdjustment.loadPending('${pending.id}')">
+                                <i class="fas fa-download"></i> 読み込み
+                            </button>
+                            <button class="btn btn-danger" style="padding: 6px 12px; font-size: 0.875rem;" 
+                                    onclick="staffingAdjustment.deletePending('${pending.id}')">
+                                <i class="fas fa-trash"></i> 削除
+                            </button>
+                        </div>
+                    `;
+                    
+                    pendingListContainer.appendChild(item);
+                });
+            }
+
+            loadPending(pendingId) {
+                const pending = this.pendingAssignments.find(p => p.id === pendingId);
+                if (!pending) {
+                    window.showMessage('保留データが見つかりません', 'error');
+                    return;
+                }
+
+                // 日付を設定
+                document.getElementById('targetDate').value = pending.date;
+                this.selectedDate = new Date(pending.date + 'T00:00:00');
+
+                // データを読み込んでから配置を復元
+                this.loadData().then(() => {
+                    this.assignments = JSON.parse(JSON.stringify(pending.assignments));
+                    this.renderTasks();
+                    this.renderSummary();
+                    window.showMessage('保留データを読み込みました', 'success');
+                });
+            }
+
+            deletePending(pendingId) {
+                if (!confirm('この保留データを削除してもよろしいですか?')) {
+                    return;
+                }
+
+                const index = this.pendingAssignments.findIndex(p => p.id === pendingId);
+                if (index > -1) {
+                    this.pendingAssignments.splice(index, 1);
+                    this.savePendingToLocalStorage();
+                    this.renderPendingList();
+                    window.showMessage('保留データを削除しました', 'success');
+                }
+            }
+
+            async confirmAndSave() {
+                if (!this.selectedDate || this.tasks.length === 0) {
+                    window.showMessage('保存できるデータがありません', 'warning');
+                    return;
+                }
+
+                if (!confirm('この配置を確定してスケジュールに反映しますか？')) {
+                    return;
+                }
+
+                try {
+                    const dateKey = this.formatDate(this.selectedDate);
+                    const updates = {};
+
+                    // 各業務の配置を更新
+                    for (const task of this.tasks) {
+                        const taskAssignments = [];
+                        const hours = Object.keys(this.assignments[task.id] || {});
+                        
+                        // 時間ごとの配置を統合
+                        const ceSet = new Set();
+                        hours.forEach(hour => {
+                            this.assignments[task.id][hour].forEach(ceName => {
+                                ceSet.add(ceName);
+                            });
+                        });
+
+                        // assignments配列を作成
+                        ceSet.forEach(ceName => {
+                            taskAssignments.push({ ceName });
+                        });
+
+                        updates[`${window.DATA_ROOT}/events/byDate/${dateKey}/${task.id}/assignments`] = taskAssignments;
+                    }
+
+                    // Firebaseに一括更新
+                    await window.database.ref().update(updates);
+
+                    // 監査ログ
+                    if (window.auditLogger) {
+                        window.auditLogger.log('staffing_adjustment_confirm', {
+                            date: dateKey,
+                            tasksCount: this.tasks.length,
+                            totalAssignments: Object.keys(updates).length
+                        });
+                    }
+
+                    window.showMessage('配置を確定してスケジュールに反映しました', 'success');
+                } catch (error) {
+                    console.error('❌ 保存エラー:', error);
+                    window.showMessage('配置の保存に失敗しました', 'error');
+                }
+            }
+        }
+
+        // グローバル変数として初期化
+        let staffingAdjustment;
+
+        window.addEventListener('DOMContentLoaded', () => {
+            staffingAdjustment = new StaffingAdjustmentSystem();
+        });
+
+        // モーダル外クリックで閉じる
+        document.addEventListener('click', (e) => {
+            const modal = document.getElementById('availableStaffModal');
+            if (e.target === modal) {
+                staffingAdjustment.closeModal();
+            }
+        });
+    </script>
+</body>
+</html>
