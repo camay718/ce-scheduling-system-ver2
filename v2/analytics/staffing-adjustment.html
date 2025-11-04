@@ -27,7 +27,7 @@
         :root {
             --timeline-start: 7;
             --timeline-end: 18;
-            --timeline-hours: 11;
+            --timeline-hours: 12;
             --hour-width: 120px;
         }
 
@@ -38,7 +38,7 @@
         }
 
         .container-main {
-            max-width: 1600px;
+            max-width: 1800px;
             margin: 0 auto;
             padding: 20px;
         }
@@ -111,7 +111,7 @@
         }
 
         .timeline-wrapper {
-            min-width: calc(var(--hour-width) * var(--timeline-hours) + 200px);
+            min-width: calc(var(--hour-width) * var(--timeline-hours) + 250px);
         }
 
         /* 時間軸ヘッダー */
@@ -123,11 +123,12 @@
         }
 
         .timeline-label {
-            width: 200px;
+            width: 250px;
             font-weight: 700;
             color: #2e7d32;
             display: flex;
             align-items: center;
+            padding-left: 12px;
         }
 
         .timeline-hours {
@@ -149,51 +150,74 @@
             display: flex;
             margin-bottom: 12px;
             border-radius: 8px;
-            background: #f9f9f9;
             transition: all 0.3s;
+            border: 2px solid transparent;
         }
 
         .task-row:hover {
-            background: #f0f0f0;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.12);
+            transform: translateX(4px);
         }
 
         .task-info {
-            width: 200px;
+            width: 250px;
             padding: 12px;
             display: flex;
             flex-direction: column;
             justify-content: center;
+            border-radius: 8px 0 0 8px;
+            position: relative;
         }
 
         .task-name {
-            font-weight: 600;
-            color: #333;
-            margin-bottom: 4px;
+            font-weight: 700;
+            color: #fff;
+            margin-bottom: 6px;
+            font-size: 0.95rem;
+            text-shadow: 0 1px 2px rgba(0,0,0,0.2);
         }
 
         .task-meta {
             font-size: 0.75rem;
-            color: #666;
+            color: rgba(255,255,255,0.95);
+            background: rgba(0,0,0,0.15);
+            padding: 4px 8px;
+            border-radius: 4px;
+            margin-top: 4px;
+        }
+
+        .department-badge {
+            position: absolute;
+            top: 8px;
+            right: 8px;
+            font-size: 0.65rem;
+            padding: 3px 8px;
+            border-radius: 12px;
+            background: rgba(255,255,255,0.3);
+            color: white;
+            font-weight: 700;
+            text-transform: uppercase;
         }
 
         .task-timeline {
             display: flex;
             flex: 1;
             position: relative;
+            background: #f9f9f9;
+            border-radius: 0 8px 8px 0;
         }
 
         .hour-cell {
             width: var(--hour-width);
             border-left: 1px solid #e0e0e0;
             position: relative;
-            min-height: 60px;
+            min-height: 80px;
             cursor: pointer;
             transition: background 0.2s;
         }
 
         .hour-cell:hover {
-            background: #e8f5e9;
+            background: rgba(76, 175, 80, 0.08);
         }
 
         .hour-cell.has-shortage {
@@ -213,10 +237,11 @@
             height: calc(100% - 8px);
             background: white;
             border-radius: 6px;
-            padding: 4px;
+            padding: 6px;
             display: flex;
             flex-direction: column;
-            gap: 2px;
+            gap: 4px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
         }
 
         .staff-required {
@@ -224,7 +249,7 @@
             font-weight: 700;
             color: #1976D2;
             text-align: center;
-            padding: 2px;
+            padding: 3px;
             background: #E3F2FD;
             border-radius: 4px;
         }
@@ -233,7 +258,7 @@
             font-size: 0.7rem;
             font-weight: 600;
             text-align: center;
-            padding: 2px;
+            padding: 3px;
             border-radius: 4px;
         }
 
@@ -248,14 +273,20 @@
         }
 
         .shortage-indicator {
-            font-size: 0.65rem;
+            font-size: 0.7rem;
             font-weight: 700;
             color: #d32f2f;
             text-align: center;
-            padding: 2px;
+            padding: 3px;
             background: #ffebee;
             border-radius: 4px;
             border: 1px solid #ef5350;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
         }
 
         /* 配置アイコンリスト */
@@ -263,37 +294,43 @@
             display: flex;
             flex-wrap: wrap;
             gap: 4px;
-            padding: 4px;
-            min-height: 24px;
+            padding: 4px 2px;
+            min-height: 28px;
+            flex: 1;
+            align-content: flex-start;
         }
 
         .staff-icon {
             background: linear-gradient(135deg, #4CAF50, #66bb6a);
             color: white;
-            padding: 4px 8px;
+            padding: 4px 10px;
             border-radius: 12px;
-            font-size: 0.7rem;
+            font-size: 0.75rem;
             font-weight: 600;
             cursor: pointer;
             transition: all 0.2s;
             display: inline-flex;
             align-items: center;
-            gap: 4px;
+            gap: 6px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
         }
 
         .staff-icon:hover {
-            transform: scale(1.1);
-            box-shadow: 0 2px 6px rgba(76, 175, 80, 0.4);
+            transform: scale(1.05) translateY(-2px);
+            box-shadow: 0 4px 8px rgba(76, 175, 80, 0.4);
         }
 
         .staff-icon .remove-btn {
             cursor: pointer;
-            margin-left: 4px;
-            opacity: 0.7;
+            margin-left: 2px;
+            opacity: 0.8;
+            font-weight: 700;
+            font-size: 0.9rem;
         }
 
         .staff-icon .remove-btn:hover {
             opacity: 1;
+            transform: scale(1.2);
         }
 
         /* 配置可能人員モーダル */
@@ -304,10 +341,11 @@
             left: 0;
             width: 100%;
             height: 100%;
-            background: rgba(0,0,0,0.5);
+            background: rgba(0,0,0,0.6);
             z-index: 1000;
             align-items: center;
             justify-content: center;
+            backdrop-filter: blur(4px);
         }
 
         .available-staff-modal.active {
@@ -318,11 +356,11 @@
             background: white;
             border-radius: 16px;
             padding: 32px;
-            max-width: 600px;
+            max-width: 700px;
             width: 90%;
-            max-height: 80vh;
+            max-height: 85vh;
             overflow-y: auto;
-            box-shadow: 0 8px 32px rgba(0,0,0,0.2);
+            box-shadow: 0 12px 48px rgba(0,0,0,0.3);
         }
 
         .modal-header {
@@ -333,53 +371,69 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
+            border-bottom: 2px solid #e0e0e0;
+            padding-bottom: 16px;
         }
 
         .modal-close {
             cursor: pointer;
             font-size: 1.5rem;
             color: #999;
-            transition: color 0.2s;
+            transition: all 0.2s;
+            width: 36px;
+            height: 36px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
         }
 
         .modal-close:hover {
             color: #333;
+            background: #f0f0f0;
         }
 
         .staff-section {
-            margin-bottom: 24px;
+            margin-bottom: 28px;
         }
 
         .section-title {
-            font-size: 1rem;
+            font-size: 1.05rem;
             font-weight: 600;
             color: #555;
-            margin-bottom: 12px;
-            padding-bottom: 8px;
+            margin-bottom: 14px;
+            padding-bottom: 10px;
             border-bottom: 2px solid #e0e0e0;
+            display: flex;
+            align-items: center;
+            gap: 8px;
         }
 
         .staff-list {
             display: flex;
             flex-wrap: wrap;
-            gap: 8px;
+            gap: 10px;
         }
 
         .available-staff-item {
             background: #f5f5f5;
             border: 2px solid #e0e0e0;
-            padding: 8px 16px;
+            padding: 10px 18px;
             border-radius: 8px;
             cursor: pointer;
             transition: all 0.2s;
             font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 8px;
         }
 
         .available-staff-item:hover {
             background: #4CAF50;
             color: white;
             border-color: #4CAF50;
-            transform: translateY(-2px);
+            transform: translateY(-3px);
+            box-shadow: 0 4px 12px rgba(76, 175, 80, 0.3);
         }
 
         .available-staff-item.concurrent {
@@ -404,13 +458,19 @@
 
         .pending-item {
             background: #f9f9f9;
-            border: 1px solid #e0e0e0;
+            border: 2px solid #e0e0e0;
             border-radius: 8px;
-            padding: 16px;
+            padding: 18px;
             margin-bottom: 12px;
             display: flex;
             justify-content: space-between;
             align-items: center;
+            transition: all 0.2s;
+        }
+
+        .pending-item:hover {
+            border-color: #4CAF50;
+            box-shadow: 0 2px 8px rgba(76, 175, 80, 0.2);
         }
 
         .pending-info {
@@ -432,19 +492,25 @@
 
         .summary-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
             gap: 16px;
         }
 
         .summary-card {
             background: linear-gradient(135deg, #f5f5f5, #e0e0e0);
-            padding: 16px;
+            padding: 20px;
             border-radius: 8px;
             text-align: center;
+            transition: all 0.3s;
+        }
+
+        .summary-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 6px 16px rgba(0,0,0,0.15);
         }
 
         .summary-value {
-            font-size: 2rem;
+            font-size: 2.5rem;
             font-weight: 700;
             margin-bottom: 8px;
         }
@@ -452,6 +518,7 @@
         .summary-label {
             font-size: 0.875rem;
             color: #666;
+            font-weight: 600;
         }
 
         .summary-card.shortage {
@@ -465,7 +532,7 @@
         /* 勤務タイプバッジ */
         .work-type-badge {
             display: inline-block;
-            padding: 2px 6px;
+            padding: 3px 8px;
             border-radius: 4px;
             font-size: 0.7rem;
             font-weight: 600;
@@ -505,6 +572,14 @@
 
             .btn {
                 justify-content: center;
+            }
+
+            .timeline-label {
+                width: 180px;
+            }
+
+            .task-info {
+                width: 180px;
             }
         }
     </style>
@@ -553,7 +628,7 @@
             <div class="timeline-wrapper">
                 <div class="timeline-header">
                     <div class="timeline-label">
-                        <i class="fas fa-tasks"></i> 業務名 / 時間
+                        <i class="fas fa-tasks"></i> 業務名 / 部門
                     </div>
                     <div class="timeline-hours" id="timelineHours"></div>
                 </div>
@@ -582,14 +657,16 @@
 
             <div class="staff-section">
                 <div class="section-title">
-                    <i class="fas fa-user-check"></i> 空き人員
+                    <i class="fas fa-user-check"></i>
+                    <span>空き人員</span>
                 </div>
                 <div class="staff-list" id="availableStaffList"></div>
             </div>
 
             <div class="staff-section">
                 <div class="section-title">
-                    <i class="fas fa-user-clock"></i> 兼務可能人員（1時間以上の業務担当中）
+                    <i class="fas fa-user-clock"></i>
+                    <span>兼務可能人員（1時間以上の業務担当中）</span>
                 </div>
                 <div class="staff-list" id="concurrentStaffList"></div>
             </div>
@@ -606,32 +683,56 @@
                 this.assignments = {}; // 配置データ {taskId: {hour: [ceNames]}}
                 this.pendingAssignments = []; // 保留リスト
                 this.currentModal = null; // 現在のモーダルコンテキスト
+                this.departmentColors = {}; // 部門色マップ
                 this.init();
             }
 
             async init() {
                 try {
                     await this.waitForDependencies();
+                    this.setupDepartmentColors();
                     this.setupEventListeners();
                     this.renderTimelineHeader();
                     this.loadPendingList();
                     console.log('✅ 人員配置調整システム初期化完了');
                 } catch (error) {
                     console.error('❌ 初期化エラー:', error);
-                    window.showMessage('システムの初期化に失敗しました', 'error');
+                    window.showMessage && window.showMessage('システムの初期化に失敗しました', 'error');
                 }
             }
 
             async waitForDependencies() {
                 let attempts = 0;
                 while (attempts < 50) {
-                    if (window.database && window.DATA_ROOT && window.showMessage) {
+                    if (window.database && window.DATA_ROOT) {
+                        // showMessageがない場合はダミー関数を作成
+                        if (!window.showMessage) {
+                            window.showMessage = (msg, type) => {
+                                console.log(`[${type}] ${msg}`);
+                                alert(msg);
+                            };
+                        }
                         return;
                     }
                     await new Promise(resolve => setTimeout(resolve, 100));
                     attempts++;
                 }
                 throw new Error('依存関係の初期化タイムアウト');
+            }
+
+            setupDepartmentColors() {
+                // constants.jsから部門色を取得、なければデフォルト色を設定
+                this.departmentColors = window.DEPARTMENT_COLORS || {
+                    '機器管理・人工呼吸': '#90EE90',
+                    '血液浄化': '#FFB6C1',
+                    '不整脈': '#9370DB',
+                    '心・カテーテル': '#32CD32',
+                    '人工心肺・補助循環': '#4169E1',
+                    '手術・麻酔': '#87CEEB',
+                    '会議・ミーティング・勉強会・打ち合わせ': '#9E9E9E',
+                    '出張・研修内容': '#9E9E9E',
+                    'その他・連絡': '#9E9E9E'
+                };
             }
 
             setupEventListeners() {
@@ -698,14 +799,19 @@
                     this.assignments = {};
                     this.tasks.forEach(task => {
                         this.assignments[task.id] = {};
-                        // 既存の配置を読み込み
-                        if (task.assignments && Array.isArray(task.assignments)) {
-                            task.assignments.forEach(assignment => {
-                                const ceName = assignment.ceName || assignment;
+                        
+                        // 既存の配置を読み込み（assignedCEsまたはassignments配列から）
+                        const assignedList = task.assignedCEs || task.assignments || [];
+                        
+                        if (Array.isArray(assignedList) && assignedList.length > 0) {
+                            const startHour = this.parseTimeToHour(task.startTime);
+                            const endHour = this.parseTimeToHour(task.endTime);
+                            
+                            assignedList.forEach(assignment => {
+                                // assignment は文字列(CE名)またはオブジェクト{ceName: "xxx"}
+                                const ceName = typeof assignment === 'string' ? assignment : assignment.ceName;
+                                
                                 if (ceName) {
-                                    const startHour = this.parseTimeToHour(task.startTime);
-                                    const endHour = this.parseTimeToHour(task.endTime);
-                                    
                                     for (let h = startHour; h < endHour; h++) {
                                         if (!this.assignments[task.id][h]) {
                                             this.assignments[task.id][h] = [];
@@ -737,6 +843,25 @@
                 return 8;
             }
 
+            getDepartmentColor(department) {
+                return this.departmentColors[department] || '#9E9E9E';
+            }
+
+            getDepartmentShortName(department) {
+                const shortNames = {
+                    '機器管理・人工呼吸': '機器管理',
+                    '血液浄化': '血液浄化',
+                    '不整脈': '不整脈',
+                    '心・カテーテル': '心カテ',
+                    '人工心肺・補助循環': '人工心肺',
+                    '手術・麻酔': '手術麻酔',
+                    '会議・ミーティング・勉強会・打ち合わせ': '会議等',
+                    '出張・研修内容': '出張研修',
+                    'その他・連絡': 'その他'
+                };
+                return shortNames[department] || department;
+            }
+
             renderTasks() {
                 const taskRowsContainer = document.getElementById('taskRows');
                 taskRowsContainer.innerHTML = '';
@@ -750,14 +875,19 @@
                     const taskRow = document.createElement('div');
                     taskRow.className = 'task-row';
 
+                    const departmentColor = this.getDepartmentColor(task.department);
+                    const departmentShort = this.getDepartmentShortName(task.department);
+
                     // 業務情報
                     const taskInfo = document.createElement('div');
                     taskInfo.className = 'task-info';
+                    taskInfo.style.background = `linear-gradient(135deg, ${departmentColor}, ${this.adjustColor(departmentColor, -20)})`;
                     taskInfo.innerHTML = `
+                        <div class="department-badge">${departmentShort}</div>
                         <div class="task-name">${task.name || '無題'}</div>
                         <div class="task-meta">
-                            ${task.startTime || '8:00'} - ${task.endTime || '17:00'} | 
-                            必要人数: ${task.requiredStaff || 1}名
+                            <i class="fas fa-clock"></i> ${task.startTime || '8:00'} - ${task.endTime || '17:00'}<br>
+                            <i class="fas fa-users"></i> 必要人数: ${task.requiredStaff || task.requiredPeople || 1}名
                         </div>
                     `;
 
@@ -774,7 +904,7 @@
 
                         // 業務時間範囲内かチェック
                         if (hour >= startHour && hour < endHour) {
-                            const required = task.requiredStaff || 1;
+                            const required = task.requiredStaff || task.requiredPeople || 1;
                             const assigned = this.assignments[task.id]?.[hour]?.length || 0;
                             const shortage = required - assigned;
 
@@ -789,7 +919,7 @@
                                 <div class="staff-assigned ${shortage > 0 ? 'shortage' : 'sufficient'}">
                                     配置: ${assigned}名
                                 </div>
-                                ${shortage > 0 ? `<div class="shortage-indicator">不足 ${shortage}名</div>` : ''}
+                                ${shortage > 0 ? `<div class="shortage-indicator"><i class="fas fa-exclamation-triangle"></i> 不足 ${shortage}名</div>` : ''}
                             `;
 
                             // 配置済みアイコン
@@ -800,8 +930,8 @@
                                     const icon = document.createElement('span');
                                     icon.className = 'staff-icon';
                                     icon.innerHTML = `
-                                        ${ceName}
-                                        <span class="remove-btn" onclick="staffingAdjustment.removeAssignment('${task.id}', ${hour}, '${ceName}')">×</span>
+                                        <i class="fas fa-user"></i> ${ceName}
+                                        <span class="remove-btn" onclick="event.stopPropagation(); staffingAdjustment.removeAssignment('${task.id}', ${hour}, '${ceName}')">×</span>
                                     `;
                                     iconsDiv.appendChild(icon);
                                 });
@@ -825,12 +955,22 @@
                 });
             }
 
+            // 色を明るく/暗くする補助関数
+            adjustColor(color, amount) {
+                const clamp = (val) => Math.min(Math.max(val, 0), 255);
+                const num = parseInt(color.replace('#', ''), 16);
+                const r = clamp((num >> 16) + amount);
+                const g = clamp(((num >> 8) & 0x00FF) + amount);
+                const b = clamp((num & 0x0000FF) + amount);
+                return '#' + ((r << 16) | (g << 8) | b).toString(16).padStart(6, '0');
+            }
+
             openAssignmentModal(task, hour) {
                 this.currentModal = { task, hour };
 
                 // モーダルタイトル
                 document.getElementById('modalTitle').textContent = 
-                    `${task.name} - ${hour}:00～${hour + 1}:00 の人員配置`;
+                    `${task.name} (${this.getDepartmentShortName(task.department)}) - ${hour}:00～${hour + 1}:00`;
 
                 // 配置可能な人員を計算
                 const availableStaff = this.getAvailableStaff(hour);
@@ -847,7 +987,8 @@
                         const item = document.createElement('div');
                         item.className = 'available-staff-item';
                         item.innerHTML = `
-                            ${ce.name}
+                            <i class="fas fa-user-plus"></i>
+                            <span>${ce.name}</span>
                             <span class="work-type-badge ${ce.workType}">${ce.workType}</span>
                         `;
                         item.onclick = () => this.assignStaff(task.id, hour, ce.name);
@@ -866,10 +1007,11 @@
                         const item = document.createElement('div');
                         item.className = 'available-staff-item concurrent';
                         item.innerHTML = `
-                            ${ce.name}
+                            <i class="fas fa-user-clock"></i>
+                            <span>${ce.name}</span>
                             <span class="work-type-badge ${ce.workType}">${ce.workType}</span>
-                            <div style="font-size: 0.7rem; color: #666; margin-top: 4px;">
-                                ${ce.currentTask}
+                            <div style="font-size: 0.7rem; color: #666; margin-top: 4px; width: 100%;">
+                                <i class="fas fa-briefcase"></i> ${ce.currentTask}
                             </div>
                         `;
                         item.onclick = () => this.assignStaff(task.id, hour, ce.name);
@@ -909,6 +1051,7 @@
 
             getConcurrentStaff(hour, currentTaskId) {
                 const concurrent = [];
+                const addedNames = new Set();
 
                 this.ceList.forEach(ce => {
                     // 勤務状態チェック
@@ -927,11 +1070,13 @@
 
                         // 1時間以上の業務かつ、その時間に配置されている
                         if (duration >= 1 && 
-                            this.assignments[task.id]?.[hour]?.includes(ce.name)) {
+                            this.assignments[task.id]?.[hour]?.includes(ce.name) &&
+                            !addedNames.has(ce.name)) {
                             concurrent.push({
                                 ...ce,
                                 currentTask: task.name
                             });
+                            addedNames.add(ce.name);
                         }
                     });
                 });
@@ -993,7 +1138,7 @@
                     const endHour = this.parseTimeToHour(task.endTime);
                     
                     for (let hour = startHour; hour < endHour; hour++) {
-                        const required = task.requiredStaff || 1;
+                        const required = task.requiredStaff || task.requiredPeople || 1;
                         const assigned = this.assignments[task.id]?.[hour]?.length || 0;
                         
                         totalRequired += required;
@@ -1004,6 +1149,8 @@
                         }
                     }
                 });
+
+                const fillRate = totalRequired > 0 ? Math.round((totalAssigned / totalRequired) * 100) : 0;
 
                 summaryGrid.innerHTML = `
                     <div class="summary-card">
@@ -1019,7 +1166,7 @@
                         <div class="summary-label">不足人員数</div>
                     </div>
                     <div class="summary-card">
-                        <div class="summary-value" style="color: #7B1FA2;">${Math.round((totalAssigned / totalRequired) * 100)}%</div>
+                        <div class="summary-value" style="color: #7B1FA2;">${fillRate}%</div>
                         <div class="summary-label">配置充足率</div>
                     </div>
                 `;
@@ -1036,7 +1183,7 @@
                     date: this.formatDate(this.selectedDate),
                     timestamp: Date.now(),
                     assignments: JSON.parse(JSON.stringify(this.assignments)),
-                    tasks: this.tasks.map(t => ({ id: t.id, name: t.name })),
+                    tasks: this.tasks.map(t => ({ id: t.id, name: t.name, department: t.department })),
                     savedBy: window.currentUserData?.displayName || 'unknown'
                 };
 
@@ -1070,7 +1217,7 @@
                 const pendingListContainer = document.getElementById('pendingList');
                 
                 if (this.pendingAssignments.length === 0) {
-                    pendingListContainer.innerHTML = '<p style="color: #999; text-align: center; padding: 20px;">保留中の配置はありません</p>';
+                    pendingListContainer.innerHTML = '<p style="color: #999; text-align: center; padding: 20px;"><i class="fas fa-inbox"></i> 保留中の配置はありません</p>';
                     return;
                 }
 
@@ -1085,19 +1232,20 @@
                     
                     item.innerHTML = `
                         <div class="pending-info">
-                            <div style="font-weight: 600; margin-bottom: 4px;">
-                                ${pending.date} の配置
+                            <div style="font-weight: 700; margin-bottom: 6px; font-size: 1.05rem;">
+                                <i class="fas fa-calendar-day"></i> ${pending.date} の配置
                             </div>
                             <div style="font-size: 0.875rem; color: #666;">
-                                保存日時: ${dateStr} | 保存者: ${pending.savedBy}
+                                <i class="fas fa-clock"></i> 保存日時: ${dateStr}<br>
+                                <i class="fas fa-user"></i> 保存者: ${pending.savedBy}
                             </div>
                         </div>
                         <div class="pending-actions">
-                            <button class="btn btn-secondary" style="padding: 6px 12px; font-size: 0.875rem;" 
+                            <button class="btn btn-secondary" style="padding: 8px 16px; font-size: 0.875rem;" 
                                     onclick="staffingAdjustment.loadPending('${pending.id}')">
                                 <i class="fas fa-download"></i> 読み込み
                             </button>
-                            <button class="btn btn-danger" style="padding: 6px 12px; font-size: 0.875rem;" 
+                            <button class="btn btn-danger" style="padding: 8px 16px; font-size: 0.875rem;" 
                                     onclick="staffingAdjustment.deletePending('${pending.id}')">
                                 <i class="fas fa-trash"></i> 削除
                             </button>
@@ -1148,7 +1296,7 @@
                     return;
                 }
 
-                if (!confirm('この配置を確定してスケジュールに反映しますか？')) {
+                if (!confirm('この配置を確定してスケジュールに反映しますか？\n\n※スケジュール画面の配置結果が上書きされます')) {
                     return;
                 }
 
@@ -1161,7 +1309,7 @@
                         const taskAssignments = [];
                         const hours = Object.keys(this.assignments[task.id] || {});
                         
-                        // 時間ごとの配置を統合
+                        // 時間ごとの配置を統合（重複排除）
                         const ceSet = new Set();
                         hours.forEach(hour => {
                             this.assignments[task.id][hour].forEach(ceName => {
@@ -1169,11 +1317,13 @@
                             });
                         });
 
-                        // assignments配列を作成
+                        // assignments配列を作成（スケジュール画面と互換性のある形式）
                         ceSet.forEach(ceName => {
                             taskAssignments.push({ ceName });
                         });
 
+                        // assignedCEsとassignments両方を更新（互換性のため）
+                        updates[`${window.DATA_ROOT}/events/byDate/${dateKey}/${task.id}/assignedCEs`] = Array.from(ceSet);
                         updates[`${window.DATA_ROOT}/events/byDate/${dateKey}/${task.id}/assignments`] = taskAssignments;
                     }
 
@@ -1185,11 +1335,16 @@
                         window.auditLogger.log('staffing_adjustment_confirm', {
                             date: dateKey,
                             tasksCount: this.tasks.length,
-                            totalAssignments: Object.keys(updates).length
+                            totalAssignments: Object.keys(updates).length / 2
                         });
                     }
 
-                    window.showMessage('配置を確定してスケジュールに反映しました', 'success');
+                    window.showMessage('✅ 配置を確定してスケジュールに反映しました', 'success');
+                    
+                    // 3秒後に再読み込みして反映を確認
+                    setTimeout(() => {
+                        this.loadData();
+                    }, 1000);
                 } catch (error) {
                     console.error('❌ 保存エラー:', error);
                     window.showMessage('配置の保存に失敗しました', 'error');
