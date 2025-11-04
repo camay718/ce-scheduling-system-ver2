@@ -22,7 +22,7 @@
             --timeline-start: 7;
             --timeline-end: 18;
             --timeline-hours: 12;
-            --hour-width: 100px;
+            --hour-width: 80px;
         }
 
         body {
@@ -31,40 +31,42 @@
             min-height: 100vh;
             margin: 0;
             padding: 0;
+            font-size: 13px;
         }
 
         .container-main {
             max-width: 1900px;
             margin: 0 auto;
-            padding: 20px;
+            padding: 16px;
         }
 
         .header-section {
             background: white;
-            border-radius: 12px;
-            padding: 24px;
-            margin-bottom: 24px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            border-radius: 10px;
+            padding: 16px;
+            margin-bottom: 16px;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.1);
         }
 
         .controls-bar {
             display: flex;
-            gap: 16px;
+            gap: 12px;
             align-items: center;
             flex-wrap: wrap;
-            margin-bottom: 16px;
+            margin-bottom: 12px;
         }
 
         .btn {
-            padding: 10px 20px;
-            border-radius: 8px;
+            padding: 6px 14px;
+            border-radius: 6px;
             border: none;
             cursor: pointer;
             font-weight: 600;
+            font-size: 12px;
             transition: all 0.3s;
             display: inline-flex;
             align-items: center;
-            gap: 8px;
+            gap: 6px;
         }
 
         .btn-primary {
@@ -90,24 +92,24 @@
         /* タイムラインコンテナ */
         .timeline-container {
             background: white;
-            border-radius: 12px;
-            padding: 24px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            border-radius: 10px;
+            padding: 16px;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.1);
             overflow-x: auto;
             position: relative;
         }
 
         .timeline-wrapper {
-            min-width: calc(var(--hour-width) * var(--timeline-hours) + 250px);
+            min-width: calc(var(--hour-width) * var(--timeline-hours) + 200px);
             position: relative;
         }
 
         /* 時間軸ヘッダー */
         .timeline-header {
             display: flex;
-            margin-bottom: 16px;
+            margin-bottom: 12px;
             border-bottom: 2px solid #4CAF50;
-            padding-bottom: 8px;
+            padding-bottom: 6px;
             position: sticky;
             top: 0;
             background: white;
@@ -115,12 +117,13 @@
         }
 
         .timeline-label {
-            width: 250px;
+            width: 200px;
             font-weight: 700;
+            font-size: 12px;
             color: #2e7d32;
             display: flex;
             align-items: center;
-            padding-left: 12px;
+            padding-left: 8px;
         }
 
         .timeline-hours {
@@ -133,9 +136,10 @@
             width: var(--hour-width);
             text-align: center;
             font-weight: 600;
+            font-size: 11px;
             color: #555;
             border-left: 1px solid #e0e0e0;
-            padding: 8px 4px;
+            padding: 6px 4px;
             cursor: pointer;
             transition: background 0.2s;
         }
@@ -147,52 +151,52 @@
         /* 業務行 */
         .task-row {
             display: flex;
-            margin-bottom: 8px;
-            border-radius: 8px;
+            margin-bottom: 6px;
+            border-radius: 6px;
             transition: all 0.3s;
             border: 2px solid transparent;
-            min-height: 60px;
+            min-height: 50px;
         }
 
         .task-row:hover {
-            box-shadow: 0 4px 12px rgba(0,0,0,0.12);
-            transform: translateX(4px);
+            box-shadow: 0 3px 10px rgba(0,0,0,0.12);
+            transform: translateX(3px);
         }
 
         .task-info {
-            width: 250px;
-            padding: 12px;
+            width: 200px;
+            padding: 8px;
             display: flex;
             flex-direction: column;
             justify-content: center;
-            border-radius: 8px 0 0 8px;
+            border-radius: 6px 0 0 6px;
             position: relative;
         }
 
         .task-name {
             font-weight: 700;
             color: #fff;
-            margin-bottom: 6px;
-            font-size: 0.95rem;
+            margin-bottom: 4px;
+            font-size: 12px;
             text-shadow: 0 1px 2px rgba(0,0,0,0.2);
         }
 
         .task-meta {
-            font-size: 0.75rem;
+            font-size: 10px;
             color: rgba(255,255,255,0.95);
             background: rgba(0,0,0,0.15);
-            padding: 4px 8px;
-            border-radius: 4px;
-            margin-top: 4px;
+            padding: 3px 6px;
+            border-radius: 3px;
+            margin-top: 3px;
         }
 
         .department-badge {
             position: absolute;
-            top: 8px;
-            right: 8px;
-            font-size: 0.65rem;
-            padding: 3px 8px;
-            border-radius: 12px;
+            top: 6px;
+            right: 6px;
+            font-size: 9px;
+            padding: 2px 6px;
+            border-radius: 10px;
             background: rgba(255,255,255,0.3);
             color: white;
             font-weight: 700;
@@ -204,7 +208,7 @@
             flex: 1;
             position: relative;
             background: #f9f9f9;
-            border-radius: 0 8px 8px 0;
+            border-radius: 0 6px 6px 0;
         }
 
         /* 時間セル（背景グリッド） */
@@ -212,21 +216,21 @@
             width: var(--hour-width);
             border-left: 1px solid #e0e0e0;
             position: relative;
-            min-height: 60px;
+            min-height: 50px;
         }
 
         /* 業務バー（時間範囲を結合） */
         .task-bar {
             position: absolute;
-            top: 4px;
-            bottom: 4px;
+            top: 3px;
+            bottom: 3px;
             background: white;
-            border-radius: 6px;
-            padding: 8px;
-            box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+            border-radius: 5px;
+            padding: 6px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.15);
             display: flex;
             flex-direction: column;
-            gap: 6px;
+            gap: 4px;
             overflow: visible;
         }
 
@@ -234,24 +238,24 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
-            padding-bottom: 6px;
+            padding-bottom: 4px;
             border-bottom: 1px solid #e0e0e0;
         }
 
         .staff-required {
-            font-size: 0.75rem;
+            font-size: 10px;
             font-weight: 700;
             color: #1976D2;
             background: #E3F2FD;
-            padding: 3px 8px;
-            border-radius: 4px;
+            padding: 2px 6px;
+            border-radius: 3px;
         }
 
         .staff-assigned {
-            font-size: 0.75rem;
+            font-size: 10px;
             font-weight: 600;
-            padding: 3px 8px;
-            border-radius: 4px;
+            padding: 2px 6px;
+            border-radius: 3px;
         }
 
         .staff-assigned.sufficient {
@@ -268,22 +272,22 @@
         .staff-icons {
             display: flex;
             flex-wrap: wrap;
-            gap: 6px;
-            padding: 4px 0;
+            gap: 4px;
+            padding: 3px 0;
             align-items: flex-start;
         }
 
         .staff-icon {
-            padding: 5px 12px;
-            border-radius: 14px;
-            font-size: 0.8rem;
+            padding: 3px 8px;
+            border-radius: 10px;
+            font-size: 10px;
             font-weight: 600;
             cursor: pointer;
             transition: all 0.2s;
             display: inline-flex;
             align-items: center;
-            gap: 6px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+            gap: 4px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.2);
             color: white;
         }
 
@@ -306,21 +310,21 @@
         }
 
         .staff-icon:hover {
-            transform: scale(1.05) translateY(-2px);
-            box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+            transform: scale(1.05) translateY(-1px);
+            box-shadow: 0 3px 6px rgba(0,0,0,0.3);
         }
 
         .staff-icon .remove-btn {
             cursor: pointer;
-            margin-left: 4px;
+            margin-left: 3px;
             opacity: 0.8;
             font-weight: 700;
-            font-size: 1rem;
+            font-size: 11px;
         }
 
         .staff-icon .remove-btn:hover {
             opacity: 1;
-            transform: scale(1.3);
+            transform: scale(1.2);
         }
 
         /* 縦ラインとメニュー */
@@ -328,9 +332,9 @@
             position: absolute;
             top: 0;
             bottom: 0;
-            width: 3px;
+            width: 2px;
             background: linear-gradient(180deg, #4CAF50, #2196F3);
-            box-shadow: 0 0 8px rgba(76, 175, 80, 0.6);
+            box-shadow: 0 0 6px rgba(76, 175, 80, 0.6);
             pointer-events: none;
             z-index: 100;
             opacity: 0;
@@ -343,16 +347,16 @@
 
         /* 箱ひげメニュー */
         .whisker-menu {
-            position: absolute;
-            width: 320px;
+            position: fixed;
+            width: 280px;
             background: white;
-            border-radius: 12px;
-            box-shadow: 0 8px 24px rgba(0,0,0,0.3);
+            border-radius: 10px;
+            box-shadow: 0 6px 20px rgba(0,0,0,0.3);
             z-index: 200;
             opacity: 0;
             pointer-events: none;
             transition: opacity 0.2s;
-            max-height: 500px;
+            max-height: 450px;
             overflow-y: auto;
         }
 
@@ -364,35 +368,43 @@
         .whisker-menu-header {
             background: linear-gradient(135deg, #4CAF50, #2196F3);
             color: white;
-            padding: 12px 16px;
-            border-radius: 12px 12px 0 0;
+            padding: 10px 12px;
+            border-radius: 10px 10px 0 0;
             font-weight: 700;
-            font-size: 0.95rem;
+            font-size: 12px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .whisker-menu-help {
+            font-size: 10px;
+            opacity: 0.9;
         }
 
         /* 部門状況サマリー */
         .dept-status-summary {
-            padding: 12px;
+            padding: 10px;
             border-bottom: 2px solid #e0e0e0;
             background: #f9f9f9;
         }
 
         .dept-status-title {
-            font-size: 0.75rem;
+            font-size: 10px;
             font-weight: 700;
             color: #555;
-            margin-bottom: 8px;
+            margin-bottom: 6px;
             display: flex;
             align-items: center;
-            gap: 6px;
+            gap: 4px;
         }
 
         .dept-status-item {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            padding: 4px 0;
-            font-size: 0.75rem;
+            padding: 3px 0;
+            font-size: 10px;
         }
 
         .dept-name {
@@ -403,10 +415,11 @@
 
         .dept-fill-rate {
             font-weight: 700;
-            padding: 2px 8px;
-            border-radius: 4px;
-            min-width: 50px;
+            padding: 2px 6px;
+            border-radius: 3px;
+            min-width: 45px;
             text-align: center;
+            font-size: 10px;
         }
 
         .dept-fill-rate.high {
@@ -426,46 +439,52 @@
 
         /* 人員リスト */
         .whisker-staff-section {
-            padding: 12px;
+            padding: 10px;
         }
 
         .whisker-section-title {
-            font-size: 0.85rem;
+            font-size: 11px;
             font-weight: 600;
             color: #555;
-            margin-bottom: 8px;
-            padding-bottom: 6px;
+            margin-bottom: 6px;
+            padding-bottom: 4px;
             border-bottom: 1px solid #e0e0e0;
             display: flex;
             align-items: center;
-            gap: 6px;
+            gap: 4px;
         }
 
         .whisker-staff-list {
             display: flex;
             flex-direction: column;
-            gap: 6px;
+            gap: 4px;
         }
 
         .whisker-staff-item {
             background: #f5f5f5;
             border: 2px solid #e0e0e0;
-            padding: 8px 12px;
-            border-radius: 6px;
+            padding: 6px 10px;
+            border-radius: 5px;
             cursor: pointer;
             transition: all 0.2s;
-            font-size: 0.8rem;
+            font-size: 11px;
             font-weight: 600;
             display: flex;
             align-items: center;
-            gap: 8px;
+            gap: 6px;
         }
 
         .whisker-staff-item:hover {
             background: #4CAF50;
             color: white;
             border-color: #4CAF50;
-            transform: translateX(4px);
+            transform: translateX(3px);
+        }
+
+        .whisker-staff-item.selected {
+            background: #2196F3;
+            color: white;
+            border-color: #2196F3;
         }
 
         .whisker-staff-item.concurrent {
@@ -478,10 +497,15 @@
             border-color: #FF9800;
         }
 
+        .whisker-staff-item.concurrent.selected {
+            background: #F57C00;
+            border-color: #F57C00;
+        }
+
         .work-type-badge {
-            padding: 2px 6px;
-            border-radius: 4px;
-            font-size: 0.7rem;
+            padding: 2px 5px;
+            border-radius: 3px;
+            font-size: 9px;
             font-weight: 600;
         }
 
@@ -508,39 +532,39 @@
         /* サマリーセクション */
         .summary-section {
             background: white;
-            border-radius: 12px;
-            padding: 24px;
-            margin-bottom: 24px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            border-radius: 10px;
+            padding: 16px;
+            margin-bottom: 16px;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.1);
         }
 
         .summary-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-            gap: 16px;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 12px;
         }
 
         .summary-card {
             background: linear-gradient(135deg, #f5f5f5, #e0e0e0);
-            padding: 20px;
-            border-radius: 8px;
+            padding: 16px;
+            border-radius: 6px;
             text-align: center;
             transition: all 0.3s;
         }
 
         .summary-card:hover {
-            transform: translateY(-4px);
-            box-shadow: 0 6px 16px rgba(0,0,0,0.15);
+            transform: translateY(-3px);
+            box-shadow: 0 5px 14px rgba(0,0,0,0.15);
         }
 
         .summary-value {
-            font-size: 2.5rem;
+            font-size: 2rem;
             font-weight: 700;
-            margin-bottom: 8px;
+            margin-bottom: 6px;
         }
 
         .summary-label {
-            font-size: 0.875rem;
+            font-size: 11px;
             color: #666;
             font-weight: 600;
         }
@@ -552,18 +576,18 @@
         /* 保留リスト */
         .pending-list-section {
             background: white;
-            border-radius: 12px;
-            padding: 24px;
-            margin-top: 24px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            border-radius: 10px;
+            padding: 16px;
+            margin-top: 16px;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.1);
         }
 
         .pending-item {
             background: #f9f9f9;
             border: 2px solid #e0e0e0;
-            border-radius: 8px;
-            padding: 18px;
-            margin-bottom: 12px;
+            border-radius: 6px;
+            padding: 12px;
+            margin-bottom: 10px;
             display: flex;
             justify-content: space-between;
             align-items: center;
@@ -572,7 +596,7 @@
 
         .pending-item:hover {
             border-color: #4CAF50;
-            box-shadow: 0 2px 8px rgba(76, 175, 80, 0.2);
+            box-shadow: 0 2px 6px rgba(76, 175, 80, 0.2);
         }
 
         .pending-info {
@@ -581,7 +605,7 @@
 
         .pending-actions {
             display: flex;
-            gap: 8px;
+            gap: 6px;
         }
     </style>
 </head>
@@ -589,8 +613,8 @@
     <div class="container-main">
         <!-- ヘッダー -->
         <div class="header-section">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
-                <h1 style="font-size: 1.75rem; font-weight: 700; color: #2e7d32;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                <h1 style="font-size: 1.4rem; font-weight: 700; color: #2e7d32;">
                     <i class="fas fa-users-cog"></i> 人員配置調整
                 </h1>
                 <button class="btn btn-secondary" onclick="window.location.href='analytics.html'">
@@ -601,8 +625,8 @@
             <!-- コントロールバー -->
             <div class="controls-bar">
                 <div>
-                    <label style="font-weight: 600; margin-right: 8px;">対象日:</label>
-                    <input type="date" id="targetDate" class="form-input" style="padding: 8px; border-radius: 6px; border: 1px solid #ddd;">
+                    <label style="font-weight: 600; margin-right: 6px; font-size: 12px;">対象日:</label>
+                    <input type="date" id="targetDate" class="form-input" style="padding: 6px; border-radius: 5px; border: 1px solid #ddd; font-size: 12px;">
                 </div>
                 <button class="btn btn-primary" onclick="staffingAdjustment.loadData()">
                     <i class="fas fa-sync-alt"></i> データ読み込み
@@ -618,7 +642,7 @@
 
         <!-- サマリーセクション -->
         <div class="summary-section" id="summarySection" style="display: none;">
-            <h3 style="font-size: 1.25rem; font-weight: 700; margin-bottom: 16px; color: #2e7d32;">
+            <h3 style="font-size: 1.1rem; font-weight: 700; margin-bottom: 12px; color: #2e7d32;">
                 <i class="fas fa-chart-bar"></i> 配置サマリー
             </h3>
             <div class="summary-grid" id="summaryGrid"></div>
@@ -637,49 +661,50 @@
 
                 <!-- 縦ライン -->
                 <div class="vertical-line" id="verticalLine"></div>
-
-                <!-- 箱ひげメニュー -->
-                <div class="whisker-menu" id="whiskerMenu">
-                    <div class="whisker-menu-header" id="whiskerMenuHeader">
-                        8:00 の配置調整
-                    </div>
-                    
-                    <!-- 部門状況サマリー -->
-                    <div class="dept-status-summary">
-                        <div class="dept-status-title">
-                            <i class="fas fa-chart-pie"></i>
-                            <span>各部門の配置状況</span>
-                        </div>
-                        <div id="deptStatusList"></div>
-                    </div>
-
-                    <!-- 空き人員 -->
-                    <div class="whisker-staff-section">
-                        <div class="whisker-section-title">
-                            <i class="fas fa-user-check"></i>
-                            <span>空き人員</span>
-                        </div>
-                        <div class="whisker-staff-list" id="whiskerAvailableList"></div>
-                    </div>
-
-                    <!-- 兼務可能人員 -->
-                    <div class="whisker-staff-section">
-                        <div class="whisker-section-title">
-                            <i class="fas fa-user-clock"></i>
-                            <span>兼務可能人員</span>
-                        </div>
-                        <div class="whisker-staff-list" id="whiskerConcurrentList"></div>
-                    </div>
-                </div>
             </div>
         </div>
 
         <!-- 保留リスト -->
         <div class="pending-list-section">
-            <h3 style="font-size: 1.25rem; font-weight: 700; margin-bottom: 16px; color: #2e7d32;">
+            <h3 style="font-size: 1.1rem; font-weight: 700; margin-bottom: 12px; color: #2e7d32;">
                 <i class="fas fa-clock"></i> 保留中の配置
             </h3>
             <div id="pendingList"></div>
+        </div>
+    </div>
+
+    <!-- 箱ひげメニュー（固定位置） -->
+    <div class="whisker-menu" id="whiskerMenu">
+        <div class="whisker-menu-header" id="whiskerMenuHeader">
+            <span>8:00 の配置調整</span>
+            <span class="whisker-menu-help">↑↓:選択 Enter:配置 Esc:閉じる</span>
+        </div>
+        
+        <!-- 部門状況サマリー -->
+        <div class="dept-status-summary">
+            <div class="dept-status-title">
+                <i class="fas fa-chart-pie"></i>
+                <span>各部門の配置状況</span>
+            </div>
+            <div id="deptStatusList"></div>
+        </div>
+
+        <!-- 空き人員 -->
+        <div class="whisker-staff-section">
+            <div class="whisker-section-title">
+                <i class="fas fa-user-check"></i>
+                <span>空き人員</span>
+            </div>
+            <div class="whisker-staff-list" id="whiskerAvailableList"></div>
+        </div>
+
+        <!-- 兼務可能人員 -->
+        <div class="whisker-staff-section">
+            <div class="whisker-section-title">
+                <i class="fas fa-user-clock"></i>
+                <span>兼務可能人員</span>
+            </div>
+            <div class="whisker-staff-list" id="whiskerConcurrentList"></div>
         </div>
     </div>
 
@@ -714,11 +739,12 @@
                     right: 20px;
                     background: ${colors[type] || '#333'};
                     color: white;
-                    padding: 16px 24px;
-                    border-radius: 8px;
+                    padding: 12px 18px;
+                    border-radius: 6px;
                     box-shadow: 0 4px 12px rgba(0,0,0,0.3);
                     z-index: 10000;
                     font-weight: 600;
+                    font-size: 12px;
                 `;
                 div.textContent = msg;
                 document.body.appendChild(div);
@@ -737,6 +763,9 @@
                 this.departmentColors = DEPARTMENT_COLORS;
                 this.currentHour = null;
                 this.currentTargetTask = null;
+                this.isMenuOpen = false;
+                this.selectedIndex = -1;
+                this.staffList = [];
                 this.init();
             }
 
@@ -747,6 +776,7 @@
                     this.renderTimelineHeader();
                     this.loadPendingList();
                     this.setupInteractiveTimeline();
+                    this.setupKeyboardControls();
                     console.log('✅ 人員配置調整システム初期化完了');
                 } catch (error) {
                     console.error('❌ 初期化エラー:', error);
@@ -799,20 +829,17 @@
                 const timelineWrapper = document.getElementById('timelineWrapper');
                 const verticalLine = document.getElementById('verticalLine');
                 const whiskerMenu = document.getElementById('whiskerMenu');
-                
-                let isMenuOpen = false;
-                let menuTimeout = null;
 
                 timelineWrapper.addEventListener('mousemove', (e) => {
+                    if (this.isMenuOpen) return; // メニューが開いている場合は無視
+
                     const rect = timelineWrapper.getBoundingClientRect();
-                    const x = e.clientX - rect.left;
                     const timelineHours = document.getElementById('timelineHours');
                     const hoursRect = timelineHours.getBoundingClientRect();
                     const hoursX = e.clientX - hoursRect.left;
 
-                    // 時間軸の範囲内かチェック
                     if (hoursX >= 0 && hoursX <= hoursRect.width) {
-                        const hourWidth = 100; // var(--hour-width)
+                        const hourWidth = 80;
                         const hourIndex = Math.floor(hoursX / hourWidth);
                         const hour = 7 + hourIndex;
 
@@ -820,70 +847,154 @@
                             this.currentHour = hour;
                             
                             // 縦ラインの位置を更新
-                            const lineX = 250 + (hourIndex * hourWidth) + (hourWidth / 2);
+                            const lineX = 200 + (hourIndex * hourWidth) + (hourWidth / 2);
                             verticalLine.style.left = `${lineX}px`;
                             verticalLine.classList.add('active');
-
-                            // メニューの位置を更新
-                            const menuX = Math.min(lineX + 10, rect.width - 340);
-                            whiskerMenu.style.left = `${menuX}px`;
-                            whiskerMenu.style.top = '80px';
-
-                            // メニュー内容を更新
-                            this.updateWhiskerMenu(hour);
                         }
                     }
                 });
 
-                // メニューのクリックで固定表示
+                // クリックでメニューを固定表示
                 timelineWrapper.addEventListener('click', (e) => {
                     const rect = timelineWrapper.getBoundingClientRect();
                     const timelineHours = document.getElementById('timelineHours');
                     const hoursRect = timelineHours.getBoundingClientRect();
                     const hoursX = e.clientX - hoursRect.left;
 
-                    if (hoursX >= 0 && hoursX <= hoursRect.width) {
-                        isMenuOpen = !isMenuOpen;
-                        whiskerMenu.classList.toggle('active', isMenuOpen);
+                    if (hoursX >= 0 && hoursX <= hoursRect.width && this.currentHour !== null) {
+                        this.isMenuOpen = true;
+                        this.selectedIndex = 0;
+                        
+                        // メニューを固定位置に表示
+                        const menuX = Math.min(e.clientX + 10, window.innerWidth - 300);
+                        const menuY = Math.min(e.clientY + 10, window.innerHeight - 500);
+                        whiskerMenu.style.left = `${menuX}px`;
+                        whiskerMenu.style.top = `${menuY}px`;
+                        whiskerMenu.classList.add('active');
+
+                        // メニュー内容を更新
+                        this.updateWhiskerMenu(this.currentHour);
                     }
                 });
 
                 // メニュー外をクリックで閉じる
                 document.addEventListener('click', (e) => {
-                    if (!timelineWrapper.contains(e.target)) {
-                        isMenuOpen = false;
-                        whiskerMenu.classList.remove('active');
-                        verticalLine.classList.remove('active');
+                    if (!timelineWrapper.contains(e.target) && !whiskerMenu.contains(e.target)) {
+                        this.closeMenu();
                     }
                 });
 
                 // マウスが離れたら縦ラインを非表示
                 timelineWrapper.addEventListener('mouseleave', () => {
-                    if (!isMenuOpen) {
+                    if (!this.isMenuOpen) {
                         verticalLine.classList.remove('active');
                     }
                 });
             }
 
+            setupKeyboardControls() {
+                document.addEventListener('keydown', (e) => {
+                    if (!this.isMenuOpen) return;
+
+                    switch(e.key) {
+                        case 'ArrowUp':
+                            e.preventDefault();
+                            this.moveSelection(-1);
+                            break;
+                        case 'ArrowDown':
+                            e.preventDefault();
+                            this.moveSelection(1);
+                            break;
+                        case 'Enter':
+                            e.preventDefault();
+                            this.assignSelected();
+                            break;
+                        case 'Escape':
+                            e.preventDefault();
+                            this.closeMenu();
+                            break;
+                        case 'Delete':
+                        case 'Backspace':
+                            e.preventDefault();
+                            // 削除機能は業務バーの×ボタンで対応
+                            break;
+                    }
+                });
+            }
+
+            moveSelection(direction) {
+                if (this.staffList.length === 0) return;
+
+                this.selectedIndex += direction;
+                
+                // 範囲チェック
+                if (this.selectedIndex < 0) {
+                    this.selectedIndex = this.staffList.length - 1;
+                } else if (this.selectedIndex >= this.staffList.length) {
+                    this.selectedIndex = 0;
+                }
+
+                // 選択状態を更新
+                this.updateSelection();
+            }
+
+            updateSelection() {
+                const availableItems = document.querySelectorAll('#whiskerAvailableList .whisker-staff-item');
+                const concurrentItems = document.querySelectorAll('#whiskerConcurrentList .whisker-staff-item');
+                const allItems = [...availableItems, ...concurrentItems];
+
+                allItems.forEach((item, index) => {
+                    if (index === this.selectedIndex) {
+                        item.classList.add('selected');
+                        item.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+                    } else {
+                        item.classList.remove('selected');
+                    }
+                });
+            }
+
+            assignSelected() {
+                if (this.selectedIndex < 0 || this.selectedIndex >= this.staffList.length) return;
+
+                const selectedStaff = this.staffList[this.selectedIndex];
+                this.showTaskSelectionForAssignment(selectedStaff.name, this.currentHour);
+            }
+
+            closeMenu() {
+                this.isMenuOpen = false;
+                this.selectedIndex = -1;
+                this.staffList = [];
+                document.getElementById('whiskerMenu').classList.remove('active');
+                document.getElementById('verticalLine').classList.remove('active');
+            }
+
             updateWhiskerMenu(hour) {
                 const whiskerMenuHeader = document.getElementById('whiskerMenuHeader');
-                whiskerMenuHeader.textContent = `${hour}:00 の配置調整`;
+                whiskerMenuHeader.querySelector('span:first-child').textContent = `${hour}:00 の配置調整`;
 
                 // 部門状況を更新
                 this.updateDepartmentStatus(hour);
 
-                // 空き人員を更新
-                this.updateAvailableStaff(hour);
+                // 空き人員と兼務可能人員を更新
+                const available = this.getAvailableStaff(hour);
+                const concurrent = this.getConcurrentStaff(hour, null);
+                
+                this.staffList = [...available, ...concurrent];
+                
+                this.updateAvailableStaff(available);
+                this.updateConcurrentStaff(concurrent);
 
-                // 兼務可能人員を更新
-                this.updateConcurrentStaff(hour);
+                // 初期選択
+                if (this.staffList.length > 0) {
+                    this.selectedIndex = 0;
+                    this.updateSelection();
+                }
             }
 
             updateDepartmentStatus(hour) {
                 const deptStatusList = document.getElementById('deptStatusList');
                 deptStatusList.innerHTML = '';
 
-                // 部門ごとに集計
                 const departments = ['機器管理・人工呼吸', '血液浄化', '不整脈', '心・カテーテル', '人工心肺・補助循環', '手術・麻酔'];
                 
                 departments.forEach(dept => {
@@ -918,56 +1029,61 @@
                 });
             }
 
-            updateAvailableStaff(hour) {
+            updateAvailableStaff(available) {
                 const availableList = document.getElementById('whiskerAvailableList');
                 availableList.innerHTML = '';
 
-                const available = this.getAvailableStaff(hour);
-
                 if (available.length === 0) {
-                    availableList.innerHTML = '<p style="color: #999; padding: 8px; font-size: 0.75rem;">空き人員がいません</p>';
+                    availableList.innerHTML = '<p style="color: #999; padding: 6px; font-size: 10px;">空き人員がいません</p>';
                     return;
                 }
 
-                available.forEach(ce => {
+                available.forEach((ce, index) => {
                     const item = document.createElement('div');
                     item.className = 'whisker-staff-item';
+                    item.dataset.index = index;
                     item.innerHTML = `
                         <i class="fas fa-user-plus"></i>
                         <span style="flex: 1;">${ce.name}</span>
                         <span class="work-type-badge ${ce.workType}">${ce.workType}</span>
                     `;
-                    item.onclick = () => this.showTaskSelectionForAssignment(ce.name, hour);
+                    item.onclick = () => {
+                        this.selectedIndex = index;
+                        this.assignSelected();
+                    };
                     availableList.appendChild(item);
                 });
             }
 
-            updateConcurrentStaff(hour) {
+            updateConcurrentStaff(concurrent) {
                 const concurrentList = document.getElementById('whiskerConcurrentList');
                 concurrentList.innerHTML = '';
 
-                const concurrent = this.getConcurrentStaff(hour, null);
-
                 if (concurrent.length === 0) {
-                    concurrentList.innerHTML = '<p style="color: #999; padding: 8px; font-size: 0.75rem;">兼務可能な人員がいません</p>';
+                    concurrentList.innerHTML = '<p style="color: #999; padding: 6px; font-size: 10px;">兼務可能な人員がいません</p>';
                     return;
                 }
 
-                concurrent.forEach(ce => {
+                const availableCount = this.getAvailableStaff(this.currentHour).length;
+
+                concurrent.forEach((ce, index) => {
                     const item = document.createElement('div');
                     item.className = 'whisker-staff-item concurrent';
+                    item.dataset.index = availableCount + index;
                     item.innerHTML = `
                         <i class="fas fa-user-clock"></i>
                         <span style="flex: 1;">${ce.name}</span>
                         <span class="work-type-badge ${ce.workType}">${ce.workType}</span>
                     `;
-                    item.onclick = () => this.showTaskSelectionForAssignment(ce.name, hour);
+                    item.onclick = () => {
+                        this.selectedIndex = availableCount + index;
+                        this.assignSelected();
+                    };
                     concurrentList.appendChild(item);
                 });
             }
 
             showTaskSelectionForAssignment(ceName, hour) {
-                // この時間帯の業務一覧を表示して選択
                 const tasksAtHour = this.tasks.filter(task => {
                     const startHour = this.parseTimeToHour(task.startTime);
                     const endHour = this.parseTimeToHour(task.endTime);
@@ -980,18 +1096,12 @@
                 }
 
                 if (tasksAtHour.length === 1) {
-                    // 業務が1つだけの場合は直接配置
                     this.assignStaffToTask(tasksAtHour[0].id, hour, ceName);
                     return;
                 }
 
-                // 複数業務がある場合は選択メニューを表示
-                const taskNames = tasksAtHour.map(t => `${t.name} (${this.getDepartmentShortName(t.department)})`).join('\n');
-                const selected = confirm(`${ceName}さんを配置する業務を選んでください:\n\n${taskNames}\n\n最初の業務に配置しますか？`);
-                
-                if (selected) {
-                    this.assignStaffToTask(tasksAtHour[0].id, hour, ceName);
-                }
+                // 複数業務がある場合は最初の業務に配置（簡易版）
+                this.assignStaffToTask(tasksAtHour[0].id, hour, ceName);
             }
 
             assignStaffToTask(taskId, hour, ceName) {
@@ -1051,6 +1161,7 @@
                     // CE勤務状態を取得
                     const statusSnap = await window.database.ref(`${window.DATA_ROOT}/ceStatus/byDate/${dateKeyFormatted}`).once('value');
                     this.ceStatus = statusSnap.val() || {};
+                    console.log('✅ CE勤務状態取得:', this.ceStatus);
 
                     // 業務データを取得
                     const eventsSnap = await window.database.ref(`${window.DATA_ROOT}/events/byDate/${dateKeyFormatted}`).once('value');
@@ -1155,7 +1266,7 @@
                 taskRowsContainer.innerHTML = '';
 
                 if (this.tasks.length === 0) {
-                    taskRowsContainer.innerHTML = '<p style="text-align: center; padding: 40px; color: #999;">業務データがありません</p>';
+                    taskRowsContainer.innerHTML = '<p style="text-align: center; padding: 30px; color: #999; font-size: 12px;">業務データがありません</p>';
                     return;
                 }
 
@@ -1175,7 +1286,7 @@
                         <div class="task-name">${task.name || '無題'}</div>
                         <div class="task-meta">
                             <i class="fas fa-clock"></i> ${task.startTime || '8:00'} - ${task.endTime || '17:00'}<br>
-                            <i class="fas fa-users"></i> 必要人数: ${task.requiredStaff || task.requiredPeople || 1}名
+                            <i class="fas fa-users"></i> 必要: ${task.requiredStaff || task.requiredPeople || 1}名
                         </div>
                     `;
 
@@ -1195,8 +1306,8 @@
 
                     // 業務バー（結合表示）
                     if (endHour > startHour) {
-                        const barLeft = (startHour - 7) * 100;
-                        const barWidth = (endHour - startHour) * 100;
+                        const barLeft = (startHour - 7) * 80;
+                        const barWidth = (endHour - startHour) * 80;
 
                         // 配置されている全CEを取得（重複排除）
                         const assignedCEs = new Set();
@@ -1215,14 +1326,14 @@
                         const taskBar = document.createElement('div');
                         taskBar.className = 'task-bar';
                         taskBar.style.left = `${barLeft}px`;
-                        taskBar.style.width = `${barWidth - 8}px`;
+                        taskBar.style.width = `${barWidth - 6}px`;
 
                         // ヘッダー
                         taskBar.innerHTML = `
                             <div class="task-bar-header">
                                 <div class="staff-required">必要: ${required}名</div>
                                 <div class="staff-assigned ${shortage > 0 ? 'shortage' : 'sufficient'}">
-                                    配置: ${assigned}名 ${shortage > 0 ? `(不足 ${shortage}名)` : ''}
+                                    配置: ${assigned}名${shortage > 0 ? ` (不足 ${shortage})` : ''}
                                 </div>
                             </div>
                         `;
@@ -1233,7 +1344,6 @@
                             iconsDiv.className = 'staff-icons';
                             
                             assignedCEs.forEach(ceName => {
-                                // CEの勤務タイプを取得
                                 const ce = this.ceList.find(c => c.name === ceName);
                                 const workType = ce?.workType || 'OPE';
 
@@ -1259,7 +1369,6 @@
             }
 
             removeAssignmentFromTask(taskId, ceName) {
-                // この業務の全時間帯からCEを削除
                 if (this.assignments[taskId]) {
                     Object.keys(this.assignments[taskId]).forEach(hour => {
                         const index = this.assignments[taskId][hour].indexOf(ceName);
@@ -1271,6 +1380,11 @@
                 this.renderTasks();
                 this.renderSummary();
                 window.showMessage(`${ceName}さんの配置を解除しました`, 'success');
+                
+                // メニューが開いている場合は更新
+                if (this.isMenuOpen && this.currentHour !== null) {
+                    this.updateWhiskerMenu(this.currentHour);
+                }
             }
 
             adjustColor(color, amount) {
@@ -1286,11 +1400,17 @@
                 const available = [];
 
                 this.ceList.forEach(ce => {
+                    // 🔧 修正: 勤務状態を正確にチェック
                     const status = this.ceStatus[ce.id] || '';
+                    console.log(`CE: ${ce.name}, ID: ${ce.id}, Status: "${status}"`);
+                    
+                    // 非番(非)、欠勤(×)、年休(年)、B当番(B) をフィルタ
                     if (status === '非' || status === '×' || status === '年' || status === 'B') {
+                        console.log(`  → 除外: ${status}`);
                         return;
                     }
 
+                    // 既に配置されているかチェック
                     let isAssigned = false;
                     this.tasks.forEach(task => {
                         if (this.assignments[task.id]?.[hour]?.includes(ce.name)) {
@@ -1303,6 +1423,7 @@
                     }
                 });
 
+                console.log(`✅ ${hour}:00の空き人員: ${available.length}名`, available.map(c => c.name));
                 return available;
             }
 
@@ -1311,6 +1432,7 @@
                 const addedNames = new Set();
 
                 this.ceList.forEach(ce => {
+                    // 🔧 修正: 勤務状態を正確にチェック
                     const status = this.ceStatus[ce.id] || '';
                     if (status === '非' || status === '×' || status === '年' || status === 'B') {
                         return;
@@ -1361,7 +1483,6 @@
                     const duration = endHour - startHour;
                     totalRequired += required * duration;
 
-                    // 配置されている全CEを取得（重複排除）
                     const assignedCEs = new Set();
                     for (let h = startHour; h < endHour; h++) {
                         if (this.assignments[task.id]?.[h]) {
@@ -1446,7 +1567,7 @@
                 const pendingListContainer = document.getElementById('pendingList');
                 
                 if (this.pendingAssignments.length === 0) {
-                    pendingListContainer.innerHTML = '<p style="color: #999; text-align: center; padding: 20px;"><i class="fas fa-inbox"></i> 保留中の配置はありません</p>';
+                    pendingListContainer.innerHTML = '<p style="color: #999; text-align: center; padding: 16px; font-size: 11px;"><i class="fas fa-inbox"></i> 保留中の配置はありません</p>';
                     return;
                 }
 
@@ -1461,20 +1582,20 @@
                     
                     item.innerHTML = `
                         <div class="pending-info">
-                            <div style="font-weight: 700; margin-bottom: 6px; font-size: 1.05rem;">
+                            <div style="font-weight: 700; margin-bottom: 4px; font-size: 12px;">
                                 <i class="fas fa-calendar-day"></i> ${pending.date} の配置
                             </div>
-                            <div style="font-size: 0.875rem; color: #666;">
-                                <i class="fas fa-clock"></i> 保存日時: ${dateStr}<br>
-                                <i class="fas fa-user"></i> 保存者: ${pending.savedBy}
+                            <div style="font-size: 10px; color: #666;">
+                                <i class="fas fa-clock"></i> ${dateStr}<br>
+                                <i class="fas fa-user"></i> ${pending.savedBy}
                             </div>
                         </div>
                         <div class="pending-actions">
-                            <button class="btn btn-secondary" style="padding: 8px 16px; font-size: 0.875rem;" 
+                            <button class="btn btn-secondary" style="padding: 6px 12px; font-size: 11px;" 
                                     onclick="staffingAdjustment.loadPending('${pending.id}')">
-                                <i class="fas fa-download"></i> 読み込み
+                                <i class="fas fa-download"></i> 読込
                             </button>
-                            <button class="btn btn-danger" style="padding: 8px 16px; font-size: 0.875rem;" 
+                            <button class="btn btn-danger" style="padding: 6px 12px; font-size: 11px; background: #f44336;" 
                                     onclick="staffingAdjustment.deletePending('${pending.id}')">
                                 <i class="fas fa-trash"></i> 削除
                             </button>
