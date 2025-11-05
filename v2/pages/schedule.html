@@ -1556,25 +1556,24 @@ this.eventsCallback = (snapshot) => {
 };
                     this.eventsRef.on('value', this.eventsCallback);
 
-
-                    // 月次業務のリアルタイム更新
-                    const yearMonth = dateKey.substring(0, 7);
+                     // 月次業務のリアルタイム更新（全期間対応版）
                     if (this.monthlyRef && this.monthlyCallback) {
                         this.monthlyRef.off('value', this.monthlyCallback);
                     }
                     
-                    this.monthlyRef = window.database.ref(`${window.DATA_ROOT}/monthlyTasks/${yearMonth}`);
+                    // ★修正: すべての月次業務を監視（特定年月ではなく全体）
+                    this.monthlyRef = window.database.ref(`${window.DATA_ROOT}/monthlyTasks`);
 this.monthlyCallback = async (snapshot) => {
-    console.log('🔄 月次業務データ更新検知:', yearMonth);
-    const data = snapshot.val() || {};
+    console.log('🔄 月次業務データ更新検知（全期間）');
+    const allData = snapshot.val() || {};
     
     // データ変更検知（無限ループ防止）
-    const currentHash = JSON.stringify(this.monthlyTasks[yearMonth] || {});
-    const newHash = JSON.stringify(data);
+    const currentHash = JSON.stringify(this.monthlyTasks);
+    const newHash = JSON.stringify(allData);
     
     if (currentHash !== newHash) {
-        console.log('📊 月次業務データ実際に変更:', yearMonth);
-        this.monthlyTasks[yearMonth] = data;
+        console.log('📊 月次業務データ実際に変更（全期間）');
+        this.monthlyTasks = allData; // ★全期間のデータを保持
         
         // デバウンス処理（連続更新防止）
 clearTimeout(this.monthlyRenderTimeout);
@@ -1591,6 +1590,7 @@ this.monthlyRenderTimeout = setTimeout(async () => {
     }
 };
                     this.monthlyRef.on('value', this.monthlyCallback);
+
                 };
                 
 // テンプレートのリアルタイム更新
@@ -2768,10 +2768,7 @@ async renderMonthlyTasks() {
     const grid = document.getElementById('departmentGrid');
     if (!grid) return;
 
-
     const dateKey = this.formatDate(this.selectedDate);
-    const yearMonth = dateKey.substring(0, 7);
-    const monthlyData = this.monthlyTasks[yearMonth] || {};
 
 
     // 既存の月次業務カードをクリア
@@ -2780,11 +2777,34 @@ async renderMonthlyTasks() {
     });
 
 
-    const taskList = Object.values(monthlyData);
-    if (taskList.length === 0) return;
+    // ★修正: すべての年月から、選択日付に該当する月次業務を抽出
+    const relevantTasks = [];
+    Object.keys(this.monthlyTasks).forEach(taskYearMonth => {
+        const monthData = this.monthlyTasks[taskYearMonth] || {};
+        Object.values(monthData).forEach(task => {
+            if (task && task.department && task.name) {
+                // ★重要: 選択日付がその月次業務の月と一致する場合のみ表示
+                if (dateKey.startsWith(taskYearMonth)) {
+                    relevantTasks.push({
+                        ...task,
+                        id: task.id,
+                        yearMonth: taskYearMonth
+                    });
+                }
+            }
+        });
+    });
 
 
-    for (const task of taskList) {
+    if (relevantTasks.length === 0) {
+        console.log('📊 表示する月次業務なし:', dateKey);
+        return;
+    }
+
+    console.log(`📊 月次業務表示: ${relevantTasks.length}件 (${dateKey})`);
+
+    for (const task of relevantTasks) {
+        const taskYearMonth = task.yearMonth;
         if (!task || !task.department || !task.name) continue;
         
         const section = grid.querySelector(`.monthly-plans[data-department="${task.department}"]`);
@@ -2811,15 +2831,15 @@ async renderMonthlyTasks() {
         const todayActual = dailyActuals[dateKey] || { count: 0, startTime: '', endTime: '' };
 
 
-        // 月間累積実施件数の計算
+        // 月間累積実施件数の計算（★修正: taskYearMonthを使用）
         let totalActualCount = 0;
         Object.keys(dailyActuals).forEach(recordDate => {
-            if (recordDate.startsWith(yearMonth) && recordDate <= dateKey) {
+            // その月次業務の月内、かつ選択日付以前の実施記録を集計
+            if (recordDate.startsWith(taskYearMonth) && recordDate <= dateKey) {
                 totalActualCount += dailyActuals[recordDate].count || 0;
             }
         });
-
-
+        
         // CE配置の正規化
         const normalizedAssigned = assignedList.map(entry => {
             if (typeof entry === 'string') {
@@ -2890,7 +2910,7 @@ async renderMonthlyTasks() {
         monthlyCard.style.background = `linear-gradient(135deg, ${deptColor}15, ${deptColor}05)`;
         monthlyCard.style.borderColor = `${deptColor}40`;
         monthlyCard.dataset.taskId = task.id;
-        monthlyCard.dataset.yearMonth = yearMonth;
+        monthlyCard.dataset.yearMonth = taskYearMonth;
         monthlyCard.dataset.dateKey = dateKey;
         monthlyCard.dataset.department = task.department;
 
@@ -2949,7 +2969,7 @@ async renderMonthlyTasks() {
 
 
         // イベントリスナーの設定
-        this.setupMonthlyCardEventListeners(monthlyCard, yearMonth, task.id, dateKey);
+        this.setupMonthlyCardEventListeners(monthlyCard, taskYearMonth, task.id, dateKey);
         section.appendChild(monthlyCard);
     }
 }
