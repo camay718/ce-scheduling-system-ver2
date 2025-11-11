@@ -182,6 +182,18 @@
             margin-bottom: 4px;
         }
 
+        /* ★追加: メモ表示スタイル */
+        .task-memo {
+            font-size: 10px;
+            color: #059669;
+            background: #f0fdf4;
+            padding: 4px 6px;
+            border-radius: 4px;
+            margin-top: 4px;
+            font-style: italic;
+            border-left: 2px solid #10b981;
+        }
+
         .ce-chips {
             display: flex;
             flex-wrap: wrap;
@@ -246,6 +258,66 @@
             z-index: 9999;
         }
 
+        /* ★追加: 印刷用スタイル */
+        @media print {
+            .no-print {
+                display: none !important;
+            }
+
+            body {
+                background: white;
+            }
+
+            .weekly-container {
+                max-width: 100%;
+                padding: 10px;
+            }
+
+            .weekly-header {
+                background: white;
+                box-shadow: none;
+                border: 1px solid #ddd;
+                page-break-after: avoid;
+            }
+
+            .weekly-filter {
+                display: none;
+            }
+
+            .weekly-grid {
+                display: grid;
+                grid-template-columns: repeat(7, 1fr);
+                gap: 8px;
+                page-break-inside: avoid;
+            }
+
+            .day-card {
+                background: white;
+                border: 1px solid #ddd;
+                box-shadow: none;
+                page-break-inside: avoid;
+            }
+
+            .day-card:hover {
+                transform: none;
+                box-shadow: none;
+            }
+
+            .task-item {
+                page-break-inside: avoid;
+                font-size: 10px;
+            }
+
+            .task-memo {
+                font-size: 9px;
+            }
+
+            .ce-chip {
+                font-size: 9px;
+                border: 1px solid #ddd;
+            }
+        }
+
         /* モバイル対応 */
         @media (max-width: 768px) {
             .weekly-container {
@@ -292,7 +364,11 @@
                     <i class="fas fa-calendar-week mr-2 text-blue-600"></i>
                     週間スケジュール
                 </h1>
-                <div class="flex gap-2">
+                <div class="flex gap-2 no-print">
+                    <!-- ★追加: PDF出力ボタン -->
+                    <button id="printPdfBtn" class="btn-unified btn-primary-unified btn-small">
+                        <i class="fas fa-file-pdf mr-1"></i>PDF出力
+                    </button>
                     <a href="./schedule.html" class="btn-unified btn-outline-unified btn-small">
                         <i class="fas fa-calendar-day mr-1"></i>日別表示
                     </a>
@@ -304,19 +380,19 @@
 
             <!-- 週間ナビゲーション -->
             <div class="weekly-navigation">
-                <button id="prevWeekBtn" class="btn-unified btn-outline-unified btn-small">
+                <button id="prevWeekBtn" class="btn-unified btn-outline-unified btn-small no-print">
                     <i class="fas fa-chevron-left"></i> 前週
                 </button>
                 <div class="text-center">
                     <h2 id="weekDisplay" class="text-lg font-semibold text-gray-700"></h2>
                     <p class="text-sm text-gray-500">週間スケジュール概要</p>
                 </div>
-                <button id="nextWeekBtn" class="btn-unified btn-outline-unified btn-small">
+                <button id="nextWeekBtn" class="btn-unified btn-outline-unified btn-small no-print">
                     次週 <i class="fas fa-chevron-right"></i>
                 </button>
             </div>
 
-            <div class="text-center mt-4">
+            <div class="text-center mt-4 no-print">
                 <button id="todayBtn" class="btn-unified btn-primary-unified btn-small">
                     <i class="fas fa-calendar-day mr-1"></i>今週
                 </button>
@@ -324,7 +400,7 @@
         </div>
 
         <!-- 部門フィルター -->
-        <div class="weekly-filter">
+        <div class="weekly-filter no-print">
             <h3 class="text-sm font-semibold mb-3">
                 <i class="fas fa-filter mr-2"></i>表示部門フィルター
             </h3>
@@ -418,6 +494,9 @@
                 document.getElementById('prevWeekBtn').onclick = () => this.navigateWeek(-1);
                 document.getElementById('nextWeekBtn').onclick = () => this.navigateWeek(1);
                 document.getElementById('todayBtn').onclick = () => this.goToCurrentWeek();
+                
+                // ★追加: PDF出力ボタン
+                document.getElementById('printPdfBtn').onclick = () => this.printToPDF();
             }
 
             navigateWeek(weeks) {
@@ -428,6 +507,30 @@
             goToCurrentWeek() {
                 this.selectedWeekStart = this.getStartOfWeek(new Date());
                 this.renderWeeklyView();
+            }
+
+            // ★追加: PDF出力機能
+            printToPDF() {
+                // 印刷前の準備
+                const originalTitle = document.title;
+                const weekDisplay = document.getElementById('weekDisplay').textContent;
+                document.title = `週間スケジュール_${weekDisplay}`;
+
+                // 印刷実行
+                window.print();
+
+                // 印刷後にタイトルを戻す
+                setTimeout(() => {
+                    document.title = originalTitle;
+                }, 100);
+
+                // 監査ログ記録
+                if (window.auditLogger) {
+                    window.auditLogger.logAction('weekly-view-print', {
+                        weekStart: this.formatDate(this.selectedWeekStart),
+                        weekDisplay: weekDisplay
+                    });
+                }
             }
 
             // 部門フィルター初期化
@@ -605,15 +708,20 @@
 
                         const ceChipsHtml = await this.generateCEChipsWithStatus(normalizedAssigned, dayInfo.dateKey);
 
+                        // ★追加: メモ（詳細）の表示
+                        const memoHtml = event.description ? 
+                            `<div class="task-memo"><i class="fas fa-sticky-note mr-1"></i>${this.escapeHtml(event.description)}</div>` : '';
+
                         tasksHtml += `
                             <div class="task-item" style="--dept-color: ${deptColor}">
                                 <div class="task-title">
-                                    <span><i class="fas fa-briefcase mr-1"></i>${event.name}</span>
+                                    <span><i class="fas fa-briefcase mr-1"></i>${this.escapeHtml(event.name)}</span>
                                     <span class="text-xs text-gray-500">${event.startTime || ''}-${event.endTime || ''}</span>
                                 </div>
                                 <div class="task-info">
                                     ${event.count > 0 ? `${event.count}件 | ` : ''}必要: ${need}名 / 配置: ${assignedCount}名
                                 </div>
+                                ${memoHtml}
                                 <div class="ce-chips">${ceChipsHtml}</div>
                             </div>
                         `;
@@ -633,11 +741,15 @@
                         const ceChipsHtml = await this.generateCEChipsWithStatus(normalizedAssigned, dayInfo.dateKey);
                         const actualCount = task.dailyActuals?.count || 0;
 
+                        // ★追加: 月次業務のメモ表示
+                        const memoHtml = task.description ? 
+                            `<div class="task-memo"><i class="fas fa-sticky-note mr-1"></i>${this.escapeHtml(task.description)}</div>` : '';
+
                         tasksHtml += `
                             <div class="task-item" style="--dept-color: ${deptColor}">
                                 <div class="task-title">
                                     <span>
-                                        <i class="fas fa-calendar-alt mr-1 text-orange-600"></i>${task.name}
+                                        <i class="fas fa-calendar-alt mr-1 text-orange-600"></i>${this.escapeHtml(task.name)}
                                         <span class="monthly-badge">月次</span>
                                     </span>
                                     <span class="text-xs text-gray-500">実績: ${actualCount}件</span>
@@ -645,6 +757,7 @@
                                 <div class="task-info">
                                     必要: ${need}名 / 配置: ${assignedCount}名
                                 </div>
+                                ${memoHtml}
                                 <div class="ce-chips">${ceChipsHtml}</div>
                             </div>
                         `;
@@ -691,6 +804,14 @@
                 `;
 
                 return dayCard;
+            }
+
+            // ★追加: HTMLエスケープ関数
+            escapeHtml(text) {
+                if (!text) return '';
+                const div = document.createElement('div');
+                div.textContent = text;
+                return div.innerHTML;
             }
 
             // CE配置の正規化
@@ -743,9 +864,9 @@
                     const titleExtra = statusBadge ? ` (${statusText})` : '';
                     chips.push(`
                         <span class="ce-chip worktype-${effectiveWorkType.toLowerCase()}" 
-                              title="${assigned.name}${titleExtra}" 
+                              title="${this.escapeHtml(assigned.name)}${titleExtra}" 
                               style="position: relative;">
-                            ${assigned.name}${statusBadge}
+                            ${this.escapeHtml(assigned.name)}${statusBadge}
                         </span>
                     `);
                 }
