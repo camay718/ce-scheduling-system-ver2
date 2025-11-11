@@ -213,11 +213,18 @@
 
             <!-- ナビゲーションカード -->
             <div class="home-grid">
-                <!-- スケジュール（日別・週間統合） -->
+                <!-- 日別スケジュール -->
                 <div class="nav-card" onclick="navigateToSchedule()">
-                    <i class="fas fa-calendar-alt"></i>
-                    <h2>スケジュール</h2>
-                    <p>日別・週間の業務とCE配置を管理</p>
+                    <i class="fas fa-calendar-day"></i>
+                    <h2>日別スケジュール</h2>
+                    <p>日別の業務とCE配置を管理</p>
+                </div>
+
+                <!-- ★追加: 週間表示 -->
+                <div class="nav-card" onclick="navigateToWeeklyView()">
+                    <i class="fas fa-calendar-week"></i>
+                    <h2>週間表示</h2>
+                    <p>週間スケジュールの概要を確認</p>
                 </div>
 
                 <!-- CE勤務表 -->
@@ -267,6 +274,11 @@
         // 認証情報を確実に引き継ぐナビゲーション関数
         function navigateToSchedule() {
             location.href = 'schedule.html';
+        }
+
+        // ★追加: 週間表示へのナビゲーション
+        function navigateToWeeklyView() {
+            location.href = 'weekly-view.html';
         }
 
         function navigateToCESchedule() {
