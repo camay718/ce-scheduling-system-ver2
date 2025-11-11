@@ -90,9 +90,9 @@
         }
 
         .day-card {
-            background: var(--glass-bg);
+            background: var(--glass-bg, rgba(255,255,255,0.9));
             backdrop-filter: blur(10px);
-            border: 1px solid var(--glass-border);
+            border: 1px solid var(--glass-border, rgba(0,0,0,0.1));
             border-radius: 16px;
             padding: 16px;
             box-shadow: 0 4px 12px rgba(0,0,0,0.1);
@@ -258,6 +258,20 @@
             z-index: 9999;
         }
 
+        .spinner {
+            border: 4px solid #f3f4f6;
+            border-top: 4px solid #3b82f6;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
         /* 印刷モード選択モーダル - レイアウト改善 */
         .print-modal {
             position: fixed;
@@ -289,6 +303,8 @@
             font-weight: bold;
             margin-bottom: 8px;
             color: #1f2937;
+            display: flex;
+            align-items: center;
         }
 
         .print-modal-subtitle {
@@ -334,6 +350,8 @@
             font-size: 1rem;
             margin-bottom: 4px;
             color: #1f2937;
+            display: flex;
+            align-items: center;
         }
 
         .print-option-description {
@@ -362,6 +380,9 @@
             transition: all 0.2s;
             border: none;
             cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
 
         .print-modal-buttons .btn-cancel {
@@ -394,6 +415,8 @@
             font-size: 0.875rem;
             color: #1e40af;
             margin-bottom: 8px;
+            display: flex;
+            align-items: center;
         }
 
         .print-hint-list {
@@ -591,7 +614,7 @@
     <div id="printModal" class="print-modal no-print">
         <div class="print-modal-content">
             <h2>
-                <i class="fas fa-print mr-2 text-blue-600"></i>印刷モード選択
+                <i class="fas fa-print" style="margin-right: 8px; color: #3b82f6;"></i>印刷モード選択
             </h2>
             <p class="print-modal-subtitle">印刷レイアウトを選択してください</p>
 
@@ -601,7 +624,7 @@
                     <input type="radio" name="printMode" value="compact" checked>
                     <div class="print-option-content">
                         <div class="print-option-title">
-                            <i class="fas fa-compress-alt mr-2 text-green-600"></i>コンパクトモード（推奨）
+                            <i class="fas fa-compress-alt" style="margin-right: 8px; color: #10b981;"></i>コンパクトモード（推奨）
                         </div>
                         <div class="print-option-description">
                             週全体を1ページに収めます（A4横向き推奨）
@@ -617,7 +640,7 @@
                     <input type="radio" name="printMode" value="department">
                     <div class="print-option-content">
                         <div class="print-option-title">
-                            <i class="fas fa-layer-group mr-2 text-blue-600"></i>部門別モード
+                            <i class="fas fa-layer-group" style="margin-right: 8px; color: #3b82f6;"></i>部門別モード
                         </div>
                         <div class="print-option-description">
                             部門ごとに改ページして詳細表示
@@ -631,16 +654,16 @@
 
             <div class="print-modal-buttons">
                 <button id="cancelPrintBtn" class="btn-cancel">
-                    <i class="fas fa-times mr-2"></i>キャンセル
+                    <i class="fas fa-times" style="margin-right: 8px;"></i>キャンセル
                 </button>
                 <button id="executePrintBtn" class="btn-execute">
-                    <i class="fas fa-print mr-2"></i>印刷実行
+                    <i class="fas fa-print" style="margin-right: 8px;"></i>印刷実行
                 </button>
             </div>
 
             <div class="print-hint-box">
                 <div class="print-hint-title">
-                    <i class="fas fa-info-circle mr-1"></i>印刷のヒント
+                    <i class="fas fa-info-circle" style="margin-right: 4px;"></i>印刷のヒント
                 </div>
                 <div class="print-hint-list">
                     • コンパクトモードは<strong>A4横向き</strong>がおすすめです<br>
@@ -813,7 +836,12 @@
             // localStorageから保存されたフィルター設定を読み込み
             const savedFilters = localStorage.getItem('weeklyDepartmentFilters');
             if (savedFilters) {
-                selectedDepartments = new Set(JSON.parse(savedFilters));
+                try {
+                    selectedDepartments = new Set(JSON.parse(savedFilters));
+                } catch (e) {
+                    console.warn('フィルター設定の読み込みに失敗:', e);
+                    selectedDepartments = new Set(Object.keys(departments));
+                }
             } else {
                 // 初回はすべて選択
                 selectedDepartments = new Set(Object.keys(departments));
@@ -887,7 +915,7 @@
                 console.log('✅ データ取得完了:', Object.keys(allScheduleData).length, '日分');
                 
                 // グリッド描画
-                renderWeekGrid();
+                await renderWeekGrid();
                 
             } catch (error) {
                 console.error('❌ データ読み込みエラー:', error);
@@ -999,7 +1027,7 @@
             const header = document.createElement('div');
             header.className = 'dept-header';
             header.innerHTML = `
-                <span class="dept-name">${deptName}</span>
+                <span class="dept-name">${escapeHtml(deptName)}</span>
             `;
             section.appendChild(header);
             
@@ -1039,7 +1067,7 @@
             
             // 担当CE
             if (task.assignedCEs && task.assignedCEs.length > 0) {
-                const normalizedCEs = await normalizeAssignedCEs(task.assignedCEs);
+                const normalizedCEs = normalizeAssignedCEs(task.assignedCEs);
                 const ceChipsHtml = await generateCEChipsWithStatus(normalizedCEs, dateKey);
                 
                 const ceChips = document.createElement('div');
@@ -1052,7 +1080,7 @@
         }
 
         // CE情報の正規化
-        async function normalizeAssignedCEs(assignedCEs) {
+        function normalizeAssignedCEs(assignedCEs) {
             if (!Array.isArray(assignedCEs)) {
                 return [];
             }
@@ -1093,7 +1121,7 @@
                         }
                         statusText = workStatus?.status || '';
                         if (statusText && statusText !== 'A') {
-                            statusBadge = `<span class="status-badge status-${statusText}">${statusText}</span>`;
+                            statusBadge = `<span class="status-badge status-${escapeHtml(statusText)}">${escapeHtml(statusText)}</span>`;
                         }
                     } catch (error) {
                         console.warn('⚠️ 勤務状態取得失敗:', assigned.name, error);
@@ -1102,8 +1130,8 @@
                 
                 const titleExtra = statusBadge ? ` (${statusText})` : '';
                 chips.push(`
-                    <span class="ce-chip worktype-${effectiveWorkType.toLowerCase()}" 
-                          title="${escapeHtml(assigned.name)}${titleExtra}" 
+                    <span class="ce-chip worktype-${escapeHtml(effectiveWorkType.toLowerCase())}" 
+                          title="${escapeHtml(assigned.name)}${escapeHtml(titleExtra)}" 
                           style="position: relative;">
                         ${escapeHtml(assigned.name)}${statusBadge}
                     </span>
@@ -1115,6 +1143,7 @@
 
         // HTMLエスケープ（XSS対策）
         function escapeHtml(text) {
+            if (!text) return '';
             const div = document.createElement('div');
             div.textContent = text;
             return div.innerHTML;
@@ -1147,13 +1176,13 @@
             
             content.innerHTML = `
                 <h3 style="font-size: 1.25rem; font-weight: bold; margin-bottom: 16px; color: #1f2937;">
-                    <i class="fas fa-sticky-note mr-2 text-green-600"></i>${escapeHtml(title || '業務メモ')}
+                    <i class="fas fa-sticky-note" style="margin-right: 8px; color: #10b981;"></i>${escapeHtml(title || '業務メモ')}
                 </h3>
                 <div style="background: #f0fdf4; border-left: 4px solid #10b981; padding: 12px; border-radius: 4px; margin-bottom: 16px; white-space: pre-wrap; color: #059669; line-height: 1.6;">
                     ${escapeHtml(description)}
                 </div>
                 <button style="width: 100%; padding: 10px; background: #3b82f6; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: 500;">
-                    <i class="fas fa-times mr-2"></i>閉じる
+                    <i class="fas fa-times" style="margin-right: 8px;"></i>閉じる
                 </button>
             `;
             
