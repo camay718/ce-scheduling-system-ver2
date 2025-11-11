@@ -182,7 +182,6 @@
             margin-bottom: 4px;
         }
 
-        /* ★追加: メモ表示スタイル */
         .task-memo {
             font-size: 10px;
             color: #059669;
@@ -258,63 +257,182 @@
             z-index: 9999;
         }
 
-        /* ★追加: 印刷用スタイル */
+        /* 印刷モード選択モーダル */
+        .print-modal {
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 10000;
+        }
+
+        .print-modal-content {
+            background: white;
+            border-radius: 16px;
+            padding: 24px;
+            max-width: 500px;
+            width: 90%;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+        }
+
+        .print-option {
+            padding: 16px;
+            border: 2px solid #e5e7eb;
+            border-radius: 12px;
+            margin-bottom: 12px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .print-option:hover {
+            border-color: #3b82f6;
+            background: #eff6ff;
+        }
+
+        .print-option input[type="radio"] {
+            margin-right: 12px;
+        }
+
+        /* 印刷用スタイル - コンパクトモード（週全体を1ページ） */
         @media print {
+            @page {
+                size: A4 landscape;
+                margin: 10mm;
+            }
+
             .no-print {
                 display: none !important;
             }
 
             body {
                 background: white;
+                font-size: 9px;
             }
 
             .weekly-container {
                 max-width: 100%;
-                padding: 10px;
+                padding: 0;
+                margin: 0;
             }
 
             .weekly-header {
                 background: white;
                 box-shadow: none;
                 border: 1px solid #ddd;
+                padding: 8px;
+                margin-bottom: 8px;
                 page-break-after: avoid;
+            }
+
+            .weekly-header h1 {
+                font-size: 14px;
             }
 
             .weekly-filter {
                 display: none;
             }
 
-            .weekly-grid {
+            /* デフォルト: コンパクトモード（1ページ） */
+            body:not(.print-mode-department) .weekly-grid {
                 display: grid;
                 grid-template-columns: repeat(7, 1fr);
-                gap: 8px;
+                gap: 4px;
                 page-break-inside: avoid;
             }
 
-            .day-card {
+            body:not(.print-mode-department) .day-card {
                 background: white;
                 border: 1px solid #ddd;
                 box-shadow: none;
+                padding: 4px;
                 page-break-inside: avoid;
+                font-size: 8px;
+            }
+
+            body:not(.print-mode-department) .day-card-header {
+                padding-bottom: 4px;
+                margin-bottom: 4px;
+            }
+
+            body:not(.print-mode-department) .day-title {
+                font-size: 10px;
+            }
+
+            body:not(.print-mode-department) .day-summary {
+                padding: 4px;
+                margin-bottom: 4px;
+                font-size: 8px;
+            }
+
+            body:not(.print-mode-department) .department-section {
+                padding: 4px;
+                margin-bottom: 4px;
+            }
+
+            body:not(.print-mode-department) .dept-header {
+                margin-bottom: 2px;
+            }
+
+            body:not(.print-mode-department) .dept-name {
+                font-size: 9px;
+            }
+
+            body:not(.print-mode-department) .task-item {
+                page-break-inside: avoid;
+                font-size: 7px;
+                padding: 3px;
+                margin: 2px 0;
+            }
+
+            body:not(.print-mode-department) .task-title {
+                font-size: 8px;
+            }
+
+            body:not(.print-mode-department) .task-info {
+                font-size: 7px;
+            }
+
+            body:not(.print-mode-department) .task-memo {
+                font-size: 7px;
+                padding: 2px 4px;
+                margin-top: 2px;
+            }
+
+            body:not(.print-mode-department) .ce-chip {
+                font-size: 7px;
+                padding: 1px 3px;
+                border: 1px solid #ddd;
+            }
+
+            /* 部門別モード */
+            body.print-mode-department .weekly-grid {
+                display: block;
+            }
+
+            body.print-mode-department .day-card {
+                background: white;
+                border: 1px solid #ddd;
+                box-shadow: none;
+                padding: 8px;
+                margin-bottom: 12px;
+                page-break-inside: avoid;
+            }
+
+            body.print-mode-department .department-section {
+                page-break-after: always;
+                padding: 12px;
+                margin-bottom: 0;
+            }
+
+            body.print-mode-department .department-section:last-child {
+                page-break-after: auto;
             }
 
             .day-card:hover {
                 transform: none;
                 box-shadow: none;
-            }
-
-            .task-item {
-                page-break-inside: avoid;
-                font-size: 10px;
-            }
-
-            .task-memo {
-                font-size: 9px;
-            }
-
-            .ce-chip {
-                font-size: 9px;
-                border: 1px solid #ddd;
             }
         }
 
@@ -355,6 +473,64 @@
         </div>
     </div>
 
+    <!-- 印刷モード選択モーダル -->
+    <div id="printModal" class="print-modal no-print" style="display: none;">
+        <div class="print-modal-content">
+            <h2 class="text-xl font-bold mb-4">
+                <i class="fas fa-print mr-2 text-blue-600"></i>印刷モード選択
+            </h2>
+            <p class="text-sm text-gray-600 mb-4">印刷レイアウトを選択してください</p>
+
+            <div class="space-y-3">
+                <!-- コンパクトモード -->
+                <label class="print-option">
+                    <input type="radio" name="printMode" value="compact" checked>
+                    <div>
+                        <div class="font-bold text-base mb-1">
+                            <i class="fas fa-compress-alt mr-2 text-green-600"></i>コンパクトモード（推奨）
+                        </div>
+                        <div class="text-sm text-gray-600">
+                            週全体を1ページに収めます（A4横向き推奨）<br>
+                            <span class="text-xs text-gray-500">※最もコンパクトで見やすい</span>
+                        </div>
+                    </div>
+                </label>
+
+                <!-- 部門別モード -->
+                <label class="print-option">
+                    <input type="radio" name="printMode" value="department">
+                    <div>
+                        <div class="font-bold text-base mb-1">
+                            <i class="fas fa-layer-group mr-2 text-blue-600"></i>部門別モード
+                        </div>
+                        <div class="text-sm text-gray-600">
+                            部門ごとに改ページして詳細表示<br>
+                            <span class="text-xs text-gray-500">※複数ページになりますが詳細が見やすい</span>
+                        </div>
+                    </div>
+                </label>
+            </div>
+
+            <div class="mt-6 flex gap-3">
+                <button id="cancelPrintBtn" class="btn-unified btn-outline-unified flex-1">
+                    <i class="fas fa-times mr-2"></i>キャンセル
+                </button>
+                <button id="executePrintBtn" class="btn-unified btn-primary-unified flex-1">
+                    <i class="fas fa-print mr-2"></i>印刷実行
+                </button>
+            </div>
+
+            <div class="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                <div class="text-xs text-blue-800">
+                    <i class="fas fa-info-circle mr-1"></i><strong>印刷のヒント</strong><br>
+                    • コンパクトモードは<strong>A4横向き</strong>がおすすめです<br>
+                    • 印刷ダイアログで「背景のグラフィック」をONにすると色が表示されます<br>
+                    • PDFとして保存する場合は「送信先」を「PDFに保存」に変更してください
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- メインコンテンツ -->
     <div id="mainContent" class="weekly-container" style="display:none;">
         <!-- ヘッダー -->
@@ -365,7 +541,6 @@
                     週間スケジュール
                 </h1>
                 <div class="flex gap-2 no-print">
-                    <!-- ★追加: PDF出力ボタン -->
                     <button id="printPdfBtn" class="btn-unified btn-primary-unified btn-small">
                         <i class="fas fa-file-pdf mr-1"></i>PDF出力
                     </button>
@@ -429,7 +604,6 @@
                 this.isInitialized = true;
 
                 try {
-                    // 認証ガード
                     const authSuccess = await AuthGuard.init();
                     if (!authSuccess) return;
 
@@ -442,7 +616,6 @@
                     window.userRole = userData.role || 'viewer';
                     window.currentUserData = userData;
 
-                    // CEマネージャー初期化
                     if (!window.ceManager && window.CEManager) {
                         window.ceManager = new window.CEManager();
                     }
@@ -455,7 +628,6 @@
                     this.initDepartmentFilter();
                     await this.renderWeeklyView();
 
-                    // 監査ログ記録
                     if (window.auditLogger) {
                         await window.auditLogger.logPageAccess('weekly-view');
                     }
@@ -494,9 +666,11 @@
                 document.getElementById('prevWeekBtn').onclick = () => this.navigateWeek(-1);
                 document.getElementById('nextWeekBtn').onclick = () => this.navigateWeek(1);
                 document.getElementById('todayBtn').onclick = () => this.goToCurrentWeek();
-                
-                // ★追加: PDF出力ボタン
-                document.getElementById('printPdfBtn').onclick = () => this.printToPDF();
+                document.getElementById('printPdfBtn').onclick = () => this.showPrintModal();
+
+                // 印刷モーダルのイベント
+                document.getElementById('cancelPrintBtn').onclick = () => this.hidePrintModal();
+                document.getElementById('executePrintBtn').onclick = () => this.executePrint();
             }
 
             navigateWeek(weeks) {
@@ -509,31 +683,57 @@
                 this.renderWeeklyView();
             }
 
-            // ★追加: PDF出力機能
-            printToPDF() {
-                // 印刷前の準備
+            // 印刷モーダル表示
+            showPrintModal() {
+                document.getElementById('printModal').style.display = 'flex';
+            }
+
+            // 印刷モーダル非表示
+            hidePrintModal() {
+                document.getElementById('printModal').style.display = 'none';
+            }
+
+            // 印刷実行
+            executePrint() {
+                const selectedMode = document.querySelector('input[name="printMode"]:checked').value;
+                
+                // 印刷モードに応じてbodyクラスを設定
+                if (selectedMode === 'department') {
+                    document.body.classList.add('print-mode-department');
+                } else {
+                    document.body.classList.remove('print-mode-department');
+                }
+
+                // モーダルを閉じる
+                this.hidePrintModal();
+
+                // タイトル設定
                 const originalTitle = document.title;
                 const weekDisplay = document.getElementById('weekDisplay').textContent;
-                document.title = `週間スケジュール_${weekDisplay}`;
+                const modeLabel = selectedMode === 'department' ? '部門別' : 'コンパクト';
+                document.title = `週間スケジュール_${weekDisplay}_${modeLabel}`;
 
                 // 印刷実行
-                window.print();
-
-                // 印刷後にタイトルを戻す
                 setTimeout(() => {
-                    document.title = originalTitle;
+                    window.print();
+                    
+                    // 印刷後にクリーンアップ
+                    setTimeout(() => {
+                        document.title = originalTitle;
+                        document.body.classList.remove('print-mode-department');
+                    }, 100);
                 }, 100);
 
                 // 監査ログ記録
                 if (window.auditLogger) {
                     window.auditLogger.logAction('weekly-view-print', {
                         weekStart: this.formatDate(this.selectedWeekStart),
-                        weekDisplay: weekDisplay
+                        weekDisplay: weekDisplay,
+                        printMode: selectedMode
                     });
                 }
             }
 
-            // 部門フィルター初期化
             initDepartmentFilter() {
                 const container = document.getElementById('filterCheckboxes');
                 if (!container) return;
@@ -559,7 +759,6 @@
                     `;
                 }).join('');
 
-                // イベントリスナー設定
                 container.querySelectorAll('.dept-filter-checkbox').forEach(checkbox => {
                     checkbox.addEventListener('change', () => {
                         this.saveDepartmentFilter();
@@ -597,7 +796,6 @@
                 return allDepartments.filter(dept => filter[dept] !== false);
             }
 
-            // 週間表示のレンダリング
             async renderWeeklyView() {
                 const container = document.getElementById('weeklyGrid');
                 const weekDisplay = document.getElementById('weekDisplay');
@@ -615,7 +813,6 @@
                 const visibleDepartments = this.getVisibleDepartments();
                 const daysOfWeek = ['月', '火', '水', '木', '金', '土', '日'];
 
-                // 7日分のデータを並列取得
                 const weekDataPromises = [];
                 for (let i = 0; i < 7; i++) {
                     const currentDate = new Date(startOfWeek);
@@ -628,21 +825,17 @@
 
                 container.innerHTML = '';
 
-                // 各曜日のカードを生成
                 for (const dayInfo of weekData) {
                     const dayCard = await this.createDayCard(dayInfo, visibleDepartments);
                     container.appendChild(dayCard);
                 }
             }
 
-            // 日別データ取得
             async getDayData(date, dateKey, dayLabel) {
-                // 通常業務の取得
                 const snap = await window.database.ref(`${window.DATA_ROOT}/events/byDate/${dateKey}`).once('value');
                 const eventsById = snap.val() || {};
                 const dailyEvents = Object.values(eventsById);
 
-                // 月次業務の取得
                 const yearMonth = dateKey.substring(0, 7);
                 const monthlySnap = await window.database.ref(`${window.DATA_ROOT}/monthlyTasks/${yearMonth}`).once('value');
                 const monthlyTasks = monthlySnap.val() || {};
@@ -667,12 +860,10 @@
                 };
             }
 
-            // 日別カードの生成
             async createDayCard(dayInfo, departments) {
                 const dayCard = document.createElement('div');
                 dayCard.className = 'day-card';
                 
-                // 今日の判定
                 const today = new Date();
                 const isToday = dayInfo.date.toDateString() === today.toDateString();
                 if (isToday) {
@@ -683,7 +874,6 @@
                 let totalDayAssigned = 0;
                 let departmentSections = '';
 
-                // 部門ごとの処理
                 for (const dept of departments) {
                     const deptEvents = dayInfo.events.filter(e => e.department === dept);
                     const deptMonthlyTasks = dayInfo.monthlyTasks.filter(t => t.department === dept);
@@ -695,7 +885,6 @@
                     let deptRequired = 0;
                     let tasksHtml = '';
 
-                    // 通常業務の処理
                     for (const event of deptEvents) {
                         const normalizedAssigned = await this.normalizeAssignedCEs(event.assignedCEs || []);
                         const assignedCount = normalizedAssigned.length;
@@ -707,8 +896,6 @@
                         totalDayRequired += need;
 
                         const ceChipsHtml = await this.generateCEChipsWithStatus(normalizedAssigned, dayInfo.dateKey);
-
-                        // ★追加: メモ（詳細）の表示
                         const memoHtml = event.description ? 
                             `<div class="task-memo"><i class="fas fa-sticky-note mr-1"></i>${this.escapeHtml(event.description)}</div>` : '';
 
@@ -727,7 +914,6 @@
                         `;
                     }
 
-                    // 月次業務の処理
                     for (const task of deptMonthlyTasks) {
                         const normalizedAssigned = await this.normalizeAssignedCEs(task.assignedCEs || []);
                         const assignedCount = normalizedAssigned.length;
@@ -740,8 +926,6 @@
 
                         const ceChipsHtml = await this.generateCEChipsWithStatus(normalizedAssigned, dayInfo.dateKey);
                         const actualCount = task.dailyActuals?.count || 0;
-
-                        // ★追加: 月次業務のメモ表示
                         const memoHtml = task.description ? 
                             `<div class="task-memo"><i class="fas fa-sticky-note mr-1"></i>${this.escapeHtml(task.description)}</div>` : '';
 
@@ -763,7 +947,6 @@
                         `;
                     }
 
-                    // 部門セクションの生成
                     const deptPercentage = deptRequired > 0 ? Math.round((deptAssigned / deptRequired) * 100) : 0;
                     const deptColorClass = deptPercentage >= 100 ? 'text-green-600' : deptPercentage >= 80 ? 'text-yellow-600' : 'text-red-600';
 
@@ -781,11 +964,9 @@
                     `;
                 }
 
-                // 全体サマリーの計算
                 const overallPercentage = totalDayRequired > 0 ? Math.round((totalDayAssigned / totalDayRequired) * 100) : 0;
                 const overallColorClass = overallPercentage >= 100 ? 'text-green-700' : overallPercentage >= 80 ? 'text-yellow-700' : 'text-red-700';
 
-                // カードの内容を設定
                 dayCard.innerHTML = `
                     <div class="day-card-header">
                         <h3 class="day-title ${isToday ? 'today' : ''}">
@@ -806,7 +987,6 @@
                 return dayCard;
             }
 
-            // ★追加: HTMLエスケープ関数
             escapeHtml(text) {
                 if (!text) return '';
                 const div = document.createElement('div');
@@ -814,7 +994,6 @@
                 return div.innerHTML;
             }
 
-            // CE配置の正規化
             async normalizeAssignedCEs(assignedCEs) {
                 if (!Array.isArray(assignedCEs)) return [];
                 
@@ -837,7 +1016,6 @@
                 }).filter(Boolean);
             }
 
-            // 勤務状態付きCEチップの生成
             async generateCEChipsWithStatus(normalizedAssigned, dateKey) {
                 const chips = [];
                 
@@ -875,7 +1053,6 @@
             }
         }
 
-        // ログアウト処理
         window.handleLogout = async () => {
             try {
                 if (window.auditLogger) {
@@ -893,7 +1070,6 @@
             }
         };
 
-        // 初期化
         document.addEventListener('DOMContentLoaded', async () => {
             try {
                 window.weeklyViewManager = new WeeklyViewManager();
