@@ -745,7 +745,7 @@
                 let attempts = 0;
                 const checkInterval = setInterval(() => {
                     attempts++;
-                    if (window.authGuard) {
+                    if (window.AuthGuard) {
                         clearInterval(checkInterval);
                         resolve();
                     } else if (attempts >= maxAttempts) {
@@ -767,16 +767,15 @@
                 console.log('✅ 認証システム読み込み完了');
                 
                 // 認証確認
-                await window.authGuard.initialize();
-                const currentUser = window.authGuard.getCurrentUser();
-                
-                if (!currentUser) {
-                    console.warn('⚠️ 未認証ユーザー - ログインページへリダイレクト');
-                    window.location.href = '../pages/login.html';
+                const authSuccess = await window.AuthGuard.init({ requireAuth: true });
+                if (!authSuccess) {
+                    console.warn('⚠️ 認証失敗 - ログインページへリダイレクト');
+                    window.location.href = '../index.html';
                     return;
                 }
                 
-                console.log('✅ 認証済みユーザー:', currentUser.email);
+                const session = window.AuthGuard.getSession();
+                console.log('✅ 認証済みユーザー:', session.username, '(', session.role, ')');
                 
                 // CE一覧取得
                 if (window.ceManager) {
