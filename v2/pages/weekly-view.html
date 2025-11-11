@@ -924,8 +924,11 @@
                 // タイトル更新
                 updateWeekTitle(weekDates);
                 
-                // Firebase からデータ取得
-                const scheduleRef = firebase.database().ref('schedules');
+                // Firebase からデータ取得（DATA_ROOT使用）
+                const dataRoot = window.DATA_ROOT || 'ce-schedule-data';
+                const scheduleRef = firebase.database().ref(`${dataRoot}/schedules`);
+                console.log('📍 データパス:', `${dataRoot}/schedules`);
+                
                 const snapshot = await scheduleRef.orderByKey().startAt(startKey).endAt(endKey).once('value');
                 
                 allScheduleData = snapshot.val() || {};
@@ -936,6 +939,9 @@
                 
             } catch (error) {
                 console.error('❌ データ読み込みエラー:', error);
+                if (error.code === 'PERMISSION_DENIED') {
+                    alert('データへのアクセス権限がありません。\n管理者に連絡してください。');
+                }
                 throw error;
             }
         }
