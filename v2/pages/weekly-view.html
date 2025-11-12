@@ -779,22 +779,35 @@
                 
                 // CEManagerインスタンスの初期化
                 if (!window.ceManager && window.CEManager) {
+                    console.log('📦 CEManagerインスタンスを作成中...');
                     window.ceManager = new window.CEManager();
                     console.log('✅ CEManagerインスタンス作成完了');
+                    
+                    // CEManagerの初期化を待つ（データ読み込み完了まで）
+                    let attempts = 0;
+                    while (attempts < 50) {
+                        if (window.ceManager.ceList && window.ceManager.ceList.length > 0) {
+                            break;
+                        }
+                        await new Promise(resolve => setTimeout(resolve, 100));
+                        attempts++;
+                    }
+                    
+                    if (window.ceManager.ceList && window.ceManager.ceList.length > 0) {
+                        console.log('✅ CE一覧読み込み完了:', window.ceManager.ceList.length, '人');
+                    } else {
+                        console.warn('⚠️ CE一覧の読み込みがタイムアウトしました（', attempts * 100, 'ms）');
+                    }
+                } else if (window.ceManager) {
+                    console.log('✅ CEManagerはすでに初期化済み:', window.ceManager.ceList?.length || 0, '人');
+                } else {
+                    console.warn('⚠️ CEManagerクラスが利用できません');
                 }
                 
                 // PublishedScheduleResolverインスタンスの初期化
                 if (!window.publishedScheduleResolver && window.PublishedScheduleResolver) {
                     window.publishedScheduleResolver = new window.PublishedScheduleResolver();
                     console.log('✅ PublishedScheduleResolverインスタンス作成完了');
-                }
-                
-                // CE一覧取得
-                if (window.ceManager) {
-                    await window.ceManager.loadCEList();
-                    console.log('✅ CE一覧取得完了:', window.ceManager.ceList?.length || 0, '人');
-                } else {
-                    console.warn('⚠️ CEManagerが利用できません');
                 }
                 
                 // 今週の月曜日を取得
