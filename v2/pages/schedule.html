@@ -700,112 +700,6 @@
             
         }
 
-        /* V1週間表示専用スタイル */
-.weekly-day-card {
-    background: var(--glass-bg);
-    backdrop-filter: blur(10px);
-    border: 1px solid var(--glass-border);
-    border-radius: 16px;
-    padding: 16px;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-    transition: all 0.2s ease;
-}
-
-.weekly-day-card:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 6px 20px rgba(0,0,0,0.15);
-}
-
-.weekly-day-card.today {
-    border-color: #3b82f6;
-    border-width: 2px;
-}
-
-.weekly-department-area {
-    background: rgba(255,255,255,0.85);
-    border-radius: 12px;
-    padding: 12px;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
-    position: relative;
-    border-left: 4px solid var(--dept-color);
-    margin-bottom: 8px;
-    min-height: 80px;
-}
-
-.weekly-task-item {
-    background: rgba(255,255,255,0.9);
-    border-radius: 8px;
-    padding: 8px;
-    margin: 6px 0;
-    border-left: 3px solid var(--dept-color);
-    box-shadow: 0 1px 4px rgba(0,0,0,0.08);
-    font-size: 11px;
-    transition: all 0.2s ease;
-}
-
-.weekly-task-item:hover {
-    transform: translateY(-1px);
-    box-shadow: 0 2px 8px rgba(0,0,0,0.12);
-}
-
-.weekly-status-badge {
-    position: absolute;
-    top: -2px;
-    right: -2px;
-    background: #4CAF50;
-    color: white;
-    font-size: 7px;
-    padding: 1px 2px;
-    border-radius: 2px;
-    font-weight: bold;
-    line-height: 1;
-}
-
-.weekly-status-badge.status-A1 { background: #FF9800; }
-.weekly-status-badge.status-B { background: #9C27B0; }
-.weekly-status-badge.status-非 { background: #607D8B; }
-.weekly-status-badge.status-休 { background: #F44336; }
-.weekly-status-badge.status-出 { background: #2196F3; }
-.weekly-status-badge.status-研 { background: #795548; }
-.weekly-status-badge.status-年 { background: #2196F3; }
-.weekly-status-badge.status-ERROR { background: #FF0000; }
-
-.weekly-navigation {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    gap: 16px;
-    margin-bottom: 20px;
-    padding: 16px;
-    background: var(--glass-bg);
-    backdrop-filter: blur(10px);
-    border: 1px solid var(--glass-border);
-    border-radius: 12px;
-}
-
-.weekly-overview-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-    gap: 16px;
-    margin-bottom: 20px;
-}
-
-/* モバイル対応 */
-@media (max-width: 768px) {
-    .weekly-overview-grid {
-        grid-template-columns: 1fr;
-        gap: 12px;
-    }
-    
-    .weekly-day-card {
-        padding: 12px;
-    }
-    
-    .weekly-navigation {
-        flex-direction: column;
-        gap: 8px;
-    }
-}
         /* モーダル表示の改善 */
 @media (max-width: 768px) {
     #templateManagerModal .glass-card {
@@ -825,6 +719,30 @@
     opacity: 0.3;
     cursor: not-allowed;
 }
+        
+        /* ドラッグ&ドロップ並び替え機能 */
+.event-card.dragging {
+    opacity: 0.5;
+    transform: rotate(2deg);
+    cursor: grabbing !important;
+}
+
+.event-card[draggable="true"]:hover {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    transform: translateY(-2px);
+}
+
+.event-card[draggable="true"]::before {
+    content: "⋮⋮";
+    position: absolute;
+    left: 4px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #9ca3af;
+    font-size: 12px;
+    cursor: move;
+}
+
         
     </style>
     
@@ -949,13 +867,11 @@
                         <i class="fas fa-eye mr-2"></i>表示切替
                     </h3>
                     <div class="space-y-2">
-                        <button id="dailyViewBtn" class="btn-unified btn-primary-unified btn-small w-full">
-                            <i class="fas fa-calendar-day mr-1"></i>日別表示
-                        </button>
-                        <button id="weeklyViewBtn" class="btn-unified btn-outline-unified btn-small w-full">
-                            <i class="fas fa-calendar-week mr-1"></i>週間表示
-                        </button>
-                    </div>
+    <a href="./weekly-view.html" class="btn-unified btn-outline-unified btn-small w-full block text-center">
+        <i class="fas fa-calendar-week mr-1"></i>週間表示
+    </a>
+</div>
+
                 </div>
 
 
@@ -991,37 +907,9 @@
         <div id="scheduleMain" class="schedule-main">
             <!-- 日別スケジュールコンテンツ -->
             <div id="dailyScheduleContent" class="schedule-content">
-                <div id="departmentGrid" class="grid grid-cols-3 gap-4 mb-6"></div>
+                <div id="departmentGrid" class="grid grid-cols-2 gap-4 mb-6"></div>
             </div>
 
-
-<!-- 週間スケジュールコンテンツ -->
-<div id="weeklyScheduleContent" class="schedule-content" style="display:none;">
-    <!-- 週間ナビゲーション -->
-    <div class="weekly-navigation">
-        <button id="prevWeekBtn" class="btn-unified btn-outline-unified btn-small">
-            <i class="fas fa-chevron-left"></i> 前週
-        </button>
-        <div class="text-center">
-            <h3 id="currentWeekDisplay" class="text-lg font-semibold text-gray-700"></h3>
-            <div class="text-xs text-gray-500 mt-1">週間スケジュール概要</div>
-        </div>
-        <button id="nextWeekBtn" class="btn-unified btn-outline-unified btn-small">
-            次週 <i class="fas fa-chevron-right"></i>
-        </button>
-    </div>
-    
-    <div class="text-center mb-4">
-        <button id="todayWeekBtn" class="btn-unified btn-primary-unified btn-small">
-            <i class="fas fa-calendar-day mr-1"></i>今週
-        </button>
-    </div>
-
-    <!-- 週間概要グリッド -->
-    <div id="weeklyOverviewGrid" class="weekly-overview-grid">
-        <!-- 各曜日のカードがここに動的に生成されます -->
-    </div>
-</div>
         </div>
     </div>
 
@@ -1053,9 +941,8 @@
         class ScheduleManager {
 constructor() {
     this.isInitialized = false;
-    this.selectedDate = new Date();
-    this.selectedWeekStart = this.getStartOfWeek(new Date());
-    this.currentView = 'daily';
+this.selectedDate = new Date();
+this.currentView = 'daily';
     this.monthlyTasks = {};
     this.eventsRef = null;
     this.eventsCallback = null;
@@ -1204,14 +1091,6 @@ console.log('✅ スケジュール管理初期化完了');
                 const sidebar = document.getElementById('sidebar');
                 const taskbar = document.getElementById('fixedTaskbar');
                 const main = document.getElementById('scheduleMain');
-                // 週間ナビゲーション（追加部分）
-const prevWeekBtn = document.getElementById('prevWeekBtn');
-const nextWeekBtn = document.getElementById('nextWeekBtn');
-const todayWeekBtn = document.getElementById('todayWeekBtn');
-
-if (prevWeekBtn) prevWeekBtn.onclick = () => this.navigateWeek(-1);
-if (nextWeekBtn) nextWeekBtn.onclick = () => this.navigateWeek(1);
-if (todayWeekBtn) todayWeekBtn.onclick = () => this.goToCurrentWeek();
                 
                 if (toggle && sidebar) {
                     toggle.onclick = () => {
@@ -1267,11 +1146,6 @@ if (todayWeekBtn) todayWeekBtn.onclick = () => this.goToCurrentWeek();
 
                 // 表示切替
                 const dailyBtn = document.getElementById('dailyViewBtn');
-                const weeklyBtn = document.getElementById('weeklyViewBtn');
-                
-                if (dailyBtn) dailyBtn.onclick = () => this.switchView('daily');
-                if (weeklyBtn) weeklyBtn.onclick = () => this.switchView('weekly');
-
 
                 // 業務追加ボタン（EventManagerとの連携強化）
                 const addBtn = document.getElementById('addEventButtonDaily');
@@ -1330,33 +1204,6 @@ if (templateManagerBtn && !templateManagerBtn.dataset.bound) {
                 if (datePicker) datePicker.value = this.formatDate(this.selectedDate);
                 this.renderDailySchedule();
             }
-
-
-switchView(view) {
-    this.currentView = view;
-    const dailyContent = document.getElementById('dailyScheduleContent');
-    const weeklyContent = document.getElementById('weeklyScheduleContent');
-    const dailyBtn = document.getElementById('dailyViewBtn');
-    const weeklyBtn = document.getElementById('weeklyViewBtn');
-    const title = document.getElementById('scheduleTitle');
-
-    if (view === 'daily') {
-        dailyContent.style.display = 'block';
-        weeklyContent.style.display = 'none';
-        dailyBtn.className = 'btn-unified btn-primary-unified btn-small w-full';
-        weeklyBtn.className = 'btn-unified btn-outline-unified btn-small w-full';
-        title.textContent = '日別スケジュール';
-        this.renderDailySchedule();
-    } else {
-        dailyContent.style.display = 'none';
-        weeklyContent.style.display = 'block';
-        dailyBtn.className = 'btn-unified btn-outline-unified btn-small w-full';
-        weeklyBtn.className = 'btn-unified btn-primary-unified btn-small w-full';
-        title.textContent = '週間スケジュール';
-        this.renderWeeklyOverview();
-    }
-}
-
 
             setupDailySchedule() {
                 if (window.ceManager) {
@@ -1460,7 +1307,7 @@ switchView(view) {
 
 
                 grid.innerHTML = '';
-                grid.className = 'grid grid-cols-3 gap-4 mb-6';
+                grid.className = 'grid grid-cols-2 gap-4 mb-6';
 
 
                 if (window.DEPARTMENTS) {
@@ -1482,6 +1329,11 @@ switchView(view) {
                         window.publishedScheduleResolver.applyCEStatusToList(dateKey);
                     }
                 }, 500);
+                // ドラッグ&ドロップ初期化
+setTimeout(() => {
+    this.initTaskSorting();
+}, 500);
+
             }
 
 
@@ -1542,18 +1394,17 @@ switchView(view) {
                     }
                     
                     this.eventsRef = window.database.ref(`${window.DATA_ROOT}/events/byDate/${dateKey}`);
-this.eventsCallback = (snapshot) => {
+
+                    this.eventsCallback = (snapshot) => {
     console.log('🔄 イベントデータ更新検知');
     if (this.currentView === 'daily') {
         setTimeout(() => {
             this.loadAndRenderEventsForSelectedDate();
         }, 300);
-    } else if (this.currentView === 'weekly') {
-        setTimeout(() => {
-            this.renderWeeklyOverview();
-        }, 300);
     }
 };
+
+                    
                     this.eventsRef.on('value', this.eventsCallback);
 
                      // 月次業務のリアルタイム更新（全期間対応版）
@@ -1577,14 +1428,14 @@ this.monthlyCallback = async (snapshot) => {
         
         // デバウンス処理（連続更新防止）
 clearTimeout(this.monthlyRenderTimeout);
-this.monthlyRenderTimeout = setTimeout(async () => {
+
+        this.monthlyRenderTimeout = setTimeout(async () => {
     if (this.currentView === 'daily') {
         await this.renderMonthlyTasks();
         this.updateDailySummary().catch(console.error);
-    } else if (this.currentView === 'weekly') {
-        this.renderWeeklyOverview();
     }
 }, 300);
+        
     } else {
         console.log('📊 月次業務データ変更なし（更新スキップ）');
     }
@@ -2289,292 +2140,6 @@ this.monthlyTasks[yearMonth][taskRef.key] = taskData;
                     window.showMessage('月次業務の追加に失敗しました', 'error');
                 }
             }
-
-            // 週の開始日（月曜日）を取得
-getStartOfWeek(date) {
-    const d = new Date(date);
-    const day = d.getDay();
-    const diff = d.getDate() - day + (day === 0 ? -6 : 1);
-    d.setDate(diff);
-    d.setHours(0, 0, 0, 0);
-    return d;
-}
-
-// 週間ナビゲーション
-navigateWeek(weeks) {
-    this.selectedWeekStart.setDate(this.selectedWeekStart.getDate() + (weeks * 7));
-    this.renderWeeklyOverview();
-}
-
-goToCurrentWeek() {
-    this.selectedWeekStart = this.getStartOfWeek(new Date());
-    this.renderWeeklyOverview();
-}
-
-// 週間概要の表示（V1の全体タブを再現）
-async renderWeeklyOverview() {
-    const container = document.getElementById('weeklyOverviewGrid');
-    const currentWeekDisplay = document.getElementById('currentWeekDisplay');
-    
-    if (!container || !currentWeekDisplay) return;
-
-    container.innerHTML = '';
-
-    const startOfWeek = new Date(this.selectedWeekStart);
-    const endOfWeek = new Date(this.selectedWeekStart);
-    endOfWeek.setDate(endOfWeek.getDate() + 6);
-
-    currentWeekDisplay.textContent = 
-        `${this.formatDate(startOfWeek)} - ${this.formatDate(endOfWeek)}`;
-
-    const departments = window.DEPARTMENTS || [];
-    const daysOfWeek = ['月', '火', '水', '木', '金', '土', '日'];
-    
-    // 7日分のデータを並列取得
-    const weekDataPromises = [];
-    for (let i = 0; i < 7; i++) {
-        const currentDate = new Date(startOfWeek);
-        currentDate.setDate(startOfWeek.getDate() + i);
-        const dateKey = this.formatDate(currentDate);
-        weekDataPromises.push(this.getDayData(currentDate, dateKey, daysOfWeek[i]));
-    }
-
-    const weekData = await Promise.all(weekDataPromises);
-
-    // 各日のカードを生成
-    for (const dayInfo of weekData) {
-        const dayCard = await this.createWeeklyDayCard(dayInfo, departments);
-        container.appendChild(dayCard);
-    }
-}
-
-// 日別データ取得
-async getDayData(date, dateKey, dayLabel) {
-    // 通常業務の取得
-    const snap = await window.database.ref(`${window.DATA_ROOT}/events/byDate/${dateKey}`).once('value');
-    const eventsById = snap.val() || {};
-    const dailyEvents = Object.values(eventsById);
-
-    // 月次業務の取得
-    const yearMonth = dateKey.substring(0, 7);
-    const monthlySnap = await window.database.ref(`${window.DATA_ROOT}/monthlyTasks/${yearMonth}`).once('value');
-    const monthlyTasks = monthlySnap.val() || {};
-    
-    const dailyMonthlyTasks = Object.values(monthlyTasks).filter(task => {
-        const assignedForDate = task.assignedCEs && task.assignedCEs[dateKey] && task.assignedCEs[dateKey].length > 0;
-        const actualForDate = task.dailyActuals && task.dailyActuals[dateKey] && task.dailyActuals[dateKey].count > 0;
-        return assignedForDate || actualForDate;
-    }).map(task => ({
-        ...task,
-        isMonthly: true,
-        assignedCEs: (task.assignedCEs && task.assignedCEs[dateKey]) ? task.assignedCEs[dateKey] : [],
-        dailyActuals: (task.dailyActuals && task.dailyActuals[dateKey]) ? task.dailyActuals[dateKey] : { count: 0, startTime: '', endTime: '' }
-    }));
-
-    return {
-        date: date,
-        dateKey: dateKey,
-        dayLabel: dayLabel,
-        events: dailyEvents,
-        monthlyTasks: dailyMonthlyTasks
-    };
-}
-
-// 日別カードの生成（V1スタイル完全再現）
-async createWeeklyDayCard(dayInfo, departments) {
-    const dayCard = document.createElement('div');
-    dayCard.className = 'weekly-day-card';
-    
-    // 今日の日付をハイライト
-    const today = new Date();
-    const isToday = dayInfo.date.toDateString() === today.toDateString();
-    if (isToday) {
-        dayCard.classList.add('today');
-    }
-
-    let totalDayRequired = 0;
-    let totalDayAssigned = 0;
-    let departmentSections = '';
-
-    // 部門ごとの業務を処理
-    for (const dept of departments) {
-        const deptEvents = dayInfo.events.filter(e => e.department === dept);
-        const deptMonthlyTasks = dayInfo.monthlyTasks.filter(t => t.department === dept);
-
-        if (deptEvents.length === 0 && deptMonthlyTasks.length === 0) continue;
-
-        const deptColor = window.DEPARTMENT_COLORS?.[dept] || '#6b7280';
-        let deptAssigned = 0;
-        let deptRequired = 0;
-        let tasksHtml = '';
-
-        // 通常業務の処理
-        for (const event of deptEvents) {
-            const normalizedAssigned = await this.normalizeAssignedCEs(event.assignedCEs || []);
-            const assignedCount = normalizedAssigned.length;
-            const need = Number.isFinite(event.requiredPeople) ? event.requiredPeople : 0;
-            
-            deptAssigned += assignedCount;
-            deptRequired += need;
-            totalDayAssigned += assignedCount;
-            totalDayRequired += need;
-
-            const assignedCEChipsHtml = await this.generateCEChipsWithStatus(normalizedAssigned, dayInfo.dateKey);
-
-            tasksHtml += `
-                <div class="weekly-task-item" style="--dept-color: ${deptColor}">
-                    <div class="flex justify-between items-center mb-1">
-                        <div class="font-bold text-xs">
-                            <i class="fas fa-briefcase mr-1"></i>${event.name}
-                        </div>
-                        <div class="text-xs text-gray-500">${event.startTime || ''}-${event.endTime || ''}</div>
-                    </div>
-                    <div class="text-xs text-gray-600 mb-1">
-                        ${event.count > 0 ? `${event.count}件 | ` : ''}必要: ${need}名 / 配置: ${assignedCount}名
-                    </div>
-                    <div class="assigned-ces flex flex-wrap gap-1">
-                        ${assignedCEChipsHtml}
-                    </div>
-                </div>
-            `;
-        }
-
-        // 月次業務の処理
-        for (const task of deptMonthlyTasks) {
-            const normalizedAssigned = await this.normalizeAssignedCEs(task.assignedCEs || []);
-            const assignedCount = normalizedAssigned.length;
-            const need = Number.isFinite(task.requiredPeople) ? task.requiredPeople : 0;
-
-            deptAssigned += assignedCount;
-            deptRequired += need;
-            totalDayAssigned += assignedCount;
-            totalDayRequired += need;
-
-            const assignedCEChipsHtml = await this.generateCEChipsWithStatus(normalizedAssigned, dayInfo.dateKey);
-            const actualCount = task.dailyActuals?.count || 0;
-            const actualTime = task.dailyActuals?.startTime && task.dailyActuals?.endTime 
-                ? ` (${task.dailyActuals.startTime}-${task.dailyActuals.endTime})` : '';
-
-            tasksHtml += `
-                <div class="weekly-task-item" style="--dept-color: ${deptColor}">
-                    <div class="flex justify-between items-center mb-1">
-                        <div class="font-bold text-xs">
-                            <i class="fas fa-calendar-alt mr-1 text-orange-600"></i>${task.name} 
-                            <span class="monthly-task-badge">月次</span>
-                        </div>
-                        <div class="text-xs text-gray-500">実績: ${actualCount}件${actualTime}</div>
-                    </div>
-                    <div class="text-xs text-gray-600 mb-1">
-                        必要: ${need}名 / 配置: ${assignedCount}名
-                    </div>
-                    <div class="assigned-ces flex flex-wrap gap-1">
-                        ${assignedCEChipsHtml}
-                    </div>
-                </div>
-            `;
-        }
-
-        // 部門セクションの生成
-        const deptPercentage = deptRequired > 0 ? Math.round((deptAssigned / deptRequired) * 100) : 0;
-        const deptColorClass = deptPercentage >= 100 ? 'text-green-600' : deptPercentage >= 80 ? 'text-yellow-600' : 'text-red-600';
-
-        departmentSections += `
-            <div class="weekly-department-area" style="--dept-color: ${deptColor}">
-                <div class="flex items-center justify-between mb-2">
-                    <h3 class="font-bold text-sm">
-                        <i class="fas fa-${window.DEPARTMENT_ICONS?.[dept] || 'cog'}" style="color: ${deptColor}"></i>
-                        ${dept}
-                    </h3>
-                    <div class="text-xs ${deptColorClass}">${deptAssigned}/${deptRequired}名 (${deptPercentage}%)</div>
-                </div>
-                <div class="space-y-1">
-                    ${tasksHtml}
-                </div>
-            </div>
-        `;
-    }
-
-    // 全体サマリーの計算
-    const overallPercentage = totalDayRequired > 0 ? Math.round((totalDayAssigned / totalDayRequired) * 100) : 0;
-    const overallColorClass = overallPercentage >= 100 ? 'text-green-700' : overallPercentage >= 80 ? 'text-yellow-700' : 'text-red-700';
-
-    // カードの内容を設定（V1デザイン完全再現）
-    dayCard.innerHTML = `
-        <h4 class="font-bold text-center mb-3 ${isToday ? 'text-blue-600' : ''}">
-            ${dayInfo.dayLabel}曜 (${dayInfo.date.getMonth() + 1}/${dayInfo.date.getDate()})
-            ${isToday ? '<i class="fas fa-star ml-1 text-yellow-500"></i>' : ''}
-        </h4>
-        <div class="text-center mb-3 pb-3 border-b border-gray-200">
-            <div class="text-lg font-bold ${overallColorClass}">${totalDayAssigned}/${totalDayRequired}名</div>
-            <div class="text-xs ${overallColorClass}">(${overallPercentage}%)</div>
-            <div class="text-xs text-gray-600">${dayInfo.events.length + dayInfo.monthlyTasks.length}件の業務</div>
-        </div>
-        <div class="space-y-2">
-            ${departmentSections || '<div class="text-center py-4 text-gray-400 text-sm">業務なし</div>'}
-        </div>
-    `;
-
-    return dayCard;
-}
-
-// CE配置の正規化
-async normalizeAssignedCEs(assignedCEs) {
-    if (!Array.isArray(assignedCEs)) return [];
-    
-    return assignedCEs.map(entry => {
-        if (typeof entry === 'string') {
-            const ce = window.ceManager?.ceList?.find(c => c.id === entry);
-            return ce ? { 
-                id: ce.id, 
-                name: ce.iconName || ce.displayName || ce.name, 
-                workType: ce.workType || 'ME' 
-            } : { id: entry, name: entry, workType: 'ME' };
-        } else if (entry && typeof entry === 'object') {
-            return { 
-                id: entry.id, 
-                name: entry.name, 
-                workType: entry.workType || 'ME' 
-            };
-        }
-        return null;
-    }).filter(Boolean);
-}
-
-// 勤務状態付きCEチップの生成（修正版）
-async generateCEChipsWithStatus(normalizedAssigned, dateKey) {
-    const chips = [];
-    
-    for (const assigned of normalizedAssigned) {
-        let effectiveWorkType = assigned.workType || 'ME';
-        let statusBadge = '';
-        let statusText = ''; // ★追加：外側で宣言して安全なスコープを確保
-        
-        if (window.publishedScheduleResolver) {
-            try {
-                const workStatus = await window.publishedScheduleResolver.getCEWorkStatusForDate(assigned.id, dateKey);
-                if (workStatus?.workType) {
-                    effectiveWorkType = workStatus.workType;
-                }
-                statusText = workStatus?.status || ''; // ★修正：安全な代入
-                if (statusText && statusText !== 'A') {
-                    statusBadge = `<span class="weekly-status-badge status-${statusText}">${statusText}</span>`;
-                }
-            } catch (statusError) {
-                console.warn('⚠️ 週間表示CE勤務状態取得失敗:', assigned.name, statusError);
-            }
-        }
-        
-        // ★修正：statusTextが安全に参照できるようになった
-        const titleExtra = statusBadge ? ` (${statusText})` : '';
-        chips.push(`
-            <span class="ce-chip worktype-${effectiveWorkType.toLowerCase()}" title="${assigned.name}${titleExtra}" style="position: relative;">
-                ${assigned.name}${statusBadge}
-            </span>
-        `);
-    }
-    
-    return chips.join('');
-}
             
             formatDate(date) {
             // 新しいコード（ローカルタイムゾーン対応）
@@ -2583,7 +2148,111 @@ async generateCEChipsWithStatus(normalizedAssigned, dateKey) {
     const day = String(date.getDate()).padStart(2, '0');
     return `${year}-${month}-${day}`;
 }
+            /**
+ * 業務カードの並び替え機能を初期化
+ */
+initTaskSorting() {
+    const taskLists = document.querySelectorAll('.task-list');
+    
+    taskLists.forEach(taskList => {
+        const eventCards = taskList.querySelectorAll('.event-card');
+        
+        eventCards.forEach((card, index) => {
+            card.setAttribute('draggable', 'true');
+            card.style.cursor = 'move';
+            
+            if (!card.dataset.sortOrder) {
+                card.dataset.sortOrder = index;
+            }
+            
+            card.addEventListener('dragstart', (e) => {
+                card.classList.add('dragging');
+                e.dataTransfer.effectAllowed = 'move';
+                e.dataTransfer.setData('text/html', card.innerHTML);
+                e.dataTransfer.setData('card-id', card.dataset.eventId || '');
+            });
+            
+            card.addEventListener('dragend', (e) => {
+                card.classList.remove('dragging');
+            });
+            
+            card.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                e.dataTransfer.dropEffect = 'move';
+                
+                const draggingCard = taskList.querySelector('.dragging');
+                if (draggingCard && draggingCard !== card) {
+                    const rect = card.getBoundingClientRect();
+                    const midpoint = rect.top + rect.height / 2;
+                    
+                    if (e.clientY < midpoint) {
+                        taskList.insertBefore(draggingCard, card);
+                    } else {
+                        taskList.insertBefore(draggingCard, card.nextSibling);
+                    }
+                }
+            });
+            
+            card.addEventListener('drop', (e) => {
+                e.preventDefault();
+                this.saveSortOrder(taskList);
+            });
+        });
+    });
+}
 
+/**
+ * 並び順をローカルストレージに保存
+ */
+saveSortOrder(taskList) {
+    const department = taskList.dataset.department;
+    const dateKey = this.formatDate(this.selectedDate);
+    const cards = taskList.querySelectorAll('.event-card');
+    
+    const sortOrder = [];
+    cards.forEach((card, index) => {
+        const eventId = card.dataset.eventId;
+        if (eventId) {
+            sortOrder.push(eventId);
+            card.dataset.sortOrder = index;
+        }
+    });
+    
+    const storageKey = `sortOrder_${dateKey}_${department}`;
+    localStorage.setItem(storageKey, JSON.stringify(sortOrder));
+    console.log(`✅ 並び順保存: ${dateKey} - ${department}`, sortOrder);
+}
+
+/**
+ * 保存された並び順を適用
+ */
+applySavedSortOrder() {
+    const dateKey = this.formatDate(this.selectedDate);
+    
+    document.querySelectorAll('.task-list').forEach(taskList => {
+        const department = taskList.dataset.department;
+        const storageKey = `sortOrder_${dateKey}_${department}`;
+        const savedOrder = localStorage.getItem(storageKey);
+        
+        if (savedOrder) {
+            try {
+                const orderArray = JSON.parse(savedOrder);
+                const cards = Array.from(taskList.querySelectorAll('.event-card'));
+                
+                orderArray.forEach(eventId => {
+                    const card = cards.find(c => c.dataset.eventId === eventId);
+                    if (card) {
+                        taskList.appendChild(card);
+                    }
+                });
+                
+                console.log(`✅ 並び順適用: ${dateKey} - ${department}`, orderArray);
+            } catch (error) {
+                console.error('並び順の適用に失敗:', error);
+            }
+        }
+    });
+}
 
             updateCEListCount() {
                 const el = document.getElementById('ceListCount');
@@ -2754,6 +2423,12 @@ async generateCEChipsWithStatus(normalizedAssigned, dateKey) {
                     // 集計の更新
                     this.updateDailySummary().catch(console.error);
                     console.log(`✅ ${dateKey} のイベント表示完了: ${events.length}件`);
+
+                            // 並び順を適用してドラッグ&ドロップを初期化
+        setTimeout(() => {
+            this.applySavedSortOrder();
+            this.initTaskSorting();
+        }, 300);
 
 
                 } catch (error) {
