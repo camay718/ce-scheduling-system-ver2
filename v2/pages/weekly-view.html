@@ -31,7 +31,7 @@
     <style>
         /* 週間表示専用スタイル */
         .weekly-container {
-            max-width: 1800px;
+            max-width: 1400px;
             margin: 0 auto;
             padding: 20px;
         }
@@ -81,18 +81,17 @@
             background: rgba(0,0,0,0.05);
         }
 
-        /* 画面レイアウト改善: 7列固定（月〜日） */
         .weekly-grid {
             display: grid;
-            grid-template-columns: repeat(7, 1fr);
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
             gap: 16px;
             margin-bottom: 20px;
         }
 
         .day-card {
-            background: var(--glass-bg, rgba(255,255,255,0.9));
+            background: var(--glass-bg);
             backdrop-filter: blur(10px);
-            border: 1px solid var(--glass-border, rgba(0,0,0,0.1));
+            border: 1px solid var(--glass-border);
             border-radius: 16px;
             padding: 16px;
             box-shadow: 0 4px 12px rgba(0,0,0,0.1);
@@ -258,74 +257,31 @@
             z-index: 9999;
         }
 
-        .spinner {
-            border: 4px solid #f3f4f6;
-            border-top: 4px solid #3b82f6;
-            border-radius: 50%;
-            width: 40px;
-            height: 40px;
-            animation: spin 1s linear infinite;
-        }
-
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-
-        /* 印刷モード選択モーダル - レイアウト改善 */
+        /* 印刷モード選択モーダル */
         .print-modal {
             position: fixed;
             inset: 0;
             background: rgba(0,0,0,0.5);
-            display: none;
+            display: flex;
             align-items: center;
             justify-content: center;
             z-index: 10000;
         }
 
-        .print-modal.active {
-            display: flex;
-        }
-
         .print-modal-content {
             background: white;
             border-radius: 16px;
-            padding: 32px;
-            max-width: 600px;
+            padding: 24px;
+            max-width: 500px;
             width: 90%;
-            max-height: 90vh;
-            overflow-y: auto;
-            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
-        }
-
-        .print-modal h2 {
-            font-size: 1.5rem;
-            font-weight: bold;
-            margin-bottom: 8px;
-            color: #1f2937;
-            display: flex;
-            align-items: center;
-        }
-
-        .print-modal-subtitle {
-            font-size: 0.875rem;
-            color: #6b7280;
-            margin-bottom: 24px;
-        }
-
-        .print-options-container {
-            display: flex;
-            flex-direction: column;
-            gap: 12px;
-            margin-bottom: 24px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.3);
         }
 
         .print-option {
-            display: flex;
-            align-items: flex-start;
             padding: 16px;
             border: 2px solid #e5e7eb;
             border-radius: 12px;
+            margin-bottom: 12px;
             cursor: pointer;
             transition: all 0.2s;
         }
@@ -336,93 +292,7 @@
         }
 
         .print-option input[type="radio"] {
-            margin-top: 4px;
             margin-right: 12px;
-            flex-shrink: 0;
-        }
-
-        .print-option-content {
-            flex: 1;
-        }
-
-        .print-option-title {
-            font-weight: bold;
-            font-size: 1rem;
-            margin-bottom: 4px;
-            color: #1f2937;
-            display: flex;
-            align-items: center;
-        }
-
-        .print-option-description {
-            font-size: 0.875rem;
-            color: #6b7280;
-            line-height: 1.5;
-        }
-
-        .print-option-note {
-            font-size: 0.75rem;
-            color: #9ca3af;
-            margin-top: 4px;
-        }
-
-        .print-modal-buttons {
-            display: flex;
-            gap: 12px;
-            margin-bottom: 16px;
-        }
-
-        .print-modal-buttons button {
-            flex: 1;
-            padding: 12px 24px;
-            border-radius: 8px;
-            font-weight: 500;
-            transition: all 0.2s;
-            border: none;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-
-        .print-modal-buttons .btn-cancel {
-            background: #f3f4f6;
-            color: #374151;
-        }
-
-        .print-modal-buttons .btn-cancel:hover {
-            background: #e5e7eb;
-        }
-
-        .print-modal-buttons .btn-execute {
-            background: #3b82f6;
-            color: white;
-        }
-
-        .print-modal-buttons .btn-execute:hover {
-            background: #2563eb;
-        }
-
-        .print-hint-box {
-            padding: 16px;
-            background: #eff6ff;
-            border: 1px solid #bfdbfe;
-            border-radius: 8px;
-        }
-
-        .print-hint-title {
-            font-weight: bold;
-            font-size: 0.875rem;
-            color: #1e40af;
-            margin-bottom: 8px;
-            display: flex;
-            align-items: center;
-        }
-
-        .print-hint-list {
-            font-size: 0.75rem;
-            color: #1e40af;
-            line-height: 1.6;
         }
 
         /* 印刷用スタイル - コンパクトモード（週全体を1ページ） */
@@ -566,13 +436,6 @@
             }
         }
 
-        /* タブレット対応: 月〜金の5列表示 */
-        @media (max-width: 1400px) and (min-width: 769px) {
-            .weekly-grid {
-                grid-template-columns: repeat(5, 1fr);
-            }
-        }
-
         /* モバイル対応 */
         @media (max-width: 768px) {
             .weekly-container {
@@ -611,26 +474,24 @@
     </div>
 
     <!-- 印刷モード選択モーダル -->
-    <div id="printModal" class="print-modal no-print">
+    <div id="printModal" class="print-modal no-print" style="display: none;">
         <div class="print-modal-content">
-            <h2>
-                <i class="fas fa-print" style="margin-right: 8px; color: #3b82f6;"></i>印刷モード選択
+            <h2 class="text-xl font-bold mb-4">
+                <i class="fas fa-print mr-2 text-blue-600"></i>印刷モード選択
             </h2>
-            <p class="print-modal-subtitle">印刷レイアウトを選択してください</p>
+            <p class="text-sm text-gray-600 mb-4">印刷レイアウトを選択してください</p>
 
-            <div class="print-options-container">
+            <div class="space-y-3">
                 <!-- コンパクトモード -->
                 <label class="print-option">
                     <input type="radio" name="printMode" value="compact" checked>
-                    <div class="print-option-content">
-                        <div class="print-option-title">
-                            <i class="fas fa-compress-alt" style="margin-right: 8px; color: #10b981;"></i>コンパクトモード（推奨）
+                    <div>
+                        <div class="font-bold text-base mb-1">
+                            <i class="fas fa-compress-alt mr-2 text-green-600"></i>コンパクトモード（推奨）
                         </div>
-                        <div class="print-option-description">
-                            週全体を1ページに収めます（A4横向き推奨）
-                        </div>
-                        <div class="print-option-note">
-                            ※最もコンパクトで見やすい
+                        <div class="text-sm text-gray-600">
+                            週全体を1ページに収めます（A4横向き推奨）<br>
+                            <span class="text-xs text-gray-500">※最もコンパクトで見やすい</span>
                         </div>
                     </div>
                 </label>
@@ -638,34 +499,30 @@
                 <!-- 部門別モード -->
                 <label class="print-option">
                     <input type="radio" name="printMode" value="department">
-                    <div class="print-option-content">
-                        <div class="print-option-title">
-                            <i class="fas fa-layer-group" style="margin-right: 8px; color: #3b82f6;"></i>部門別モード
+                    <div>
+                        <div class="font-bold text-base mb-1">
+                            <i class="fas fa-layer-group mr-2 text-blue-600"></i>部門別モード
                         </div>
-                        <div class="print-option-description">
-                            部門ごとに改ページして詳細表示
-                        </div>
-                        <div class="print-option-note">
-                            ※複数ページになりますが詳細が見やすい
+                        <div class="text-sm text-gray-600">
+                            部門ごとに改ページして詳細表示<br>
+                            <span class="text-xs text-gray-500">※複数ページになりますが詳細が見やすい</span>
                         </div>
                     </div>
                 </label>
             </div>
 
-            <div class="print-modal-buttons">
-                <button id="cancelPrintBtn" class="btn-cancel">
-                    <i class="fas fa-times" style="margin-right: 8px;"></i>キャンセル
+            <div class="mt-6 flex gap-3">
+                <button id="cancelPrintBtn" class="btn-unified btn-outline-unified flex-1">
+                    <i class="fas fa-times mr-2"></i>キャンセル
                 </button>
-                <button id="executePrintBtn" class="btn-execute">
-                    <i class="fas fa-print" style="margin-right: 8px;"></i>印刷実行
+                <button id="executePrintBtn" class="btn-unified btn-primary-unified flex-1">
+                    <i class="fas fa-print mr-2"></i>印刷実行
                 </button>
             </div>
 
-            <div class="print-hint-box">
-                <div class="print-hint-title">
-                    <i class="fas fa-info-circle" style="margin-right: 4px;"></i>印刷のヒント
-                </div>
-                <div class="print-hint-list">
+            <div class="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                <div class="text-xs text-blue-800">
+                    <i class="fas fa-info-circle mr-1"></i><strong>印刷のヒント</strong><br>
                     • コンパクトモードは<strong>A4横向き</strong>がおすすめです<br>
                     • 印刷ダイアログで「背景のグラフィック」をONにすると色が表示されます<br>
                     • PDFとして保存する場合は「送信先」を「PDFに保存」に変更してください
@@ -690,633 +547,155 @@
                     <a href="./schedule.html" class="btn-unified btn-outline-unified btn-small">
                         <i class="fas fa-calendar-day mr-1"></i>日別表示
                     </a>
-                    <a href="../home.html" class="btn-unified btn-outline-unified btn-small">
-                        <i class="fas fa-home mr-1"></i>ホーム
+                    <a href="./home.html" class="btn-unified btn-outline-unified btn-small">
+                        <i class="fas fa-home mr-1"></i>HOME
                     </a>
                 </div>
             </div>
 
-            <!-- 週ナビゲーション -->
+            <!-- 週間ナビゲーション -->
             <div class="weekly-navigation">
-                <button id="prevWeekBtn" class="btn-unified btn-outline-unified btn-small">
-                    <i class="fas fa-chevron-left mr-1"></i>前週
+                <button id="prevWeekBtn" class="btn-unified btn-outline-unified btn-small no-print">
+                    <i class="fas fa-chevron-left"></i> 前週
                 </button>
                 <div class="text-center">
-                    <h2 id="weekTitle" class="text-xl font-bold text-gray-800"></h2>
-                    <p id="weekRange" class="text-sm text-gray-600"></p>
+                    <h2 id="weekDisplay" class="text-lg font-semibold text-gray-700"></h2>
+                    <p class="text-sm text-gray-500">週間スケジュール概要</p>
                 </div>
-                <button id="nextWeekBtn" class="btn-unified btn-outline-unified btn-small">
-                    次週<i class="fas fa-chevron-right ml-1"></i>
+                <button id="nextWeekBtn" class="btn-unified btn-outline-unified btn-small no-print">
+                    次週 <i class="fas fa-chevron-right"></i>
+                </button>
+            </div>
+
+            <div class="text-center mt-4 no-print">
+                <button id="todayBtn" class="btn-unified btn-primary-unified btn-small">
+                    <i class="fas fa-calendar-day mr-1"></i>今週
                 </button>
             </div>
         </div>
 
         <!-- 部門フィルター -->
         <div class="weekly-filter no-print">
-            <div class="flex items-center justify-between mb-3">
-                <h3 class="font-bold text-gray-700">
-                    <i class="fas fa-filter mr-2"></i>部門フィルター
-                </h3>
-                <div>
-                    <button id="filterSelectAll" class="text-sm text-blue-600 hover:text-blue-800 mr-3">
-                        すべて選択
-                    </button>
-                    <button id="filterDeselectAll" class="text-sm text-gray-600 hover:text-gray-800">
-                        すべて解除
-                    </button>
-                </div>
+            <h3 class="text-sm font-semibold mb-3">
+                <i class="fas fa-filter mr-2"></i>表示部門フィルター
+            </h3>
+            <div id="filterCheckboxes" class="filter-checkboxes">
+                <!-- チェックボックスが動的に生成されます -->
             </div>
-            <div id="departmentFilters" class="filter-checkboxes"></div>
         </div>
 
         <!-- 週間グリッド -->
-        <div id="weekGrid" class="weekly-grid"></div>
+        <div id="weeklyGrid" class="weekly-grid">
+            <!-- 各曜日のカードが動的に生成されます -->
+        </div>
     </div>
 
     <script>
-        // グローバル変数
-        let currentWeekStart = null;
-        let allScheduleData = null;
-        let selectedDepartments = new Set();
+        // 週間表示管理クラス
+        class WeeklyViewManager {
+            constructor() {
+                this.isInitialized = false;
+                this.selectedWeekStart = this.getStartOfWeek(new Date());
+                this.monthlyTasks = {};
+            }
 
-        // 認証システムの読み込みを待つ
-        function waitForAuthGuard(maxAttempts = 50) {
-            return new Promise((resolve, reject) => {
-                let attempts = 0;
-                const checkInterval = setInterval(() => {
-                    attempts++;
-                    if (window.AuthGuard) {
-                        clearInterval(checkInterval);
-                        resolve();
-                    } else if (attempts >= maxAttempts) {
-                        clearInterval(checkInterval);
-                        reject(new Error('認証システムの読み込みがタイムアウトしました'));
-                    }
-                }, 100);
-            });
-        }
+            async init() {
+                if (this.isInitialized) return;
+                this.isInitialized = true;
 
-        // ページ初期化
-        document.addEventListener('DOMContentLoaded', async () => {
-            console.log('✅ 週間表示ページ初期化開始');
-            
-            try {
-                // 認証システムの読み込みを待つ
-                console.log('⏳ 認証システムの読み込みを待機中...');
-                await waitForAuthGuard();
-                console.log('✅ 認証システム読み込み完了');
-                
-                // 認証確認
-                const authSuccess = await window.AuthGuard.init({ requireAuth: true });
-                if (!authSuccess) {
-                    console.warn('⚠️ 認証失敗 - ログインページへリダイレクト');
-                    window.location.href = '../index.html';
-                    return;
-                }
-                
-                const session = window.AuthGuard.getSession();
-                console.log('✅ 認証済みユーザー:', session.username, '(', session.role, ')');
-                
-                // CEManagerインスタンスの初期化
-                if (!window.ceManager && window.CEManager) {
-                    console.log('📦 CEManagerインスタンスを作成中...');
-                    window.ceManager = new window.CEManager();
-                    console.log('✅ CEManagerインスタンス作成完了');
-                    
-                    // CEManagerの初期化を待つ（データ読み込み完了まで）
-                    let attempts = 0;
-                    while (attempts < 50) {
-                        if (window.ceManager.ceList && window.ceManager.ceList.length > 0) {
-                            break;
-                        }
-                        await new Promise(resolve => setTimeout(resolve, 100));
-                        attempts++;
+                try {
+                    const authSuccess = await AuthGuard.init();
+                    if (!authSuccess) return;
+
+                    const userData = await AuthGuard.getUserData();
+                    if (!userData || !userData.setupCompleted) {
+                        location.href = '../index.html';
+                        return;
                     }
-                    
-                    if (window.ceManager.ceList && window.ceManager.ceList.length > 0) {
-                        console.log('✅ CE一覧読み込み完了:', window.ceManager.ceList.length, '人');
-                    } else {
-                        console.warn('⚠️ CE一覧の読み込みがタイムアウトしました（', attempts * 100, 'ms）');
+
+                    window.userRole = userData.role || 'viewer';
+                    window.currentUserData = userData;
+
+                    if (!window.ceManager && window.CEManager) {
+                        window.ceManager = new window.CEManager();
                     }
-                } else if (window.ceManager) {
-                    console.log('✅ CEManagerはすでに初期化済み:', window.ceManager.ceList?.length || 0, '人');
-                } else {
-                    console.warn('⚠️ CEManagerクラスが利用できません');
+
+                    if (!window.publishedScheduleResolver && window.PublishedScheduleResolver) {
+                        window.publishedScheduleResolver = new window.PublishedScheduleResolver();
+                    }
+
+                    this.setupEventListeners();
+                    this.initDepartmentFilter();
+                    await this.renderWeeklyView();
+
+                    if (window.auditLogger) {
+                        await window.auditLogger.logPageAccess('weekly-view');
+                    }
+
+                    this.showContent();
+                    console.log('✅ 週間表示初期化完了');
+
+                } catch (error) {
+                    console.error('❌ 週間表示初期化エラー:', error);
+                    window.showMessage('週間表示の初期化に失敗しました', 'error');
                 }
-                
-                // PublishedScheduleResolverインスタンスの初期化
-                if (!window.publishedScheduleResolver && window.PublishedScheduleResolver) {
-                    window.publishedScheduleResolver = new window.PublishedScheduleResolver();
-                    console.log('✅ PublishedScheduleResolverインスタンス作成完了');
-                }
-                
-                // 今週の月曜日を取得
-                currentWeekStart = getMonday(new Date());
-                console.log('📅 今週の開始日:', currentWeekStart.toLocaleDateString('ja-JP'));
-                
-                // 部門フィルター初期化
-                initializeDepartmentFilters();
-                
-                // 週間データ読み込み
-                await loadWeekData();
-                
-                // イベントリスナー設定
-                setupEventListeners();
-                
-                // 表示
+            }
+
+            showContent() {
                 document.getElementById('loading').style.display = 'none';
                 document.getElementById('mainContent').style.display = 'block';
-                
-                console.log('✅ 週間表示ページ初期化完了');
-                
-            } catch (error) {
-                console.error('❌ 初期化エラー:', error);
-                alert('ページの読み込みに失敗しました。\n' + error.message);
-                document.getElementById('loading').style.display = 'none';
-            }
-        });
-
-        // 月曜日を取得
-        function getMonday(date) {
-            const d = new Date(date);
-            const day = d.getDay();
-            const diff = d.getDate() - day + (day === 0 ? -6 : 1);
-            return new Date(d.setDate(diff));
-        }
-
-        // 週の日付配列を生成（月〜日）
-        function getWeekDates(startDate) {
-            const dates = [];
-            for (let i = 0; i < 7; i++) {
-                const date = new Date(startDate);
-                date.setDate(startDate.getDate() + i);
-                dates.push(date);
-            }
-            return dates;
-        }
-
-        // 日付をキーに変換（YYYYMMDD）
-        function dateToKey(date) {
-            const y = date.getFullYear();
-            const m = String(date.getMonth() + 1).padStart(2, '0');
-            const d = String(date.getDate()).padStart(2, '0');
-            return `${y}${m}${d}`;
-        }
-
-        // 部門フィルター初期化
-        function initializeDepartmentFilters() {
-            const filterContainer = document.getElementById('departmentFilters');
-            const departments = window.DEPARTMENT_COLORS || {
-                '手術部': '#E6A8D7',
-                '血管撮影': '#FFB3BA',
-                'ME室': '#B0E57C',
-                '放射線': '#FFD59E',
-                '不整脈': '#AEC6CF',
-                '生理検査': '#F4C2C2',
-                '人工心肺': '#D4A5A5',
-                '心カテ': '#C9A0DC'
-            };
-
-            // localStorageから保存されたフィルター設定を読み込み
-            const savedFilters = localStorage.getItem('weeklyDepartmentFilters');
-            if (savedFilters) {
-                try {
-                    selectedDepartments = new Set(JSON.parse(savedFilters));
-                } catch (e) {
-                    console.warn('フィルター設定の読み込みに失敗:', e);
-                    selectedDepartments = new Set(Object.keys(departments));
-                }
-            } else {
-                // 初回はすべて選択
-                selectedDepartments = new Set(Object.keys(departments));
             }
 
-            filterContainer.innerHTML = '';
-            
-            Object.entries(departments).forEach(([dept, color]) => {
-                const label = document.createElement('label');
-                label.className = 'filter-checkbox-label';
-                
-                const checkbox = document.createElement('input');
-                checkbox.type = 'checkbox';
-                checkbox.value = dept;
-                checkbox.checked = selectedDepartments.has(dept);
-                checkbox.addEventListener('change', handleFilterChange);
-                
-                const colorBox = document.createElement('span');
-                colorBox.style.cssText = `
-                    display: inline-block;
-                    width: 16px;
-                    height: 16px;
-                    background: ${color};
-                    border-radius: 4px;
-                    border: 1px solid rgba(0,0,0,0.2);
-                `;
-                
-                const text = document.createElement('span');
-                text.textContent = dept;
-                
-                label.appendChild(checkbox);
-                label.appendChild(colorBox);
-                label.appendChild(text);
-                filterContainer.appendChild(label);
-            });
-        }
-
-        // フィルター変更ハンドラ
-        function handleFilterChange(e) {
-            const dept = e.target.value;
-            if (e.target.checked) {
-                selectedDepartments.add(dept);
-            } else {
-                selectedDepartments.delete(dept);
+            getStartOfWeek(date) {
+                const d = new Date(date);
+                const day = d.getDay();
+                const diff = d.getDate() - day + (day === 0 ? -6 : 1);
+                d.setDate(diff);
+                d.setHours(0, 0, 0, 0);
+                return d;
             }
-            
-            // localStorageに保存
-            localStorage.setItem('weeklyDepartmentFilters', JSON.stringify([...selectedDepartments]));
-            
-            // 表示更新
-            renderWeekGrid();
-        }
 
-        // 週間データ読み込み
-        async function loadWeekData() {
-            try {
-                console.log('📊 週間データ読み込み開始');
-                
-                const weekDates = getWeekDates(currentWeekStart);
-                const startKey = dateToKey(weekDates[0]);
-                const endKey = dateToKey(weekDates[6]);
-                
-                // タイトル更新
-                updateWeekTitle(weekDates);
-                
-                // Firebase からデータ取得（DATA_ROOT使用）
-                const dataRoot = window.DATA_ROOT || 'ce-schedule-data';
-                const scheduleRef = firebase.database().ref(`${dataRoot}/schedules`);
-                console.log('📍 データパス:', `${dataRoot}/schedules`);
-                
-                const snapshot = await scheduleRef.orderByKey().startAt(startKey).endAt(endKey).once('value');
-                
-                allScheduleData = snapshot.val() || {};
-                console.log('✅ データ取得完了:', Object.keys(allScheduleData).length, '日分');
-                console.log('📝 取得した日付キー:', Object.keys(allScheduleData));
-                
-                // データ構造の確認
-                if (Object.keys(allScheduleData).length > 0) {
-                    const firstDateKey = Object.keys(allScheduleData)[0];
-                    const firstDayData = allScheduleData[firstDateKey];
-                    console.log('🔍 最初の日のデータ構造:', firstDateKey, '→', Object.keys(firstDayData || {}));
-                }
-                
-                // グリッド描画
-                await renderWeekGrid();
-                
-            } catch (error) {
-                console.error('❌ データ読み込みエラー:', error);
-                if (error.code === 'PERMISSION_DENIED') {
-                    alert('データへのアクセス権限がありません。\n管理者に連絡してください。');
-                }
-                throw error;
+            formatDate(date) {
+                const year = date.getFullYear();
+                const month = String(date.getMonth() + 1).padStart(2, '0');
+                const day = String(date.getDate()).padStart(2, '0');
+                return `${year}-${month}-${day}`;
             }
-        }
 
-        // 週タイトル更新
-        function updateWeekTitle(weekDates) {
-            const weekTitle = document.getElementById('weekTitle');
-            const weekRange = document.getElementById('weekRange');
-            
-            const startMonth = weekDates[0].getMonth() + 1;
-            const startDay = weekDates[0].getDate();
-            const endMonth = weekDates[6].getMonth() + 1;
-            const endDay = weekDates[6].getDate();
-            const year = weekDates[0].getFullYear();
-            
-            const today = new Date();
-            const isThisWeek = weekDates.some(d => 
-                d.toDateString() === today.toDateString()
-            );
-            
-            weekTitle.textContent = isThisWeek ? '今週' : `${year}年 ${startMonth}/${startDay} - ${endMonth}/${endDay} の週`;
-            weekRange.textContent = `${year}年${startMonth}月${startDay}日 〜 ${year}年${endMonth}月${endDay}日`;
-        }
+            setupEventListeners() {
+                document.getElementById('prevWeekBtn').onclick = () => this.navigateWeek(-1);
+                document.getElementById('nextWeekBtn').onclick = () => this.navigateWeek(1);
+                document.getElementById('todayBtn').onclick = () => this.goToCurrentWeek();
+                document.getElementById('printPdfBtn').onclick = () => this.showPrintModal();
 
-        // 週間グリッド描画
-        async function renderWeekGrid() {
-            const gridContainer = document.getElementById('weekGrid');
-            const weekDates = getWeekDates(currentWeekStart);
-            const today = new Date();
-            today.setHours(0, 0, 0, 0);
-            
-            console.log('📋 週間グリッド描画開始');
-            gridContainer.innerHTML = '';
-            
-            for (const date of weekDates) {
-                const dateKey = dateToKey(date);
-                const dayData = allScheduleData[dateKey] || {};
-                console.log(`📅 ${dateKey} (${date.toLocaleDateString('ja-JP')}):`, Object.keys(dayData).length, '部門');
-                
-                // 日カード作成
-                const dayCard = await createDayCard(date, dayData, date.getTime() === today.getTime());
-                gridContainer.appendChild(dayCard);
+                // 印刷モーダルのイベント
+                document.getElementById('cancelPrintBtn').onclick = () => this.hidePrintModal();
+                document.getElementById('executePrintBtn').onclick = () => this.executePrint();
             }
-            
-            console.log('✅ 週間グリッド描画完了');
-        }
 
-        // 日カード作成
-        async function createDayCard(date, dayData, isToday) {
-            const card = document.createElement('div');
-            card.className = 'day-card';
-            if (isToday) card.classList.add('today');
-            
-            const dayNames = ['日', '月', '火', '水', '木', '金', '土'];
-            const dayName = dayNames[date.getDay()];
-            const month = date.getMonth() + 1;
-            const day = date.getDate();
-            
-            // ヘッダー
-            const header = document.createElement('div');
-            header.className = 'day-card-header';
-            header.innerHTML = `
-                <div class="day-title ${isToday ? 'today' : ''}">
-                    ${month}/${day} (${dayName})
-                </div>
-            `;
-            card.appendChild(header);
-            
-            // 部門別データをフィルタリングして表示
-            const departments = window.DEPARTMENT_COLORS || {};
-            const filteredDepts = Object.keys(departments).filter(dept => selectedDepartments.has(dept));
-            
-            if (filteredDepts.length === 0) {
-                const emptyMsg = document.createElement('div');
-                emptyMsg.className = 'text-center text-gray-400 py-4';
-                emptyMsg.textContent = 'フィルタが選択されていません';
-                card.appendChild(emptyMsg);
-                return card;
+            navigateWeek(weeks) {
+                this.selectedWeekStart.setDate(this.selectedWeekStart.getDate() + (weeks * 7));
+                this.renderWeeklyView();
             }
-            
-            let hasData = false;
-            let processedDepts = 0;
-            
-            for (const dept of filteredDepts) {
-                const deptData = dayData[dept];
-                if (!deptData) {
-                    console.log(`  ⚪ ${dept}: データなし`);
-                    continue;
-                }
-                
-                console.log(`  ✅ ${dept}:`, deptData.tasks?.length || 0, '業務');
-                hasData = true;
-                processedDepts++;
-                const deptSection = await createDepartmentSection(dept, deptData, dateToKey(date));
-                card.appendChild(deptSection);
-            }
-            
-            console.log(`  📋 処理完了: ${processedDepts}/${filteredDepts.length} 部門`);
-            
-            if (!hasData) {
-                const emptyMsg = document.createElement('div');
-                emptyMsg.className = 'text-center text-gray-400 py-4';
-                emptyMsg.textContent = '予定なし';
-                card.appendChild(emptyMsg);
-            }
-            
-            return card;
-        }
 
-        // 部門セクション作成
-        async function createDepartmentSection(deptName, deptData, dateKey) {
-            const section = document.createElement('div');
-            section.className = 'department-section';
-            
-            const color = (window.DEPARTMENT_COLORS || {})[deptName] || '#ccc';
-            section.style.setProperty('--dept-color', color);
-            
-            const header = document.createElement('div');
-            header.className = 'dept-header';
-            header.innerHTML = `
-                <span class="dept-name">${escapeHtml(deptName)}</span>
-            `;
-            section.appendChild(header);
-            
-            // 業務一覧
-            const tasks = deptData.tasks || [];
-            if (tasks.length === 0) {
-                console.log(`    ⚠️ ${deptName}: tasksが空です`);
+            goToCurrentWeek() {
+                this.selectedWeekStart = this.getStartOfWeek(new Date());
+                this.renderWeeklyView();
             }
-            for (const task of tasks) {
-                const taskItem = await createTaskItem(task, color, dateKey);
-                section.appendChild(taskItem);
+
+            // 印刷モーダル表示
+            showPrintModal() {
+                document.getElementById('printModal').style.display = 'flex';
             }
-            
-            return section;
-        }
 
-        // 業務アイテム作成
-        async function createTaskItem(task, deptColor, dateKey) {
-            const item = document.createElement('div');
-            item.className = 'task-item';
-            item.style.setProperty('--dept-color', deptColor);
-            
-            // タイトル
-            const title = document.createElement('div');
-            title.className = 'task-title';
-            
-            const titleText = document.createElement('span');
-            titleText.textContent = task.title || '業務';
-            title.appendChild(titleText);
-            
-            // メモアイコン
-            if (task.description && task.description.trim()) {
-                const memoIcon = document.createElement('span');
-                memoIcon.innerHTML = '<i class="fas fa-sticky-note" style="color: #059669; cursor: pointer;" title="メモを表示"></i>';
-                memoIcon.onclick = () => showMemoModal(task.title, task.description);
-                title.appendChild(memoIcon);
+            // 印刷モーダル非表示
+            hidePrintModal() {
+                document.getElementById('printModal').style.display = 'none';
             }
-            
-            item.appendChild(title);
-            
-            // 担当CE
-            if (task.assignedCEs && task.assignedCEs.length > 0) {
-                const normalizedCEs = normalizeAssignedCEs(task.assignedCEs);
-                const ceChipsHtml = await generateCEChipsWithStatus(normalizedCEs, dateKey);
-                
-                const ceChips = document.createElement('div');
-                ceChips.className = 'ce-chips';
-                ceChips.innerHTML = ceChipsHtml;
-                item.appendChild(ceChips);
-            }
-            
-            return item;
-        }
 
-        // CE情報の正規化
-        function normalizeAssignedCEs(assignedCEs) {
-            if (!Array.isArray(assignedCEs)) {
-                return [];
-            }
-            
-            return assignedCEs.map(entry => {
-                if (typeof entry === 'string') {
-                    const ce = window.ceManager?.ceList?.find(c => c.id === entry);
-                    return ce ? { 
-                        id: ce.id, 
-                        name: ce.iconName || ce.displayName || ce.name, 
-                        workType: ce.workType || 'ME' 
-                    } : { id: entry, name: entry, workType: 'ME' };
-                } else if (entry && typeof entry === 'object') {
-                    return { 
-                        id: entry.id, 
-                        name: entry.name, 
-                        workType: entry.workType || 'ME' 
-                    };
-                }
-                return null;
-            }).filter(Boolean);
-        }
-
-        // CE勤務状態付きチップ生成
-        async function generateCEChipsWithStatus(normalizedAssigned, dateKey) {
-            const chips = [];
-            
-            for (const assigned of normalizedAssigned) {
-                let effectiveWorkType = assigned.workType || 'ME';
-                let statusBadge = '';
-                let statusText = '';
-                
-                if (window.publishedScheduleResolver) {
-                    try {
-                        const workStatus = await window.publishedScheduleResolver.getCEWorkStatusForDate(assigned.id, dateKey);
-                        if (workStatus?.workType) {
-                            effectiveWorkType = workStatus.workType;
-                        }
-                        statusText = workStatus?.status || '';
-                        if (statusText && statusText !== 'A') {
-                            statusBadge = `<span class="status-badge status-${escapeHtml(statusText)}">${escapeHtml(statusText)}</span>`;
-                        }
-                    } catch (error) {
-                        console.warn('⚠️ 勤務状態取得失敗:', assigned.name, error);
-                    }
-                }
-                
-                const titleExtra = statusBadge ? ` (${statusText})` : '';
-                chips.push(`
-                    <span class="ce-chip worktype-${escapeHtml(effectiveWorkType.toLowerCase())}" 
-                          title="${escapeHtml(assigned.name)}${escapeHtml(titleExtra)}" 
-                          style="position: relative;">
-                        ${escapeHtml(assigned.name)}${statusBadge}
-                    </span>
-                `);
-            }
-            
-            return chips.join('');
-        }
-
-        // HTMLエスケープ（XSS対策）
-        function escapeHtml(text) {
-            if (!text) return '';
-            const div = document.createElement('div');
-            div.textContent = text;
-            return div.innerHTML;
-        }
-
-        // メモモーダル表示
-        function showMemoModal(title, description) {
-            const modal = document.createElement('div');
-            modal.style.cssText = `
-                position: fixed;
-                inset: 0;
-                background: rgba(0,0,0,0.5);
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                z-index: 10001;
-            `;
-            
-            const content = document.createElement('div');
-            content.style.cssText = `
-                background: white;
-                border-radius: 12px;
-                padding: 24px;
-                max-width: 500px;
-                width: 90%;
-                max-height: 80vh;
-                overflow-y: auto;
-                box-shadow: 0 10px 40px rgba(0,0,0,0.3);
-            `;
-            
-            content.innerHTML = `
-                <h3 style="font-size: 1.25rem; font-weight: bold; margin-bottom: 16px; color: #1f2937;">
-                    <i class="fas fa-sticky-note" style="margin-right: 8px; color: #10b981;"></i>${escapeHtml(title || '業務メモ')}
-                </h3>
-                <div style="background: #f0fdf4; border-left: 4px solid #10b981; padding: 12px; border-radius: 4px; margin-bottom: 16px; white-space: pre-wrap; color: #059669; line-height: 1.6;">
-                    ${escapeHtml(description)}
-                </div>
-                <button style="width: 100%; padding: 10px; background: #3b82f6; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: 500;">
-                    <i class="fas fa-times" style="margin-right: 8px;"></i>閉じる
-                </button>
-            `;
-            
-            const closeBtn = content.querySelector('button');
-            closeBtn.onclick = () => modal.remove();
-            
-            modal.onclick = (e) => {
-                if (e.target === modal) modal.remove();
-            };
-            
-            modal.appendChild(content);
-            document.body.appendChild(modal);
-        }
-
-        // イベントリスナー設定
-        function setupEventListeners() {
-            // 前週・次週ボタン
-            document.getElementById('prevWeekBtn').addEventListener('click', () => {
-                currentWeekStart.setDate(currentWeekStart.getDate() - 7);
-                loadWeekData();
-            });
-            
-            document.getElementById('nextWeekBtn').addEventListener('click', () => {
-                currentWeekStart.setDate(currentWeekStart.getDate() + 7);
-                loadWeekData();
-            });
-            
-            // フィルター全選択・全解除
-            document.getElementById('filterSelectAll').addEventListener('click', () => {
-                selectedDepartments = new Set(Object.keys(window.DEPARTMENT_COLORS || {}));
-                localStorage.setItem('weeklyDepartmentFilters', JSON.stringify([...selectedDepartments]));
-                document.querySelectorAll('#departmentFilters input[type="checkbox"]').forEach(cb => cb.checked = true);
-                renderWeekGrid();
-            });
-            
-            document.getElementById('filterDeselectAll').addEventListener('click', () => {
-                selectedDepartments.clear();
-                localStorage.setItem('weeklyDepartmentFilters', JSON.stringify([]));
-                document.querySelectorAll('#departmentFilters input[type="checkbox"]').forEach(cb => cb.checked = false);
-                renderWeekGrid();
-            });
-            
-            // PDF出力ボタン
-            document.getElementById('printPdfBtn').addEventListener('click', () => {
-                const modal = document.getElementById('printModal');
-                modal.classList.add('active');
-            });
-            
-            // モーダル閉じる
-            document.getElementById('cancelPrintBtn').addEventListener('click', () => {
-                const modal = document.getElementById('printModal');
-                modal.classList.remove('active');
-            });
-            
             // 印刷実行
-            document.getElementById('executePrintBtn').addEventListener('click', () => {
+            executePrint() {
                 const selectedMode = document.querySelector('input[name="printMode"]:checked').value;
-                
-                // モーダルを閉じる
-                const modal = document.getElementById('printModal');
-                modal.classList.remove('active');
                 
                 // 印刷モードに応じてbodyクラスを設定
                 if (selectedMode === 'department') {
@@ -1324,22 +703,383 @@
                 } else {
                     document.body.classList.remove('print-mode-department');
                 }
-                
-                // 印刷ダイアログを表示
+
+                // モーダルを閉じる
+                this.hidePrintModal();
+
+                // タイトル設定
+                const originalTitle = document.title;
+                const weekDisplay = document.getElementById('weekDisplay').textContent;
+                const modeLabel = selectedMode === 'department' ? '部門別' : 'コンパクト';
+                document.title = `週間スケジュール_${weekDisplay}_${modeLabel}`;
+
+                // 印刷実行
                 setTimeout(() => {
                     window.print();
-                    // 印刷後にクラスをリセット
-                    document.body.classList.remove('print-mode-department');
+                    
+                    // 印刷後にクリーンアップ
+                    setTimeout(() => {
+                        document.title = originalTitle;
+                        document.body.classList.remove('print-mode-department');
+                    }, 100);
                 }, 100);
-            });
-            
-            // モーダル背景クリックで閉じる
-            document.getElementById('printModal').addEventListener('click', (e) => {
-                if (e.target.id === 'printModal') {
-                    e.target.classList.remove('active');
+
+                // 監査ログ記録
+                if (window.auditLogger) {
+                    window.auditLogger.logAction('weekly-view-print', {
+                        weekStart: this.formatDate(this.selectedWeekStart),
+                        weekDisplay: weekDisplay,
+                        printMode: selectedMode
+                    });
                 }
-            });
+            }
+
+            initDepartmentFilter() {
+                const container = document.getElementById('filterCheckboxes');
+                if (!container) return;
+
+                const departments = window.DEPARTMENTS || [];
+                const savedFilter = this.loadDepartmentFilter();
+
+                container.innerHTML = departments.map(dept => {
+                    const checked = savedFilter[dept] !== false ? 'checked' : '';
+                    const color = window.DEPARTMENT_COLORS?.[dept] || '#6b7280';
+                    const icon = window.DEPARTMENT_ICONS?.[dept] || 'cog';
+                    return `
+                        <label class="filter-checkbox-label">
+                            <input type="checkbox" 
+                                   class="dept-filter-checkbox" 
+                                   data-department="${dept}" 
+                                   ${checked}>
+                            <span style="color: ${color}; font-weight: 500;">
+                                <i class="fas fa-${icon}"></i>
+                                ${dept}
+                            </span>
+                        </label>
+                    `;
+                }).join('');
+
+                container.querySelectorAll('.dept-filter-checkbox').forEach(checkbox => {
+                    checkbox.addEventListener('change', () => {
+                        this.saveDepartmentFilter();
+                        this.renderWeeklyView();
+                    });
+                });
+            }
+
+            saveDepartmentFilter() {
+                const checkboxes = document.querySelectorAll('.dept-filter-checkbox');
+                const filter = {};
+                checkboxes.forEach(checkbox => {
+                    filter[checkbox.dataset.department] = checkbox.checked;
+                });
+                localStorage.setItem('weeklyDepartmentFilter', JSON.stringify(filter));
+            }
+
+            loadDepartmentFilter() {
+                try {
+                    const saved = localStorage.getItem('weeklyDepartmentFilter');
+                    return saved ? JSON.parse(saved) : {};
+                } catch (e) {
+                    return {};
+                }
+            }
+
+            getVisibleDepartments() {
+                const filter = this.loadDepartmentFilter();
+                const allDepartments = window.DEPARTMENTS || [];
+                
+                if (Object.keys(filter).length === 0) {
+                    return allDepartments;
+                }
+                
+                return allDepartments.filter(dept => filter[dept] !== false);
+            }
+
+            async renderWeeklyView() {
+                const container = document.getElementById('weeklyGrid');
+                const weekDisplay = document.getElementById('weekDisplay');
+                
+                if (!container || !weekDisplay) return;
+
+                container.innerHTML = '<div class="col-span-full text-center py-8"><div class="spinner"></div><p class="mt-4 text-gray-600">読み込み中...</p></div>';
+
+                const startOfWeek = new Date(this.selectedWeekStart);
+                const endOfWeek = new Date(this.selectedWeekStart);
+                endOfWeek.setDate(endOfWeek.getDate() + 6);
+
+                weekDisplay.textContent = `${this.formatDate(startOfWeek)} - ${this.formatDate(endOfWeek)}`;
+
+                const visibleDepartments = this.getVisibleDepartments();
+                const daysOfWeek = ['月', '火', '水', '木', '金', '土', '日'];
+
+                const weekDataPromises = [];
+                for (let i = 0; i < 7; i++) {
+                    const currentDate = new Date(startOfWeek);
+                    currentDate.setDate(startOfWeek.getDate() + i);
+                    const dateKey = this.formatDate(currentDate);
+                    weekDataPromises.push(this.getDayData(currentDate, dateKey, daysOfWeek[i]));
+                }
+
+                const weekData = await Promise.all(weekDataPromises);
+
+                container.innerHTML = '';
+
+                for (const dayInfo of weekData) {
+                    const dayCard = await this.createDayCard(dayInfo, visibleDepartments);
+                    container.appendChild(dayCard);
+                }
+            }
+
+            async getDayData(date, dateKey, dayLabel) {
+                const snap = await window.database.ref(`${window.DATA_ROOT}/events/byDate/${dateKey}`).once('value');
+                const eventsById = snap.val() || {};
+                const dailyEvents = Object.values(eventsById);
+
+                const yearMonth = dateKey.substring(0, 7);
+                const monthlySnap = await window.database.ref(`${window.DATA_ROOT}/monthlyTasks/${yearMonth}`).once('value');
+                const monthlyTasks = monthlySnap.val() || {};
+                
+                const dailyMonthlyTasks = Object.values(monthlyTasks).filter(task => {
+                    const assignedForDate = task.assignedCEs && task.assignedCEs[dateKey] && task.assignedCEs[dateKey].length > 0;
+                    const actualForDate = task.dailyActuals && task.dailyActuals[dateKey] && task.dailyActuals[dateKey].count > 0;
+                    return assignedForDate || actualForDate;
+                }).map(task => ({
+                    ...task,
+                    isMonthly: true,
+                    assignedCEs: (task.assignedCEs && task.assignedCEs[dateKey]) ? task.assignedCEs[dateKey] : [],
+                    dailyActuals: (task.dailyActuals && task.dailyActuals[dateKey]) ? task.dailyActuals[dateKey] : { count: 0 }
+                }));
+
+                return {
+                    date: date,
+                    dateKey: dateKey,
+                    dayLabel: dayLabel,
+                    events: dailyEvents,
+                    monthlyTasks: dailyMonthlyTasks
+                };
+            }
+
+            async createDayCard(dayInfo, departments) {
+                const dayCard = document.createElement('div');
+                dayCard.className = 'day-card';
+                
+                const today = new Date();
+                const isToday = dayInfo.date.toDateString() === today.toDateString();
+                if (isToday) {
+                    dayCard.classList.add('today');
+                }
+
+                let totalDayRequired = 0;
+                let totalDayAssigned = 0;
+                let departmentSections = '';
+
+                for (const dept of departments) {
+                    const deptEvents = dayInfo.events.filter(e => e.department === dept);
+                    const deptMonthlyTasks = dayInfo.monthlyTasks.filter(t => t.department === dept);
+
+                    if (deptEvents.length === 0 && deptMonthlyTasks.length === 0) continue;
+
+                    const deptColor = window.DEPARTMENT_COLORS?.[dept] || '#6b7280';
+                    let deptAssigned = 0;
+                    let deptRequired = 0;
+                    let tasksHtml = '';
+
+                    for (const event of deptEvents) {
+                        const normalizedAssigned = await this.normalizeAssignedCEs(event.assignedCEs || []);
+                        const assignedCount = normalizedAssigned.length;
+                        const need = Number.isFinite(event.requiredPeople) ? event.requiredPeople : 0;
+                        
+                        deptAssigned += assignedCount;
+                        deptRequired += need;
+                        totalDayAssigned += assignedCount;
+                        totalDayRequired += need;
+
+                        const ceChipsHtml = await this.generateCEChipsWithStatus(normalizedAssigned, dayInfo.dateKey);
+                        const memoHtml = event.description ? 
+                            `<div class="task-memo"><i class="fas fa-sticky-note mr-1"></i>${this.escapeHtml(event.description)}</div>` : '';
+
+                        tasksHtml += `
+                            <div class="task-item" style="--dept-color: ${deptColor}">
+                                <div class="task-title">
+                                    <span><i class="fas fa-briefcase mr-1"></i>${this.escapeHtml(event.name)}</span>
+                                    <span class="text-xs text-gray-500">${event.startTime || ''}-${event.endTime || ''}</span>
+                                </div>
+                                <div class="task-info">
+                                    ${event.count > 0 ? `${event.count}件 | ` : ''}必要: ${need}名 / 配置: ${assignedCount}名
+                                </div>
+                                ${memoHtml}
+                                <div class="ce-chips">${ceChipsHtml}</div>
+                            </div>
+                        `;
+                    }
+
+                    for (const task of deptMonthlyTasks) {
+                        const normalizedAssigned = await this.normalizeAssignedCEs(task.assignedCEs || []);
+                        const assignedCount = normalizedAssigned.length;
+                        const need = Number.isFinite(task.requiredPeople) ? task.requiredPeople : 0;
+
+                        deptAssigned += assignedCount;
+                        deptRequired += need;
+                        totalDayAssigned += assignedCount;
+                        totalDayRequired += need;
+
+                        const ceChipsHtml = await this.generateCEChipsWithStatus(normalizedAssigned, dayInfo.dateKey);
+                        const actualCount = task.dailyActuals?.count || 0;
+                        const memoHtml = task.description ? 
+                            `<div class="task-memo"><i class="fas fa-sticky-note mr-1"></i>${this.escapeHtml(task.description)}</div>` : '';
+
+                        tasksHtml += `
+                            <div class="task-item" style="--dept-color: ${deptColor}">
+                                <div class="task-title">
+                                    <span>
+                                        <i class="fas fa-calendar-alt mr-1 text-orange-600"></i>${this.escapeHtml(task.name)}
+                                        <span class="monthly-badge">月次</span>
+                                    </span>
+                                    <span class="text-xs text-gray-500">実績: ${actualCount}件</span>
+                                </div>
+                                <div class="task-info">
+                                    必要: ${need}名 / 配置: ${assignedCount}名
+                                </div>
+                                ${memoHtml}
+                                <div class="ce-chips">${ceChipsHtml}</div>
+                            </div>
+                        `;
+                    }
+
+                    const deptPercentage = deptRequired > 0 ? Math.round((deptAssigned / deptRequired) * 100) : 0;
+                    const deptColorClass = deptPercentage >= 100 ? 'text-green-600' : deptPercentage >= 80 ? 'text-yellow-600' : 'text-red-600';
+
+                    departmentSections += `
+                        <div class="department-section" style="--dept-color: ${deptColor}">
+                            <div class="dept-header">
+                                <div class="dept-name">
+                                    <i class="fas fa-${window.DEPARTMENT_ICONS?.[dept] || 'cog'}" style="color: ${deptColor}"></i>
+                                    ${dept}
+                                </div>
+                                <div class="text-xs ${deptColorClass}">${deptAssigned}/${deptRequired}名 (${deptPercentage}%)</div>
+                            </div>
+                            ${tasksHtml}
+                        </div>
+                    `;
+                }
+
+                const overallPercentage = totalDayRequired > 0 ? Math.round((totalDayAssigned / totalDayRequired) * 100) : 0;
+                const overallColorClass = overallPercentage >= 100 ? 'text-green-700' : overallPercentage >= 80 ? 'text-yellow-700' : 'text-red-700';
+
+                dayCard.innerHTML = `
+                    <div class="day-card-header">
+                        <h3 class="day-title ${isToday ? 'today' : ''}">
+                            ${dayInfo.dayLabel}曜 (${dayInfo.date.getMonth() + 1}/${dayInfo.date.getDate()})
+                            ${isToday ? '<i class="fas fa-star ml-1 text-yellow-500"></i>' : ''}
+                        </h3>
+                    </div>
+                    <div class="day-summary">
+                        <div class="text-lg font-bold ${overallColorClass}">${totalDayAssigned}/${totalDayRequired}名</div>
+                        <div class="text-xs ${overallColorClass}">(${overallPercentage}%)</div>
+                        <div class="text-xs text-gray-600 mt-1">${dayInfo.events.length + dayInfo.monthlyTasks.length}件の業務</div>
+                    </div>
+                    <div>
+                        ${departmentSections || '<div class="text-center py-4 text-gray-400 text-sm">業務なし</div>'}
+                    </div>
+                `;
+
+                return dayCard;
+            }
+
+            escapeHtml(text) {
+                if (!text) return '';
+                const div = document.createElement('div');
+                div.textContent = text;
+                return div.innerHTML;
+            }
+
+            async normalizeAssignedCEs(assignedCEs) {
+                if (!Array.isArray(assignedCEs)) return [];
+                
+                return assignedCEs.map(entry => {
+                    if (typeof entry === 'string') {
+                        const ce = window.ceManager?.ceList?.find(c => c.id === entry);
+                        return ce ? { 
+                            id: ce.id, 
+                            name: ce.iconName || ce.displayName || ce.name, 
+                            workType: ce.workType || 'ME' 
+                        } : { id: entry, name: entry, workType: 'ME' };
+                    } else if (entry && typeof entry === 'object') {
+                        return { 
+                            id: entry.id, 
+                            name: entry.name, 
+                            workType: entry.workType || 'ME' 
+                        };
+                    }
+                    return null;
+                }).filter(Boolean);
+            }
+
+            async generateCEChipsWithStatus(normalizedAssigned, dateKey) {
+                const chips = [];
+                
+                for (const assigned of normalizedAssigned) {
+                    let effectiveWorkType = assigned.workType || 'ME';
+                    let statusBadge = '';
+                    let statusText = '';
+                    
+                    if (window.publishedScheduleResolver) {
+                        try {
+                            const workStatus = await window.publishedScheduleResolver.getCEWorkStatusForDate(assigned.id, dateKey);
+                            if (workStatus?.workType) {
+                                effectiveWorkType = workStatus.workType;
+                            }
+                            statusText = workStatus?.status || '';
+                            if (statusText && statusText !== 'A') {
+                                statusBadge = `<span class="status-badge status-${statusText}">${statusText}</span>`;
+                            }
+                        } catch (error) {
+                            console.warn('⚠️ 勤務状態取得失敗:', assigned.name, error);
+                        }
+                    }
+                    
+                    const titleExtra = statusBadge ? ` (${statusText})` : '';
+                    chips.push(`
+                        <span class="ce-chip worktype-${effectiveWorkType.toLowerCase()}" 
+                              title="${this.escapeHtml(assigned.name)}${titleExtra}" 
+                              style="position: relative;">
+                            ${this.escapeHtml(assigned.name)}${statusBadge}
+                        </span>
+                    `);
+                }
+                
+                return chips.join('');
+            }
         }
+
+        window.handleLogout = async () => {
+            try {
+                if (window.auditLogger) {
+                    await window.auditLogger.logAction('logout');
+                }
+                if (window.auth && window.auth.currentUser) {
+                    await window.auth.signOut();
+                }
+            } catch (error) {
+                console.error('ログアウトエラー:', error);
+            } finally {
+                sessionStorage.clear();
+                localStorage.clear();
+                window.location.href = '../index.html';
+            }
+        };
+
+        document.addEventListener('DOMContentLoaded', async () => {
+            try {
+                window.weeklyViewManager = new WeeklyViewManager();
+                await window.weeklyViewManager.init();
+                console.log('✅ 週間表示ページ初期化完了');
+            } catch (error) {
+                console.error('❌ 週間表示ページ初期化エラー:', error);
+                window.showMessage('週間表示の初期化に失敗しました', 'error');
+            }
+        });
     </script>
 </body>
 </html>
