@@ -907,7 +907,7 @@
         <div id="scheduleMain" class="schedule-main">
             <!-- 日別スケジュールコンテンツ -->
             <div id="dailyScheduleContent" class="schedule-content">
-                <div id="departmentGrid" class="grid grid-cols-2 gap-4 mb-6"></div>
+                <div id="departmentGrid" class="grid grid-cols-3 gap-4 mb-6"></div>
             </div>
 
         </div>
@@ -1372,7 +1372,7 @@ setTimeout(() => {
                             <div class="dept-ratio-fill" style="background: ${deptColor}; width: 0%"></div>
                         </div>
                     </div>
-                    <div class="task-list min-h-[120px] space-y-2 mt-3" data-department="${dept}">
+                    <div class="task-list min-h-[120px] grid grid-cols-2 gap-2 mt-3" data-department="${dept}">
                         <!-- 通常業務がここに表示されます -->
                     </div>
                     <div class="monthly-plans mt-2" data-department="${dept}">
