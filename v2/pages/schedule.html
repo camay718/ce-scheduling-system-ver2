@@ -2333,42 +2333,7 @@ this.monthlyTasks[yearMonth][taskRef.key] = taskData;
                 dragHandle.addEventListener('mouseup', () => {
                     card.draggable = false;
                 });
-            }
-
-
-/**
- * 並び順をローカルストレージに保存
- */
-saveSortOrder(taskList) {
-
-                        return closest;
-                    }
-                }, { offset: Number.NEGATIVE_INFINITY }).element;
-            }
-
-            addSortHandle(card) {
-                // 既に追加済みの場合はスキップ
-                if (card.querySelector('.drag-handle')) return;
-                
-                // 並び替え用のドラッグハンドルを追加
-                const dragHandle = document.createElement('div');
-                dragHandle.className = 'drag-handle';
-                dragHandle.innerHTML = '⋮⋮';
-                dragHandle.style.cssText = 'position: absolute; top: 8px; left: 8px; cursor: move; font-size: 16px; color: #9ca3af; user-select: none; z-index: 10; padding: 4px;';
-                dragHandle.title = '並び替え（ドラッグして移動）';
-                card.style.position = 'relative';
-                card.insertBefore(dragHandle, card.firstChild);
-                
-                // ドラッグハンドルのイベント
-                dragHandle.addEventListener('mousedown', (e) => {
-                    e.stopPropagation();
-                    card.draggable = true;
-                });
-                
-                dragHandle.addEventListener('mouseup', () => {
-                    card.draggable = false;
-                });
-            }
+             }
 
 
 /**
