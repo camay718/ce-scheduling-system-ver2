@@ -2185,70 +2185,133 @@ this.monthlyTasks[yearMonth][taskRef.key] = taskData;
             /**
  * 業務カードの並び替え機能を初期化
  */
-            initTaskSorting() {
+             initTaskSorting() {
                 const taskLists = document.querySelectorAll('.task-list');
                 
                 taskLists.forEach(list => {
                     // 既存のSortableインスタンスを破棄
                     if (list.sortableInstance) {
                         list.sortableInstance.destroy();
+                        delete list.sortableInstance;
                     }
                     
-                    // Sortableを初期化（CE配置と競合しないように設定）
-                    list.sortableInstance = new Sortable(list, {
-                        animation: 150,
-                        ghostClass: 'sortable-ghost',
-                        chosenClass: 'sortable-chosen',
-                        dragClass: 'sortable-drag',
-                        handle: '.event-card', // カード全体をハンドルに
-                        draggable: '.event-card', // ドラッグ可能な要素
+                    // カスタムドラッグ実装（CE配置と競合しない）
+                    const cards = list.querySelectorAll('.event-card');
+                    
+                    cards.forEach(card => {
+                        // 並び替え用のドラッグハンドルを追加
+                        if (!card.querySelector('.drag-handle')) {
+                            const dragHandle = document.createElement('div');
+                            dragHandle.className = 'drag-handle';
+                            dragHandle.innerHTML = '⋮⋮';
+                            dragHandle.style.cssText = 'position: absolute; top: 8px; left: 8px; cursor: move; font-size: 16px; color: #9ca3af; user-select: none;';
+                            dragHandle.title = '並び替え';
+                            card.style.position = 'relative';
+                            card.insertBefore(dragHandle, card.firstChild);
+                        }
                         
-                        // CE配置との競合を防ぐための設定
-                        filter: '.ce-icon', // CEアイコンは並び替え対象外
-                        preventOnFilter: false, // フィルター要素のイベントを妨げない
+                        const dragHandle = card.querySelector('.drag-handle');
                         
-                        // ドラッグ開始時の判定
-                        onStart: (evt) => {
-                            // CEドラッグ中は並び替えを無効化
+                        // ドラッグハンドルのイベント
+                        dragHandle.addEventListener('mousedown', (e) => {
+                            e.stopPropagation();
+                            card.draggable = true;
+                        });
+                        
+                        card.addEventListener('dragstart', (e) => {
+                            // CEドラッグ中は無効
                             if (this.draggedCE) {
-                                evt.preventDefault();
-                                return false;
-                            }
-                        },
-                        
-                        // 並び替え完了時の処理
-                        onEnd: async (evt) => {
-                            // CEドラッグ中は処理しない
-                            if (this.draggedCE) {
+                                e.preventDefault();
                                 return;
                             }
                             
-                            const eventId = evt.item.dataset.eventId;
-                            const dateKey = evt.item.dataset.dateKey;
-                            const department = evt.item.dataset.department;
-                            const newIndex = evt.newIndex;
-                            
-                            if (!eventId || !dateKey || !department) return;
-                            
-                            try {
-                                // 新しい順序を保存
-                                const eventRef = window.database.ref(
-                                    `${window.DATA_ROOT}/events/byDate/${dateKey}/${eventId}`
-                                );
-                                await eventRef.update({
-                                    sortOrder: newIndex,
-                                    updatedAt: new Date().toISOString()
-                                });
-                                
-                                console.log('✅ 並び替え保存完了:', { eventId, newIndex });
-                            } catch (err) {
-                                console.error('❌ 並び替え保存エラー:', err);
+                            // ドラッグハンドル以外から開始された場合は無効
+                            if (!e.target.classList.contains('drag-handle')) {
+                                e.preventDefault();
+                                card.draggable = false;
+                                return;
                             }
-                        }
+                            
+                            card.classList.add('opacity-50');
+                            e.dataTransfer.effectAllowed = 'move';
+                            e.dataTransfer.setData('text/html', card.innerHTML);
+                            
+                            // 並び替え用のフラグ
+                            card.dataset.sorting = 'true';
+                        });
+                        
+                        card.addEventListener('dragend', () => {
+                            card.classList.remove('opacity-50');
+                            card.draggable = false;
+                            delete card.dataset.sorting;
+                        });
+                        
+                        card.addEventListener('dragover', (e) => {
+                            // 並び替え中のみ処理
+                            const sortingCard = list.querySelector('[data-sorting="true"]');
+                            if (!sortingCard || this.draggedCE) return;
+                            
+                            e.preventDefault();
+                            e.dataTransfer.dropEffect = 'move';
+                            
+                            const afterElement = this.getDragAfterElement(list, e.clientY);
+                            if (afterElement == null) {
+                                list.appendChild(sortingCard);
+                            } else {
+                                list.insertBefore(sortingCard, afterElement);
+                            }
+                        });
+                        
+                        card.addEventListener('drop', async (e) => {
+                            // 並び替え中のみ処理
+                            const sortingCard = list.querySelector('[data-sorting="true"]');
+                            if (!sortingCard || this.draggedCE) {
+                                // CE配置の処理
+                                console.log('🎯 event-card直接ドロップ検知（CE配置）');
+                                this.handleEventDrop(e);
+                                return;
+                            }
+                            
+                            e.preventDefault();
+                            
+                            // 並び替えの保存
+                            const eventId = sortingCard.dataset.eventId;
+                            const dateKey = sortingCard.dataset.dateKey;
+                            const newIndex = Array.from(list.children).indexOf(sortingCard);
+                            
+                            if (eventId && dateKey) {
+                                try {
+                                    const eventRef = window.database.ref(
+                                        `${window.DATA_ROOT}/events/byDate/${dateKey}/${eventId}`
+                                    );
+                                    await eventRef.update({
+                                        sortOrder: newIndex,
+                                        updatedAt: new Date().toISOString()
+                                    });
+                                    console.log('✅ 並び替え保存完了:', { eventId, newIndex });
+                                } catch (err) {
+                                    console.error('❌ 並び替え保存エラー:', err);
+                                }
+                            }
+                        });
                     });
                 });
             }
-
+            
+            getDragAfterElement(container, y) {
+                const draggableElements = [...container.querySelectorAll('.event-card:not([data-sorting="true"])')];
+                
+                return draggableElements.reduce((closest, child) => {
+                    const box = child.getBoundingClientRect();
+                    const offset = y - box.top - box.height / 2;
+                    
+                    if (offset < 0 && offset > closest.offset) {
+                        return { offset: offset, element: child };
+                    } else {
+                        return closest;
+                    }
+                }, { offset: Number.NEGATIVE_INFINITY }).element;
+            }
 
 /**
  * 並び順をローカルストレージに保存
@@ -2347,10 +2410,8 @@ applySavedSortOrder() {
                         // ドロップイベントリスナー
                         item.addEventListener('dragover', (e) => this.handleEventDragOver(e));
                         item.addEventListener('dragleave', (e) => this.handleEventDragLeave(e));
-                        item.addEventListener('drop', (e) => {
-                            console.log('🎯 event-card直接ドロップ検知');
-                            this.handleEventDrop(e);
-                        });
+                         // dropイベントはinitTaskSorting()内で設定されるため、ここでは設定しない
+
 
 
 
