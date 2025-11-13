@@ -2296,18 +2296,6 @@ this.monthlyTasks[yearMonth][taskRef.key] = taskData;
                 });
             }
 
-                            
-                            // ドラッグハンドル以外から開始された場合は無効
-                            if (!e.target.classList.contains('drag-handle')) {
-                                e.preventDefault();
-                                card.draggable = false;
-                                return;
-                            }
-                            
-                            card.classList.add('opacity-50');
-                            e.dataTransfer.effectAllowed = 'move';
-                            e.dataTransfer.setData('text/html', card.innerHTML);
-                            
                             // 並び替え用のフラグ
                             card.dataset.sorting = 'true';
                         });
