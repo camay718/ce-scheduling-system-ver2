@@ -2385,7 +2385,7 @@ this.monthlyTasks[yearMonth][taskRef.key] = taskData;
                 });
             }
             
-            getDragAfterElement(container, y) {
+             getDragAfterElement(container, y) {
                 const draggableElements = [...container.querySelectorAll('.event-card:not([data-sorting="true"])')];
                 
                 return draggableElements.reduce((closest, child) => {
@@ -2400,7 +2400,6 @@ this.monthlyTasks[yearMonth][taskRef.key] = taskData;
                 }, { offset: Number.NEGATIVE_INFINITY }).element;
             }
 
-                        
             addSortHandle(card) {
                 // 既に追加済みの場合はスキップ
                 if (card.querySelector('.drag-handle')) return;
