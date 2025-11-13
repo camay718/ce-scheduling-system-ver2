@@ -691,8 +691,8 @@ this.footerTypes = [
                 const prevBtn = document.getElementById('prevPeriodBtn');
                 const nextBtn = document.getElementById('nextPeriodBtn');
                 
-                if (prevBtn) prevBtn.onclick = () => this.navigatePeriod(-1);
-                if (nextBtn) nextBtn.onclick = () => this.navigatePeriod(1);
+                if (prevBtn) prevBtn.onclick = () => this.navigatePeriod(1);
+                if (nextBtn) nextBtn.onclick = () => this.navigatePeriod(-1);
 
                 // フィルタ変更
                 ['showFuture', 'showPast', 'showAll', 'showHidden'].forEach(id => {
