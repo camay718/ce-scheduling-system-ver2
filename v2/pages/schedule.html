@@ -298,12 +298,34 @@
         }
 
 
+        /* ドラッグ中のスタイル */
         .event-card.drag-over {
-            background: #fff7ed !important;
-            border: 2px dashed #f59e0b !important;
+            background-color: rgba(59, 130, 246, 0.1);
+            border: 2px dashed #3b82f6;
             transform: scale(1.02);
         }
 
+        /* グリッドレイアウト内のイベントカード最適化 */
+        .task-list.grid .event-card {
+            pointer-events: auto;
+            position: relative;
+            z-index: 1;
+        }
+        
+        .task-list.grid .event-card.drag-over {
+            z-index: 10;
+        }
+        
+        /* グリッド内の子要素のポインターイベント制御 */
+        .task-list.grid .event-card * {
+            pointer-events: none;
+        }
+        
+        .task-list.grid .event-card button,
+        .task-list.grid .event-card input,
+        .task-list.grid .event-card select {
+            pointer-events: auto;
+        }
 
         .event-count-display {
             font-size: 11px;
@@ -2442,6 +2464,40 @@ applySavedSortOrder() {
             this.initTaskSorting();
         }, 300);
 
+                                        // 並び替え機能を初期化
+                    this.initTaskSorting();
+
+                    // グリッドレイアウト対応: task-listコンテナにもドロップイベントを設定
+                    document.querySelectorAll('.task-list').forEach(taskList => {
+                        taskList.addEventListener('dragover', (e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            if (this.draggedCE) {
+                                e.dataTransfer.dropEffect = 'copy';
+                            }
+                        });
+                        
+                        taskList.addEventListener('drop', (e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            
+                            if (!this.draggedCE) return;
+                            
+                            // ドロップ位置に最も近いevent-cardを探す
+                            const cards = Array.from(taskList.querySelectorAll('.event-card'));
+                            const targetCard = cards.find(card => {
+                                const rect = card.getBoundingClientRect();
+                                return e.clientX >= rect.left && e.clientX <= rect.right &&
+                                       e.clientY >= rect.top && e.clientY <= rect.bottom;
+                            });
+                            
+                            if (targetCard) {
+                                this.handleEventDrop.call(targetCard, e);
+                            }
+                        });
+                    });
+
+                    
                 } catch (error) {
                     console.error('❌ 日別イベント読み込みエラー:', error);
                     window.showMessage('イベントの読み込みに失敗しました', 'error');
