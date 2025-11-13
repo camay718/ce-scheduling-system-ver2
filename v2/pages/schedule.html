@@ -2286,7 +2286,7 @@ this.monthlyTasks[yearMonth][taskRef.key] = taskData;
                                 return;
                             }
                             
-                            // CE配置の処理
+                        // CE配置の処理
                             if (this.draggedCE) {
                                 console.log('🎯 event-card直接ドロップ検知（CE配置）');
                                 this.handleEventDrop(e);
@@ -2296,21 +2296,6 @@ this.monthlyTasks[yearMonth][taskRef.key] = taskData;
                 });
             }
 
-                        
-                        const dragHandle = card.querySelector('.drag-handle');
-                        
-                        // ドラッグハンドルのイベント
-                        dragHandle.addEventListener('mousedown', (e) => {
-                            e.stopPropagation();
-                            card.draggable = true;
-                        });
-                        
-                        card.addEventListener('dragstart', (e) => {
-                            // CEドラッグ中は無効
-                            if (this.draggedCE) {
-                                e.preventDefault();
-                                return;
-                            }
                             
                             // ドラッグハンドル以外から開始された場合は無効
                             if (!e.target.classList.contains('drag-handle')) {
