@@ -720,6 +720,17 @@
     cursor: not-allowed;
 }
         
+        /* グリッドレイアウトでのドロップ対応 */
+        .task-list.grid {
+            pointer-events: none;
+        }
+        
+        .task-list.grid .event-card {
+            pointer-events: auto;
+        }
+        
+
+        
         /* ドラッグ&ドロップ並び替え機能 */
 .event-card.dragging {
     opacity: 0.5;
@@ -3131,16 +3142,22 @@ const currentDayAssigned = Array.isArray(assignedCEs[dateKey]) ? assignedCEs[dat
 
             // ドラッグ&ドロップハンドラー
             handleEventDragOver(e) {
-    console.log('🎯 ドラッグオーバー検知:', e.target.className);
-    e.preventDefault();
-    e.stopPropagation();
-                if (window.userRole === 'viewer') return;
+                console.log('🎯 ドラッグオーバー検知:', e.target.className);
+                
+                if (window.userRole === 'viewer') {
+                    e.preventDefault();
+                    return;
+                }
                 
                 e.preventDefault();
+                e.stopPropagation();
                 e.dataTransfer.dropEffect = 'copy';
-                e.currentTarget.classList.add('drag-over');
+                
+                const card = e.target.closest('.event-card');
+                if (card) {
+                    card.classList.add('drag-over');
+                }
             }
-
 
             handleEventDragLeave(e) {
                 if (!e.currentTarget.contains(e.relatedTarget)) {
@@ -3148,20 +3165,22 @@ const currentDayAssigned = Array.isArray(assignedCEs[dateKey]) ? assignedCEs[dat
                 }
             }
 
-
             async handleEventDrop(e) {
-    console.log('🎯 ドロップ検知:', e.target.className);
-    e.preventDefault();
-    e.stopPropagation();
+                console.log('🎯 ドロップ検知:', e.target.className);
+                
                 e.preventDefault();
-                e.currentTarget.classList.remove('drag-over');
-
+                e.stopPropagation();
+                
+                // drag-overクラスを削除
+                const card = e.target.closest('.event-card');
+                if (card) {
+                    card.classList.remove('drag-over');
+                }
 
                 if (window.userRole === 'viewer') {
                     window.showMessage('編集権限がありません', 'warning');
                     return;
                 }
-
 
                 try {
                     let ceDataStr = e.dataTransfer.getData('application/json') || 
@@ -3172,7 +3191,6 @@ const currentDayAssigned = Array.isArray(assignedCEs[dateKey]) ? assignedCEs[dat
                         return;
                     }
 
-
                     let ceData;
                     try {
                         ceData = JSON.parse(ceDataStr);
@@ -3181,10 +3199,15 @@ const currentDayAssigned = Array.isArray(assignedCEs[dateKey]) ? assignedCEs[dat
                         return;
                     }
 
+                    // event-cardから直接データを取得
+                    const eventCard = e.target.closest('.event-card');
+                    if (!eventCard) {
+                        console.warn('⚠️ イベントカードが見つかりません');
+                        return;
+                    }
 
-                    const eventId = e.currentTarget.dataset.eventId;
-                    const dateKey = e.currentTarget.dataset.dateKey;
-
+                    const eventId = eventCard.dataset.eventId;
+                    const dateKey = eventCard.dataset.dateKey;
 
                     if (!ceData.ceId || !ceData.ceName || !eventId || !dateKey) {
                         console.error('❌ 必須データが不足:', { ceData, eventId, dateKey });
@@ -3192,17 +3215,14 @@ const currentDayAssigned = Array.isArray(assignedCEs[dateKey]) ? assignedCEs[dat
                         return;
                     }
 
-
                     console.log('📥 ドロップ処理:', { ceData, eventId, dateKey });
                     await this.assignCEToEvent(dateKey, eventId, ceData);
-
 
                 } catch (error) {
                     console.error('❌ ドロップ処理エラー:', error);
                     window.showMessage(`CE配置に失敗しました: ${error.message}`, 'error');
                 }
             }
-
 
             // CE配置処理
             async assignCEToEvent(dateKey, eventId, ceData) {
