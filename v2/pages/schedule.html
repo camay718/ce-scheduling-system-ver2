@@ -3131,6 +3131,9 @@ const currentDayAssigned = Array.isArray(assignedCEs[dateKey]) ? assignedCEs[dat
 
             // ドラッグ&ドロップハンドラー
             handleEventDragOver(e) {
+    console.log('🎯 ドラッグオーバー検知:', e.target.className);
+    e.preventDefault();
+    e.stopPropagation();
                 if (window.userRole === 'viewer') return;
                 
                 e.preventDefault();
@@ -3147,6 +3150,9 @@ const currentDayAssigned = Array.isArray(assignedCEs[dateKey]) ? assignedCEs[dat
 
 
             async handleEventDrop(e) {
+    console.log('🎯 ドロップ検知:', e.target.className);
+    e.preventDefault();
+    e.stopPropagation();
                 e.preventDefault();
                 e.currentTarget.classList.remove('drag-over');
 
