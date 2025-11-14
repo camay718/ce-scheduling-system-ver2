@@ -172,7 +172,7 @@
             color: #B8860B; 
         }
 
-        /* 非勤務状態（白色表示） */
+        /* 非勤務状態(白色表示) */
         .work-schedule-table .work-cell.status-非,
         .work-schedule-table .work-cell.status-×,
         .work-schedule-table .work-cell.status-年,
@@ -183,7 +183,7 @@
             border: 1px solid #ddd !important;
         }
 
-                /* 自由入力テキスト（白色表示） */
+                /* 自由入力テキスト(白色表示) */
         .work-schedule-table .work-cell.status-text {
             background: #FFFFFF !important;
             color: #333 !important;
@@ -342,33 +342,27 @@ html, body {
     overflow: visible; 
 }
 
-/* コンパクトヘッダーレイアウト */
-.compact-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: flex-start;
-    gap: 20px;
+/* シンプルヘッダーレイアウト */
+.simple-header {
     margin-bottom: 20px;
 }
 
-.header-info {
-    flex: 1;
-}
-
-.header-controls {
-    flex-shrink: 0;
-    min-width: 400px;
+/* 勤務表期間コントロール */
+.schedule-period-controls {
     background: var(--glass-bg);
     backdrop-filter: blur(10px);
     border: 1px solid var(--glass-border);
     border-radius: 8px;
     padding: 16px;
+    margin-bottom: 16px;
+    text-align: center;
 }
 
 .period-display {
-    font-size: 16px;
+    font-size: 18px;
     font-weight: bold;
-    margin-bottom: 4px;
+    margin-bottom: 8px;
+    color: #1f2937;
 }
 
 .period-details {
@@ -379,18 +373,19 @@ html, body {
 
 .control-buttons {
     display: flex;
-    gap: 6px;
+    gap: 8px;
+    justify-content: center;
+    align-items: center;
     flex-wrap: wrap;
 }
 
-@media (max-width: 1200px) {
-    .compact-header {
-        flex-direction: column;
+@media (max-width: 768px) {
+    .schedule-period-controls {
+        padding: 12px;
     }
     
-    .header-controls {
-        min-width: auto;
-        width: 100%;
+    .period-display {
+        font-size: 16px;
     }
 }
         
@@ -451,7 +446,7 @@ html, body {
                     </div>
                 </div>
 
-                <!-- 勤務表操作（管理者のみ） -->
+                <!-- 勤務表操作(管理者のみ) -->
                 <div id="adminScheduleActions" class="mb-6" style="display:none;">
                     <h3 class="text-sm font-semibold mb-3">
                         <i class="fas fa-plus mr-2"></i>勤務表操作
@@ -506,31 +501,13 @@ html, body {
         <!-- メインコンテンツ -->
         <div class="schedule-main">
 
+            <!-- シンプルヘッダー -->
+            <div class="simple-header">
+                <h2 class="text-2xl font-bold text-gray-800 mb-2">勤務表管理</h2>
+                <p class="text-gray-600">作成済みの勤務表の閲覧・管理を行います</p>
+            </div>
+
             <!-- 勤務表表示エリア -->
-            <!-- コンパクトヘッダー -->
-<div class="compact-header">
-    <div class="header-info">
-        <h2 class="text-2xl font-bold text-gray-800 mb-2">勤務表管理</h2>
-        <p class="text-gray-600">作成済みの勤務表の閲覧・管理を行います</p>
-    </div>
-    
-    <div class="header-controls">
-        <div id="currentPeriodDisplay" class="period-display">期間を読み込み中...</div>
-        <div id="periodDetails" class="period-details"></div>
-        
-        <div class="control-buttons">
-            <button id="prevPeriodBtn" class="btn-unified btn-outline-unified btn-small">
-                <i class="fas fa-chevron-left mr-1"></i>前の期間
-            </button>
-            <button id="nextPeriodBtn" class="btn-unified btn-outline-unified btn-small">
-                次の期間<i class="fas fa-chevron-right ml-1"></i>
-            </button>
-            <span id="adminControlsContainer" class="flex gap-2" style="display:none;">
-                <!-- 管理者操作ボタンがここに表示 -->
-            </span>
-        </div>
-    </div>
-</div>
             <div id="workScheduleDisplayArea">
                 <div class="text-center py-12 text-gray-500">
                     <i class="fas fa-table text-4xl mb-4"></i>
@@ -562,7 +539,7 @@ html, body {
         // ログアウト処理
 window.handleLogout = async () => {
     try {
-        // 監査ログ記録（共通ロガー使用）
+        // 監査ログ記録(共通ロガー使用)
         if (window.auditLogger) {
             await window.auditLogger.logAction('logout');
         }
@@ -681,16 +658,17 @@ this.footerTypes = [
                     };
                 }
 
-                // 勤務表作成（管理者のみ）
+                // 勤務表作成(管理者のみ)
                 const createBtn = document.getElementById('createScheduleBtn');
                 if (createBtn) {
                     createBtn.onclick = () => this.openScheduleEditor();
                 }
 
-                // 期間ナビゲーション
+                // 期間ナビゲーション（修正済み）
                 const prevBtn = document.getElementById('prevPeriodBtn');
                 const nextBtn = document.getElementById('nextPeriodBtn');
                 
+                // 修正: 「前の期間」は古い期間(+1)、「次の期間」は新しい期間(-1)
                 if (prevBtn) prevBtn.onclick = () => this.navigatePeriod(1);
                 if (nextBtn) nextBtn.onclick = () => this.navigatePeriod(-1);
 
@@ -702,7 +680,7 @@ this.footerTypes = [
                     }
                 });
 
-                // テーブルスケール調整（リサイズ時）
+                // テーブルスケール調整(リサイズ時)
                 let resizeTimer = null;
                 window.addEventListener('resize', () => {
                     clearTimeout(resizeTimer);
@@ -808,43 +786,31 @@ this.footerTypes = [
             }
 
             async displayCurrentPeriod() {
-                const displayEl = document.getElementById('currentPeriodDisplay');
-                const detailsEl = document.getElementById('periodDetails');
-                const adminControlsEl = document.getElementById('adminControlsContainer');
-                
                 if (this.availablePeriods.length === 0) {
                     this.displayNoPeriods();
                     return;
                 }
 
                 const currentPeriod = this.availablePeriods[this.currentPeriodIndex];
-                
-                if (displayEl) {
-                    const visibilityStatus = currentPeriod.isVisible === false ? ' (非公開)' : '';
-                    displayEl.innerHTML = `
-                        ${currentPeriod.startDate} ～ ${currentPeriod.endDate}${visibilityStatus}
-                    `;
-                }
-
-                if (detailsEl) {
-                    detailsEl.innerHTML = `
-                        (${this.currentPeriodIndex + 1}/${this.availablePeriods.length})
-                        ${currentPeriod.publishedBy ? ` / 作成者: ${currentPeriod.publishedBy}` : ''}
-                        ${currentPeriod.publishedAt ? ` / 公開: ${new Date(currentPeriod.publishedAt).toLocaleString('ja-JP')}` : ''}
-                    `;
-                }
-
                 await this.renderWorkScheduleTable(currentPeriod.key);
+            }
+            
+            reattachPeriodControls() {
+                // 期間ナビゲーションボタンのイベントリスナーを再設定
+                const prevBtn = document.getElementById('prevPeriodBtn');
+                const nextBtn = document.getElementById('nextPeriodBtn');
                 
+                if (prevBtn) prevBtn.onclick = () => this.navigatePeriod(1);
+                if (nextBtn) nextBtn.onclick = () => this.navigatePeriod(-1);
+                
+                // 管理者コントロールを表示
+                const adminControlsEl = document.getElementById('adminControlsContainer');
                 if (adminControlsEl && window.userRole === 'admin') {
+                    const currentPeriod = this.availablePeriods[this.currentPeriodIndex];
                     adminControlsEl.innerHTML = this.renderAdminControls(currentPeriod);
-                    adminControlsEl.style.display = 'flex';
-                } else if (adminControlsEl) {
-                    adminControlsEl.style.display = 'none';
+                    adminControlsEl.style.display = 'inline-flex';
+                    adminControlsEl.style.gap = '8px';
                 }
-
-// テーブルスケール調整 - 無効化
-// setTimeout(() => this.fitTableToViewport(), 100);
             }
 
             renderAdminControls(period) {
@@ -913,13 +879,37 @@ this.footerTypes = [
                     const metadata = periodData.metadata || {};
                     const dates = this.generateDateRange(new Date(metadata.startDate), new Date(metadata.endDate));
 
+                    // 期間コントロールと勤務表を表示
+                    const visibilityStatus = metadata.isVisible === false ? ' <span style="color:#ef4444;">(非公開)</span>' : '';
                     areaEl.innerHTML = `
+                        <div class="schedule-period-controls">
+                            <div id="currentPeriodDisplay" class="period-display">${metadata.startDate} ～ ${metadata.endDate}${visibilityStatus}</div>
+                            <div id="periodDetails" class="period-details">
+                                (${this.currentPeriodIndex + 1}/${this.availablePeriods.length})
+                                ${metadata.publishedBy ? ` / 作成者: ${metadata.publishedBy}` : ''}
+                                ${metadata.publishedAt ? ` / 公開: ${new Date(metadata.publishedAt).toLocaleString('ja-JP')}` : ''}
+                            </div>
+                            <div class="control-buttons">
+                                <button id="prevPeriodBtn" class="btn-unified btn-outline-unified btn-small">
+                                    <i class="fas fa-chevron-left mr-1"></i>前の期間
+                                </button>
+                                <button id="nextPeriodBtn" class="btn-unified btn-outline-unified btn-small">
+                                    次の期間<i class="fas fa-chevron-right ml-1"></i>
+                                </button>
+                                <span id="adminControlsContainer" style="display:none;">
+                                    <!-- 管理者操作ボタンがここに表示 -->
+                                </span>
+                            </div>
+                        </div>
                         <div class="work-schedule-table-wrapper">
                             <table class="work-schedule-table">
                                 ${this.generateTableHTML(dates, scheduleData, ceList, workTypeOverrides)}
                             </table>
                         </div>
                     `;
+                    
+                    // イベントリスナーを再設定
+                    this.reattachPeriodControls();
 
                 } catch (error) {
                     console.error('❌ 勤務表表示エラー:', error);
@@ -933,7 +923,7 @@ this.footerTypes = [
             }
 
             // テーブルを画面にフィット
-            // テーブル最適表示（完全修正版）
+            // テーブル最適表示(完全修正版)
 fitTableToViewport() {
     const table = document.querySelector('.work-schedule-table');
     if (!table) return;
@@ -964,7 +954,7 @@ fitTableToViewport() {
                 return `${year}-${month}-${day}`;
             }
 
-            // 祝日判定（簡易実装）
+            // 祝日判定(簡易実装)
             isJapaneseHoliday(date) {
                 const holidays2024 = new Set([
                     '2024-01-01', '2024-01-08', '2024-02-11', '2024-02-12', '2024-02-23',
@@ -1006,7 +996,7 @@ fitTableToViewport() {
             }
 
 generateTableHTML(dates, scheduleData, ceList, workTypeOverrides) {
-    // ヘッダー（No + 氏名）
+    // ヘッダー(No + 氏名)
     let html = '<thead><tr><th class="no-header">No</th><th class="name-header">氏名</th>';
     
     dates.forEach(date => {
@@ -1131,7 +1121,7 @@ generateTableHTML(dates, scheduleData, ceList, workTypeOverrides) {
                 const period = this.availablePeriods.find(p => p.key === periodKey);
                 if (!period) return;
 
-                if (!confirm(`勤務表「${period.startDate} ～ ${period.endDate}」を完全に削除しますか？\n\nこの操作は元に戻せません。`)) {
+                if (!confirm(`勤務表「${period.startDate} ～ ${period.endDate}」を完全に削除しますか?\n\nこの操作は元に戻せません。`)) {
                     return;
                 }
 
@@ -1173,7 +1163,7 @@ generateTableHTML(dates, scheduleData, ceList, workTypeOverrides) {
                 const win = window.open(url, 'workScheduleEditor', 'width=1400,height=900,scrollbars=yes,resizable=yes');
                 
                 if (!win || win.closed || typeof win.closed === 'undefined') {
-                    if (confirm('新しいタブで開けませんでした。同じタブで勤務表エディタを開きますか？')) {
+                    if (confirm('新しいタブで開けませんでした。同じタブで勤務表エディタを開きますか?')) {
                         window.location.href = url;
                     } else {
                         window.showMessage('勤務表エディタを開くには、ポップアップを許可してください', 'warning');
