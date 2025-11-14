@@ -323,6 +323,26 @@
             text-align: left !important;
             padding-left: 3px !important;
         }
+        
+        /* ===== 追加: コピーモードのスタイル ===== */
+        .work-cell.copy-mode {
+            outline: 3px solid #4CAF50;
+            outline-offset: -3px;
+            box-shadow: 0 0 10px rgba(76, 175, 80, 0.5);
+            animation: pulse-copy 1.5s ease-in-out infinite;
+        }
+
+        @keyframes pulse-copy {
+            0%, 100% {
+                outline-color: #4CAF50;
+                box-shadow: 0 0 10px rgba(76, 175, 80, 0.5);
+            }
+            50% {
+                outline-color: #66BB6A;
+                box-shadow: 0 0 15px rgba(102, 187, 106, 0.7);
+            }
+        }
+
 
         .warning-count {
             color: #dc3545 !important;
@@ -825,6 +845,9 @@
             this.currentCEEditTarget = null;
             this.savedSchedules = {};
             this.isReady = false;
+
+            // ===== 追加: コピー機能用プロパティ =====
+            this.copiedCellData = null; // コピーしたセルのデータ
             
             // 2024-2025年の日本の祝日データ
             this.holidays = new Set([
@@ -1478,27 +1501,27 @@ if (exportBtn) exportBtn.onclick = () => this.exportToExcel(); // 追加
                 }, 250);
             });
 
-            document.addEventListener('click', (e) => {
-                const statusMenu = document.getElementById('workStatusMenu');
-                const workTypeMenu = document.getElementById('workTypeOverrideMenu');
-                const ceEditMenu = document.getElementById('ceEditMenu');
-                
-                if (statusMenu && statusMenu.style.display === 'block' && 
-                    !statusMenu.contains(e.target) && 
+          document.addEventListener('click', (e) => {
+                if (!e.target.closest('#workStatusMenu') && 
                     !e.target.closest('.work-cell')) {
                     this.closeStatusMenu();
                 }
-                
-                if (workTypeMenu && workTypeMenu.style.display === 'block' && 
-                    !workTypeMenu.contains(e.target) && 
+
+                if (!e.target.closest('#workTypeOverrideMenu') && 
                     !e.target.closest('.ce-number')) {
                     this.closeWorkTypeOverrideMenu();
                 }
-                
-                if (ceEditMenu && ceEditMenu.style.display === 'block' && 
-                    !ceEditMenu.contains(e.target) && 
+
+                if (!e.target.closest('#ceEditMenu') && 
                     !e.target.closest('.name-cell')) {
                     this.closeCEEditMenu();
+                }
+            });
+
+            // ===== 追加: ESCキーでコピーモードキャンセル =====
+            document.addEventListener('keydown', (e) => {
+                if (e.key === 'Escape' && this.copiedCellData) {
+                    this.cancelCopyMode();
                 }
             });
         }
@@ -1760,35 +1783,56 @@ if (exportBtn) exportBtn.onclick = () => this.exportToExcel(); // 追加
             });
         }
 
-        createWorkCell(ce, date, dateKey, workData) {
-            const cell = document.createElement('td');
-            const isWeekendOrHoliday = this.isWeekendOrHoliday(date);
-            const effectiveWorkType = this.getEffectiveWorkType(ce.id, dateKey);
-            
-            // テキスト優先表示
-            const displayStatus = workData.customText?.trim() || workData.status || (isWeekendOrHoliday ? '×' : 'A');
-            
-            let cellClass = `work-cell date-col type-${effectiveWorkType.toLowerCase()}`;
-            
-            if (workData.status) {
-                cellClass += ` status-${workData.status}`;
-            }
-            if (workData.customText?.trim()) {
-                cellClass += ' status-text';
-            }
-            if (workData.desired) {
-                cellClass += ' desired';
-            }
-            if (isWeekendOrHoliday) {
-                cellClass += ' holiday';
-            }
-            
-            cell.textContent = displayStatus;
-            cell.className = cellClass;
-            cell.onclick = (e) => this.openStatusMenu(e, ce, dateKey);
-            
-            return cell;
+createWorkCell(ce, date, dateKey, workData) {
+    const cell = document.createElement('td');
+    const isWeekendOrHoliday = this.isWeekendOrHoliday(date);
+    const effectiveWorkType = this.getEffectiveWorkType(ce.id, dateKey);
+    
+    // テキスト優先表示
+    const displayStatus = workData.customText?.trim() || workData.status || (isWeekendOrHoliday ? '×' : 'A');
+    
+    let cellClass = `work-cell date-col type-${effectiveWorkType.toLowerCase()}`;
+    
+    if (workData.status) {
+        cellClass += ` status-${workData.status}`;
+    }
+    if (workData.customText?.trim()) {
+        cellClass += ' status-text';
+    }
+    if (workData.desired) {
+        cellClass += ' desired';
+    }
+    if (isWeekendOrHoliday) {
+        cellClass += ' holiday';
+    }
+    
+    cell.textContent = displayStatus;
+    cell.className = cellClass;
+    
+    // ===== 追加: セルにデータ属性を設定 =====
+    cell.dataset.ceId = ce.id;
+    cell.dataset.dateKey = dateKey;
+    
+    // ===== 修正: 左クリック処理（コピーモード対応） =====
+    cell.onclick = (e) => {
+        // コピー済みデータがある場合は貼り付け
+        if (this.copiedCellData) {
+            this.pasteCellData(ce.id, dateKey);
+        } else {
+            // 通常のメニュー表示
+            this.openStatusMenu(e, ce, dateKey);
         }
+    };
+    
+    // ===== 追加: 右クリックでコピー =====
+    cell.oncontextmenu = (e) => {
+        e.preventDefault();
+        this.copyCellData(ce.id, dateKey, cell);
+    };
+    
+    return cell;
+}
+
 
         getWorkData(ceId, dateKey) {
             return this.scheduleData[ceId]?.[dateKey] || {};
@@ -1963,6 +2007,86 @@ if (exportBtn) exportBtn.onclick = () => this.exportToExcel(); // 追加
             }
             this.currentMenuTarget = null;
         }
+        
+                /**
+         * ===== 追加: セルデータをコピー =====
+         */
+        copyCellData(ceId, dateKey, cell) {
+            const workData = this.getWorkData(ceId, dateKey);
+            
+            // コピーするデータを保存
+            this.copiedCellData = {
+                status: workData.status || null,
+                customText: workData.customText || null,
+                desired: workData.desired || false
+            };
+            
+            // 既存のコピーモードのハイライトを削除
+            document.querySelectorAll('.work-cell.copy-mode').forEach(el => {
+                el.classList.remove('copy-mode');
+            });
+            
+            // セルにコピーモードのクラスを追加
+            cell.classList.add('copy-mode');
+            
+            // メッセージ表示
+            const displayText = this.copiedCellData.customText || this.copiedCellData.status || '(空)';
+            window.showMessage(`コピーしました: ${displayText}（クリックで貼り付け / ESCでキャンセル）`, 'success');
+        }
+
+        /**
+         * ===== 追加: コピーしたデータを貼り付け =====
+         */
+        async pasteCellData(ceId, dateKey) {
+            if (!this.copiedCellData) return;
+            
+            try {
+                const workData = {
+                    status: this.copiedCellData.status,
+                    customText: this.copiedCellData.customText,
+                    desired: this.copiedCellData.desired,
+                    updatedAt: firebase.database.ServerValue.TIMESTAMP,
+                    updatedBy: 'editor'
+                };
+                
+                await window.database.ref(`${window.DATA_ROOT}/workSchedule/${ceId}/${dateKey}`).set(workData);
+                
+                if (!this.scheduleData[ceId]) {
+                    this.scheduleData[ceId] = {};
+                }
+                this.scheduleData[ceId][dateKey] = workData;
+                
+                // B勤務または希望勤務の場合、翌日に自動で非番を設定
+                if (workData.status) {
+                    await this.autoSetNextDayOff(ceId, dateKey, workData.status, workData.desired);
+                }
+                
+                this.renderScheduleTable();
+                
+                // コピーモードを継続（連続貼り付け可能）
+                const displayText = this.copiedCellData.customText || this.copiedCellData.status || '(空)';
+                window.showMessage(`貼り付けました: ${displayText}`, 'info');
+                
+            } catch (error) {
+                console.error('❌ 貼り付けエラー:', error);
+                window.showMessage('貼り付けに失敗しました', 'error');
+            }
+        }
+
+        /**
+         * ===== 追加: コピーモードをキャンセル =====
+         */
+        cancelCopyMode() {
+            this.copiedCellData = null;
+            
+            // コピーモードのハイライトを削除
+            document.querySelectorAll('.work-cell.copy-mode').forEach(el => {
+                el.classList.remove('copy-mode');
+            });
+            
+            window.showMessage('コピーモードをキャンセルしました', 'info');
+        }
+
 
         openWorkTypeOverrideMenu(event, ce) {
             const menu = document.getElementById('workTypeOverrideMenu');
