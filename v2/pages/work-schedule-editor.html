@@ -323,26 +323,6 @@
             text-align: left !important;
             padding-left: 3px !important;
         }
-        
-        /* ===== 追加: コピーモードのスタイル ===== */
-        .work-cell.copy-mode {
-            outline: 3px solid #4CAF50;
-            outline-offset: -3px;
-            box-shadow: 0 0 10px rgba(76, 175, 80, 0.5);
-            animation: pulse-copy 1.5s ease-in-out infinite;
-        }
-
-        @keyframes pulse-copy {
-            0%, 100% {
-                outline-color: #4CAF50;
-                box-shadow: 0 0 10px rgba(76, 175, 80, 0.5);
-            }
-            50% {
-                outline-color: #66BB6A;
-                box-shadow: 0 0 15px rgba(102, 187, 106, 0.7);
-            }
-        }
-
 
         .warning-count {
             color: #dc3545 !important;
@@ -452,6 +432,118 @@
         .ce-edit-menu {
             z-index: 1001;
         }
+
+        /* 🆕 ツールバースタイル */
+.copy-toolbar {
+    background: linear-gradient(135deg, #9333ea, #7c3aed);
+    border-radius: 12px;
+    padding: 16px;
+    margin-bottom: 16px;
+    box-shadow: 0 4px 12px rgba(147, 51, 234, 0.3);
+    display: flex;
+    align-items: center;
+    gap: 16px;
+}
+
+.toolbar-title {
+    color: white;
+    font-weight: 600;
+    font-size: 14px;
+    white-space: nowrap;
+}
+
+.toolbar-buttons {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    flex: 1;
+}
+
+.toolbar-btn {
+    background: rgba(255, 255, 255, 0.2);
+    color: white;
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    border-radius: 8px;
+    padding: 8px 16px;
+    font-weight: 600;
+    font-size: 13px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    min-width: 50px;
+}
+
+.toolbar-btn:hover {
+    background: rgba(255, 255, 255, 0.3);
+    border-color: rgba(255, 255, 255, 0.5);
+}
+
+.toolbar-btn.active {
+    background: #10b981;
+    border-color: #10b981;
+    box-shadow: 0 0 20px rgba(16, 185, 129, 0.6);
+    animation: pulse 1.5s infinite;
+}
+
+.toolbar-btn-text {
+    min-width: 80px;
+}
+
+.toolbar-options {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.toolbar-checkbox {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    color: white;
+    font-size: 13px;
+    cursor: pointer;
+    user-select: none;
+}
+
+.toolbar-checkbox input[type="checkbox"] {
+    width: 16px;
+    height: 16px;
+    cursor: pointer;
+}
+
+.toolbar-text-input {
+    background: white;
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    border-radius: 6px;
+    padding: 6px 12px;
+    font-size: 13px;
+    width: 150px;
+    transition: all 0.3s ease;
+}
+
+.toolbar-text-input:focus {
+    outline: none;
+    border-color: #10b981;
+    box-shadow: 0 0 10px rgba(16, 185, 129, 0.3);
+}
+
+/* コピーモード中のセルホバー */
+.work-cell.copy-hover {
+    outline: 3px solid #10b981;
+    outline-offset: -3px;
+    transform: scale(1.05);
+}
+
+@keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.7; }
+}
+
+/* 印刷時は非表示 */
+@media print {
+    .copy-toolbar {
+        display: none !important;
+    }
+}
 
         /* 印刷スタイル */
         @media print {
@@ -693,17 +785,42 @@
             </div>
         </div>
 
-        <!-- メインエリア -->
-        <div class="editor-main">
-            <!-- ヘッダー -->
-            <div class="mb-4">
-                <h2 id="scheduleTitle" class="text-xl font-bold text-gray-800">
-                    勤務表作成・編集
-                </h2>
-            </div>
+<!-- メインエリア -->
+<div class="editor-main">
+    <!-- ヘッダー -->
+    <div class="mb-4">
+        <h2 id="scheduleTitle" class="text-xl font-bold text-gray-800">
+            勤務表作成・編集
+        </h2>
+    </div>
 
-            <!-- 勤務表テーブル -->
-            <div class="schedule-table-container">
+    <!-- 🆕 ツールバー（ここから追加） -->
+    <div id="copyToolbar" class="copy-toolbar">
+        <div class="toolbar-title">📋 勤務状態コピー</div>
+        <div class="toolbar-buttons">
+            <button class="toolbar-btn" data-status="A">A</button>
+            <button class="toolbar-btn" data-status="A1">A1</button>
+            <button class="toolbar-btn" data-status="B">B</button>
+            <button class="toolbar-btn" data-status="非">非</button>
+            <button class="toolbar-btn" data-status="×">×</button>
+            <button class="toolbar-btn" data-status="年">年</button>
+            <button class="toolbar-btn" data-status="出">出</button>
+            <button class="toolbar-btn" data-status="研">研</button>
+            <button class="toolbar-btn toolbar-btn-text" data-status="text">テキスト</button>
+        </div>
+        <div class="toolbar-options">
+            <label class="toolbar-checkbox">
+                <input type="checkbox" id="toolbarDesireCheck">
+                <span>希望勤務（下線）</span>
+            </label>
+            <input type="text" id="toolbarTextInput" class="toolbar-text-input" placeholder="テキスト入力..." style="display: none;">
+        </div>
+    </div>
+    <!-- 🆕 ツールバー（ここまで追加） -->
+
+    <!-- 勤務表テーブル -->
+    <div class="schedule-table-container">
+
                 <table id="scheduleTable" class="schedule-table">
                     <thead id="scheduleTableHead"></thead>
                     <tbody id="scheduleTableBody"></tbody>
@@ -846,8 +963,13 @@
             this.savedSchedules = {};
             this.isReady = false;
 
-            // ===== 追加: コピー機能用プロパティ =====
-            this.copiedCellData = null; // コピーしたセルのデータ
+// 🆕 コピー機能の状態管理
+this.copyMode = {
+    active: false,
+    status: null,
+    customText: '',
+    desired: false
+};
             
             // 2024-2025年の日本の祝日データ
             this.holidays = new Set([
@@ -1492,6 +1614,9 @@ if (exportBtn) exportBtn.onclick = () => this.exportToExcel(); // 追加
                 saveCEEditBtn.onclick = () => this.saveCEEdit();
             }
 
+            // 🆕 ツールバーのイベントリスナー
+            this.setupCopyToolbar();
+            
             // リサイズ時のテーブルフィット
             let resizeTimer = null;
             window.addEventListener('resize', () => {
@@ -1515,13 +1640,6 @@ if (exportBtn) exportBtn.onclick = () => this.exportToExcel(); // 追加
                 if (!e.target.closest('#ceEditMenu') && 
                     !e.target.closest('.name-cell')) {
                     this.closeCEEditMenu();
-                }
-            });
-
-            // ===== 追加: ESCキーでコピーモードキャンセル =====
-            document.addEventListener('keydown', (e) => {
-                if (e.key === 'Escape' && this.copiedCellData) {
-                    this.cancelCopyMode();
                 }
             });
         }
@@ -1808,27 +1926,15 @@ createWorkCell(ce, date, dateKey, workData) {
     
     cell.textContent = displayStatus;
     cell.className = cellClass;
-    
-    // ===== 追加: セルにデータ属性を設定 =====
-    cell.dataset.ceId = ce.id;
-    cell.dataset.dateKey = dateKey;
-    
-    // ===== 修正: 左クリック処理（コピーモード対応） =====
     cell.onclick = (e) => {
-        // コピー済みデータがある場合は貼り付け
-        if (this.copiedCellData) {
-            this.pasteCellData(ce.id, dateKey);
-        } else {
-            // 通常のメニュー表示
-            this.openStatusMenu(e, ce, dateKey);
-        }
-    };
-    
-    // ===== 追加: 右クリックでコピー =====
-    cell.oncontextmenu = (e) => {
-        e.preventDefault();
-        this.copyCellData(ce.id, dateKey, cell);
-    };
+    if (this.copyMode.active) {
+        // 🆕 コピーモード中はペースト実行
+        this.pasteCellData(ce.id, dateKey);
+    } else {
+        // 通常モードはメニュー表示
+        this.openStatusMenu(e, ce, dateKey);
+    }
+};
     
     return cell;
 }
@@ -2008,86 +2114,6 @@ createWorkCell(ce, date, dateKey, workData) {
             this.currentMenuTarget = null;
         }
         
-                /**
-         * ===== 追加: セルデータをコピー =====
-         */
-        copyCellData(ceId, dateKey, cell) {
-            const workData = this.getWorkData(ceId, dateKey);
-            
-            // コピーするデータを保存
-            this.copiedCellData = {
-                status: workData.status || null,
-                customText: workData.customText || null,
-                desired: workData.desired || false
-            };
-            
-            // 既存のコピーモードのハイライトを削除
-            document.querySelectorAll('.work-cell.copy-mode').forEach(el => {
-                el.classList.remove('copy-mode');
-            });
-            
-            // セルにコピーモードのクラスを追加
-            cell.classList.add('copy-mode');
-            
-            // メッセージ表示
-            const displayText = this.copiedCellData.customText || this.copiedCellData.status || '(空)';
-            window.showMessage(`コピーしました: ${displayText}（クリックで貼り付け / ESCでキャンセル）`, 'success');
-        }
-
-        /**
-         * ===== 追加: コピーしたデータを貼り付け =====
-         */
-        async pasteCellData(ceId, dateKey) {
-            if (!this.copiedCellData) return;
-            
-            try {
-                const workData = {
-                    status: this.copiedCellData.status,
-                    customText: this.copiedCellData.customText,
-                    desired: this.copiedCellData.desired,
-                    updatedAt: firebase.database.ServerValue.TIMESTAMP,
-                    updatedBy: 'editor'
-                };
-                
-                await window.database.ref(`${window.DATA_ROOT}/workSchedule/${ceId}/${dateKey}`).set(workData);
-                
-                if (!this.scheduleData[ceId]) {
-                    this.scheduleData[ceId] = {};
-                }
-                this.scheduleData[ceId][dateKey] = workData;
-                
-                // B勤務または希望勤務の場合、翌日に自動で非番を設定
-                if (workData.status) {
-                    await this.autoSetNextDayOff(ceId, dateKey, workData.status, workData.desired);
-                }
-                
-                this.renderScheduleTable();
-                
-                // コピーモードを継続（連続貼り付け可能）
-                const displayText = this.copiedCellData.customText || this.copiedCellData.status || '(空)';
-                window.showMessage(`貼り付けました: ${displayText}`, 'info');
-                
-            } catch (error) {
-                console.error('❌ 貼り付けエラー:', error);
-                window.showMessage('貼り付けに失敗しました', 'error');
-            }
-        }
-
-        /**
-         * ===== 追加: コピーモードをキャンセル =====
-         */
-        cancelCopyMode() {
-            this.copiedCellData = null;
-            
-            // コピーモードのハイライトを削除
-            document.querySelectorAll('.work-cell.copy-mode').forEach(el => {
-                el.classList.remove('copy-mode');
-            });
-            
-            window.showMessage('コピーモードをキャンセルしました', 'info');
-        }
-
-
         openWorkTypeOverrideMenu(event, ce) {
             const menu = document.getElementById('workTypeOverrideMenu');
             const startDateInput = document.getElementById('overrideStartDate');
@@ -2567,6 +2593,43 @@ getEffectiveWorkType(ceId, dateKey) {
             window.print();
         }
 
+        // 🆕 セルに貼り付け
+async pasteCellData(ceId, dateKey) {
+    if (!this.copyMode.active) return;
+
+    try {
+        const workData = {
+            status: this.copyMode.status === 'text' ? null : this.copyMode.status,
+            customText: this.copyMode.status === 'text' ? this.copyMode.customText : null,
+            desired: this.copyMode.desired,
+            updatedAt: firebase.database.ServerValue.TIMESTAMP,
+            updatedBy: 'editor-copy'
+        };
+
+        await window.database.ref(`${window.DATA_ROOT}/workSchedule/${ceId}/${dateKey}`).set(workData);
+
+        if (!this.scheduleData[ceId]) {
+            this.scheduleData[ceId] = {};
+        }
+        this.scheduleData[ceId][dateKey] = workData;
+
+        // B勤務または希望勤務の場合、翌日に自動で非番を設定
+        if (this.copyMode.status !== 'text') {
+            await this.autoSetNextDayOff(ceId, dateKey, this.copyMode.status, this.copyMode.desired);
+        }
+
+        this.renderScheduleTable();
+        
+        // コピーモードは維持（連続貼り付け可能）
+        console.log('✅ 貼り付け完了:', ceId, dateKey);
+
+    } catch (error) {
+        console.error('❌ 貼り付けエラー:', error);
+        window.showMessage('貼り付けに失敗しました', 'error');
+    }
+}
+
+        
         async saveCEList() {
             const ceListData = {
                 list: this.ceList,
@@ -2580,6 +2643,146 @@ getEffectiveWorkType(ceId, dateKey) {
                 console.warn('localStorage通知失敗:', e);
             }
         }
+
+        // 🆕 ツールバー機能の初期化
+setupCopyToolbar() {
+    const toolbar = document.getElementById('copyToolbar');
+    if (!toolbar) return;
+
+    const buttons = toolbar.querySelectorAll('.toolbar-btn');
+    const desireCheck = document.getElementById('toolbarDesireCheck');
+    const textInput = document.getElementById('toolbarTextInput');
+
+    // ボタンクリックイベント
+    buttons.forEach(btn => {
+        btn.addEventListener('click', () => {
+            const status = btn.dataset.status;
+
+            if (this.copyMode.active && this.copyMode.status === status) {
+                // 同じボタンを再クリック → 解除
+                this.deactivateCopyMode();
+            } else {
+                // 新しいボタンをクリック → コピーモード開始
+                this.activateCopyMode(status, btn);
+            }
+        });
+    });
+
+    // 希望勤務チェックボックス
+    desireCheck?.addEventListener('change', (e) => {
+        if (this.copyMode.active) {
+            this.copyMode.desired = e.target.checked;
+        }
+    });
+
+    // テキスト入力
+    textInput?.addEventListener('input', (e) => {
+        if (this.copyMode.active) {
+            this.copyMode.customText = e.target.value.trim();
+        }
+    });
+
+    // ESCキーで解除
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && this.copyMode.active) {
+            this.deactivateCopyMode();
+        }
+    });
+}
+
+// 🆕 コピーモード開始
+activateCopyMode(status, button) {
+    console.log('🟢 コピーモード開始:', status);
+
+    // 既存のactiveを解除
+    document.querySelectorAll('.toolbar-btn.active').forEach(btn => {
+        btn.classList.remove('active');
+    });
+
+    // 新しいボタンをactive化
+    button.classList.add('active');
+
+    const textInput = document.getElementById('toolbarTextInput');
+    const desireCheck = document.getElementById('toolbarDesireCheck');
+
+    // テキスト入力欄の表示制御
+    if (status === 'text') {
+        textInput.style.display = 'block';
+        textInput.focus();
+    } else {
+        textInput.style.display = 'none';
+        textInput.value = '';
+    }
+
+    // 状態を保存
+    this.copyMode = {
+        active: true,
+        status: status,
+        customText: status === 'text' ? textInput.value.trim() : '',
+        desired: desireCheck.checked
+    };
+
+    // セルにホバーイベントを追加
+    this.addCellHoverEvents();
+
+    window.showMessage(`コピーモード: ${status === 'text' ? 'テキスト' : status}（セルをクリックして貼り付け）`, 'info');
+}
+
+// 🆕 コピーモード解除
+deactivateCopyMode() {
+    console.log('🔴 コピーモード解除');
+
+    document.querySelectorAll('.toolbar-btn.active').forEach(btn => {
+        btn.classList.remove('active');
+    });
+
+    const textInput = document.getElementById('toolbarTextInput');
+    textInput.style.display = 'none';
+    textInput.value = '';
+
+    this.copyMode = {
+        active: false,
+        status: null,
+        customText: '',
+        desired: false
+    };
+
+    // ホバーイベントを削除
+    this.removeCellHoverEvents();
+
+    window.showMessage('コピーモードを終了しました', 'info');
+}
+
+// 🆕 セルホバーイベント追加
+addCellHoverEvents() {
+    const cells = document.querySelectorAll('.work-cell');
+    cells.forEach(cell => {
+        cell.addEventListener('mouseenter', this.cellHoverHandler);
+        cell.addEventListener('mouseleave', this.cellLeaveHandler);
+    });
+}
+
+// 🆕 セルホバーイベント削除
+removeCellHoverEvents() {
+    const cells = document.querySelectorAll('.work-cell');
+    cells.forEach(cell => {
+        cell.removeEventListener('mouseenter', this.cellHoverHandler);
+        cell.removeEventListener('mouseleave', this.cellLeaveHandler);
+        cell.classList.remove('copy-hover');
+    });
+}
+
+// 🆕 セルホバー時の処理（アロー関数で束縛）
+cellHoverHandler = (e) => {
+    if (this.copyMode.active) {
+        e.target.classList.add('copy-hover');
+    }
+};
+
+cellLeaveHandler = (e) => {
+    e.target.classList.remove('copy-hover');
+};
+
 
         // Excel出力機能
         async exportToExcel() {
