@@ -934,8 +934,36 @@
             <i class="fas fa-times"></i>
         </button>
     </div>
+    
+    <div class="space-y-3">
+        <div>
+            <label class="block text-xs font-medium mb-1">氏名（勤務表表示名）</label>
+            <input type="text" id="editCEFullName" class="input-unified text-sm" placeholder="氏名を入力">
+        </div>
+        <div>
+            <label class="block text-xs font-medium mb-1">アイコン名（ダッシュボード表示名）</label>
+            <input type="text" id="editCEIconName" class="input-unified text-sm" placeholder="アイコン名を入力">
+        </div>
+        <!-- 追加: 基本勤務区分選択 -->
+        <div>
+            <label class="block text-xs font-medium mb-1">基本勤務区分</label>
+            <select id="editCEWorkType" class="input-unified text-sm">
+                <option value="OPE">OPE</option>
+                <option value="ME">ME</option>
+                <option value="HD">HD</option>
+                <option value="FLEX">FLEX</option>
+            </select>
+        </div>
+    </div>
 
-    <!-- 🆕 日付設定メニュー -->
+    <div class="flex gap-2 mt-4">
+        <button id="saveCEEdit" class="btn-unified btn-primary-unified btn-small flex-1">
+            <i class="fas fa-save mr-1"></i>保存
+        </button>
+    </div>
+</div>
+
+<!-- 🆕 日付設定メニュー（CE編集メニューの外に配置） -->
 <div id="dateSettingMenu" class="date-setting-menu" style="display: none;">
     <div class="flex items-center justify-between mb-3">
         <span class="text-sm font-semibold">日付設定</span>
@@ -967,27 +995,6 @@
         </div>
     </div>
 </div>
-    
-    <div class="space-y-3">
-        <div>
-            <label class="block text-xs font-medium mb-1">氏名（勤務表表示名）</label>
-            <input type="text" id="editCEFullName" class="input-unified text-sm" placeholder="氏名を入力">
-        </div>
-        <div>
-            <label class="block text-xs font-medium mb-1">アイコン名（ダッシュボード表示名）</label>
-            <input type="text" id="editCEIconName" class="input-unified text-sm" placeholder="アイコン名を入力">
-        </div>
-        <!-- 追加: 基本勤務区分選択 -->
-        <div>
-            <label class="block text-xs font-medium mb-1">基本勤務区分</label>
-            <select id="editCEWorkType" class="input-unified text-sm">
-                <option value="OPE">OPE</option>
-                <option value="ME">ME</option>
-                <option value="HD">HD</option>
-                <option value="FLEX">FLEX</option>
-            </select>
-        </div>
-    </div>
 
     <div class="flex gap-2 mt-4">
         <button id="saveCEEdit" class="btn-unified btn-primary-unified btn-small flex-1">
