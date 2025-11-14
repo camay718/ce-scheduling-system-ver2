@@ -445,6 +445,26 @@
     gap: 16px;
 }
 
+        /* 🆕 日付設定メニュー */
+.date-setting-menu {
+    position: fixed;
+    background: white;
+    border: 1px solid #dee2e6;
+    border-radius: 8px;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.15);
+    padding: 12px;
+    z-index: 1002;
+    min-width: 250px;
+}
+
+.date-setting-menu .text-xs {
+    font-size: 12px;
+}
+
+.date-setting-menu .btn-small {
+    font-size: 13px;
+    padding: 8px 12px;
+}
 
 .toolbar-title {
     color: white;
@@ -914,6 +934,39 @@
             <i class="fas fa-times"></i>
         </button>
     </div>
+
+    <!-- 🆕 日付設定メニュー -->
+<div id="dateSettingMenu" class="date-setting-menu" style="display: none;">
+    <div class="flex items-center justify-between mb-3">
+        <span class="text-sm font-semibold">日付設定</span>
+        <button id="closeDateSettingMenu" class="text-gray-500 hover:text-gray-700">
+            <i class="fas fa-times"></i>
+        </button>
+    </div>
+    
+    <div class="mb-3">
+        <div class="text-xs text-gray-600 mb-2" id="dateSettingTarget">対象日: </div>
+    </div>
+
+    <div class="space-y-2">
+        <button id="setAsWorkday" class="btn-unified btn-primary-unified btn-small w-full">
+            <i class="fas fa-briefcase mr-1"></i>平日に設定
+        </button>
+        <button id="setAsHoliday" class="btn-unified btn-outline-unified btn-small w-full">
+            <i class="fas fa-umbrella-beach mr-1"></i>休日に設定
+        </button>
+        <button id="resetDateSetting" class="btn-unified btn-outline-unified btn-small w-full text-gray-600">
+            <i class="fas fa-undo mr-1"></i>デフォルトに戻す
+        </button>
+    </div>
+
+    <div class="mt-3 pt-3 border-t">
+        <div class="text-xs text-gray-500">
+            <i class="fas fa-info-circle mr-1"></i>
+            この設定は保存されません（一時的な変更）
+        </div>
+    </div>
+</div>
     
     <div class="space-y-3">
         <div>
@@ -971,18 +1024,78 @@ this.copyMode = {
     customText: '',
     desired: false
 };
+
+            // 🆕 日付設定のオーバーライド（一時的な変更）
+this.dateOverrides = {};
+this.currentDateTarget = null;
             
-            // 2024-2025年の日本の祝日データ
-            this.holidays = new Set([
-                '2024-01-01', '2024-01-08', '2024-02-11', '2024-02-12', '2024-02-23',
-                '2024-03-20', '2024-04-29', '2024-05-03', '2024-05-04', '2024-05-05',
-                '2024-07-15', '2024-08-11', '2024-08-12', '2024-09-16', '2024-09-22',
-                '2024-09-23', '2024-10-14', '2024-11-03', '2024-11-04', '2024-11-23',
-                '2024-12-23', '2025-01-01', '2025-01-13', '2025-02-11', '2025-02-23',
-                '2025-03-20', '2025-04-29', '2025-05-03', '2025-05-04', '2025-05-05',
-                '2025-07-21', '2025-08-11', '2025-09-15', '2025-09-23', '2025-10-13',
-                '2025-11-03', '2025-11-23', '2025-12-23'
-            ]);
+// 2024-2026年の日本の祝日データ（最新版）
+this.holidays = new Set([
+    // 2024年
+    '2024-01-01', // 元日
+    '2024-01-08', // 成人の日
+    '2024-02-11', // 建国記念の日
+    '2024-02-12', // 振替休日
+    '2024-02-23', // 天皇誕生日
+    '2024-03-20', // 春分の日
+    '2024-04-29', // 昭和の日
+    '2024-05-03', // 憲法記念日
+    '2024-05-04', // みどりの日
+    '2024-05-05', // こどもの日
+    '2024-05-06', // 振替休日
+    '2024-07-15', // 海の日
+    '2024-08-11', // 山の日
+    '2024-08-12', // 振替休日
+    '2024-09-16', // 敬老の日
+    '2024-09-22', // 秋分の日
+    '2024-09-23', // 振替休日
+    '2024-10-14', // スポーツの日
+    '2024-11-03', // 文化の日
+    '2024-11-04', // 振替休日
+    '2024-11-23', // 勤労感謝の日
+    
+    // 2025年
+    '2025-01-01', // 元日
+    '2025-01-13', // 成人の日
+    '2025-02-11', // 建国記念の日
+    '2025-02-23', // 天皇誕生日
+    '2025-02-24', // 振替休日
+    '2025-03-20', // 春分の日
+    '2025-04-29', // 昭和の日
+    '2025-05-03', // 憲法記念日
+    '2025-05-04', // みどりの日
+    '2025-05-05', // こどもの日
+    '2025-05-06', // 振替休日
+    '2025-07-21', // 海の日
+    '2025-08-11', // 山の日
+    '2025-09-15', // 敬老の日
+    '2025-09-23', // 秋分の日
+    '2025-10-13', // スポーツの日
+    '2025-11-03', // 文化の日
+    '2025-11-23', // 勤労感謝の日
+    '2025-11-24', // 振替休日
+    
+    // 2026年
+    '2026-01-01', // 元日
+    '2026-01-12', // 成人の日
+    '2026-02-11', // 建国記念の日
+    '2026-02-23', // 天皇誕生日
+    '2026-03-20', // 春分の日
+    '2026-04-29', // 昭和の日
+    '2026-05-03', // 憲法記念日
+    '2026-05-04', // みどりの日
+    '2026-05-05', // こどもの日
+    '2026-05-06', // 振替休日
+    '2026-07-20', // 海の日
+    '2026-08-11', // 山の日
+    '2026-09-21', // 敬老の日
+    '2026-09-22', // 国民の休日
+    '2026-09-23', // 秋分の日
+    '2026-10-12', // スポーツの日
+    '2026-11-03', // 文化の日
+    '2026-11-23'  // 勤労感謝の日
+]);
+
             
             // 通常順の定義（27名）
             this.normalOrder = [
@@ -1033,11 +1146,22 @@ this.copyMode = {
             return this.holidays.has(dateKey);
         }
 
-        // 休日判定（土日祝日）
-        isWeekendOrHoliday(date) {
-            const dayOfWeek = date.getDay();
-            return dayOfWeek === 0 || dayOfWeek === 6 || this.isHoliday(date);
-        }
+// 休日判定（土日祝日 + オーバーライド対応）
+isWeekendOrHoliday(date) {
+    const dateKey = this.formatDateKey(date);
+    
+    // 🆕 オーバーライドが設定されている場合は優先
+    if (this.dateOverrides[dateKey] === 'holiday') {
+        return true;
+    }
+    if (this.dateOverrides[dateKey] === 'workday') {
+        return false;
+    }
+    
+    // デフォルトの判定
+    const dayOfWeek = date.getDay();
+    return dayOfWeek === 0 || dayOfWeek === 6 || this.isHoliday(date);
+}
 
         // 勤務区分の実効値を取得（複数オーバーライド対応）
         getEffectiveWorkType(ceId, dateKey) {
@@ -1617,6 +1741,9 @@ if (exportBtn) exportBtn.onclick = () => this.exportToExcel(); // 追加
 
             // 🆕 ツールバーのイベントリスナー
             this.setupCopyToolbar();
+
+            // 🆕 日付設定メニューのイベントリスナー
+            this.setupDateSettingMenu();
             
             // リサイズ時のテーブルフィット
             let resizeTimer = null;
@@ -1627,22 +1754,28 @@ if (exportBtn) exportBtn.onclick = () => this.exportToExcel(); // 追加
                 }, 250);
             });
 
-          document.addEventListener('click', (e) => {
-                if (!e.target.closest('#workStatusMenu') && 
-                    !e.target.closest('.work-cell')) {
-                    this.closeStatusMenu();
-                }
+document.addEventListener('click', (e) => {
+    if (!e.target.closest('#workStatusMenu') && 
+        !e.target.closest('.work-cell')) {
+        this.closeStatusMenu();
+    }
 
-                if (!e.target.closest('#workTypeOverrideMenu') && 
-                    !e.target.closest('.ce-number')) {
-                    this.closeWorkTypeOverrideMenu();
-                }
+    if (!e.target.closest('#workTypeOverrideMenu') && 
+        !e.target.closest('.ce-number')) {
+        this.closeWorkTypeOverrideMenu();
+    }
 
-                if (!e.target.closest('#ceEditMenu') && 
-                    !e.target.closest('.name-cell')) {
-                    this.closeCEEditMenu();
-                }
-            });
+    if (!e.target.closest('#ceEditMenu') && 
+        !e.target.closest('.name-cell')) {
+        this.closeCEEditMenu();
+    }
+
+    // 🆕 日付設定メニューの外側クリックで閉じる
+    if (!e.target.closest('#dateSettingMenu') && 
+        !e.target.closest('.date-col')) {
+        this.closeDateSettingMenu();
+    }
+});
         }
 
         updatePeriod() {
@@ -1774,27 +1907,41 @@ if (exportBtn) exportBtn.onclick = () => this.exportToExcel(); // 追加
             
             headerRow.innerHTML = '<th class="no-header">No</th><th class="name-header">氏名</th>';
             
-            dates.forEach(date => {
-                const dayOfWeek = ['日', '月', '火', '水', '木', '金', '土'][date.getDay()];
-                const isWeekendOrHoliday = this.isWeekendOrHoliday(date);
-                const isHoliday = this.isHoliday(date);
-                
-                let headerClass = 'date-col';
-                let dayClass = '';
-                
-                if (date.getDay() === 0 || isHoliday) {
-                    dayClass = 'text-red-600';
-                } else if (date.getDay() === 6) {
-                    dayClass = 'text-blue-600';
-                }
-                
-                headerRow.innerHTML += `
-                    <th class="${headerClass}">
-                        <div>${date.getDate()}</div>
-                        <div class="text-xs ${dayClass}">${dayOfWeek}</div>
-                    </th>
-                `;
-            });
+dates.forEach(date => {
+    const dayOfWeek = ['日', '月', '火', '水', '木', '金', '土'][date.getDay()];
+    const dateKey = this.formatDateKey(date);
+    const isWeekendOrHoliday = this.isWeekendOrHoliday(date);
+    const isHoliday = this.isHoliday(date);
+    
+    let headerClass = 'date-col';
+    let dayClass = '';
+    
+    if (date.getDay() === 0 || isHoliday) {
+        dayClass = 'text-red-600';
+    } else if (date.getDay() === 6) {
+        dayClass = 'text-blue-600';
+    }
+    
+    // 🆕 日付オーバーライドの反映
+    if (this.dateOverrides[dateKey] === 'holiday') {
+        dayClass = 'text-red-600';
+    } else if (this.dateOverrides[dateKey] === 'workday') {
+        dayClass = 'text-gray-700';
+    }
+    
+    const th = document.createElement('th');
+    th.className = headerClass;
+    th.innerHTML = `
+        <div>${date.getDate()}</div>
+        <div class="text-xs ${dayClass}">${dayOfWeek}</div>
+    `;
+    // 🆕 ダブルクリックで日付設定メニューを開く
+    th.ondblclick = (e) => this.openDateSettingMenu(e, date);
+    th.title = '日付設定（ダブルクリック）';
+    th.style.cursor = 'pointer';
+    
+    headerRow.appendChild(th);
+});
             
             const summaryHeaders = ['A', 'A1', 'B', '非', '×', '休日数', '実勤務', '当直回数'];
             summaryHeaders.forEach(header => {
@@ -2630,6 +2777,94 @@ async pasteCellData(ceId, dateKey) {
         console.error('❌ 貼り付けエラー:', error);
         window.showMessage('貼り付けに失敗しました', 'error');
     }
+}
+
+        // 🆕 日付設定メニューの初期化
+setupDateSettingMenu() {
+    const closeBtn = document.getElementById('closeDateSettingMenu');
+    const setWorkdayBtn = document.getElementById('setAsWorkday');
+    const setHolidayBtn = document.getElementById('setAsHoliday');
+    const resetBtn = document.getElementById('resetDateSetting');
+
+    if (closeBtn) {
+        closeBtn.onclick = () => this.closeDateSettingMenu();
+    }
+
+    if (setWorkdayBtn) {
+        setWorkdayBtn.onclick = () => this.setDateType('workday');
+    }
+
+    if (setHolidayBtn) {
+        setHolidayBtn.onclick = () => this.setDateType('holiday');
+    }
+
+    if (resetBtn) {
+        resetBtn.onclick = () => this.setDateType('default');
+    }
+}
+
+// 🆕 日付設定メニューを開く
+openDateSettingMenu(event, date) {
+    const menu = document.getElementById('dateSettingMenu');
+    const targetDisplay = document.getElementById('dateSettingTarget');
+    
+    if (!menu || !targetDisplay) return;
+
+    this.currentDateTarget = date;
+    const dateKey = this.formatDateKey(date);
+    const dateStr = this.formatDateDisplay(date);
+    const dayOfWeek = ['日', '月', '火', '水', '木', '金', '土'][date.getDay()];
+
+    let statusText = '';
+    if (this.dateOverrides[dateKey] === 'holiday') {
+        statusText = '（休日設定中）';
+    } else if (this.dateOverrides[dateKey] === 'workday') {
+        statusText = '（平日設定中）';
+    } else if (this.isWeekendOrHoliday(date)) {
+        statusText = '（デフォルト: 休日）';
+    } else {
+        statusText = '（デフォルト: 平日）';
+    }
+
+    targetDisplay.textContent = `対象日: ${dateStr} (${dayOfWeek}) ${statusText}`;
+
+    this.positionMenu(menu, event.target);
+}
+
+// 🆕 日付設定メニューを閉じる
+closeDateSettingMenu() {
+    const menu = document.getElementById('dateSettingMenu');
+    if (menu) {
+        menu.style.display = 'none';
+    }
+    this.currentDateTarget = null;
+}
+
+// 🆕 日付タイプを設定
+setDateType(type) {
+    if (!this.currentDateTarget) return;
+
+    const dateKey = this.formatDateKey(this.currentDateTarget);
+    const dateStr = this.formatDateDisplay(this.currentDateTarget);
+
+    if (type === 'default') {
+        // デフォルトに戻す
+        delete this.dateOverrides[dateKey];
+        window.showMessage(`${dateStr} をデフォルト設定に戻しました`, 'info');
+    } else if (type === 'workday') {
+        // 平日に設定
+        this.dateOverrides[dateKey] = 'workday';
+        window.showMessage(`${dateStr} を平日に設定しました`, 'success');
+    } else if (type === 'holiday') {
+        // 休日に設定
+        this.dateOverrides[dateKey] = 'holiday';
+        window.showMessage(`${dateStr} を休日に設定しました`, 'success');
+    }
+
+    this.renderScheduleTable();
+    this.closeDateSettingMenu();
+
+    console.log('📅 日付オーバーライド:', this.dateOverrides);
 }
 
         
