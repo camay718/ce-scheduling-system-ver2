@@ -1906,58 +1906,72 @@ document.addEventListener('click', (e) => {
             return dates;
         }
 
-        renderTableHeader(dates) {
-            const thead = document.getElementById('scheduleTableHead');
-            if (!thead) return;
+renderTableHeader(dates) {
+    const thead = document.getElementById('scheduleTableHead');
+    if (!thead) return;
 
-            const headerRow = document.createElement('tr');
-            
-            headerRow.innerHTML = '<th class="no-header">No</th><th class="name-header">氏名</th>';
-            
-dates.forEach(date => {
-    const dayOfWeek = ['日', '月', '火', '水', '木', '金', '土'][date.getDay()];
-    const dateKey = this.formatDateKey(date);
-    const isWeekendOrHoliday = this.isWeekendOrHoliday(date);
-    const isHoliday = this.isHoliday(date);
+    const headerRow = document.createElement('tr');
     
-    let headerClass = 'date-col';
-    let dayClass = '';
+    // No列と氏名列を要素として追加
+    const noHeader = document.createElement('th');
+    noHeader.className = 'no-header';
+    noHeader.textContent = 'No';
+    headerRow.appendChild(noHeader);
     
-    if (date.getDay() === 0 || isHoliday) {
-        dayClass = 'text-red-600';
-    } else if (date.getDay() === 6) {
-        dayClass = 'text-blue-600';
-    }
+    const nameHeader = document.createElement('th');
+    nameHeader.className = 'name-header';
+    nameHeader.textContent = '氏名';
+    headerRow.appendChild(nameHeader);
     
-    // 🆕 日付オーバーライドの反映
-    if (this.dateOverrides[dateKey] === 'holiday') {
-        dayClass = 'text-red-600';
-    } else if (this.dateOverrides[dateKey] === 'workday') {
-        dayClass = 'text-gray-700';
-    }
-    
-    const th = document.createElement('th');
-    th.className = headerClass;
-    th.innerHTML = `
-        <div>${date.getDate()}</div>
-        <div class="text-xs ${dayClass}">${dayOfWeek}</div>
-    `;
-    // 🆕 ダブルクリックで日付設定メニューを開く
-    th.ondblclick = (e) => this.openDateSettingMenu(e, date);
-    th.title = '日付設定（ダブルクリック）';
-    th.style.cursor = 'pointer';
-    
-    headerRow.appendChild(th);
-});
-            
-            const summaryHeaders = ['A', 'A1', 'B', '非', '×', '休日数', '実勤務', '当直回数'];
-            summaryHeaders.forEach(header => {
-                headerRow.innerHTML += `<th class="summary-cell text-xs">${header}</th>`;
-            });
-            
-            thead.innerHTML = '';
-            thead.appendChild(headerRow);
+    // 日付列
+    dates.forEach(date => {
+        const dayOfWeek = ['日', '月', '火', '水', '木', '金', '土'][date.getDay()];
+        const dateKey = this.formatDateKey(date);
+        const isWeekendOrHoliday = this.isWeekendOrHoliday(date);
+        const isHoliday = this.isHoliday(date);
+        
+        let headerClass = 'date-col';
+        let dayClass = '';
+        
+        if (date.getDay() === 0 || isHoliday) {
+            dayClass = 'text-red-600';
+        } else if (date.getDay() === 6) {
+            dayClass = 'text-blue-600';
         }
+        
+        // 🆕 日付オーバーライドの反映
+        if (this.dateOverrides[dateKey] === 'holiday') {
+            dayClass = 'text-red-600';
+        } else if (this.dateOverrides[dateKey] === 'workday') {
+            dayClass = 'text-gray-700';
+        }
+        
+        const th = document.createElement('th');
+        th.className = headerClass;
+        th.innerHTML = `
+            <div>${date.getDate()}</div>
+            <div class="text-xs ${dayClass}">${dayOfWeek}</div>
+        `;
+        // 🆕 ダブルクリックで日付設定メニューを開く
+        th.ondblclick = (e) => this.openDateSettingMenu(e, date);
+        th.title = '日付設定（ダブルクリック）';
+        th.style.cursor = 'pointer';
+        
+        headerRow.appendChild(th);
+    });
+    
+    // サマリー列を要素として追加
+    const summaryHeaders = ['A', 'A1', 'B', '非', '×', '休日数', '実勤務', '当直回数'];
+    summaryHeaders.forEach(header => {
+        const th = document.createElement('th');
+        th.className = 'summary-cell text-xs';
+        th.textContent = header;
+        headerRow.appendChild(th);
+    });
+    
+    thead.innerHTML = '';
+    thead.appendChild(headerRow);
+}
 
         renderTableBody(dates) {
             const tbody = document.getElementById('scheduleTableBody');
