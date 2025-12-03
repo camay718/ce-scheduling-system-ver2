@@ -876,6 +876,7 @@ this.footerTypes = [
                     const scheduleData = periodData.scheduleData || {};
                     const ceList = periodData.ceList;
                     const workTypeOverrides = periodData.workTypeOverrides || {};
+                    const dateOverrides = periodData.dateOverrides || {};  // ← この行を追加
                     const metadata = periodData.metadata || {};
                     const dates = this.generateDateRange(new Date(metadata.startDate), new Date(metadata.endDate));
 
@@ -903,7 +904,7 @@ this.footerTypes = [
                         </div>
                         <div class="work-schedule-table-wrapper">
                             <table class="work-schedule-table">
-                                ${this.generateTableHTML(dates, scheduleData, ceList, workTypeOverrides)}
+                            ${this.generateTableHTML(dates, scheduleData, ceList, workTypeOverrides, dateOverrides)}
                             </table>
                         </div>
                     `;
@@ -995,7 +996,23 @@ fitTableToViewport() {
                 return ce.workType || 'ME';
             }
 
-generateTableHTML(dates, scheduleData, ceList, workTypeOverrides) {
+            generateTableHTML(dates, scheduleData, ceList, workTypeOverrides, dateOverrides = {}) {
+               // 日付オーバーライド対応の休日判定
+                const isWeekendOrHolidayWithOverride = (date) => {
+                    const dateKey = this.formatDate(date);
+                    
+                    // オーバーライドが設定されている場合は優先
+                    if (dateOverrides[dateKey] === 'holiday') {
+                        return true;
+                    }
+                    if (dateOverrides[dateKey] === 'workday') {
+                        return false;
+                    }
+                    
+                    // デフォルトの判定
+                    return date.getDay() === 0 || date.getDay() === 6 || this.isJapaneseHoliday(date);
+                };
+                
     // ヘッダー(No + 氏名)
     let html = '<thead><tr><th class="no-header">No</th><th class="name-header">氏名</th>';
     
@@ -1022,7 +1039,7 @@ generateTableHTML(dates, scheduleData, ceList, workTypeOverrides) {
         dates.forEach(date => {
             const dateKey = this.formatDate(date);
             const workData = scheduleData[ce.id]?.[dateKey] || {};
-            const isWeekendOrHoliday = date.getDay() === 0 || date.getDay() === 6 || this.isJapaneseHoliday(date);
+            const isWeekendOrHoliday = isWeekendOrHolidayWithOverride(date);
             
             // テキスト優先表示の修正
             const displayStatus = workData.customText?.trim() || workData.status || (isWeekendOrHoliday ? '×' : 'A');
@@ -1073,7 +1090,7 @@ generateTableHTML(dates, scheduleData, ceList, workTypeOverrides) {
             let count = 0;
             ceList.forEach(ce => {
                 const workData = scheduleData[ce.id]?.[dateKey] || {};
-                const isWeekendOrHoliday = date.getDay() === 0 || date.getDay() === 6 || this.isJapaneseHoliday(date);
+                const isWeekendOrHoliday = isWeekendOrHolidayWithOverride(date);
                 const status = workData.status || (isWeekendOrHoliday ? '×' : 'A');
                 const effectiveType = this.getEffectiveWorkType(ce.id, dateKey, ceList, workTypeOverrides);
                 if (type.filter(ce, status, effectiveType)) count++;
