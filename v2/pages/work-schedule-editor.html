@@ -2628,12 +2628,20 @@ async saveCEEdit() {
                 return;
             }
 
-            try {
+try {
+    console.log('📂 勤務表読み込み開始:', schedule.title);
+    console.log('📅 期間:', schedule.startDate, '～', schedule.endDate);
+    
     this.scheduleData = schedule.scheduleData || {};
     this.ceList = schedule.ceList || this.ceList;
     this.workTypeOverrides = schedule.workTypeOverrides || {};
     this.dateOverrides = schedule.dateOverrides || {};  // ← 追加
+    
     this.currentPeriod.startDate = this.createDateFromKey(schedule.startDate);
+    this.currentPeriod.endDate = this.createDateFromKey(schedule.endDate);
+    
+    console.log('✅ 期間設定完了:', this.currentPeriod.startDate, '～', this.currentPeriod.endDate);
+    console.log('📅 日付オーバーライド復元:', Object.keys(this.dateOverrides).length, '件');
                 
                 const startInput = document.getElementById('periodStartDate');
                 const endInput = document.getElementById('periodEndDate');
