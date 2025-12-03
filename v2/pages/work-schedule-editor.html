@@ -2772,22 +2772,21 @@ try {
         console.log('🚀 勤務表公開開始:', { periodKey, startKey, endKey });
 
         const publishData = {
-    metadata: {
-        startDate: startKey,
-        endDate: endKey,
-        title: `勤務表（${startKey}～${endKey}）`,
-        createdAt: firebase.database.ServerValue.TIMESTAMP,
-        publishedAt: firebase.database.ServerValue.TIMESTAMP,
-        publishedBy: window.currentUserData?.displayName || 'editor',
-        isVisible: true,
-        version: '2.0'
-    },
-    scheduleData: this.scheduleData,
-    ceList: this.ceList,
-    workTypeOverrides: this.workTypeOverrides,
-    dateOverrides: this.dateOverrides  // ← 追加
-};
-
+            metadata: {
+                startDate: startKey,
+                endDate: endKey,
+                title: `勤務表（${startKey}～${endKey}）`,
+                createdAt: firebase.database.ServerValue.TIMESTAMP,
+                publishedAt: firebase.database.ServerValue.TIMESTAMP,
+                publishedBy: window.currentUserData?.displayName || 'editor',
+                isVisible: true,  // 管理用表示フラグ
+                version: '2.0'    // データ形式バージョン
+            },
+            scheduleData: this.scheduleData,
+            ceList: this.ceList,
+            workTypeOverrides: this.workTypeOverrides,
+            dateOverrides: this.dateOverrides  // ← この行を追加
+        };
 
         // 新形式で保存
         await window.database.ref(`${window.DATA_ROOT}/workSchedules/${periodKey}`).set(publishData);
