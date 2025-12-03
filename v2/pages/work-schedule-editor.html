@@ -990,9 +990,9 @@
 
     <div class="mt-3 pt-3 border-t">
         <div class="text-xs text-gray-500">
-            <i class="fas fa-info-circle mr-1"></i>
-            この設定は保存されません（一時的な変更）
-        </div>
+    <i class="fas fa-info-circle mr-1"></i>
+    この設定は保存・公開時に記録されます
+</div>
     </div>
 </div>
 
@@ -2588,15 +2588,16 @@ async saveCEEdit() {
                 const endStr = this.formatDateDisplay(this.currentPeriod.endDate);
                 
                 const saveData = {
-                    title: title,
-                    period: `${startStr} ～ ${endStr}`,
-                    startDate: this.formatDateKey(this.currentPeriod.startDate),
-                    endDate: this.formatDateKey(this.currentPeriod.endDate),
-                    scheduleData: this.scheduleData,
-                    ceList: this.ceList,
-                    workTypeOverrides: this.workTypeOverrides,
-                    savedAt: firebase.database.ServerValue.TIMESTAMP
-                };
+    title: title,
+    period: `${startStr} ～ ${endStr}`,
+    startDate: this.formatDateKey(this.currentPeriod.startDate),
+    endDate: this.formatDateKey(this.currentPeriod.endDate),
+    scheduleData: this.scheduleData,
+    ceList: this.ceList,
+    workTypeOverrides: this.workTypeOverrides,
+    dateOverrides: this.dateOverrides,  // ← 追加
+    savedAt: firebase.database.ServerValue.TIMESTAMP
+};
                 
                 await window.database.ref(`${window.DATA_ROOT}/savedSchedules/${saveId}`).set(saveData);
                 this.savedSchedules[saveId] = saveData;
@@ -2628,11 +2629,11 @@ async saveCEEdit() {
             }
 
             try {
-                this.scheduleData = schedule.scheduleData || {};
-                this.ceList = schedule.ceList || this.ceList;
-                this.workTypeOverrides = schedule.workTypeOverrides || {};
-                this.currentPeriod.startDate = this.createDateFromKey(schedule.startDate);
-                this.currentPeriod.endDate = this.createDateFromKey(schedule.endDate);
+    this.scheduleData = schedule.scheduleData || {};
+    this.ceList = schedule.ceList || this.ceList;
+    this.workTypeOverrides = schedule.workTypeOverrides || {};
+    this.dateOverrides = schedule.dateOverrides || {};  // ← 追加
+    this.currentPeriod.startDate = this.createDateFromKey(schedule.startDate);
                 
                 const startInput = document.getElementById('periodStartDate');
                 const endInput = document.getElementById('periodEndDate');
@@ -2706,20 +2707,22 @@ async saveCEEdit() {
         console.log('🚀 勤務表公開開始:', { periodKey, startKey, endKey });
 
         const publishData = {
-            metadata: {
-                startDate: startKey,
-                endDate: endKey,
-                title: `勤務表（${startKey}～${endKey}）`,
-                createdAt: firebase.database.ServerValue.TIMESTAMP,
-                publishedAt: firebase.database.ServerValue.TIMESTAMP,
-                publishedBy: window.currentUserData?.displayName || 'editor',
-                isVisible: true,  // 管理用表示フラグ
-                version: '2.0'    // データ形式バージョン
-            },
-            scheduleData: this.scheduleData,
-            ceList: this.ceList,
-            workTypeOverrides: this.workTypeOverrides
-        };
+    metadata: {
+        startDate: startKey,
+        endDate: endKey,
+        title: `勤務表（${startKey}～${endKey}）`,
+        createdAt: firebase.database.ServerValue.TIMESTAMP,
+        publishedAt: firebase.database.ServerValue.TIMESTAMP,
+        publishedBy: window.currentUserData?.displayName || 'editor',
+        isVisible: true,
+        version: '2.0'
+    },
+    scheduleData: this.scheduleData,
+    ceList: this.ceList,
+    workTypeOverrides: this.workTypeOverrides,
+    dateOverrides: this.dateOverrides  // ← 追加
+};
+
 
         // 新形式で保存
         await window.database.ref(`${window.DATA_ROOT}/workSchedules/${periodKey}`).set(publishData);
