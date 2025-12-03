@@ -297,28 +297,6 @@
             location.href = 'admin-dashboard.html';
         }
 
-        function navigateToDashboard(tab) {
-            const uid = sessionStorage.getItem('targetUID');
-            const username = sessionStorage.getItem('currentUsername');
-            const role = sessionStorage.getItem('userRole');
-            
-            if (!uid || !username) {
-                alert('認証情報が見つかりません。再度ログインしてください。');
-                return location.href = '../index.html';
-            }
-            
-            // URLパラメータで認証情報を渡す
-            const params = new URLSearchParams({
-                uid: uid,
-                username: username,
-                role: role || 'viewer',
-                tab: tab,
-                from: 'home'
-            });
-            
-            location.href = `../dashboard.html?${params.toString()}`;
-        }
-
         // 認証確認と初期化
         async function initHome() {
             try {
