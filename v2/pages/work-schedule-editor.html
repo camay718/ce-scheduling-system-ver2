@@ -703,23 +703,26 @@
                             <i class="fas fa-database mr-2"></i>保存・読み込み
                         </h3>
                         <div class="space-y-2">
-                            <div class="flex gap-2">
-                                <input type="text" id="snapshotTitle" class="input-unified text-xs" placeholder="タイトル">
-                                <button id="saveSnapshotBtn" class="btn-unified btn-primary-unified btn-small">
-                                    <i class="fas fa-save"></i>
-                                </button>
-                            </div>
-                            <select id="snapshotSelect" class="input-unified text-xs">
-                                <option value="">保存データを選択</option>
-                            </select>
-                            <div class="flex gap-2">
-                                <button id="loadSnapshotBtn" class="btn-unified btn-outline-unified btn-small flex-1">
-                                    <i class="fas fa-folder-open mr-1"></i>読込
-                                </button>
-                                <button id="deleteSnapshotBtn" class="btn-unified btn-outline-unified btn-small flex-1 text-red-600 border-red-600">
-                                    <i class="fas fa-trash mr-1"></i>削除
-                                </button>
-                            </div>
+<div class="flex gap-2">
+    <input type="text" id="snapshotTitle" class="input-unified text-xs" placeholder="タイトル">
+    <button id="saveSnapshotBtn" class="btn-unified btn-primary-unified btn-small" title="新規保存">
+        <i class="fas fa-save"></i>
+    </button>
+</div>
+<select id="snapshotSelect" class="input-unified text-xs">
+    <option value="">保存データを選択</option>
+</select>
+<div class="flex gap-2">
+    <button id="loadSnapshotBtn" class="btn-unified btn-outline-unified btn-small flex-1">
+        <i class="fas fa-folder-open mr-1"></i>読込
+    </button>
+    <button id="overwriteSnapshotBtn" class="btn-unified btn-success btn-small flex-1" title="選択中のデータを上書き">
+        <i class="fas fa-sync mr-1"></i>上書
+    </button>
+    <button id="deleteSnapshotBtn" class="btn-unified btn-outline-unified btn-small flex-1 text-red-600 border-red-600">
+        <i class="fas fa-trash mr-1"></i>削除
+    </button>
+</div>
                         </div>
                     </div>
 
@@ -1694,17 +1697,20 @@ isWeekendOrHoliday(date) {
 
 const saveBtn = document.getElementById('saveSnapshotBtn');
 const loadBtn = document.getElementById('loadSnapshotBtn');
+const overwriteBtn = document.getElementById('overwriteSnapshotBtn');  // 追加
 const deleteBtn = document.getElementById('deleteSnapshotBtn');
 const publishBtn = document.getElementById('publishScheduleBtn');
 const printBtn = document.getElementById('printScheduleBtn');
-const exportBtn = document.getElementById('exportExcelBtn'); // 追加
+const exportBtn = document.getElementById('exportExcelBtn');
 
 if (saveBtn) saveBtn.onclick = () => this.saveSnapshot();
 if (loadBtn) loadBtn.onclick = () => this.loadSnapshot();
+if (overwriteBtn) overwriteBtn.onclick = () => this.overwriteSnapshot();  // 追加
 if (deleteBtn) deleteBtn.onclick = () => this.deleteSnapshot();
 if (publishBtn) publishBtn.onclick = () => this.publishSchedule();
 if (printBtn) printBtn.onclick = () => this.printSchedule();
-if (exportBtn) exportBtn.onclick = () => this.exportToExcel(); // 追加
+if (exportBtn) exportBtn.onclick = () => this.exportToExcel();
+
 
             const closeMenuBtn = document.getElementById('closeStatusMenu');
             if (closeMenuBtn) {
@@ -2587,7 +2593,7 @@ async saveCEEdit() {
                 const startStr = this.formatDateDisplay(this.currentPeriod.startDate);
                 const endStr = this.formatDateDisplay(this.currentPeriod.endDate);
                 
-                const saveData = {
+const saveData = {
     title: title,
     period: `${startStr} ～ ${endStr}`,
     startDate: this.formatDateKey(this.currentPeriod.startDate),
@@ -2595,9 +2601,10 @@ async saveCEEdit() {
     scheduleData: this.scheduleData,
     ceList: this.ceList,
     workTypeOverrides: this.workTypeOverrides,
-    dateOverrides: this.dateOverrides,  // ← 追加
+    dateOverrides: this.dateOverrides,  // 追加
     savedAt: firebase.database.ServerValue.TIMESTAMP
 };
+
                 
                 await window.database.ref(`${window.DATA_ROOT}/savedSchedules/${saveId}`).set(saveData);
                 this.savedSchedules[saveId] = saveData;
@@ -2656,6 +2663,56 @@ try {
             } catch (error) {
                 console.error('❌ 勤務表読み込みエラー:', error);
                 window.showMessage('勤務表の読み込みに失敗しました', 'error');
+            }
+        }
+
+                async overwriteSnapshot() {
+            const select = document.getElementById('snapshotSelect');
+            const scheduleId = select.value;
+            
+            if (!scheduleId) {
+                window.showMessage('上書きする保存データを選択してください', 'warning');
+                return;
+            }
+
+            const existingSchedule = this.savedSchedules[scheduleId];
+            if (!existingSchedule) {
+                window.showMessage('選択された保存データが見つかりません', 'error');
+                return;
+            }
+
+            if (!confirm(`勤務表「${existingSchedule.title}」を上書き保存しますか？\n\n※元のデータは完全に置き換えられます。`)) {
+                return;
+            }
+
+            try {
+                const startStr = this.formatDateDisplay(this.currentPeriod.startDate);
+                const endStr = this.formatDateDisplay(this.currentPeriod.endDate);
+                
+                const saveData = {
+                    title: existingSchedule.title,
+                    period: `${startStr} ～ ${endStr}`,
+                    startDate: this.formatDateKey(this.currentPeriod.startDate),
+                    endDate: this.formatDateKey(this.currentPeriod.endDate),
+                    scheduleData: this.scheduleData,
+                    ceList: this.ceList,
+                    workTypeOverrides: this.workTypeOverrides,
+                    dateOverrides: this.dateOverrides,
+                    savedAt: firebase.database.ServerValue.TIMESTAMP,
+                    overwrittenAt: firebase.database.ServerValue.TIMESTAMP
+                };
+                
+                await window.database.ref(`${window.DATA_ROOT}/savedSchedules/${scheduleId}`).set(saveData);
+                this.savedSchedules[scheduleId] = saveData;
+                
+                this.updateSnapshotSelect();
+                window.showMessage(`勤務表「${existingSchedule.title}」を上書き保存しました`, 'success');
+                
+                console.log('✅ 上書き保存完了:', scheduleId, existingSchedule.title);
+                
+            } catch (error) {
+                console.error('❌ 勤務表上書き保存エラー:', error);
+                window.showMessage('勤務表の上書き保存に失敗しました', 'error');
             }
         }
 
