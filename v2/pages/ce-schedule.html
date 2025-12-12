@@ -710,44 +710,70 @@ this.footerTypes = [
                 }
             }
 
-            async loadAvailablePeriods() {
-                try {
-                    const snapshot = await window.database.ref(`${window.DATA_ROOT}/workSchedules`).once('value');
-                    const data = snapshot.val() || {};
-                    
-                    const today = new Date().toISOString().slice(0, 10);
-                    
-                    this.availablePeriods = Object.keys(data)
-                        .map(periodKey => ({
-                            key: periodKey,
-                            ...data[periodKey].metadata
-                        }))
-                        .filter(period => {
-                            // 管理者以外は非公開を除外
-                            if (window.userRole !== 'admin' && period.isVisible === false) {
-                                return false;
-                            }
-                            
-                            // フィルタ適用
-                            return this.applyTimeFilter(period, today);
-                        })
-                        .sort((a, b) => (b.publishedAt || b.createdAt || 0) - (a.publishedAt || a.createdAt || 0));
-                    
-                    if (this.availablePeriods.length > 0) {
-                        if (this.currentPeriodIndex >= this.availablePeriods.length) {
-                            this.currentPeriodIndex = 0;
-                        }
-                        this.displayCurrentPeriod();
-                    } else {
-                        this.displayNoPeriods();
-                    }
-                    
-                    console.log(`✅ 公開勤務表読み込み完了: ${this.availablePeriods.length}件`);
-                } catch (error) {
-                    console.error('❌ 期間データ読み込みエラー:', error);
-                    window.showMessage('勤務表データの読み込みに失敗しました', 'error');
+async loadAvailablePeriods() {
+    try {
+        const snapshot = await window.database.ref(`${window.DATA_ROOT}/workSchedules`).once('value');
+        const data = snapshot.val() || {};
+        
+        const today = new Date().toISOString().slice(0, 10);
+        
+        // 1. フィルタリング
+        this.availablePeriods = Object.keys(data)
+            .map(periodKey => ({
+                key: periodKey,
+                ...data[periodKey].metadata
+            }))
+            .filter(period => {
+                // 管理者以外は非公開を除外
+                if (window.userRole !== 'admin' && period.isVisible === false) {
+                    return false;
                 }
+                
+                // フィルタ適用
+                return this.applyTimeFilter(period, today);
+            })
+            // 2. ★★★ 時系列ソート(期間開始日順: 古い→新しい) ★★★
+            .sort((a, b) => {
+                const dateA = a.startDate || '';
+                const dateB = b.startDate || '';
+                return dateA.localeCompare(dateB);
+            });
+        
+        if (this.availablePeriods.length > 0) {
+            // 3. ★★★ アクセス日を含む勤務表を検索 ★★★
+            const periodsContainingToday = this.availablePeriods
+                .map((period, index) => ({ period, index }))
+                .filter(({ period }) => {
+                    return today >= period.startDate && today <= period.endDate;
+                });
+            
+            if (periodsContainingToday.length > 0) {
+                // 4. ★★★ 複数ある場合は最新版(公開日時が新しい方)を選択 ★★★
+                periodsContainingToday.sort((a, b) => {
+                    const timeA = a.period.publishedAt || a.period.createdAt || 0;
+                    const timeB = b.period.publishedAt || b.period.createdAt || 0;
+                    return timeB - timeA; // 新しい順
+                });
+                
+                this.currentPeriodIndex = periodsContainingToday[0].index;
+                console.log(`📅 アクセス日(${today})を含む勤務表を選択: ${periodsContainingToday[0].period.startDate} ～ ${periodsContainingToday[0].period.endDate}`);
+            } else {
+                // アクセス日を含む勤務表がない場合は、最新の勤務表を選択
+                this.currentPeriodIndex = this.availablePeriods.length - 1;
+                console.log('📅 アクセス日を含む勤務表なし、最新の勤務表を選択');
             }
+            
+            this.displayCurrentPeriod();
+        } else {
+            this.displayNoPeriods();
+        }
+        
+        console.log(`✅ 公開勤務表読み込み完了: ${this.availablePeriods.length}件 (時系列ソート済み)`);
+    } catch (error) {
+        console.error('❌ 期間データ読み込みエラー:', error);
+        window.showMessage('勤務表データの読み込みに失敗しました', 'error');
+    }
+}
 
             applyTimeFilter(period, today) {
                 const showFuture = document.getElementById('showFuture')?.checked;
