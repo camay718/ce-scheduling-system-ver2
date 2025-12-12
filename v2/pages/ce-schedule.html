@@ -664,13 +664,14 @@ this.footerTypes = [
                     createBtn.onclick = () => this.openScheduleEditor();
                 }
 
-                // 期間ナビゲーション（修正済み）
-                const prevBtn = document.getElementById('prevPeriodBtn');
-                const nextBtn = document.getElementById('nextPeriodBtn');
-                
-                // 修正: 「前の期間」は古い期間(+1)、「次の期間」は新しい期間(-1)
-                if (prevBtn) prevBtn.onclick = () => this.navigatePeriod(1);
-                if (nextBtn) nextBtn.onclick = () => this.navigatePeriod(-1);
+// 期間ナビゲーション
+const prevBtn = document.getElementById('prevPeriodBtn');
+const nextBtn = document.getElementById('nextPeriodBtn');
+
+// 「前の期間」は新しい期間(-1)、「次の期間」は古い期間(+1)
+// ※配列は古い順(開始日昇順)なので、インデックスが大きいほど新しい
+if (prevBtn) prevBtn.onclick = () => this.navigatePeriod(-1);
+if (nextBtn) nextBtn.onclick = () => this.navigatePeriod(1);
 
                 // フィルタ変更
                 ['showFuture', 'showPast', 'showAll', 'showHidden'].forEach(id => {
@@ -821,13 +822,13 @@ async loadAvailablePeriods() {
                 await this.renderWorkScheduleTable(currentPeriod.key);
             }
             
-            reattachPeriodControls() {
-                // 期間ナビゲーションボタンのイベントリスナーを再設定
-                const prevBtn = document.getElementById('prevPeriodBtn');
-                const nextBtn = document.getElementById('nextPeriodBtn');
-                
-                if (prevBtn) prevBtn.onclick = () => this.navigatePeriod(1);
-                if (nextBtn) nextBtn.onclick = () => this.navigatePeriod(-1);
+reattachPeriodControls() {
+    // 期間ナビゲーションボタンのイベントリスナーを再設定
+    const prevBtn = document.getElementById('prevPeriodBtn');
+    const nextBtn = document.getElementById('nextPeriodBtn');
+    
+    if (prevBtn) prevBtn.onclick = () => this.navigatePeriod(-1);
+    if (nextBtn) nextBtn.onclick = () => this.navigatePeriod(1);
                 
                 // 管理者コントロールを表示
                 const adminControlsEl = document.getElementById('adminControlsContainer');
