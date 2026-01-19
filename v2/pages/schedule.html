@@ -1085,109 +1085,131 @@ if (templateManagerBtn && !templateManagerBtn.dataset.bound) {
                 }
             }
 
-            // CEリストをサイドバーに3列表示（完全修正版）
-            displayCEListInSidebar() {
-                const container = document.getElementById('ceListContainer');
-                if (!container) {
-                    console.error('❌ CEリストコンテナが見つかりません');
-                    return;
-                }
+// CEリストをサイドバーに3列表示（ローテーション勤務区分対応版）
+displayCEListInSidebar() {
+    const container = document.getElementById('ceListContainer');
+    if (!container) {
+        console.error('❌ CEリストコンテナが見つかりません');
+        return;
+    }
 
-                if (!window.ceManager?.ceList) {
-                    console.warn('⚠️ CEリストが未読み込み');
-                    return;
-                }
+    if (!window.ceManager?.ceList) {
+        console.warn('⚠️ CEリストが未読み込み');
+        return;
+    }
 
-                container.innerHTML = '';
-                container.className = 'ce-grid ce-grid-3col'; // 互換性確保
+    container.innerHTML = '';
+    container.className = 'ce-grid ce-grid-3col'; // 互換性確保
 
-                window.ceManager.ceList.forEach((ce, index) => {
-                    const item = document.createElement('div');
-                    item.className = 'ce-item';
-                    item.draggable = true;
-                    item.dataset.ceId = ce.id;
-                    item.dataset.ceName = ce.iconName || ce.displayName || ce.name;
-                    item.dataset.workType = ce.workType || 'ME';
-                    
-                    // 基本の勤務区分クラスを追加
-                    item.classList.add(`worktype-${(ce.workType || 'ME').toLowerCase()}`);
-                    
-                    item.textContent = ce.iconName || ce.displayName || ce.name;
-                    
-                    // ドラッグイベント
-                    item.addEventListener('dragstart', (e) => {
-                        if (window.userRole === 'viewer') {
-                            e.preventDefault();
-                            return;
-                        }
+    window.ceManager.ceList.forEach((ce) => {
+        const item = document.createElement('div');
+        item.className = 'ce-item';
+        item.draggable = true;
 
-                        const ceData = {
-                            ceId: ce.id,
-                            ceName: ce.iconName || ce.displayName || ce.name,
-                            workType: ce.workType || 'ME'
-                        };
+        const ceName = ce.iconName || ce.displayName || ce.name;
+        const baseWorkType = ce.workType || 'ME';
 
-                        e.dataTransfer.setData('text/plain', JSON.stringify(ceData));
-                        e.dataTransfer.setData('application/json', JSON.stringify(ceData));
-                        e.dataTransfer.effectAllowed = 'copy';
-                        
-                        item.classList.add('dragging');
-                        item.style.opacity = '0.5';
-                    });
+        item.dataset.ceId = ce.id;
+        item.dataset.ceName = ceName;
 
-                    item.addEventListener('dragend', () => {
-                        item.classList.remove('dragging');
-                        item.style.opacity = '';
-                    });
+        // まずは暫定（後段の syncWorkTypeColorsForDate / applyCEStatusToList で上書きされる）
+        item.dataset.workType = baseWorkType;
+        item.classList.add(`worktype-${String(baseWorkType).toLowerCase()}`);
 
-                    container.appendChild(item);
-                });
+        item.textContent = ceName;
 
-                console.log('✅ CEリスト表示完了:', window.ceManager.ceList.length, '名');
+        // ドラッグイベント
+        item.addEventListener('dragstart', (e) => {
+            if (window.userRole === 'viewer') {
+                e.preventDefault();
+                return;
             }
 
-            renderDailySchedule() {
-                const title = document.getElementById('scheduleTitle');
-                const grid = document.getElementById('departmentGrid');
-                
-                if (title && document.getElementById('dailyScheduleContent').style.display !== 'none') {
-                    const dateStr = this.selectedDate.toLocaleDateString('ja-JP', { 
-                        year: 'numeric', 
-                        month: 'long', 
-                        day: 'numeric', 
-                        weekday: 'short' 
-                    });
-                    title.textContent = `日別スケジュール（${dateStr}）`;
-                }
+            // ★重要: その日のローテーション反映済みdatasetを使用
+            const ceData = {
+                ceId: ce.id,
+                ceName: ceName,
+                workType: item.dataset.workType || baseWorkType
+            };
 
-                if (window.ceManager) {
-                    window.ceManager.currentDisplayDate = this.selectedDate;
-                    this.displayCEListInSidebar();
-                }
+            e.dataTransfer.setData('text/plain', JSON.stringify(ceData));
+            e.dataTransfer.setData('application/json', JSON.stringify(ceData));
+            e.dataTransfer.effectAllowed = 'copy';
 
-                if (!grid) return;
+            item.classList.add('dragging');
+            item.style.opacity = '0.5';
+        });
 
-                grid.innerHTML = '';
-                grid.className = 'grid grid-cols-3 gap-4 mb-6';
+        item.addEventListener('dragend', () => {
+            item.classList.remove('dragging');
+            item.style.opacity = '';
+        });
 
-                if (window.DEPARTMENTS) {
-                    window.DEPARTMENTS.forEach(dept => {
-                        const section = this.createDepartmentSection(dept);
-                        grid.appendChild(section);
-                    });
-                }
+        container.appendChild(item);
+    });
 
-                this.updateCEListCount();
-                this.loadAndRenderEventsForSelectedDate();
+    console.log('✅ CEリスト表示完了:', window.ceManager.ceList.length, '名');
+}
 
-                // 公開勤務表連動の適用
-                const dateKey = this.formatDate(this.selectedDate);
-                setTimeout(() => {
-                    if (window.publishedScheduleResolver) {
-                        window.publishedScheduleResolver.applyCEStatusToList(dateKey);
-                    }
-                }, 500);
+renderDailySchedule() {
+    const title = document.getElementById('scheduleTitle');
+    const grid = document.getElementById('departmentGrid');
+
+    if (title && document.getElementById('dailyScheduleContent').style.display !== 'none') {
+        const dateStr = this.selectedDate.toLocaleDateString('ja-JP', {
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric',
+            weekday: 'short'
+        });
+        title.textContent = `日別スケジュール（${dateStr}）`;
+    }
+
+    // 左のCE一覧（まずは描画）
+    if (window.ceManager) {
+        window.ceManager.currentDisplayDate = this.selectedDate;
+        this.displayCEListInSidebar();
+    }
+
+    if (!grid) return;
+
+    // 部門枠を作り直し
+    grid.innerHTML = '';
+    grid.className = 'grid grid-cols-3 gap-4 mb-6';
+
+    if (window.DEPARTMENTS) {
+        window.DEPARTMENTS.forEach(dept => {
+            const section = this.createDepartmentSection(dept);
+            grid.appendChild(section);
+        });
+    }
+
+    // 表示更新
+    this.updateCEListCount();
+
+    // イベント描画（非同期）
+    this.loadAndRenderEventsForSelectedDate();
+
+    // 公開勤務表連動の適用（statusバッジ + worktype）＋ 色同期（workTypeOverrides反映）
+    const dateKey = this.formatDate(this.selectedDate);
+
+    setTimeout(async () => {
+        try {
+            if (window.publishedScheduleResolver) {
+                // 左CE一覧の status + workType を published schedule で上書き
+                await window.publishedScheduleResolver.applyCEStatusToList(dateKey);
             }
+
+            // ★追加: workType色を最終同期（左CE一覧＆全CEチップ）
+            // applyCEStatusToList の後に呼ぶことで、表示が戻るのを防ぎます
+            if (typeof this.syncWorkTypeColorsForDate === 'function') {
+                await this.syncWorkTypeColorsForDate(dateKey);
+            }
+        } catch (e) {
+            console.warn('⚠️ 公開勤務表連動/色同期に失敗:', e);
+        }
+    }, 500);
+}
 
             createDepartmentSection(dept) {
                 const section = document.createElement('div');
@@ -1979,154 +2001,162 @@ getStartOfWeek(date) {
                 }
             }
 
-            // dashboard.htmlからloadAndRenderEventsForSelectedDateメソッドを完全移植
-            async loadAndRenderEventsForSelectedDate() {
-                const grid = document.getElementById('departmentGrid');
-                if (!grid) return;
+// dashboard.htmlからloadAndRenderEventsForSelectedDateメソッドを完全移植（ローテーション勤務区分同期を追加）
+async loadAndRenderEventsForSelectedDate() {
+    const grid = document.getElementById('departmentGrid');
+    if (!grid) return;
 
-                const dateKey = this.formatDate(this.selectedDate);
-                try {
-                    const snap = await window.database.ref(`${window.DATA_ROOT}/events/byDate/${dateKey}`).once('value');
-                    const eventsById = snap.val() || {};
-                    const events = Object.values(eventsById);
+    const dateKey = this.formatDate(this.selectedDate);
 
-                    // 既存のイベントカードをクリア
-                    grid.querySelectorAll('.task-list').forEach(el => {
-                        el.querySelectorAll('.event-card').forEach(card => card.remove());
-                    });
+    try {
+        const snap = await window.database.ref(`${window.DATA_ROOT}/events/byDate/${dateKey}`).once('value');
+        const eventsById = snap.val() || {};
+        const events = Object.values(eventsById);
 
-                    // イベントを部門ごとに表示
-                    for (const ev of events) {
-                        const section = grid.querySelector(`.task-list[data-department="${ev.department}"]`);
-                        if (!section) continue;
+        // 既存のイベントカードをクリア
+        grid.querySelectorAll('.task-list').forEach(el => {
+            el.querySelectorAll('.event-card').forEach(card => card.remove());
+        });
 
-                        const item = document.createElement('div');
-                        item.className = 'glass-card p-3 mb-2 rounded-lg shadow-sm event-card';
-                        item.dataset.eventId = ev.id;
-                        item.dataset.dateKey = dateKey;
-                        item.dataset.department = ev.department;
+        // イベントを部門ごとに表示
+        for (const ev of events) {
+            const section = grid.querySelector(`.task-list[data-department="${ev.department}"]`);
+            if (!section) continue;
 
-                        // ドロップイベントリスナー
-                        item.addEventListener('dragover', (e) => this.handleEventDragOver(e));
-                        item.addEventListener('dragleave', (e) => this.handleEventDragLeave(e));
-                        item.addEventListener('drop', (e) => this.handleEventDrop(e));
+            const item = document.createElement('div');
+            item.className = 'glass-card p-3 mb-2 rounded-lg shadow-sm event-card';
+            item.dataset.eventId = ev.id;
+            item.dataset.dateKey = dateKey;
+            item.dataset.department = ev.department;
 
-                        const timeText = (ev.startTime && ev.endTime) ? ` ${ev.startTime}-${ev.endTime}` : '';
+            // ドロップイベントリスナー
+            item.addEventListener('dragover', (e) => this.handleEventDragOver(e));
+            item.addEventListener('dragleave', (e) => this.handleEventDragLeave(e));
+            item.addEventListener('drop', (e) => this.handleEventDrop(e));
 
-                        // assignedCEsの互換処理
-                        const assignedList = Array.isArray(ev.assignedCEs) ? ev.assignedCEs : [];
-                        const normalizedAssigned = assignedList.map(entry => {
-                            if (typeof entry === 'string') {
-                                const ce = window.ceManager?.ceList?.find(c => c.id === entry);
-                                return ce ? { 
-                                    id: ce.id, 
-                                    name: ce.iconName || ce.displayName || ce.name, 
-                                    workType: ce.workType || 'ME' 
-                                } : { id: entry, name: entry, workType: 'ME' };
-                            } else if (entry && typeof entry === 'object') {
-                                return { 
-                                    id: entry.id, 
-                                    name: entry.name, 
-                                    workType: entry.workType || 'ME' 
-                                };
-                            }
-                            return null;
-                        }).filter(Boolean);
+            const timeText = (ev.startTime && ev.endTime) ? ` ${ev.startTime}-${ev.endTime}` : '';
 
-                        const assignedCount = normalizedAssigned.length;
-                        const need = Number.isFinite(ev.requiredPeople) ? ev.requiredPeople : 0;
-
-                        // 配置済みCEチップの生成（勤務区分連動）
-                        const assignedCEChips = [];
-                        for (const assigned of normalizedAssigned) {
-                            let effectiveWorkType = assigned.workType || 'ME';
-                            
-                            // 勤務表連動で実際の勤務区分を取得
-                            if (window.publishedScheduleResolver) {
-                                try {
-                                    const workStatus = await window.publishedScheduleResolver.getCEWorkStatusForDate(assigned.id, dateKey);
-                                    if (workStatus && workStatus.workType) {
-                                        effectiveWorkType = workStatus.workType;
-                                    }
-                                } catch (statusError) {
-                                    console.warn('⚠️ 勤務状態取得失敗:', assigned.name, statusError);
-                                }
-                            }
-                            
-                            assignedCEChips.push(`
-                                <span class="ce-chip worktype-${effectiveWorkType.toLowerCase()}" data-ce-id="${assigned.id}" title="${assigned.name}">
-                                    ${assigned.name}
-                                    ${window.userRole !== 'viewer' ? `<i class="fas fa-times remove-ce" title="配置解除"></i>` : ''}
-                                </span>
-                            `);
-                        }
-
-                        const assignedCEChipsHtml = assignedCEChips.join('');
-
-                        // 予定件数の表示
-                        const countDisplay = Number.isFinite(ev.count) && ev.count > 0 ? 
-                            `<div class="event-count-display">予定件数: ${ev.count}件</div>` : '';
-
-                        item.innerHTML = `
-                            <div class="flex justify-between items-center mb-2">
-                                <div class="font-semibold text-sm">
-                                    <i class="fas fa-briefcase mr-1"></i>${ev.name}${timeText}
-                                </div>
-                                <div class="text-xs text-gray-500">${assignedCount}/${need}名</div>
-                            </div>
-                            ${countDisplay}
-                            ${ev.description ? `<div class="text-xs text-gray-600 mb-2">${ev.description}</div>` : ''}
-                            <div class="assigned-ces">
-                                ${assignedCEChipsHtml}
-                            </div>
-                            <div class="text-xs text-gray-400 mt-2 italic">CEをドラッグ&ドロップで配置</div>
-                            ${window.userRole !== 'viewer' ? `<button class="edit-event-btn text-blue-600 hover:text-blue-800 text-xs mt-2">
-                                <i class="fas fa-edit mr-1"></i>編集
-                            </button>` : ''}
-                        `;
-
-                        // 編集ボタンのイベント
-                        const editBtn = item.querySelector('.edit-event-btn');
-                        if (editBtn) {
-                            editBtn.addEventListener('click', (e) => {
-                                e.stopPropagation();
-                                this.openEditEventModal(dateKey, ev.id, ev);
-                            });
-                        }
-
-                        // 配置解除ボタンのイベント
-                        const removeButtons = item.querySelectorAll('.remove-ce');
-                        removeButtons.forEach(removeBtn => {
-                            removeBtn.addEventListener('click', async (e) => {
-                                e.stopPropagation();
-                                const chip = e.currentTarget.closest('.ce-chip');
-                                const ceId = chip?.dataset?.ceId;
-                                if (ceId) {
-                                    await this.unassignCE(dateKey, ev.id, ceId);
-                                }
-                            });
-                        });
-
-                        section.appendChild(item);
-                    }
-
-                    // CEアイテムにドラッグ機能を有効化
-                    setTimeout(() => {
-                        this.enableCEDragging();
-                    }, 100);
-
-                    // 月次業務の表示
-                    await this.renderMonthlyTasks();
-
-                    // 集計の更新
-                    this.updateDailySummary().catch(console.error);
-                    console.log(`✅ ${dateKey} のイベント表示完了: ${events.length}件`);
-
-                } catch (error) {
-                    console.error('❌ 日別イベント読み込みエラー:', error);
-                    window.showMessage('イベントの読み込みに失敗しました', 'error');
+            // assignedCEsの互換処理
+            const assignedList = Array.isArray(ev.assignedCEs) ? ev.assignedCEs : [];
+            const normalizedAssigned = assignedList.map(entry => {
+                if (typeof entry === 'string') {
+                    const ce = window.ceManager?.ceList?.find(c => c.id === entry);
+                    return ce ? {
+                        id: ce.id,
+                        name: ce.iconName || ce.displayName || ce.name,
+                        workType: ce.workType || 'ME'
+                    } : { id: entry, name: entry, workType: 'ME' };
+                } else if (entry && typeof entry === 'object') {
+                    return {
+                        id: entry.id,
+                        name: entry.name,
+                        workType: entry.workType || 'ME'
+                    };
                 }
+                return null;
+            }).filter(Boolean);
+
+            const assignedCount = normalizedAssigned.length;
+            const need = Number.isFinite(ev.requiredPeople) ? ev.requiredPeople : 0;
+
+            // 配置済みCEチップの生成（勤務区分連動）
+            const assignedCEChips = [];
+            for (const assigned of normalizedAssigned) {
+                let effectiveWorkType = assigned.workType || 'ME';
+
+                // 勤務表連動で実際の勤務区分を取得（workTypeOverrides反映）
+                if (window.publishedScheduleResolver) {
+                    try {
+                        const workStatus = await window.publishedScheduleResolver.getCEWorkStatusForDate(assigned.id, dateKey);
+                        if (workStatus && workStatus.workType) {
+                            effectiveWorkType = workStatus.workType;
+                        }
+                    } catch (statusError) {
+                        console.warn('⚠️ 勤務状態取得失敗:', assigned.name, statusError);
+                    }
+                }
+
+                assignedCEChips.push(`
+                    <span class="ce-chip worktype-${String(effectiveWorkType).toLowerCase()}" data-ce-id="${assigned.id}" title="${assigned.name}">
+                        ${assigned.name}
+                        ${window.userRole !== 'viewer' ? `<i class="fas fa-times remove-ce" title="配置解除"></i>` : ''}
+                    </span>
+                `);
             }
+
+            const assignedCEChipsHtml = assignedCEChips.join('');
+
+            // 予定件数の表示
+            const countDisplay = Number.isFinite(ev.count) && ev.count > 0
+                ? `<div class="event-count-display">予定件数: ${ev.count}件</div>`
+                : '';
+
+            item.innerHTML = `
+                <div class="flex justify-between items-center mb-2">
+                    <div class="font-semibold text-sm">
+                        <i class="fas fa-briefcase mr-1"></i>${ev.name}${timeText}
+                    </div>
+                    <div class="text-xs text-gray-500">${assignedCount}/${need}名</div>
+                </div>
+                ${countDisplay}
+                ${ev.description ? `<div class="text-xs text-gray-600 mb-2">${ev.description}</div>` : ''}
+                <div class="assigned-ces">
+                    ${assignedCEChipsHtml}
+                </div>
+                <div class="text-xs text-gray-400 mt-2 italic">CEをドラッグ&ドロップで配置</div>
+                ${window.userRole !== 'viewer' ? `<button class="edit-event-btn text-blue-600 hover:text-blue-800 text-xs mt-2">
+                    <i class="fas fa-edit mr-1"></i>編集
+                </button>` : ''}
+            `;
+
+            // 編集ボタンのイベント
+            const editBtn = item.querySelector('.edit-event-btn');
+            if (editBtn) {
+                editBtn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    this.openEditEventModal(dateKey, ev.id, ev);
+                });
+            }
+
+            // 配置解除ボタンのイベント
+            const removeButtons = item.querySelectorAll('.remove-ce');
+            removeButtons.forEach(removeBtn => {
+                removeBtn.addEventListener('click', async (e) => {
+                    e.stopPropagation();
+                    const chip = e.currentTarget.closest('.ce-chip');
+                    const ceId = chip?.dataset?.ceId;
+                    if (ceId) {
+                        await this.unassignCE(dateKey, ev.id, ceId);
+                    }
+                });
+            });
+
+            section.appendChild(item);
+        }
+
+        // CEアイテムにドラッグ機能を有効化
+        setTimeout(() => {
+            this.enableCEDragging();
+        }, 100);
+
+        // 月次業務の表示
+        await this.renderMonthlyTasks();
+
+        // 集計の更新
+        this.updateDailySummary().catch(console.error);
+
+        console.log(`✅ ${dateKey} のイベント表示完了: ${events.length}件`);
+
+        // ★追加: 描画後にworkType色を再同期（ローテーション勤務区分取りこぼし防止）
+        if (typeof this.syncWorkTypeColorsForDate === 'function') {
+            await this.syncWorkTypeColorsForDate(dateKey);
+        }
+
+    } catch (error) {
+        console.error('❌ 日別イベント読み込みエラー:', error);
+        window.showMessage('イベントの読み込みに失敗しました', 'error');
+    }
+}
 
 // renderMonthlyTasks メソッドの修正（日別実施件数・時間対応版）
 async renderMonthlyTasks() {
