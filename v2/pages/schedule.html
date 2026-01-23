@@ -852,6 +852,77 @@ constructor() {
     this.templatesCallback = null;
 }
 
+                /**
+     * 公開勤務表（publishedScheduleResolver）から、指定日の「実効workType」を解決する
+     * - workTypeOverrides を含んだ workType が返る
+     * - 取得できなければ fallbackWorkType
+     */
+    async resolveEffectiveWorkType(ceId, dateKey, fallbackWorkType = 'ME') {
+        if (!window.publishedScheduleResolver) return fallbackWorkType;
+
+        try {
+            const workStatus = await window.publishedScheduleResolver.getCEWorkStatusForDate(ceId, dateKey);
+            if (workStatus?.workType) return workStatus.workType;
+        } catch (e) {
+            console.warn('⚠️ resolveEffectiveWorkType failed:', ceId, dateKey, e);
+        }
+        return fallbackWorkType;
+    }
+
+    /**
+     * worktype-* クラスをDOM要素に適用（既存クラスをクリアしてから付与）
+     * - workType === 'ERROR' の場合は worktype-error
+     * - dataset.workType も合わせて更新
+     */
+    applyWorkTypeClassToElement(el, workType) {
+        if (!el) return;
+
+        el.classList.remove(
+            'worktype-ope',
+            'worktype-me',
+            'worktype-hd',
+            'worktype-flex',
+            'worktype-error'
+        );
+
+        const normalized = (workType || 'ME');
+
+        if (normalized === 'ERROR') {
+            el.classList.add('worktype-error');
+        } else {
+            el.classList.add(`worktype-${String(normalized).toLowerCase()}`);
+        }
+
+        el.dataset.workType = normalized;
+    }
+
+    /**
+     * 日別画面の「色」同期（workTypeOverrides反映）
+     * - 左CE一覧（#ceListContainer .ce-item）
+     * - 画面内の全CEチップ（.ce-chip[data-ce-id]）※イベント/月次含む
+     *
+     * 注意: この関数は「表示の色」を最終的に合わせるためのもの。
+     *      D&Dで使うworkTypeは dataset.workType を参照する前提で整合する。
+     */
+    async syncWorkTypeColorsForDate(dateKey) {
+        // 1) 左CE一覧（ドラッグ元）
+        const ceItems = document.querySelectorAll('#ceListContainer .ce-item');
+        for (const item of ceItems) {
+            const ceId = item.dataset.ceId;
+            const fallback = item.dataset.workType || 'ME';
+            const effective = await this.resolveEffectiveWorkType(ceId, dateKey, fallback);
+            this.applyWorkTypeClassToElement(item, effective);
+        }
+
+        // 2) イベント/月次カード内の割当CEチップ
+        const chips = document.querySelectorAll('.ce-chip[data-ce-id]');
+        for (const chip of chips) {
+            const ceId = chip.dataset.ceId;
+            const effective = await this.resolveEffectiveWorkType(ceId, dateKey, 'ME');
+            this.applyWorkTypeClassToElement(chip, effective);
+        }
+    }
+            
             async init() {
                 if (this.isInitialized) return;
                 this.isInitialized = true;
