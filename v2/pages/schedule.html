@@ -1078,22 +1078,48 @@ console.log('✅ スケジュール管理初期化完了');
                 }
 
                 // 日付ナビゲーション
-                const datePicker = document.getElementById('scheduleDatePicker');
-                if (datePicker) {
-                    datePicker.value = this.formatDate(this.selectedDate);
-                    datePicker.onchange = (e) => {
-                        this.selectedDate = new Date(e.target.value + 'T00:00:00');
-                        this.renderDailySchedule();
-                    };
-                }
+const datePicker = document.getElementById('scheduleDatePicker');
+if (datePicker) {
+    datePicker.value = this.formatDate(this.selectedDate);
+    datePicker.onchange = async (e) => {
+        this.selectedDate = new Date(e.target.value + 'T00:00:00');
+        await this.renderDailySchedule();
+        // ★追加: 日付変更時にCEリストの勤務区分表示を更新
+        const dateKey = this.formatDate(this.selectedDate);
+        if (window.publishedScheduleResolver && typeof window.publishedScheduleResolver.applyCEStatusToList === 'function') {
+            await window.publishedScheduleResolver.applyCEStatusToList(dateKey);
+        }
+    };
+}
 
-                const prev = document.getElementById('prevDayBtn');
-                const next = document.getElementById('nextDayBtn');
-                const today = document.getElementById('todayBtn');
-                
-                if (prev) prev.onclick = () => this.navigateDay(-1);
-                if (next) next.onclick = () => this.navigateDay(1);
-                if (today) today.onclick = () => this.goToToday();
+const prev = document.getElementById('prevDayBtn');
+const next = document.getElementById('nextDayBtn');
+const today = document.getElementById('todayBtn');
+
+if (prev) prev.onclick = async () => {
+    await this.navigateDay(-1);
+    // ★追加: 日付ナビゲーション後にCEリスト更新
+    const dateKey = this.formatDate(this.selectedDate);
+    if (window.publishedScheduleResolver && typeof window.publishedScheduleResolver.applyCEStatusToList === 'function') {
+        await window.publishedScheduleResolver.applyCEStatusToList(dateKey);
+    }
+};
+if (next) next.onclick = async () => {
+    await this.navigateDay(1);
+    // ★追加: 日付ナビゲーション後にCEリスト更新
+    const dateKey = this.formatDate(this.selectedDate);
+    if (window.publishedScheduleResolver && typeof window.publishedScheduleResolver.applyCEStatusToList === 'function') {
+        await window.publishedScheduleResolver.applyCEStatusToList(dateKey);
+    }
+};
+if (today) today.onclick = async () => {
+    await this.goToToday();
+    // ★追加: 今日に戻った後にCEリスト更新
+    const dateKey = this.formatDate(this.selectedDate);
+    if (window.publishedScheduleResolver && typeof window.publishedScheduleResolver.applyCEStatusToList === 'function') {
+        await window.publishedScheduleResolver.applyCEStatusToList(dateKey);
+    }
+};
 
                 // 業務追加ボタン（EventManagerとの連携強化）
                 const addBtn = document.getElementById('addEventButtonDaily');
@@ -2813,28 +2839,44 @@ const currentDayAssigned = Array.isArray(assignedCEs[dateKey]) ? assignedCEs[dat
                         newItem.dataset.workType = ce.workType || 'ME';
                     }
 
-                    // ドラッグイベント
-                    newItem.addEventListener('dragstart', (e) => {
-                        if (window.userRole === 'viewer') {
-                            e.preventDefault();
-                            return;
-                        }
+// ドラッグイベント
+newItem.addEventListener('dragstart', async (e) => {
+    if (window.userRole === 'viewer') {
+        e.preventDefault();
+        return;
+    }
 
-                        const ceData = {
-                            ceId: newItem.dataset.ceId,
-                            ceName: newItem.dataset.ceName,
-                            workType: newItem.dataset.workType || 'ME'
-                        };
+    // ★重要: ドラッグ開始時に現在の日付で実効workTypeを取得
+    const dateKey = this.formatDate(this.selectedDate);
+    let effectiveWorkType = newItem.dataset.workType || 'ME';
+    
+    if (window.publishedScheduleResolver) {
+        try {
+            const workStatus = await window.publishedScheduleResolver.getCEWorkStatusForDate(newItem.dataset.ceId, dateKey);
+            if (workStatus && workStatus.workType) {
+                effectiveWorkType = workStatus.workType;
+                console.log(`🔄 ${newItem.dataset.ceName} の実効workType取得: ${effectiveWorkType} (${dateKey})`);
+            }
+        } catch (error) {
+            console.warn('⚠️ ドラッグ時の実効workType取得失敗:', error);
+        }
+    }
 
-                        e.dataTransfer.setData('text/plain', JSON.stringify(ceData));
-                        e.dataTransfer.setData('application/json', JSON.stringify(ceData));
-                        e.dataTransfer.effectAllowed = 'copy';
-                        
-                        newItem.classList.add('dragging');
-                        newItem.style.opacity = '0.5';
-                        
-                        console.log('🎯 CEドラッグ開始:', ceData);
-                    });
+    const ceData = {
+        ceId: newItem.dataset.ceId,
+        ceName: newItem.dataset.ceName,
+        workType: effectiveWorkType  // ★修正: 実効workTypeを使用
+    };
+
+    e.dataTransfer.setData('text/plain', JSON.stringify(ceData));
+    e.dataTransfer.setData('application/json', JSON.stringify(ceData));
+    e.dataTransfer.effectAllowed = 'copy';
+    
+    newItem.classList.add('dragging');
+    newItem.style.opacity = '0.5';
+    
+    console.log('🎯 CEドラッグ開始:', ceData);
+});
 
                     newItem.addEventListener('dragend', () => {
                         newItem.classList.remove('dragging');
