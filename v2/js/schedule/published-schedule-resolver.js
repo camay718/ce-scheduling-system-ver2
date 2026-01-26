@@ -38,52 +38,70 @@ class PublishedScheduleResolver {
         }
     }
 
-    async getCEWorkStatusForDate(ceId, dateKey) {
-        const cacheKey = `${ceId}_${dateKey}`;
-        if (this.cache.has(cacheKey)) {
-            return this.cache.get(cacheKey);
+async getCEWorkStatusForDate(ceId, dateKey) {
+    const cacheKey = `${ceId}_${dateKey}`;
+    if (this.cache.has(cacheKey)) {
+        return this.cache.get(cacheKey);
+    }
+
+    const relevantSchedules = this.publishedSchedules.filter(schedule => {
+        const metadata = schedule.metadata || {};
+        return dateKey >= metadata.startDate && dateKey <= metadata.endDate;
+    });
+
+    if (relevantSchedules.length === 0) {
+        return null;
+    }
+
+    if (relevantSchedules.length > 1) {
+        const conflicts = this.checkConflicts(ceId, dateKey, relevantSchedules);
+        if (conflicts.length > 0) {
+            console.warn('⚠️ 勤務表競合検出:', conflicts);
+            return { status: '競合', workType: 'ERROR', desired: false };
         }
+    }
 
-        const relevantSchedules = this.publishedSchedules.filter(schedule => {
-            const metadata = schedule.metadata || {};
-            return dateKey >= metadata.startDate && dateKey <= metadata.endDate;
-        });
+    const schedule = relevantSchedules[0];
+    const scheduleData = schedule.scheduleData || {};
+    const workTypeOverrides = schedule.workTypeOverrides || {};
+    const ceList = schedule.ceList || [];
+    const dateOverrides = schedule.dateOverrides || {};
+    
+    const ce = ceList.find(c => c.id === ceId);
+    if (!ce) return null;
 
-        if (relevantSchedules.length === 0) {
-            return null;
-        }
-
-        if (relevantSchedules.length > 1) {
-            const conflicts = this.checkConflicts(ceId, dateKey, relevantSchedules);
-            if (conflicts.length > 0) {
-                console.warn('⚠️ 勤務表競合検出:', conflicts);
-                return { status: '競合', workType: 'ERROR', desired: false };
-            }
-        }
-
-        const schedule = relevantSchedules[0];
-        const scheduleData = schedule.scheduleData || {};
-        const workTypeOverrides = schedule.workTypeOverrides || {};
-        const ceList = schedule.ceList || [];
-        
-        const ce = ceList.find(c => c.id === ceId);
-        if (!ce) return null;
-
-        const workData = scheduleData[ceId]?.[dateKey];
-        if (!workData) return null;
-
-        const effectiveWorkType = this.getEffectiveWorkType(ceId, dateKey, ce, workTypeOverrides);
-        const status = workData.customText?.trim() || workData.status;
+    const workData = scheduleData[ceId]?.[dateKey];
+    
+    // ★修正: workDataが存在しない場合でも、実効workTypeを取得
+    const effectiveWorkType = this.getEffectiveWorkType(ceId, dateKey, ce, workTypeOverrides);
+    
+    // ★追加: workDataが存在しない場合は、デフォルト値を使用
+    if (!workData) {
+        // 休日判定（dateOverridesを考慮）
+        const isHoliday = this.isWeekendOrHoliday(dateKey, dateOverrides);
+        const defaultStatus = isHoliday ? '×' : 'A';
         
         const result = {
-            status: status,
+            status: defaultStatus,
             workType: effectiveWorkType,
-            desired: workData.desired || false
+            desired: false
         };
-
+        
         this.cache.set(cacheKey, result);
         return result;
     }
+    
+    const status = workData.customText?.trim() || workData.status;
+    
+    const result = {
+        status: status,
+        workType: effectiveWorkType,
+        desired: workData.desired || false
+    };
+
+    this.cache.set(cacheKey, result);
+    return result;
+}
 
     checkConflicts(ceId, dateKey, schedules) {
         const statuses = schedules.map(schedule => {
@@ -113,7 +131,35 @@ class PublishedScheduleResolver {
         return ce.workType || 'ME';
     }
 
+    isWeekendOrHoliday(dateKey, dateOverrides = {}) {
+        // オーバーライドチェック
+        if (dateOverrides[dateKey] === 'holiday') {
+            return true;
+        }
+        if (dateOverrides[dateKey] === 'workday') {
+            return false;
+        }
+        
+        // 日付パース
+        const [year, month, day] = dateKey.split('-').map(Number);
+        const date = new Date(year, month - 1, day);
+        const dayOfWeek = date.getDay();
+        
+        // 土日判定
+        if (dayOfWeek === 0 || dayOfWeek === 6) {
+            return true;
+        }
+        
+        // 祝日判定（constants.jsから取得、またはハードコード）
+        if (window.HOLIDAYS && window.HOLIDAYS.has && window.HOLIDAYS.has(dateKey)) {
+            return true;
+        }
+        
+        return false;
+    }
+
     setupRealtimeUpdates() {
+
         window.database.ref(`${window.DATA_ROOT}/workSchedules`).on('value', async () => {
             console.log('🔄 公開勤務表データ更新検知');
             await this.loadPublishedSchedules();
