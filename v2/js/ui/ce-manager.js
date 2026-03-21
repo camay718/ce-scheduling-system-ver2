@@ -1,5 +1,6 @@
 /**
  * CE管理システム - V2統合版（日別ステータス完全対応）
+ * 修正: saveCEList()重複定義解消、addNewCE()にiconName/displayName/fullName追加、normalizeCEData()補完強化
  */
 (function() {
     'use strict';
@@ -39,86 +40,90 @@
             throw new Error('CEManager: 依存関係の初期化タイムアウト');
         }
 
-// setupRealtimeListener() の置換
-async setupRealtimeListener() {
-    this.dbRef = window.database.ref(`${window.DATA_ROOT}/ceList`);
+        // setupRealtimeListener() - 両形式対応版
+        async setupRealtimeListener() {
+            this.dbRef = window.database.ref(`${window.DATA_ROOT}/ceList`);
 
-    this.dbRef.on('value', snapshot => {
-        const raw = snapshot.val();
-        let list = [];
-        
-        // データ形式の統一処理
-        if (Array.isArray(raw)) {
-            // 旧形式（配列直置き）
-            list = raw;
-        } else if (raw?.list && Array.isArray(raw.list)) {
-            // 新形式 {list: [...]}
-            list = raw.list;
-        } else if (raw && typeof raw === 'object') {
-            // フォールバック
-            list = Array.isArray(raw) ? raw : Object.values(raw);
+            this.dbRef.on('value', snapshot => {
+                const raw = snapshot.val();
+                let list = [];
+                
+                // データ形式の統一処理
+                if (Array.isArray(raw)) {
+                    // 旧形式（配列直置き）
+                    list = raw;
+                } else if (raw?.list && Array.isArray(raw.list)) {
+                    // 新形式 {list: [...]}
+                    list = raw.list;
+                } else if (raw && typeof raw === 'object') {
+                    // フォールバック: オブジェクトの値のうち配列でないもの（=CE オブジェクト）を抽出
+                    const values = Object.values(raw).filter(v => v && typeof v === 'object' && !Array.isArray(v) && v.id);
+                    if (values.length > 0) {
+                        list = values;
+                    }
+                }
+
+                if (list.length > 0) {
+                    this.ceList = list.filter(ce => ce && typeof ce === 'object');
+                    this.normalizeCEData();
+                } else {
+                    // 27名で初期化
+                    this.ceList = this.create27CEList();
+                    this.saveCEList();
+                }
+
+                this.displayCEList();
+            }, error => {
+                console.error('❌ CEリストリアルタイム監視エラー:', error);
+            });
         }
 
-        if (list.length > 0) {
-            this.ceList = list;
-            this.normalizeCEData();
-        } else {
-            // 27名で初期化
-            this.ceList = this.create27CEList();
-            this.saveCEList();
+        // saveCEList() - {list: [...], updatedAt: ...} 形式で統一保存
+        async saveCEList() {
+            try {
+                const ceListData = {
+                    list: this.ceList,
+                    updatedAt: firebase.database.ServerValue.TIMESTAMP
+                };
+                await window.database.ref(`${window.DATA_ROOT}/ceList`).set(ceListData);
+                console.log('✅ CEリスト保存完了');
+            } catch (error) {
+                console.error('❌ CEリスト保存エラー:', error);
+                window.showMessage('CEリストの保存に失敗しました', 'error');
+            }
         }
 
-        this.displayCEList();
-    }, error => {
-        console.error('❌ CEリストリアルタイム監視エラー:', error);
-    });
-}
+        // 27名初期化メソッド
+        create27CEList() {
+            const normalOrder = [
+                '安孫子明博', '八鍬純', '杉山陽子', '中村圭佑', '石山智之', 
+                '亀井祐哉', '丸藤健', '三春摩弥', '斎藤大樹', '田中隆昭', 
+                '宇井勇気', '宇野沢徹', '佐藤将志', '庄司由紀', '小沼和樹', 
+                '武田優斗', '設樂佑介', '伊藤大晟', '上松野聖', '笹生貴之', 
+                '和田彩花', '伊藤大稀', '佐藤千優', '桑島亜依', '村田七星', 
+                '小林将己', '寒河江悠輝'
+            ];
+            
+            return normalOrder.map((name, index) => ({
+                id: `ce_${index + 1}_${Date.now()}`,
+                name: this.getLastName(name),
+                fullName: name,
+                displayName: this.getLastName(name),
+                iconName: this.getLastName(name),
+                workType: ['OPE', 'ME', 'HD', 'FLEX'][index % 4],
+                status: {
+                    monday: '', tuesday: '', wednesday: '', thursday: '',
+                    friday: '', saturday: '', sunday: ''
+                },
+                createdAt: Date.now()
+            }));
+        }
 
-// saveCEList() の置換
-async saveCEList() {
-    try {
-        const ceListData = {
-            list: this.ceList,
-            updatedAt: firebase.database.ServerValue.TIMESTAMP
-        };
-        await window.database.ref(`${window.DATA_ROOT}/ceList`).set(ceListData);
-        console.log('✅ CEリスト保存完了');
-    } catch (error) {
-        console.error('❌ CEリスト保存エラー:', error);
-        window.showMessage('CEリストの保存に失敗しました', 'error');
-    }
-}
-
-// 27名初期化メソッドの追加
-create27CEList() {
-    const normalOrder = [
-        '安孫子明博', '八鍬純', '杉山陽子', '中村圭佑', '石山智之', 
-        '亀井祐哉', '丸藤健', '三春摩弥', '斎藤大樹', '田中隆昭', 
-        '宇井勇気', '宇野沢徹', '佐藤将志', '庄司由紀', '小沼和樹', 
-        '武田優斗', '設樂佑介', '伊藤大晟', '上松野聖', '笹生貴之', 
-        '和田彩花', '伊藤大稀', '佐藤千優', '桑島亜依', '村田七星', 
-        '小林将己', '寒河江悠輝'
-    ];
-    
-    return normalOrder.map((name, index) => ({
-        id: `ce_${index + 1}_${Date.now()}`,
-        name: this.getLastName(name),
-        fullName: name,
-        displayName: this.getLastName(name),
-        iconName: this.getLastName(name),
-        workType: ['OPE', 'ME', 'HD', 'FLEX'][index % 4],
-        status: {
-            monday: '', tuesday: '', wednesday: '', thursday: '',
-            friday: '', saturday: '', sunday: ''
-        },
-        createdAt: Date.now()
-    }));
-}
-
-getLastName(fullName) {
-    if (fullName.length <= 2) return fullName;
-    return fullName.substring(0, Math.min(3, Math.floor(fullName.length / 2)));
-}
+        getLastName(fullName) {
+            if (!fullName) return '';
+            if (fullName.length <= 2) return fullName;
+            return fullName.substring(0, Math.min(3, Math.floor(fullName.length / 2)));
+        }
 
         normalizeCEData() {
             this.ceList = this.ceList.map((ce, index) => {
@@ -132,24 +137,22 @@ getLastName(fullName) {
                 };
                 const status = Object.assign({}, defaultStatus, ce.status || {});
 
+                // アイコン名を優先順で決定: iconName > displayName > name > fullNameの2文字
+                const iconName = ce.iconName || ce.displayName || ce.name || 
+                                 (ce.fullName ? ce.fullName.substring(0, 2) : '??');
+                const fullName = ce.fullName || ce.name || '';
+
                 return {
                     id: ce.id || `normalized_ce_${index}_${Date.now()}`,
                     ...ce,
                     workType: normalizedWorkType,
                     status: status,
-                    name: ce.name || '名前なし'
+                    name: ce.name || iconName || '名前なし',
+                    fullName: fullName,
+                    displayName: ce.displayName || iconName,
+                    iconName: iconName
                 };
             });
-        }
-
-        async saveCEList() {
-            try {
-                await window.database.ref(`${window.DATA_ROOT}/ceList`).set(this.ceList);
-                console.log('✅ CEリスト保存完了');
-            } catch (error) {
-                console.error('❌ CEリスト保存エラー:', error);
-                window.showMessage('CEリストの保存に失敗しました', 'error');
-            }
         }
 
         displayCEList() {
@@ -162,20 +165,24 @@ getLastName(fullName) {
             container.innerHTML = '';
             this.ceList.forEach((ce, index) => {
                 const ceElement = document.createElement('div');
-                ceElement.className = `ce-item worktype-${ce.workType.toLowerCase()}`;
+                const workTypeLower = (ce.workType || 'me').toLowerCase();
+                ceElement.className = `ce-item worktype-${workTypeLower}`;
                 
                 // 日別ステータス表示（CEDailyStatusManagerから取得）
                 const statusBadge = this.renderStatusBadge(ce);
                 
+                // アイコン表示名: iconName > displayName > name の優先順
+                const displayName = ce.iconName || ce.displayName || ce.name;
+
                 ceElement.innerHTML = `
                     ${statusBadge}
-                    <div class="font-medium">${ce.name}</div>
+                    <div class="font-medium">${displayName}</div>
                     <div class="text-xs opacity-75">${ce.workType}</div>
                 `;
                 ceElement.draggable = window.userRole !== 'viewer';
                 ceElement.dataset.ceId = ce.id;
                 ceElement.dataset.ceIndex = index;
-                ceElement.dataset.ceName = ce.name;
+                ceElement.dataset.ceName = displayName;
                 ceElement.dataset.workType = ce.workType;
                 
                 // ドラッグ機能（閲覧者以外）
@@ -183,13 +190,13 @@ getLastName(fullName) {
                     ceElement.addEventListener('dragstart', (e) => {
                         const dragData = {
                             ceId: ce.id,
-                            ceName: ce.name,
+                            ceName: displayName,
                             workType: ce.workType
                         };
                         e.dataTransfer.setData('text/plain', JSON.stringify(dragData));
                         e.dataTransfer.effectAllowed = 'copy';
                         ceElement.classList.add('opacity-50');
-                        console.log('🖱️ CEドラッグ開始:', ce.name);
+                        console.log('🖱️ CEドラッグ開始:', displayName);
                     });
 
                     ceElement.addEventListener('dragend', () => {
@@ -343,14 +350,21 @@ getLastName(fullName) {
                 return;
             }
 
-            if (this.ceList.some(ce => ce.name === name.trim())) {
+            const trimmedName = name.trim();
+
+            if (this.ceList.some(ce => ce.name === trimmedName)) {
                 window.showMessage('同じ名前のCEが既に存在します', 'warning');
                 return;
             }
 
+            // アイコン名: 入力名（姓のみ想定）をそのまま使用
+            const iconName = trimmedName;
             const newCE = {
                 id: `ce_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-                name: name.trim(),
+                name: trimmedName,
+                fullName: trimmedName,
+                displayName: iconName,
+                iconName: iconName,
                 workType: workType.toUpperCase(),
                 department: null,
                 status: {
@@ -365,7 +379,7 @@ getLastName(fullName) {
             
             try {
                 await this.saveCEList();
-                console.log(`✅ CE追加完了: ${name}`);
+                console.log(`✅ CE追加完了: ${trimmedName}`);
             } catch (error) {
                 console.error('❌ CE追加エラー:', error);
                 throw error;
