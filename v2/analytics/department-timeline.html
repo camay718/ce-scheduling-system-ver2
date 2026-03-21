@@ -664,11 +664,21 @@ async function loadDataFromFirebase() {
         ]);
         
         const eventsByDate = eventsByDateSnapshot.val() || {};
-        const ceList = ceListSnapshot.val() || {};
-        
+        const ceListRaw = ceListSnapshot.val() || {};
+
+        // ceListのデータ形式を統一 ({list:[...],updatedAt:...} または 配列 の両方に対応)
+        let ceListArray = [];
+        if (ceListRaw && Array.isArray(ceListRaw.list)) {
+            ceListArray = ceListRaw.list.filter(ce => ce && typeof ce === 'object');
+        } else if (Array.isArray(ceListRaw)) {
+            ceListArray = ceListRaw.filter(ce => ce && typeof ce === 'object');
+        } else if (ceListRaw && typeof ceListRaw === 'object') {
+            ceListArray = Object.values(ceListRaw).filter(v => v && typeof v === 'object' && !Array.isArray(v) && v.id);
+        }
+
         console.log('📊 取得データ確認:');
         console.log('  - events/byDate キー:', Object.keys(eventsByDate));
-        console.log('  - ceList 件数:', Object.keys(ceList).length);
+        console.log('  - ceList 件数:', ceListArray.length);
         
         globalTasksData = {};
         globalAssignmentsData = {};
@@ -700,7 +710,7 @@ async function loadDataFromFirebase() {
                             if (typeof assignedCE === 'object' && assignedCE !== null) {
                                 return assignedCE.name || assignedCE.id || '不明CE';
                             } else if (typeof assignedCE === 'string') {
-                                const foundCE = Object.values(ceList).find(ce => ce.id === assignedCE);
+                                cconst foundCE = ceListArray.find(ce => ce.id === assignedCE);
                                 return foundCE?.iconName || foundCE?.displayName || foundCE?.name || assignedCE;
                             }
                             return '不明CE';
