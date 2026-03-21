@@ -943,14 +943,46 @@
                 v2EventsByDate = eventsByDateSnapshot.val() || {};
                 console.log('📊 イベントデータ:', Object.keys(v2EventsByDate).length, '日分');
                 
-                if (latestSchedule && latestSchedule.ceList) {
-                    globalCEList = buildCEListFromWorkSchedule(latestSchedule);
-                    globalWorkStatusData = buildWorkStatusMap(latestSchedule, globalCEList, currentDateRange);
-                    console.log('✅ 勤務表からCE取得:', globalCEList.length, '名');
-                } else {
-                    console.warn('⚠️ 公開勤務表未発見 - CEリストからフォールバック読み込み');
-                    await loadCEListFallback();
-                }
+if (latestSchedule && latestSchedule.ceList) {
+    globalCEList = buildCEListFromWorkSchedule(latestSchedule);
+    globalWorkStatusData = buildWorkStatusMap(latestSchedule, globalCEList, currentDateRange);
+    console.log('✅ 勤務表からCE取得:', globalCEList.length, '名');
+    
+    // ★追加: ceListからも新規CE（勤務表に含まれていないCE）をマージ
+    try {
+        const ceListSnapshot = await database.ref(`${DATA_ROOT}/ceList`).once('value');
+        const ceListData = ceListSnapshot.val();
+        let allCEsFromList = [];
+        if (ceListData && Array.isArray(ceListData.list)) {
+            allCEsFromList = ceListData.list;
+        } else if (Array.isArray(ceListData)) {
+            allCEsFromList = ceListData;
+        }
+        
+        // 公開済み勤務表にないCEを追加
+        const existingIds = new Set(globalCEList.map(ce => ce.id));
+        const newCEs = allCEsFromList
+            .filter(ce => ce && ce.id && !existingIds.has(ce.id))
+            .filter(ce => ce.fullName || ce.iconName || ce.name)
+            .map(ce => ({
+                id: ce.id,
+                name: ce.fullName || ce.name,
+                fullName: ce.fullName || ce.name,
+                iconName: ce.iconName || ce.displayName || ce.name,
+                workType: ce.workType || 'ME'
+            }));
+        
+        if (newCEs.length > 0) {
+            globalCEList = [...globalCEList, ...newCEs];
+            console.log(`✅ 新規CE追加: ${newCEs.length}名 (合計: ${globalCEList.length}名)`);
+        }
+    } catch (e) {
+        console.warn('⚠️ 新規CEマージ中にエラー:', e);
+    }
+} else {
+    console.warn('⚠️ 公開勤務表未発見 - CEリストからフォールバック読み込み');
+    await loadCEListFallback();
+}
                 
                 console.log('✅ Firebaseデータ読み込み完了 - CE数:', globalCEList.length);
                 
