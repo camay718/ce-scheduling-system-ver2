@@ -1266,74 +1266,82 @@ isWeekendOrHoliday(date) {
             this.updateRemoveCESelect();
         }
 
-        addCE() {
-            const nameInput = document.getElementById('newCEName');
-            const workTypeSelect = document.getElementById('newCEWorkType');
-            
-            const name = nameInput?.value?.trim();
-            const workType = workTypeSelect?.value || 'ME';
-            
-            if (!name) {
-                window.showMessage('CE名を入力してください', 'warning');
-                return;
-            }
+async addCE() {
+    const nameInput = document.getElementById('newCEName');
+    const workTypeSelect = document.getElementById('newCEWorkType');
 
-            const exists = this.ceList.some(ce => ce.fullName === name);
-            if (exists) {
-                window.showMessage('同じ名前のCEが既に存在します', 'warning');
-                return;
-            }
+    const name = nameInput?.value?.trim();
+    const workType = workTypeSelect?.value || 'ME';
 
-            const newCE = {
-                id: `ce_${Date.now()}`,
-                name: this.getShortName(name),
-                fullName: name,
-                displayName: this.getShortName(name),
-                iconName: this.getShortName(name),
-                workType: workType
-            };
+    if (!name) {
+        window.showMessage('CE名を入力してください', 'warning');
+        return;
+    }
 
-            this.ceList.push(newCE);
-            this.saveCEList();
-            this.renderScheduleTable();
-            this.updateRemoveCESelect();
-            
-            if (nameInput) nameInput.value = '';
-            if (workTypeSelect) workTypeSelect.value = 'ME';
-            
-            window.showMessage(`CE「${name}」を追加しました`, 'success');
-        }
+    const exists = this.ceList.some(ce => (ce.fullName || '').trim() === name);
+    if (exists) {
+        window.showMessage('同じ名前のCEが既に存在します', 'warning');
+        return;
+    }
 
-        removeCE() {
-            const select = document.getElementById('removeCESelect');
-            const selectedId = select?.value;
-            
-            if (!selectedId) {
-                window.showMessage('削除するCEを選択してください', 'warning');
-                return;
-            }
+    const shortName = this.getShortName(name);
+    const newCE = {
+        id: `ce_${Date.now()}`,
+        name: shortName,
+        fullName: name,
+        displayName: shortName,
+        iconName: shortName,
+        workType: workType
+    };
 
-            const ceToRemove = this.ceList.find(ce => ce.id === selectedId);
-            if (!ceToRemove) {
-                window.showMessage('選択されたCEが見つかりません', 'error');
-                return;
-            }
+    try {
+        this.ceList.push(newCE);
+        await this.saveCEList();
+        this.renderScheduleTable();
+        this.updateRemoveCESelect();
 
-            if (!confirm(`CE「${ceToRemove.fullName}」を削除しますか？\n\n※関連する勤務データも削除されます。`)) {
-                return;
-            }
+        if (nameInput) nameInput.value = '';
+        if (workTypeSelect) workTypeSelect.value = 'ME';
 
-            this.ceList = this.ceList.filter(ce => ce.id !== selectedId);
-            delete this.scheduleData[selectedId];
-            delete this.workTypeOverrides[selectedId];
-            
-            this.saveCEList();
-            this.saveWorkTypeOverrides();
-            this.renderScheduleTable();
-            this.updateRemoveCESelect();
-            
-            window.showMessage(`CE「${ceToRemove.fullName}」を削除しました`, 'success');
-        }
+        window.showMessage(`CE「${name}」を追加しました`, 'success');
+    } catch (error) {
+        console.error('❌ CE追加エラー:', error);
+        this.ceList = this.ceList.filter(ce => ce.id !== newCE.id);
+        window.showMessage('CE追加の保存に失敗しました', 'error');
+    }
+}
+
+async removeCE() {
+    const select = document.getElementById('removeCESelect');
+    const selectedId = select?.value;
+    
+    if (!selectedId) {
+        window.showMessage('削除するCEを選択してください', 'warning');
+        return;
+    }
+
+    const ceToRemove = this.ceList.find(ce => ce.id === selectedId);
+    if (!ceToRemove) {
+        window.showMessage('選択されたCEが見つかりません', 'error');
+        return;
+    }
+
+    if (!confirm(`CE「${ceToRemove.fullName}」を削除しますか？\n\n※関連する勤務データも削除されます。`)) {
+        return;
+    }
+
+    this.ceList = this.ceList.filter(ce => ce.id !== selectedId);
+    delete this.scheduleData[selectedId];
+    delete this.workTypeOverrides[selectedId];
+    
+    await this.saveCEList();
+    await this.saveWorkTypeOverrides();
+    this.renderScheduleTable();
+    this.updateRemoveCESelect();
+    
+    window.showMessage(`CE「${ceToRemove.fullName}」を削除しました`, 'success');
+}
+
 
         initialize27CE() {
             if (!confirm('CEリストを指定の27名で初期化しますか？\n\n※現在のCEリストと勤務データは全て削除されます。')) {
@@ -1555,40 +1563,53 @@ isWeekendOrHoliday(date) {
             }
         }
 
-        async loadCEList() {
-            try {
-                const snapshot = await window.database.ref(`${window.DATA_ROOT}/ceList`).once('value');
-                const data = snapshot.val();
-                
-                if (data && data.list && Array.isArray(data.list) && data.list.length > 0) {
-                    this.ceList = data.list.map((ce, index) => ({
-                        id: ce.id || `ce${index + 1}`,
-                        name: ce.iconName || ce.displayName || ce.fullName || `CE${index + 1}`,
-                        fullName: ce.fullName || ce.iconName || ce.displayName || `CE${index + 1}`,
-                        displayName: ce.displayName || ce.iconName || ce.fullName || `CE${index + 1}`,
-                        iconName: ce.iconName || ce.displayName || ce.fullName || `CE${index + 1}`,
-                        workType: ce.workType || 'ME'
-                    }));
-                } else {
-                    this.ceList = this.normalOrder.map((name, index) => ({
-                        id: `ce${index + 1}`,
-                        name: this.getShortName(name),
-                        fullName: name,
-                        displayName: this.getShortName(name),
-                        iconName: this.getShortName(name),
-                        workType: this.getDefaultWorkType(index)
-                    }));
-                    
-                    await this.saveCEList();
-                    window.showMessage('CEリストを通常順で初期化しました', 'info');
-                }
-                
-                console.log('✅ CEリスト読み込み完了:', this.ceList.length + '名');
-            } catch (error) {
-                console.error('❌ CEリスト読み込みエラー:', error);
-                this.ceList = [];
-            }
+async loadCEList() {
+    try {
+        const snapshot = await window.database.ref(`${window.DATA_ROOT}/ceList`).once('value');
+        const data = snapshot.val();
+
+        let ceArray = [];
+        if (data && Array.isArray(data.list)) {
+            ceArray = data.list;
+        } else if (Array.isArray(data)) {
+            ceArray = data;
+        } else if (data && typeof data === 'object') {
+            ceArray = Object.values(data).filter(v => v && typeof v === 'object' && (v.id || v.fullName || v.name));
         }
+
+        if (ceArray.length > 0) {
+            this.ceList = ceArray.map((ce, index) => {
+                const fullName = ce.fullName || ce.name || ce.displayName || ce.iconName || `CE${index + 1}`;
+                const shortName = ce.iconName || ce.displayName || ce.name || this.getShortName(fullName);
+                return {
+                    id: ce.id || `ce${index + 1}`,
+                    name: shortName,
+                    fullName: fullName,
+                    displayName: ce.displayName || shortName,
+                    iconName: ce.iconName || ce.displayName || shortName,
+                    workType: ce.workType || 'ME'
+                };
+            });
+        } else {
+            this.ceList = this.normalOrder.map((name, index) => ({
+                id: `ce${index + 1}`,
+                name: this.getShortName(name),
+                fullName: name,
+                displayName: this.getShortName(name),
+                iconName: this.getShortName(name),
+                workType: this.getDefaultWorkType(index)
+            }));
+
+            await this.saveCEList();
+            window.showMessage('CEリストを通常順で初期化しました', 'info');
+        }
+
+        console.log('✅ CEリスト読み込み完了:', this.ceList.length + '名');
+    } catch (error) {
+        console.error('❌ CEリスト読み込みエラー:', error);
+        this.ceList = [];
+    }
+}
 
         async loadWorkTypeOverrides() {
             try {
@@ -1840,41 +1861,41 @@ document.addEventListener('click', (e) => {
             this.renderScheduleTable();
         }
 
-        sortCEByName() {
-            this.ceList.sort((a, b) => (a.fullName || a.name).localeCompare(b.fullName || b.name, 'ja'));
-            this.saveCEList();
-            this.renderScheduleTable();
-            window.showMessage('名前順で並び替えました', 'success');
-        }
+async sortCEByName() {
+    this.ceList.sort((a, b) => (a.fullName || a.name).localeCompare(b.fullName || b.name, 'ja'));
+    await this.saveCEList();
+    this.renderScheduleTable();
+    window.showMessage('名前順で並び替えました', 'success');
+}
 
-        sortCEByWorkType() {
-            const workTypeOrder = { 'OPE': 1, 'ME': 2, 'HD': 3, 'FLEX': 4 };
-            this.ceList.sort((a, b) => {
-                const aOrder = workTypeOrder[a.workType] || 999;
-                const bOrder = workTypeOrder[b.workType] || 999;
-                if (aOrder !== bOrder) return aOrder - bOrder;
-                return (a.fullName || a.name).localeCompare(b.fullName || b.name, 'ja');
-            });
-            this.saveCEList();
-            this.renderScheduleTable();
-            window.showMessage('勤務順で並び替えました', 'success');
-        }
+async sortCEByWorkType() {
+    const workTypeOrder = { 'OPE': 1, 'ME': 2, 'HD': 3, 'FLEX': 4 };
+    this.ceList.sort((a, b) => {
+        const aOrder = workTypeOrder[a.workType] || 999;
+        const bOrder = workTypeOrder[b.workType] || 999;
+        if (aOrder !== bOrder) return aOrder - bOrder;
+        return (a.fullName || a.name).localeCompare(b.fullName || b.name, 'ja');
+    });
+    await this.saveCEList();
+    this.renderScheduleTable();
+    window.showMessage('勤務順で並び替えました', 'success');
+}
 
-        sortCEByNormal() {
-            const normalOrderMap = new Map(this.normalOrder.map((name, index) => [name, index]));
-            
-            this.ceList.sort((a, b) => {
-                const aIndex = normalOrderMap.get(a.fullName) ?? 999;
-                const bIndex = normalOrderMap.get(b.fullName) ?? 999;
-                
-                if (aIndex !== bIndex) return aIndex - bIndex;
-                return (a.fullName || a.name).localeCompare(b.fullName || b.name, 'ja');
-            });
-            
-            this.saveCEList();
-            this.renderScheduleTable();
-            window.showMessage('通常順で並び替えました', 'success');
-        }
+async sortCEByNormal() {
+    const normalOrderMap = new Map(this.normalOrder.map((name, index) => [name, index]));
+    
+    this.ceList.sort((a, b) => {
+        const aIndex = normalOrderMap.get(a.fullName) ?? 999;
+        const bIndex = normalOrderMap.get(b.fullName) ?? 999;
+        
+        if (aIndex !== bIndex) return aIndex - bIndex;
+        return (a.fullName || a.name).localeCompare(b.fullName || b.name, 'ja');
+    });
+    
+    await this.saveCEList();
+    this.renderScheduleTable();
+    window.showMessage('通常順で並び替えました', 'success');
+}
 
         renderScheduleTable() {
             if (this.ceList.length === 0) {
@@ -2589,6 +2610,7 @@ async saveCEEdit() {
             }
 
             try {
+                await this.saveCEList();
                 const saveId = Date.now().toString();
                 const startStr = this.formatDateDisplay(this.currentPeriod.startDate);
                 const endStr = this.formatDateDisplay(this.currentPeriod.endDate);
