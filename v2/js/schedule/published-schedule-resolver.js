@@ -38,13 +38,12 @@ class PublishedScheduleResolver {
         }
     }
 
-async getCEWorkStatusForDate(ceId, dateKey) {
+    async getCEWorkStatusForDate(ceId, dateKey) {
     const cacheKey = `${ceId}_${dateKey}`;
     if (this.cache.has(cacheKey)) {
         return this.cache.get(cacheKey);
     }
 
-    // グローバルCE一覧（最新）
     const globalCE = (window.ceManager?.ceList || []).find(c => c.id === ceId);
     const globalWorkType = globalCE?.workType || 'ME';
 
@@ -54,7 +53,7 @@ async getCEWorkStatusForDate(ceId, dateKey) {
         return dateKey >= metadata.startDate && dateKey <= metadata.endDate;
     });
 
-    // 公開勤務表が無い場合 → ベース勤務区分を返す
+    // 公開勤務表が無い場合 → ベース勤務区分
     if (relevantSchedules.length === 0) {
         if (globalCE) {
             return { status: 'A', workType: globalWorkType, desired: false };
@@ -62,16 +61,18 @@ async getCEWorkStatusForDate(ceId, dateKey) {
         return null;
     }
 
-    // 複数の公開勤務表が競合している場合
-    if (relevantSchedules.length > 1) {
-        const conflicts = this.checkConflicts(ceId, dateKey, relevantSchedules);
-        if (conflicts.length > 0) {
-            console.warn('⚠️ 勤務表競合検出:', conflicts);
-            return { status: '競合', workType: 'ERROR', desired: false };
-        }
-    }
+    // ★複数該当時: priority(大きいほど優先) → publishedAt(新しい順) で1件に絞る
+    const schedule = relevantSchedules.sort((a, b) => {
+        const pa = a.metadata?.priority ?? 0;
+        const pb = b.metadata?.priority ?? 0;
+        if (pa !== pb) return pb - pa;  // priority降順
+        const ta = a.metadata?.publishedAt || 0;
+        const tb = b.metadata?.publishedAt || 0;
+        return tb - ta;                  // publishedAt降順
+    })[0];
 
-    const schedule = relevantSchedules[0];
+    console.log(`📋 採用勤務表: ${schedule.key} (priority=${schedule.metadata?.priority ?? 0}, 日付=${dateKey})`);
+
     const scheduleData = schedule.scheduleData || {};
     const workTypeOverrides = schedule.workTypeOverrides || {};
     const ceList = schedule.ceList || [];
@@ -86,20 +87,17 @@ async getCEWorkStatusForDate(ceId, dateKey) {
 
     const workData = scheduleData[ceId]?.[dateKey];
 
-    // ★workType解決の優先順位:
+    // workType解決の優先順位:
     //   1. workTypeOverrides（期間オーバーライド設定）★最優先
     //   2. workData.workType（scheduleData内のworkType）
     //   3. ce.workType（ベース勤務区分）
     const overrideWorkType = this.getEffectiveWorkType(ceId, dateKey, ce, workTypeOverrides);
     let effectiveWorkType;
     if (overrideWorkType && overrideWorkType !== (ce.workType || 'ME')) {
-        // オーバーライドが効いている場合（ベースと異なる値が返った）
         effectiveWorkType = overrideWorkType;
     } else if (workData && workData.workType) {
-        // scheduleDataに明示的に保存されたworkType
         effectiveWorkType = workData.workType;
     } else {
-        // ベース勤務区分
         effectiveWorkType = overrideWorkType;
     }
 
