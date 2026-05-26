@@ -840,20 +840,30 @@ reattachPeriodControls() {
                 }
             }
 
-            renderAdminControls(period) {
-                return `
-                    <button onclick="window.ceScheduleManager.toggleVisibility('${period.key}')" 
-                            class="btn-unified btn-small ${period.isVisible === false ? 'btn-success' : 'btn-warning'}" 
-                            title="表示/非表示切替">
-                        <i class="fas fa-eye${period.isVisible === false ? '' : '-slash'}"></i>
-                        ${period.isVisible === false ? '公開' : '非公開'}
-                    </button>
-                    <button onclick="window.ceScheduleManager.deleteSchedule('${period.key}')" 
-                            class="btn-unified btn-small btn-danger" title="削除">
-                        <i class="fas fa-trash"></i>削除
-                    </button>
-                `;
-            }
+    renderAdminControls(period) {
+    const currentPriority = period.priority ?? 0;
+    return `
+        <select onchange="window.ceScheduleManager.setPriority('${period.key}', this.value)"
+                class="btn-unified btn-small"
+                title="優先度設定(複数勤務表が重複時、数値が大きい方が採用されます)"
+                style="padding: 4px 8px;">
+            <option value="0" ${currentPriority === 0 ? 'selected' : ''}>📋 仮公開 (0)</option>
+            <option value="50" ${currentPriority === 50 ? 'selected' : ''}>📋 通常 (50)</option>
+            <option value="100" ${currentPriority === 100 ? 'selected' : ''}>⭐ 正式版 (100)</option>
+            <option value="200" ${currentPriority === 200 ? 'selected' : ''}>🔥 最優先 (200)</option>
+        </select>
+        <button onclick="window.ceScheduleManager.toggleVisibility('${period.key}')" 
+                class="btn-unified btn-small ${period.isVisible === false ? 'btn-success' : 'btn-warning'}" 
+                title="表示/非表示切替">
+            <i class="fas fa-eye${period.isVisible === false ? '' : '-slash'}"></i>
+            ${period.isVisible === false ? '公開' : '非公開'}
+        </button>
+        <button onclick="window.ceScheduleManager.deleteSchedule('${period.key}')" 
+                class="btn-unified btn-small btn-danger" title="削除">
+            <i class="fas fa-trash"></i>削除
+        </button>
+    `;
+}
 
             displayNoPeriods() {
                 const displayEl = document.getElementById('currentPeriodDisplay');
@@ -1182,6 +1192,29 @@ fitTableToViewport() {
     });
     
     return html + '</tfoot>';
+}
+
+    async setPriority(periodKey, priorityValue) {
+    if (window.userRole !== 'admin') {
+        window.showMessage('管理者権限が必要です', 'warning');
+        return;
+    }
+
+    try {
+        const priority = parseInt(priorityValue, 10) || 0;
+        await window.database
+            .ref(`${window.DATA_ROOT}/workSchedules/${periodKey}/metadata/priority`)
+            .set(priority);
+        
+        const labelMap = { 0: '仮公開', 50: '通常', 100: '正式版', 200: '最優先' };
+        window.showMessage(`優先度を「${labelMap[priority] || priority}」に設定しました`, 'success');
+        
+        await this.loadAvailablePeriods();
+        
+    } catch (error) {
+        console.error('❌ 優先度設定エラー:', error);
+        window.showMessage('優先度の設定に失敗しました', 'error');
+    }
 }
 
             async toggleVisibility(periodKey) {
