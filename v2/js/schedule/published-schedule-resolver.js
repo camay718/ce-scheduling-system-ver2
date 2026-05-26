@@ -44,12 +44,19 @@ async getCEWorkStatusForDate(ceId, dateKey) {
         return this.cache.get(cacheKey);
     }
 
+    // ★修正: グローバルCE一覧（最新）から該当CEを取得（フォールバック用）
+    const globalCE = (window.ceManager?.ceList || []).find(c => c.id === ceId);
+    const globalWorkType = globalCE?.workType || 'ME';
+
     const relevantSchedules = this.publishedSchedules.filter(schedule => {
         const metadata = schedule.metadata || {};
         return dateKey >= metadata.startDate && dateKey <= metadata.endDate;
     });
 
     if (relevantSchedules.length === 0) {
+        if (globalCE) {
+            return { status: 'A', workType: globalWorkType, desired: false };
+        }
         return null;
     }
 
@@ -66,39 +73,36 @@ async getCEWorkStatusForDate(ceId, dateKey) {
     const workTypeOverrides = schedule.workTypeOverrides || {};
     const ceList = schedule.ceList || [];
     const dateOverrides = schedule.dateOverrides || {};
-    
-    const ce = ceList.find(c => c.id === ceId);
-    if (!ce) return null;
+
+    // ★最重要修正: 公開勤務表 ceList に居なくてもグローバルCEで代替
+    //   → これで workTypeOverrides の評価まで到達できる（関健宏もここで救済）
+    let ce = ceList.find(c => c.id === ceId);
+    if (!ce) {
+        if (!globalCE) return null;
+        ce = globalCE;
+    }
 
     const workData = scheduleData[ceId]?.[dateKey];
-    
-    // ★修正: workDataが存在しない場合でも、実効workTypeを取得
     const effectiveWorkType = this.getEffectiveWorkType(ceId, dateKey, ce, workTypeOverrides);
-    
-    // ★追加: workDataが存在しない場合は、デフォルト値を使用
+
     if (!workData) {
-        // 休日判定（dateOverridesを考慮）
         const isHoliday = this.isWeekendOrHoliday(dateKey, dateOverrides);
         const defaultStatus = isHoliday ? '×' : 'A';
-        
         const result = {
             status: defaultStatus,
             workType: effectiveWorkType,
             desired: false
         };
-        
         this.cache.set(cacheKey, result);
         return result;
     }
-    
+
     const status = workData.customText?.trim() || workData.status;
-    
     const result = {
         status: status,
         workType: effectiveWorkType,
         desired: workData.desired || false
     };
-
     this.cache.set(cacheKey, result);
     return result;
 }
@@ -158,64 +162,66 @@ async getCEWorkStatusForDate(ceId, dateKey) {
         return false;
     }
 
-    setupRealtimeUpdates() {
+setupRealtimeUpdates() {
 
-        window.database.ref(`${window.DATA_ROOT}/workSchedules`).on('value', async () => {
-            console.log('🔄 公開勤務表データ更新検知');
-            await this.loadPublishedSchedules();
-            
-            if (window.ceManager && typeof window.ceManager.updateCEIconsFromSchedule === 'function') {
-                window.ceManager.updateCEIconsFromSchedule();
+    window.database.ref(`${window.DATA_ROOT}/workSchedules`).on('value', async () => {
+        console.log('🔄 公開勤務表データ更新検知');
+        this.cache.clear();  // ★追加: キャッシュ強制クリア
+        await this.loadPublishedSchedules();
+        
+        if (window.ceManager && typeof window.ceManager.updateCEIconsFromSchedule === 'function') {
+            window.ceManager.updateCEIconsFromSchedule();
+        }
+    });
+
+    // ★追加: ceList変更時にもキャッシュクリア（新規CE追加に対応）
+    window.database.ref(`${window.DATA_ROOT}/ceList`).on('value', () => {
+        this.cache.clear();
+        console.log('🔄 CE一覧更新検知（キャッシュクリア）');
+    });
+}
+
+async applyCEStatusToList(dateKey) {
+    const ceItems = document.querySelectorAll('#ceListContainer .ce-item');
+    const ceMap = new Map((window.ceManager?.ceList || []).map(c => [c.id, c]));
+
+    for (const item of ceItems) {
+        const ceId = item.dataset.ceId;  // ★ idで突合（indexに依存しない）
+        const ce = ceMap.get(ceId);
+        if (!ce) continue;
+
+        item.classList.remove('worktype-ope', 'worktype-me', 'worktype-hd', 'worktype-flex', 'worktype-error');
+        item.querySelectorAll('.status-badge').forEach(badge => badge.remove());
+
+        const workStatus = await this.getCEWorkStatusForDate(ceId, dateKey);
+        const wt = (workStatus?.workType || ce.workType || 'ME');
+
+        if (wt === 'ERROR') {
+            item.classList.add('worktype-error');
+        } else {
+            item.classList.add(`worktype-${wt.toLowerCase()}`);
+        }
+        item.dataset.workType = wt;
+
+        if (workStatus?.status && workStatus.status !== 'A') {
+            const badge = document.createElement('div');
+            badge.className = 'status-badge';
+            badge.textContent = workStatus.status;
+
+            const statusColors = {
+                'A1': '#FF9800', 'B': '#9C27B0', '非': '#607D8B',
+                '×': '#F44336', '年': '#2196F3', '出': '#2196F3', '研': '#795548',
+                '競合': '#FF0000'
+            };
+            if (statusColors[workStatus.status]) {
+                badge.style.background = statusColors[workStatus.status];
+                badge.style.color = 'white';
             }
-        });
-    }
 
-    async applyCEStatusToList(dateKey) {
-        const ceItems = document.querySelectorAll('#ceListContainer .ce-item');
-        const ceList = window.ceManager?.ceList || [];
-
-        for (let i = 0; i < ceItems.length; i++) {
-            const item = ceItems[i];
-            const ce = ceList[i];
-            if (!ce) continue;
-
-            item.classList.remove('worktype-ope', 'worktype-me', 'worktype-hd', 'worktype-flex', 'worktype-error');
-            item.querySelectorAll('.status-badge').forEach(badge => badge.remove());
-
-            const workStatus = await this.getCEWorkStatusForDate(ce.id, dateKey);
-            
-            if (workStatus) {
-                if (workStatus.workType === 'ERROR') {
-                    item.classList.add('worktype-error');
-                } else {
-                    item.classList.add(`worktype-${workStatus.workType.toLowerCase()}`);
-                }
-                
-                if (workStatus.status && workStatus.status !== 'A') {
-                    const badge = document.createElement('div');
-                    badge.className = 'status-badge';
-                    badge.textContent = workStatus.status;
-                    
-                    const statusColors = {
-                        'A1': '#FF9800', 'B': '#9C27B0', '非': '#607D8B',
-                        '×': '#F44336', '年': '#2196F3', '出': '#2196F3', '研': '#795548',
-                        '競合': '#FF0000'
-                    };
-                    if (statusColors[workStatus.status]) {
-                        badge.style.background = statusColors[workStatus.status];
-                        badge.style.color = 'white';
-                    }
-                    
-                    item.appendChild(badge);
-                }
-                
-                item.dataset.workType = workStatus.workType;
-            } else {
-                item.classList.add(`worktype-${(ce.workType || 'ME').toLowerCase()}`);
-                item.dataset.workType = ce.workType || 'ME';
-            }
+            item.appendChild(badge);
         }
     }
+}
 }
 
 window.PublishedScheduleResolver = PublishedScheduleResolver;
