@@ -44,15 +44,17 @@ async getCEWorkStatusForDate(ceId, dateKey) {
         return this.cache.get(cacheKey);
     }
 
-    // ★修正: グローバルCE一覧（最新）から該当CEを取得（フォールバック用）
+    // グローバルCE一覧（最新）
     const globalCE = (window.ceManager?.ceList || []).find(c => c.id === ceId);
     const globalWorkType = globalCE?.workType || 'ME';
 
+    // 該当日付を含む公開勤務表を抽出
     const relevantSchedules = this.publishedSchedules.filter(schedule => {
         const metadata = schedule.metadata || {};
         return dateKey >= metadata.startDate && dateKey <= metadata.endDate;
     });
 
+    // 公開勤務表が無い場合 → ベース勤務区分を返す
     if (relevantSchedules.length === 0) {
         if (globalCE) {
             return { status: 'A', workType: globalWorkType, desired: false };
@@ -60,6 +62,7 @@ async getCEWorkStatusForDate(ceId, dateKey) {
         return null;
     }
 
+    // 複数の公開勤務表が競合している場合
     if (relevantSchedules.length > 1) {
         const conflicts = this.checkConflicts(ceId, dateKey, relevantSchedules);
         if (conflicts.length > 0) {
@@ -74,8 +77,7 @@ async getCEWorkStatusForDate(ceId, dateKey) {
     const ceList = schedule.ceList || [];
     const dateOverrides = schedule.dateOverrides || {};
 
-    // ★最重要修正: 公開勤務表 ceList に居なくてもグローバルCEで代替
-    //   → これで workTypeOverrides の評価まで到達できる（関健宏もここで救済）
+    // 公開勤務表 ceList に居なくてもグローバルCEで代替（関健宏もここで救済）
     let ce = ceList.find(c => c.id === ceId);
     if (!ce) {
         if (!globalCE) return null;
@@ -83,7 +85,23 @@ async getCEWorkStatusForDate(ceId, dateKey) {
     }
 
     const workData = scheduleData[ceId]?.[dateKey];
-    const effectiveWorkType = this.getEffectiveWorkType(ceId, dateKey, ce, workTypeOverrides);
+
+    // ★workType解決の優先順位:
+    //   1. workTypeOverrides（期間オーバーライド設定）★最優先
+    //   2. workData.workType（scheduleData内のworkType）
+    //   3. ce.workType（ベース勤務区分）
+    const overrideWorkType = this.getEffectiveWorkType(ceId, dateKey, ce, workTypeOverrides);
+    let effectiveWorkType;
+    if (overrideWorkType && overrideWorkType !== (ce.workType || 'ME')) {
+        // オーバーライドが効いている場合（ベースと異なる値が返った）
+        effectiveWorkType = overrideWorkType;
+    } else if (workData && workData.workType) {
+        // scheduleDataに明示的に保存されたworkType
+        effectiveWorkType = workData.workType;
+    } else {
+        // ベース勤務区分
+        effectiveWorkType = overrideWorkType;
+    }
 
     if (!workData) {
         const isHoliday = this.isWeekendOrHoliday(dateKey, dateOverrides);
@@ -120,16 +138,26 @@ async getCEWorkStatusForDate(ceId, dateKey) {
 
     getEffectiveWorkType(ceId, dateKey, ce, workTypeOverrides) {
         const overrides = workTypeOverrides[ceId];
+        
+        // 配列形式のオーバーライド
         if (Array.isArray(overrides)) {
-            const validOverrides = overrides.filter(override => 
-                dateKey >= override.startDate && dateKey <= override.endDate
-            );
+            const validOverrides = overrides.filter(override => {
+                if (!override || !override.startDate || !override.endDate) return false;
+                return dateKey >= override.startDate && dateKey <= override.endDate;
+            });
             if (validOverrides.length > 0) {
+                // 最新のcreatedAt優先
                 const latest = validOverrides.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0))[0];
+                console.log(`✅ workTypeOverride適用: ${ceId} ${dateKey} → ${latest.workType}`);
                 return latest.workType;
             }
-        } else if (overrides && overrides.startDate && dateKey >= overrides.startDate && dateKey <= overrides.endDate) {
-            return overrides.workType;
+        } 
+        // オブジェクト形式のオーバーライド（単一）
+        else if (overrides && overrides.startDate && overrides.endDate) {
+            if (dateKey >= overrides.startDate && dateKey <= overrides.endDate) {
+                console.log(`✅ workTypeOverride適用: ${ceId} ${dateKey} → ${overrides.workType}`);
+                return overrides.workType;
+            }
         }
         
         return ce.workType || 'ME';
