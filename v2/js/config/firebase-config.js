@@ -1,5 +1,5 @@
 /**
- * Firebase設定 - V2統合版（個人設定画面完全対応・認証競合解消）
+ * Firebase設定 - V2統合版（パフォーマンス最適化版）
  * 
  * 役割:
  * - Firebase基本設定の提供とApp初期化
@@ -12,9 +12,9 @@
 if (typeof window.firebaseV2Initialized === 'undefined') {
     console.log('🔄 Firebase設定ファイル読み込み開始');
     
-    // Firebase設定（既存設定を維持）
+    // Firebase設定
     window.firebaseConfig = {
-        apiKey: "AIzaSyBEe7xDIoo6OsVCT-2yXakuO_FMhYs1GNg",
+        apiKey: "AIzaSyBEe7xDIoo6OsVCT-2yXakuO_FMhYs1GNg",  // 既存のapiKeyを維持
         authDomain: "ce-scheduling-system-v2.firebaseapp.com",
         databaseURL: "https://ce-scheduling-system-v2-default-rtdb.asia-southeast1.firebasedatabase.app",
         projectId: "ce-scheduling-system-v2",
@@ -24,7 +24,6 @@ if (typeof window.firebaseV2Initialized === 'undefined') {
         measurementId: "G-LSEEMJE2R0"
     };
 
-    // データルート
     window.DATA_ROOT = 'ceScheduleV2';
 
     // グローバル変数
@@ -32,6 +31,9 @@ if (typeof window.firebaseV2Initialized === 'undefined') {
     window.database = null;
     window.isFirebaseReady = false;
     window.firebaseV2Initialized = false;
+    
+    // ページ可視性フラグ（バックグラウンド時の省電力化）
+    window.isPageVisible = true;
 
     // Promise管理（初期化完了待機用）
     let initResolve, initReject, isResolved = false;
@@ -41,6 +43,16 @@ if (typeof window.firebaseV2Initialized === 'undefined') {
     });
     
     window.waitForFirebase = () => window.firebaseInitPromise;
+
+    // ページ可視性監視（省電力化）
+    function setupVisibilityHandler() {
+        if (typeof document !== 'undefined') {
+            document.addEventListener('visibilitychange', () => {
+                window.isPageVisible = document.visibilityState === 'visible';
+                console.log(`📱 ページ状態: ${window.isPageVisible ? 'アクティブ' : 'バックグラウンド'}`);
+            });
+        }
+    }
 
     /**
      * Firebase基本初期化（認証なし）
@@ -78,11 +90,17 @@ if (typeof window.firebaseV2Initialized === 'undefined') {
             window.database = firebase.database();
             window.firebaseV2Initialized = true;
             
-            // 接続状態監視（エラーハンドリング付き）
+            // ページ可視性監視を設定
+            setupVisibilityHandler();
+            
+            // 接続状態監視（バックグラウンド時はログ出力を抑制）
             try {
                 window.database.ref('.info/connected').on('value', function(snapshot) {
                     window.isFirebaseReady = snapshot.val();
-                    console.log(snapshot.val() ? '✅ Firebase接続成功' : '❌ Firebase接続失敗');
+                    // アクティブ時のみログ出力（省電力）
+                    if (window.isPageVisible) {
+                        console.log(snapshot.val() ? '✅ Firebase接続成功' : '❌ Firebase接続失敗');
+                    }
                 }, function(error) {
                     console.warn('⚠️ Firebase接続監視エラー:', error.message);
                 });
@@ -107,5 +125,5 @@ if (typeof window.firebaseV2Initialized === 'undefined') {
 
     // 即座に初期化実行
     initializeFirebaseV2();
-    console.log('🔒 Firebase設定ファイル読み込み完了');
+    console.log('🔒 Firebase設定ファイル読み込み完了（最適化版）');
 }
