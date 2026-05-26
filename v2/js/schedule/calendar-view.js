@@ -1,5 +1,5 @@
 /**
- * 月間カレンダー表示 - V2統合版（修正版）
+ * 月間カレンダー表示 - V2統合版（パフォーマンス最適化版）
  */
 (function() {
     'use strict';
@@ -8,12 +8,16 @@
         constructor() {
             this.currentDate = new Date();
             this.scheduleCore = null;
+            
+            // 差分検出: 前回描画したイベントデータのスナップショット
+            this.lastEventsSnapshot = null;
+            this.lastMonthKey = null;
+            
             this.init();
         }
 
         async init() {
             try {
-                // ScheduleCoreの初期化を待つ
                 await this.waitForDependencies();
                 
                 this.scheduleCore = new window.ScheduleCore();
@@ -27,20 +31,27 @@
             }
         }
 
-        async waitForDependencies() {
-            let attempts = 0;
-            while (attempts < 30) {
-                if (window.DateUtils && window.ScheduleCore && window.database) {
-                    return;
-                }
-                await new Promise(resolve => setTimeout(resolve, 100));
-                attempts++;
-            }
-            throw new Error('依存関係の初期化タイムアウト');
+        waitForDependencies() {
+            return new Promise((resolve, reject) => {
+                let attempts = 0;
+                const maxAttempts = 30;
+                const check = () => {
+                    if (window.DateUtils && window.ScheduleCore && window.database) {
+                        resolve();
+                        return;
+                    }
+                    attempts++;
+                    if (attempts >= maxAttempts) {
+                        reject(new Error('依存関係の初期化タイムアウト'));
+                        return;
+                    }
+                    setTimeout(check, 100);
+                };
+                check();
+            });
         }
 
         setupEventListeners() {
-            // 月切り替えボタンの再利用
             const prevBtn = document.getElementById('prevWeekBtn');
             const nextBtn = document.getElementById('nextWeekBtn');
 
@@ -49,14 +60,12 @@
                 prevBtn.innerHTML = '<i class="fas fa-chevron-left"></i>';
                 prevBtn.title = '前月';
             }
-
             if (nextBtn) {
                 nextBtn.onclick = () => this.changeMonth(1);
                 nextBtn.innerHTML = '<i class="fas fa-chevron-right"></i>';
                 nextBtn.title = '次月';
             }
 
-            // 今月ボタンの追加
             this.addTodayButton();
         }
 
@@ -74,7 +83,7 @@
 
         changeMonth(delta) {
             this.currentDate.setMonth(this.currentDate.getMonth() + delta);
-            this.currentDate.setDate(1); // 月初に設定
+            this.currentDate.setDate(1);
             this.startMonthListener();
             this.render();
         }
@@ -90,6 +99,7 @@
                 const year = this.currentDate.getFullYear();
                 const month = this.currentDate.getMonth() + 1;
                 
+                // schedule-core 側で既にデバウンス済み（150ms）
                 this.scheduleCore.listenToMonth(year, month, () => {
                     this.render();
                 });
@@ -108,19 +118,49 @@
             }
         }
 
+        // ★ 月のイベントデータのスナップショット（差分検出用）
+        getCurrentMonthEventsSnapshot() {
+            if (!this.scheduleCore) return '';
+            const year = this.currentDate.getFullYear();
+            const month = this.currentDate.getMonth() + 1;
+            const monthKey = `${year}-${String(month).padStart(2, '0')}`;
+            
+            // この月の日付のイベントだけを抽出してハッシュ化
+            const monthEvents = {};
+            Object.keys(this.scheduleCore.events).forEach(dateKey => {
+                if (dateKey.startsWith(monthKey + '-')) {
+                    monthEvents[dateKey] = this.scheduleCore.events[dateKey].map(e => 
+                        `${e.id}:${e.name}:${e.department}:${e.startTime}:${e.endTime}:${e.requiredPeople}`
+                    ).join('|');
+                }
+            });
+            return JSON.stringify(monthEvents);
+        }
+
         renderCalendar() {
             const tableBody = document.getElementById('scheduleTableBody');
             if (!tableBody) return;
 
             const year = this.currentDate.getFullYear();
             const month = this.currentDate.getMonth() + 1;
+            const monthKey = `${year}-${String(month).padStart(2, '0')}`;
             const dates = window.DateUtils.generateCalendarDates(year, month);
 
-            let html = '';
+            // ★ 差分検出: 同じ月 & イベント変更なし → スキップ
+            const currentSnapshot = this.getCurrentMonthEventsSnapshot();
+            if (this.lastMonthKey === monthKey && 
+                this.lastEventsSnapshot === currentSnapshot) {
+                console.log('⏭️ 描画スキップ（変更なし）');
+                return;
+            }
+            this.lastMonthKey = monthKey;
+            this.lastEventsSnapshot = currentSnapshot;
+
+            // DocumentFragmentで一括構築（リフロー1回に集約）
+            const fragment = document.createDocumentFragment();
             
-            // 週単位でレンダリング
             for (let week = 0; week < 6; week++) {
-                html += '<tr>';
+                const row = document.createElement('tr');
                 
                 for (let day = 0; day < 7; day++) {
                     const index = week * 7 + day;
@@ -137,29 +177,33 @@
                         isToday ? 'bg-blue-50 border-blue-300' : ''
                     ].filter(Boolean).join(' ');
 
-                    html += `
-                        <td class="${cellClass}" data-date="${dateKey}" onclick="window.openDateModal('${dateKey}')">
-                            <div class="h-full w-full min-h-[80px] p-2">
-                                <div class="font-medium text-sm mb-1 ${isToday ? 'text-blue-700' : dateInfo.isCurrentMonth ? '' : 'text-gray-400'}">
-                                    ${dateInfo.date.getDate()}
-                                </div>
-                                <div class="space-y-1">
-                                    ${this.renderEventChips(events, dateKey)}
-                                </div>
+                    const cell = document.createElement('td');
+                    cell.className = cellClass;
+                    cell.dataset.date = dateKey;
+                    cell.setAttribute('onclick', `window.openDateModal('${dateKey}')`);
+                    cell.innerHTML = `
+                        <div class="h-full w-full min-h-[80px] p-2">
+                            <div class="font-medium text-sm mb-1 ${isToday ? 'text-blue-700' : dateInfo.isCurrentMonth ? '' : 'text-gray-400'}">
+                                ${dateInfo.date.getDate()}
                             </div>
-                        </td>
+                            <div class="space-y-1">
+                                ${this.renderEventChips(events, dateKey)}
+                            </div>
+                        </div>
                     `;
+                    row.appendChild(cell);
                 }
                 
-                html += '</tr>';
+                fragment.appendChild(row);
                 
-                // 当月の日付が全て表示されたら終了
                 if (dates[week * 7 + 6] && dates[week * 7 + 6].date.getMonth() !== (month - 1)) {
                     break;
                 }
             }
 
-            tableBody.innerHTML = html;
+            // ★ 一括置換（リフローを1回に）
+            tableBody.innerHTML = '';
+            tableBody.appendChild(fragment);
             console.log('✅ カレンダー描画完了');
         }
 
@@ -190,13 +234,10 @@
             return html;
         }
 
-        // サンプルデータ追加（開発用）
         async addSampleData() {
             if (!this.scheduleCore) return;
-
             const today = new Date();
             const todayKey = window.DateUtils.formatDateISO(today);
-
             const sampleEvent = {
                 date: todayKey,
                 name: 'サンプル業務',
@@ -206,26 +247,20 @@
                 count: 1,
                 requiredPeople: 1
             };
-
             try {
                 await this.scheduleCore.addEvent(sampleEvent);
-                console.log('✅ サンプルデータ追加完了');
             } catch (error) {
                 console.error('❌ サンプルデータ追加エラー:', error);
             }
         }
+
+        destroy() {
+            if (this.scheduleCore) {
+                this.scheduleCore.destroy();
+            }
+        }
     }
 
-    // 🔧 重要: 古いプレースホルダー関数を削除
-    // 以下のような関数定義があれば削除またはコメントアウトしてください
-    /*
-    window.openDateModal = (dateKey) => {
-        console.log('📅 日付クリック:', dateKey);
-        alert(`${dateKey}の詳細画面を表示します（実装予定）`);
-    };
-    */
-
-    // グローバル公開
     window.CalendarView = CalendarView;
-    console.log('📅 カレンダービュー読み込み完了');
+    console.log('📅 カレンダービュー読み込み完了（最適化版）');
 })();
