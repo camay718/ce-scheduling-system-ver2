@@ -5,14 +5,14 @@ if (typeof window.firebaseV2Initialized === 'undefined') {
     console.log('🔄 Firebase設定ファイル読み込み開始');
     
     window.firebaseConfig = {
-        apiKey: "AIzaSyBEe7xDIoo6OsVCT-2yXakuO_FMhYs1GNg",  // ★ 既存維持
-        authDomain: "ce-scheduling-system-v2.firebaseapp.com",
-        databaseURL: "https://ce-scheduling-system-v2-default-rtdb.asia-southeast1.firebasedatabase.app",
-        projectId: "ce-scheduling-system-v2",
-        storageBucket: "ce-scheduling-system-v2.firebasestorage.app",
-        messagingSenderId: "288279598010",
-        appId: "1:288279598010:web:d545ee1d4d854513084383",
-        measurementId: "G-LSEEMJE2R0"
+        apiKey: "AIzaSyBYrjRe2x0sxfYpJN0XY8HC-UPOjTAEBk4",
+        authDomain: "yamadaice-webapp.firebaseapp.com",
+        databaseURL: "https://yamadaice-webapp-default-rtdb.asia-southeast1.firebasedatabase.app",
+        projectId: "yamadaice-webapp",
+        storageBucket: "yamadaice-webapp.firebasestorage.app",
+        messagingSenderId: "407493129637",
+        appId: "1:407493129637:web:8b26f34ecd245fb37a244c",
+        measurementId: "G-B5Q2PMRQWY"
     };
 
     window.DATA_ROOT = 'ceScheduleV2';
