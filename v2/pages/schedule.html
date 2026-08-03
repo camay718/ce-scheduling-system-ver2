@@ -287,6 +287,16 @@
             cursor: default;
         }
 
+        /* フィルターチェックボックス */
+        #filterSharedEvents, #filterPersonalCards {
+            cursor: pointer;
+            width: 16px;
+            height: 16px;
+        }
+        #filterDepartment {
+            cursor: pointer;
+        }
+
         .event-count-display {
             font-size: 11px;
             color: #6b7280;
@@ -787,13 +797,37 @@
                         <button id="dailyViewBtn" class="btn-unified btn-primary-unified btn-small w-full">
                             <i class="fas fa-calendar-day mr-1"></i>日別表示
                         </button>
- <a href="./weekly-view.html" class="btn-unified btn-outline-unified btn-small w-full">
-    <i class="fas fa-calendar-week mr-1"></i>週間表示
-</a>
+                        <a href="./weekly-view.html" class="btn-unified btn-outline-unified btn-small w-full">
+     <i class="fas fa-calendar-week mr-1"></i>週間表示
+ </a>
+                    </div>
+                </div>
+
+                <!-- フィルター -->
+                <div class="mb-6">
+                    <h3 class="text-sm font-semibold mb-3">
+                        <i class="fas fa-filter mr-2"></i>フィルター
+                    </h3>
+                    <div class="space-y-2">
+                        <label class="flex items-center">
+                            <input type="checkbox" id="filterSharedEvents" checked class="mr-2">
+                            <span class="text-sm">共有業務</span>
+                        </label>
+                        <label class="flex items-center">
+                            <input type="checkbox" id="filterPersonalCards" checked class="mr-2">
+                            <span class="text-sm">個人業務</span>
+                        </label>
+                        <div class="mt-3">
+                            <label class="block text-xs font-semibold mb-1 text-gray-600">部門絞り込み</label>
+                            <select id="filterDepartment" class="input-unified" style="padding: 4px 8px; font-size: 12px;">
+                                <option value="all">全部門</option>
+                            </select>
+                        </div>
                     </div>
                 </div>
 
                 <!-- CEリストセクション（互換性確保） -->
+
                 <div class="mb-6">
                     <h3 class="text-sm font-semibold mb-3">
                         <i class="fas fa-users mr-2"></i>CEリスト（<span id="ceListCount">--</span>名）
@@ -944,6 +978,10 @@ constructor() {
                 if (this.isInitialized) return;
                 this.isInitialized = true;
 
+                // フィルター状態・リスナー管理
+                this.cardFilters = { shared: true, personal: true, department: 'all' };
+                this.personalCardListener = null;
+
                 try {
                     // 依存関係の待機
                     await this.waitForDependencies();
@@ -970,20 +1008,21 @@ constructor() {
                         displayName: userData.displayName || userData.username || __session_ug.username || 'ユーザー',
                         role: userData.role || __session_ug.role || sessionStorage.getItem('userRole') || 'viewer'
                     };
+                    await this.initializeScheduleSystem();
 
-await this.initializeScheduleSystem();
+                    // フィルター初期化
+                    this.setupCardFilters();
 
-// 個人カードボタンの表示制御
-if (window.eventManager && typeof window.eventManager.updatePersonalCardButtonVisibility === 'function') {
-    window.eventManager.updatePersonalCardButtonVisibility().catch(console.error);
-}
+                    // 個人カードボタンの表示制御
+                    if (window.eventManager && typeof window.eventManager.updatePersonalCardButtonVisibility === 'function') {
+                        window.eventManager.updatePersonalCardButtonVisibility().catch(console.error);
+                    }
+                    // ページアクセスログ記録
+                    if (window.auditLogger) {
+                        await window.auditLogger.logPageAccess('schedule');
+                    }
 
-// ページアクセスログ記録
-if (window.auditLogger) {
-    await window.auditLogger.logPageAccess('schedule');
-}
-
-console.log('✅ スケジュール管理初期化完了');
+                    console.log('✅ スケジュール管理初期化完了');
                 } catch (error) {
                     console.error('スケジュール初期化エラー:', error);
                     location.href = '../index.html';
@@ -2144,9 +2183,12 @@ async loadAndRenderEventsForSelectedDate() {
         grid.querySelectorAll('.task-list').forEach(el => {
             el.querySelectorAll('.event-card').forEach(card => card.remove());
         });
-
+    
         // イベントを部門ごとに表示
         for (const ev of events) {
+            // 共有業務フィルター
+            if (!this.cardFilters?.shared) continue;
+
             const section = grid.querySelector(`.task-list[data-department="${ev.department}"]`);
             if (!section) continue;
 
@@ -2269,8 +2311,11 @@ async loadAndRenderEventsForSelectedDate() {
         // 月次業務の表示
         await this.renderMonthlyTasks();
 
-        // 個人カードの表示
-        await this.renderPersonalCards(dateKey);
+        // 個人カードのリアルタイムリスナー設定（初期レンダリング含む）
+        this.setupPersonalCardListener(dateKey);
+
+        // 部門フィルター適用
+        this.applyDepartmentFilter();
 
         // 集計の更新
         this.updateDailySummary().catch(console.error);
@@ -2288,48 +2333,153 @@ async loadAndRenderEventsForSelectedDate() {
     }
 }
 
-// 個人カード表示メソッド
-async renderPersonalCards(dateKey) {
-    const grid = document.getElementById('departmentGrid');
-    if (!grid) return;
-
-    // EventManagerが未初期化ならスキップ
-    if (!window.eventManager || typeof window.eventManager.loadPersonalCardsForDate !== 'function') {
-        return;
+// 個人カードリアルタイムリスナー設定
+setupPersonalCardListener(dateKey) {
+    // 古いリスナーをクリーンアップ
+    if (this.personalCardListener) {
+        this.personalCardListener.off();
+        this.personalCardListener = null;
     }
 
-    try {
-        const personalCards = await window.eventManager.loadPersonalCardsForDate(dateKey);
+    if (!window.database || !window.DATA_ROOT) return;
+
+    const ref = window.database.ref(`${window.DATA_ROOT}/personalCards/byDate/${dateKey}`);
+    this.personalCardListener = ref;
+
+    ref.on('value', (snapshot) => {
+        const grid = document.getElementById('departmentGrid');
+        if (!grid) return;
+
+        // 既存の個人カードをクリア
+        grid.querySelectorAll('.personal-card').forEach(card => card.remove());
+
+        // 個人業務フィルターチェック
+        if (!this.cardFilters?.personal) return;
+
+        const cardsById = snapshot.val() || {};
+        const personalCards = Object.values(cardsById);
 
         if (personalCards.length === 0) {
             console.log('📋 個人カードなし:', dateKey);
             return;
         }
 
-        console.log(`📋 個人カード表示: ${personalCards.length}件 (${dateKey})`);
+        console.log(`📋 個人カード更新: ${personalCards.length}件 (${dateKey})`);
 
         for (const card of personalCards) {
+            // 部門フィルターチェック
+            if (this.cardFilters?.department && this.cardFilters.department !== 'all') {
+                if (card.department !== this.cardFilters.department) continue;
+            }
+
             const section = grid.querySelector(`.task-list[data-department="${card.department}"]`);
             if (!section) continue;
 
-            const cardElement = window.eventManager.createPersonalCardElement(card, dateKey);
-            section.appendChild(cardElement);
+            if (window.eventManager && typeof window.eventManager.createPersonalCardElement === 'function') {
+                const cardElement = window.eventManager.createPersonalCardElement(card, dateKey);
+                section.appendChild(cardElement);
+            }
         }
-    } catch (error) {
-        console.error('❌ 個人カード表示エラー:', error);
-    }
+    }, (error) => {
+        console.error('❌ 個人カードリスナーエラー:', error);
+    });
 }
 
-// renderMonthlyTasks メソッドの修正（日別実施件数・時間対応版）
-async renderMonthlyTasks() {
+// 個人カードのみ再描画（フィルター切替用）
+refreshPersonalCards() {
+    const dateKey = this.formatDate(this.selectedDate);
     const grid = document.getElementById('departmentGrid');
     if (!grid) return;
 
-    const dateKey = this.formatDate(this.selectedDate);
+    // 既存の個人カードをクリア
+    grid.querySelectorAll('.personal-card').forEach(card => card.remove());
 
-    // 既存の月次業務カードをクリア
-    grid.querySelectorAll('.monthly-plans').forEach(el => {
-        el.innerHTML = '';
+    // 個人業務フィルター
+    if (!this.cardFilters?.personal) return;
+
+    if (window.eventManager && typeof window.eventManager.loadPersonalCardsForDate === 'function') {
+        window.eventManager.loadPersonalCardsForDate(dateKey).then(personalCards => {
+            for (const card of personalCards) {
+                if (this.cardFilters?.department && this.cardFilters.department !== 'all') {
+                    if (card.department !== this.cardFilters.department) continue;
+                }
+                const section = grid.querySelector(`.task-list[data-department="${card.department}"]`);
+                if (!section) continue;
+                const cardElement = window.eventManager.createPersonalCardElement(card, dateKey);
+                section.appendChild(cardElement);
+            }
+        }).catch(console.error);
+    }
+}
+
+// フィルター初期化
+setupCardFilters() {
+    // 部門ドロップダウン生成
+    const deptFilter = document.getElementById('filterDepartment');
+    if (deptFilter && window.DEPARTMENTS) {
+        window.DEPARTMENTS.forEach(dept => {
+            const option = document.createElement('option');
+            option.value = dept;
+            option.textContent = dept;
+            deptFilter.appendChild(option);
+        });
+    }
+
+    // 共有業務フィルター
+    const sharedCheckbox = document.getElementById('filterSharedEvents');
+    if (sharedCheckbox) {
+        sharedCheckbox.onchange = () => {
+            this.cardFilters.shared = sharedCheckbox.checked;
+            this.renderDailySchedule();
+        };
+    }
+
+    // 個人業務フィルター
+    const personalCheckbox = document.getElementById('filterPersonalCards');
+    if (personalCheckbox) {
+        personalCheckbox.onchange = () => {
+            this.cardFilters.personal = personalCheckbox.checked;
+            this.refreshPersonalCards();
+        };
+    }
+
+    // 部門フィルター
+    if (deptFilter) {
+        deptFilter.onchange = () => {
+            this.cardFilters.department = deptFilter.value;
+            this.applyDepartmentFilter();
+        };
+    }
+
+    console.log('✅ カードフィルター初期化完了');
+}
+
+// 部門フィルター適用
+applyDepartmentFilter() {
+    const grid = document.getElementById('departmentGrid');
+    if (!grid) return;
+
+    const selectedDept = this.cardFilters?.department || 'all';
+
+    grid.querySelectorAll('[data-department]').forEach(section => {
+        if (selectedDept === 'all') {
+            section.style.display = '';
+        } else {
+            section.style.display = section.dataset.department === selectedDept ? '' : 'none';
+        }
+    });
+}
+
+            // renderMonthlyTasks メソッドの修正（日別実施件数・時間対応版）
+            async renderMonthlyTasks() {
+                const grid = document.getElementById('departmentGrid');
+                if (!grid) return;
+
+                const dateKey = this.formatDate(this.selectedDate);
+
+                // 既存の月次業務カードをクリア
+                grid.querySelectorAll('.monthly-plans').forEach(el => {
+                    el.innerHTML = '';
     });
 
     // ★修正: すべての年月から、選択日付に該当する月次業務を抽出
