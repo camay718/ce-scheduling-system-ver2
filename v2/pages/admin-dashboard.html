@@ -58,6 +58,44 @@
             cursor: pointer;
             margin-left: 12px;
         }
+        /* トグルスイッチ（Tailwind JIT非依存・自前CSS） */
+.toggle-switch {
+    position: relative;
+    display: inline-block;
+    width: 44px;
+    height: 24px;
+    flex-shrink: 0;
+}
+.toggle-switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+.toggle-slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background-color: #d1d5db;
+    border-radius: 12px;
+    transition: 0.3s;
+}
+.toggle-slider::before {
+    content: "";
+    position: absolute;
+    height: 20px;
+    width: 20px;
+    left: 2px;
+    top: 2px;
+    background-color: white;
+    border-radius: 50%;
+    transition: 0.3s;
+}
+.toggle-switch input:checked + .toggle-slider {
+    background-color: #2563eb;
+}
+.toggle-switch input:checked + .toggle-slider::before {
+    transform: translateX(20px);
+}
     </style>
 </head>
 <body class="theme-unified">
@@ -231,9 +269,9 @@
                                     <div class="font-medium text-gray-800">個人業務入力の許可</div>
                                     <div class="text-sm text-gray-600">Viewerが個人業務カードを作成・編集・削除できるようにします。自身のアイコンが自動配置され、追加CEも選択できます。</div>
                                 </div>
-                                <label class="relative inline-flex items-center cursor-pointer">
-                                    <input type="checkbox" id="viewerCanCreatePersonalCard" class="sr-only peer">
-                                    <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                                <label class="toggle-switch">
+                                    <input type="checkbox" id="viewerCanCreatePersonalCard">
+                                    <span class="toggle-slider"></span>
                                 </label>
                             </div>
                         </div>
