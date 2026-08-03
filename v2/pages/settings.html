@@ -830,68 +830,82 @@ class SettingsManager {
         return 'other';
     }
 
-    getActionIcon(action) {
-        const map = {
-            'login': 'fas fa-sign-in-alt',
-            'logout': 'fas fa-sign-out-alt',
-            'page-access': 'fas fa-eye',
-            'analytics-page-access': 'fas fa-chart-line',
-            'event-add': 'fas fa-plus',
-            'event-edit': 'fas fa-pen',
-            'event-delete': 'fas fa-trash',
-            'event-bulk-add': 'fas fa-layer-group',
-            'event-copy': 'fas fa-copy',
-            'ce-assign': 'fas fa-user-plus',
-            'ce-unassign': 'fas fa-user-minus',
-            'schedule-create': 'fas fa-calendar-plus',
-            'schedule-edit': 'fas fa-calendar-day',
-            'schedule-publish': 'fas fa-bullhorn',
-            'template-create': 'fas fa-bookmark',
-            'template-apply': 'fas fa-magic',
-            'template-delete': 'fas fa-eraser',
-            'template-rename': 'fas fa-i-cursor',
-            'template-reorder': 'fas fa-sort',
-            'monthly-create': 'fas fa-calendar-alt',
-            'monthly-update': 'fas fa-calendar-check',
-            'monthly-delete': 'fas fa-calendar-minus',
-            'monthly-task-copy': 'fas fa-copy',
-            'user-create': 'fas fa-user-plus',
-            'user-delete': 'fas fa-user-times'
-        };
-        return map[action] || 'fas fa-circle-info';
-    }
+getActionIcon(action) {
+    const map = {
+        'login': 'fas fa-sign-in-alt',
+        'logout': 'fas fa-sign-out-alt',
+        'page-access': 'fas fa-eye',
+        'analytics-page-access': 'fas fa-chart-line',
+        'event-add': 'fas fa-plus',
+        'event-edit': 'fas fa-pen',
+        'event-delete': 'fas fa-trash',
+        'event-bulk-add': 'fas fa-layer-group',
+        'event-copy': 'fas fa-copy',
+        'ce-assign': 'fas fa-user-plus',
+        'ce-unassign': 'fas fa-user-minus',
+        'schedule-create': 'fas fa-calendar-plus',
+        'schedule-edit': 'fas fa-calendar-day',
+        'schedule-delete': 'fas fa-trash',
+        'schedule-publish': 'fas fa-bullhorn',
+        'schedule-ce-add': 'fas fa-user-plus',
+        'schedule-ce-remove': 'fas fa-user-minus',
+        'template-create': 'fas fa-bookmark',
+        'template-apply': 'fas fa-magic',
+        'template-delete': 'fas fa-eraser',
+        'template-rename': 'fas fa-i-cursor',
+        'template-reorder': 'fas fa-sort',
+        'monthly-create': 'fas fa-calendar-alt',
+        'monthly-update': 'fas fa-calendar-check',
+        'monthly-delete': 'fas fa-calendar-minus',
+        'monthly-task-copy': 'fas fa-copy',
+        'user-create': 'fas fa-user-plus',
+        'user-pending-delete': 'fas fa-user-times',
+        'user-role-change': 'fas fa-user-shield',
+        'user-password-reset': 'fas fa-key',
+        'user-delete': 'fas fa-user-times',
+        'user-permissions-update': 'fas fa-lock'
+    };
+    return map[action] || 'fas fa-circle-info';
+}
 
     getActionLabel(log) {
-        const map = {
-            'login': 'ログイン',
-            'logout': 'ログアウト',
-            'page-access': 'ページ閲覧',
-            'analytics-page-access': '分析ページ閲覧',
-            'event-add': '業務を追加',
-            'event-edit': '業務を編集',
-            'event-delete': '業務を削除',
-            'event-bulk-add': '業務を一括追加',
-            'event-copy': '業務をコピー',
-            'ce-assign': 'CEを配置',
-            'ce-unassign': 'CE配置を解除',
-            'schedule-create': '勤務表を作成',
-            'schedule-edit': '勤務表を編集',
-            'schedule-publish': '勤務表を公開',
-            'template-create': 'テンプレを作成',
-            'template-apply': 'テンプレを適用',
-            'template-delete': 'テンプレを削除',
-            'template-rename': 'テンプレ名を変更',
-            'template-reorder': 'テンプレ順序変更',
-            'monthly-create': '月次業務を追加',
-            'monthly-update': '月次業務を更新',
-            'monthly-delete': '月次業務を削除',
-            'monthly-task-copy': '月次業務コピー',
-            'user-create': 'ユーザーを作成',
-            'user-delete': 'ユーザーを削除',
-            'weekly-view-print': '週間表を印刷'
-        };
-        return map[log.action] || (log.action || '操作');
-    }
+    const map = {
+        'login': 'ログイン',
+        'logout': 'ログアウト',
+        'page-access': 'ページ閲覧',
+        'analytics-page-access': '分析ページ閲覧',
+        'event-add': '業務を追加',
+        'event-edit': '業務を編集',
+        'event-delete': '業務を削除',
+        'event-bulk-add': '業務を一括追加',
+        'event-copy': '業務をコピー',
+        'ce-assign': 'CEを配置',
+        'ce-unassign': 'CE配置を解除',
+        'schedule-create': '勤務表を保存',
+        'schedule-edit': '勤務表を上書き保存',
+        'schedule-delete': '勤務表を削除',
+        'schedule-publish': '勤務表を公開',
+        'schedule-ce-add': 'CEを追加',
+        'schedule-ce-remove': 'CEを削除',
+        'template-create': 'テンプレを作成',
+        'template-apply': 'テンプレを適用',
+        'template-delete': 'テンプレを削除',
+        'template-rename': 'テンプレ名を変更',
+        'template-reorder': 'テンプレ順序変更',
+        'monthly-create': '月次業務を追加',
+        'monthly-update': '月次業務を更新',
+        'monthly-delete': '月次業務を削除',
+        'monthly-task-copy': '月次業務コピー',
+        'user-create': 'ユーザーを作成',
+        'user-pending-delete': '待機ユーザーを削除',
+        'user-role-change': '権限を変更',
+        'user-password-reset': 'パスワードをリセット',
+        'user-delete': 'ユーザーを削除',
+        'user-permissions-update': 'viewer権限設定を更新',
+        'weekly-view-print': '週間表を印刷'
+    };
+    return map[log.action] || (log.action || '操作');
+}
 
     getTargetLabel(log) {
         const d = log.details || {};
