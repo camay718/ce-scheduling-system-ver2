@@ -549,7 +549,7 @@
         @media (max-width: 768px) {
             .fixed-taskbar {
                 height: 120px;
-                padding: 8px 12px;
+                padding: 6px 8px;
                 left: 0 !important;
             }
 
@@ -557,51 +557,106 @@
                 padding-top: 120px;
             }
 
+            /* タスクバー全体を2段レイアウトに */
             .taskbar-content {
-                flex-direction: column;
-                gap: 8px;
-                align-items: stretch;
+                display: flex !important;
+                flex-direction: column !important;
+                justify-content: center !important;
+                gap: 4px !important;
+                align-items: stretch !important;
+                height: 100% !important;
+                padding: 0 !important;
             }
 
-            .taskbar-left {
-                order: 1;
-            }
-
+            /* 1段目: 日付ナビ + 今日 */
+            .taskbar-left,
             .taskbar-center {
-                order: 2;
-                justify-content: center;
-                flex-wrap: wrap;
-                gap: 6px;
-                width: 100%;
+                order: unset !important;
+                display: flex !important;
+                align-items: center !important;
+                justify-content: center !important;
+                gap: 4px !important;
+                width: 100% !important;
+                flex: 0 0 auto !important;
+                flex-wrap: nowrap !important;
             }
+            .taskbar-left { order: 1 !important; }
+            .taskbar-center { order: 2 !important; }
 
+            /* 日付ピッカーの詰め */
             .taskbar-center input[type="date"],
+            .taskbar-left input[type="date"] {
+                font-size: 12px !important;
+                padding: 4px 6px !important;
+                width: auto !important;
+                max-width: 130px !important;
+            }
+            .taskbar-left .btn-unified,
             .taskbar-center .btn-unified {
-                font-size: 13px;
-                padding: 6px 8px;
+                font-size: 12px !important;
+                padding: 4px 8px !important;
+                white-space: nowrap !important;
+                height: 30px !important;
+                line-height: 1 !important;
+            }
+            /* 前日・翌日ボタンをコンパクト化 */
+            #prevDayBtn, #nextDayBtn {
+                min-width: 28px !important;
+                padding: 4px 6px !important;
+            }
+            #prevDayBtn span, #nextDayBtn span {
+                display: none !important;
             }
 
+            /* 2段目: 業務ボタン群 */
             .taskbar-right {
-                order: 3;
-                display: flex;
-                flex-wrap: wrap;
-                gap: 6px;
-                width: 100%;
-                justify-content: flex-start;
+                order: 3 !important;
+                display: flex !important;
+                flex-wrap: nowrap !important;
+                gap: 4px !important;
+                width: 100% !important;
+                justify-content: space-between !important;
+                margin-top: 0 !important;
             }
-
             .taskbar-right .btn-unified,
             .taskbar-right button {
-                flex: 1 1 calc(50% - 6px);
-                min-width: 0;
-                white-space: nowrap;
-                font-size: 12px;
-                padding: 6px 8px;
+                flex: 1 1 0 !important;
+                min-width: 0 !important;
+                white-space: nowrap !important;
+                font-size: 11px !important;
+                padding: 4px 4px !important;
+                height: 30px !important;
+                line-height: 1 !important;
+                overflow: hidden !important;
+                text-overflow: ellipsis !important;
             }
-
             .taskbar-right .btn-unified i,
             .taskbar-right button i {
-                margin-right: 4px !important;
+                margin-right: 2px !important;
+                font-size: 12px !important;
+            /* スマホ用ラベル短縮（元テキストを隠して短いラベルに差し替え） */
+            #addBulkEventBtn { font-size: 0 !important; }
+            #addBulkEventBtn i { font-size: 12px !important; }
+            #addBulkEventBtn::after {
+                content: "一括";
+                font-size: 11px;
+                margin-left: 3px;
+            }
+
+            #addPersonalCardBtn { font-size: 0 !important; }
+            #addPersonalCardBtn i { font-size: 12px !important; }
+            #addPersonalCardBtn::after {
+                content: "個人";
+                font-size: 11px;
+                margin-left: 3px;
+            }
+
+            #templateManagerBtn { font-size: 0 !important; }
+            #templateManagerBtn i { font-size: 12px !important; }
+            #templateManagerBtn::after {
+                content: "テンプレ";
+                font-size: 11px;
+                margin-left: 3px;
             }
 
             .schedule-sidebar {
