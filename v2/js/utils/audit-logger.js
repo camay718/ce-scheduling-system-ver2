@@ -1,12 +1,51 @@
 /**
  * 監査ログシステム - CEスケジュール管理システムv2
- * 全操作の記録と管理
+ * 全操作の記録と管理（actor解決強化版）
  */
 class AuditLogger {
     constructor() {
         this.isEnabled = true;
         this.maxRetries = 2;
         this.retryDelay = 500;
+    }
+
+    /**
+     * 現在の操作者情報を、複数ソースから安全に解決する
+     * 優先順位: window.currentUserData > sessionStorage > localStorage.dashboardAuth
+     */
+    getActorInfo() {
+        let dashboardAuth = {};
+        try {
+            dashboardAuth = JSON.parse(localStorage.getItem('dashboardAuth') || '{}');
+        } catch (e) {
+            dashboardAuth = {};
+        }
+
+        const uid =
+            window.currentUserData?.uid ||
+            sessionStorage.getItem('targetUID') ||
+            dashboardAuth.uid ||
+            'anonymous';
+
+        const username =
+            window.currentUserData?.username ||
+            sessionStorage.getItem('currentUsername') ||
+            dashboardAuth.username ||
+            'unknown';
+
+        const displayName =
+            window.currentUserData?.displayName ||
+            dashboardAuth.displayName ||
+            username ||
+            'unknown';
+
+        const role =
+            window.currentUserData?.role ||
+            sessionStorage.getItem('userRole') ||
+            dashboardAuth.role ||
+            'viewer';
+
+        return { uid, username, displayName, role };
     }
 
     /**
@@ -19,6 +58,8 @@ class AuditLogger {
         }
 
         try {
+            const actor = this.getActorInfo();
+
             const entry = {
                 action: action,
                 details: {
@@ -26,9 +67,10 @@ class AuditLogger {
                     page: this.getCurrentPage(),
                     ...additionalData
                 },
-                uid: window.currentUserData?.uid || 'anonymous',
-                username: window.currentUserData?.username || 'unknown',
-                displayName: window.currentUserData?.displayName || window.currentUserData?.username || 'unknown',
+                uid: actor.uid,
+                username: actor.username,
+                displayName: actor.displayName,
+                role: actor.role,
                 timestamp: firebase.database.ServerValue.TIMESTAMP,
                 userAgent: navigator.userAgent.substring(0, 100)
             };
@@ -36,7 +78,6 @@ class AuditLogger {
             // 重要操作は同期記録、その他は非同期記録
             const criticalActions = ['login', 'logout', 'user-create', 'user-delete', 'schedule-publish', 'template-delete'];
 
-            
             if (criticalActions.includes(action)) {
                 await this.writeLogEntry(entry);
             } else {
@@ -47,7 +88,7 @@ class AuditLogger {
                 }, 50);
             }
 
-            console.log('📝 監査ログ記録:', action, details);
+            console.log('📝 監査ログ記録:', action, details, `by ${actor.displayName}`);
 
         } catch (error) {
             console.error('❌ 監査ログ記録エラー:', error);
@@ -128,44 +169,40 @@ class AuditLogger {
     }
 
     async logTemplateAction(action, data = {}) {
-    // action: 'create' | 'rename' | 'delete' | 'apply' | 'reorder'
-    await this.logAction(`template-${action}`, {
-        department: data.department || 'unknown',
-        templateId: data.templateId || data.id || '',
-        name: data.name || '',
-        // 単日適用
-        dateKey: data.dateKey || '',
-        added: data.added ?? null,
-        skipped: data.skipped ?? null,
-        // 期間適用
-        startDate: data.startDate || '',
-        endDate: data.endDate || '',
-        totalDays: data.totalDays ?? null,
-        totalAdded: data.totalAdded ?? null,
-        totalSkipped: data.totalSkipped ?? null,
-        // その他
-        items: data.items ?? null
-    });
-}
+        // action: 'create' | 'rename' | 'delete' | 'apply' | 'reorder'
+        await this.logAction(`template-${action}`, {
+            department: data.department || 'unknown',
+            templateId: data.templateId || data.id || '',
+            name: data.name || '',
+            dateKey: data.dateKey || '',
+            added: data.added ?? null,
+            skipped: data.skipped ?? null,
+            startDate: data.startDate || '',
+            endDate: data.endDate || '',
+            totalDays: data.totalDays ?? null,
+            totalAdded: data.totalAdded ?? null,
+            totalSkipped: data.totalSkipped ?? null,
+            items: data.items ?? null
+        });
+    }
 
-async logEventCopy(data = {}) {
-    await this.logAction('event-copy', {
-        name: data.name || '',
-        from: data.from || data.srcDateKey || '',
-        to: data.to || data.destDateKey || '',
-        department: data.department || 'unknown'
-    });
-}
+    async logEventCopy(data = {}) {
+        await this.logAction('event-copy', {
+            name: data.name || '',
+            from: data.from || data.srcDateKey || '',
+            to: data.to || data.destDateKey || '',
+            department: data.department || 'unknown'
+        });
+    }
 
-async logMonthlyTaskCopy(data = {}) {
-    await this.logAction('monthly-task-copy', {
-        name: data.name || '',
-        fromYearMonth: data.fromYearMonth || '',
-        toYearMonth: data.toYearMonth || '',
-        department: data.department || 'unknown'
-    });
-}
-
+    async logMonthlyTaskCopy(data = {}) {
+        await this.logAction('monthly-task-copy', {
+            name: data.name || '',
+            fromYearMonth: data.fromYearMonth || '',
+            toYearMonth: data.toYearMonth || '',
+            department: data.department || 'unknown'
+        });
+    }
 }
 
 // グローバルインスタンス作成
