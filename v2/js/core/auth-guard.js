@@ -1,15 +1,15 @@
 /**
  * 認証ガード - 全ページ共通認証システム
- * セッションタイムアウト対応版
+ * セッションタイムアウト対応版（ログイン直後の誤判定修正版）
  */
 (function(){
     if (window.AuthGuard) return;
 
-    const TIMEOUT_MINUTES = 30; // ← 後で変更するならここだけ変える
+    const TIMEOUT_MINUTES = 30; // ← 必要ならここだけ変更
     const TIMEOUT_MS = TIMEOUT_MINUTES * 60 * 1000;
     const DASHBOARD_AUTH_KEY = 'dashboardAuth';
     const LAST_ACTIVITY_KEY = 'lastActivityAt';
-    const ACTIVITY_EVENTS = ['click', 'keydown', 'mousedown', 'touchstart', 'scroll'];
+    const ACTIVITY_EVENTS = ['click', 'keydown', 'mousedown', 'touchstart'];
 
     let inactivityTimer = null;
     let listenersBound = false;
@@ -22,7 +22,7 @@
         }
     }
 
-    function removeAuthStorage() {
+    function clearAuthStorage() {
         sessionStorage.removeItem('targetUID');
         sessionStorage.removeItem('currentUsername');
         sessionStorage.removeItem('userRole');
@@ -32,46 +32,106 @@
 
     function isExpired(timestamp) {
         const ts = Number(timestamp || 0);
-        if (!ts) return true;
+        if (!ts) return false; // timestampが無ければ期限切れ扱いしない
         return (Date.now() - ts) > TIMEOUT_MS;
     }
 
-    function startInactivityTimer() {
-        clearTimeout(inactivityTimer);
-        inactivityTimer = setTimeout(() => {
-            window.AuthGuard.forceLogout('一定時間操作がなかったため、自動的にログアウトしました。再度ログインしてください。');
-        }, TIMEOUT_MS);
+    function getSessionCandidate() {
+        const params = new URLSearchParams(location.search);
+
+        const urlUid = params.get('uid');
+        const urlUsername = params.get('username');
+        const urlRole = params.get('role');
+
+        const sessionUid = sessionStorage.getItem('targetUID');
+        const sessionUsername = sessionStorage.getItem('currentUsername');
+        const sessionRole = sessionStorage.getItem('userRole');
+
+        const dashboardAuth = readDashboardAuth();
+
+        let uid = '';
+        let username = '';
+        let role = 'viewer';
+        let source = 'none';
+
+        if (urlUid && urlUsername) {
+            uid = urlUid;
+            username = urlUsername;
+            role = urlRole || 'viewer';
+            source = 'url';
+        } else if (sessionUid && sessionUsername) {
+            uid = sessionUid;
+            username = sessionUsername;
+            role = sessionRole || 'viewer';
+            source = 'session';
+        } else if (dashboardAuth.uid && dashboardAuth.username) {
+            uid = dashboardAuth.uid;
+            username = dashboardAuth.username;
+            role = dashboardAuth.role || 'viewer';
+            source = 'dashboard';
+        }
+
+        const sessionTimestamp = sessionStorage.getItem(LAST_ACTIVITY_KEY);
+        const dashboardTimestamp = dashboardAuth.timestamp;
+        const timestamp = Number(sessionTimestamp || dashboardTimestamp || 0);
+
+        return {
+            uid,
+            username,
+            role,
+            source,
+            timestamp,
+            hasSession: !!(uid && username)
+        };
     }
 
     function touchSession(uid, username, role) {
         const currentUid = uid || sessionStorage.getItem('targetUID');
         const currentUsername = username || sessionStorage.getItem('currentUsername');
         const currentRole = role || sessionStorage.getItem('userRole') || 'viewer';
+
+        if (!currentUid || !currentUsername) return;
+
         const now = Date.now();
 
-        if (currentUid && currentUsername) {
-            sessionStorage.setItem('targetUID', currentUid);
-            sessionStorage.setItem('currentUsername', currentUsername);
-            sessionStorage.setItem('userRole', currentRole);
-            sessionStorage.setItem(LAST_ACTIVITY_KEY, String(now));
+        sessionStorage.setItem('targetUID', currentUid);
+        sessionStorage.setItem('currentUsername', currentUsername);
+        sessionStorage.setItem('userRole', currentRole);
+        sessionStorage.setItem(LAST_ACTIVITY_KEY, String(now));
 
-            const currentDashboard = readDashboardAuth();
-            localStorage.setItem(DASHBOARD_AUTH_KEY, JSON.stringify({
-                ...currentDashboard,
-                uid: currentUid,
-                username: currentUsername,
-                role: currentRole,
-                timestamp: now
-            }));
+        const prev = readDashboardAuth();
+        localStorage.setItem(DASHBOARD_AUTH_KEY, JSON.stringify({
+            ...prev,
+            uid: currentUid,
+            username: currentUsername,
+            role: currentRole,
+            timestamp: now
+        }));
+    }
+
+    function startInactivityTimer() {
+        clearTimeout(inactivityTimer);
+
+        if (!sessionStorage.getItem('targetUID') || !sessionStorage.getItem('currentUsername')) {
+            return;
         }
+
+        inactivityTimer = setTimeout(() => {
+            window.AuthGuard.forceLogout('一定時間操作がなかったため、自動的にログアウトしました。再度ログインしてください。');
+        }, TIMEOUT_MS);
     }
 
     function bindActivityListeners() {
         if (listenersBound) return;
 
         const onActivity = () => {
-            if (!sessionStorage.getItem('targetUID') || !sessionStorage.getItem('currentUsername')) return;
-            touchSession();
+            const uid = sessionStorage.getItem('targetUID');
+            const username = sessionStorage.getItem('currentUsername');
+            const role = sessionStorage.getItem('userRole') || 'viewer';
+
+            if (!uid || !username) return;
+
+            touchSession(uid, username, role);
             startInactivityTimer();
         };
 
@@ -82,7 +142,11 @@
         document.addEventListener('visibilitychange', () => {
             if (document.visibilityState !== 'visible') return;
 
-            if (window.AuthGuard.isSessionExpired()) {
+            const sessionUid = sessionStorage.getItem('targetUID');
+            const sessionUsername = sessionStorage.getItem('currentUsername');
+            const lastActivity = sessionStorage.getItem(LAST_ACTIVITY_KEY);
+
+            if (sessionUid && sessionUsername && isExpired(lastActivity)) {
                 window.AuthGuard.forceLogout('一定時間操作がなかったため、自動的にログアウトしました。再度ログインしてください。');
                 return;
             }
@@ -96,23 +160,6 @@
     window.AuthGuard = {
         sessionTimeoutMinutes: TIMEOUT_MINUTES,
 
-        isSessionExpired() {
-            const sessionUid = sessionStorage.getItem('targetUID');
-            const sessionUsername = sessionStorage.getItem('currentUsername');
-            const sessionLastActivity = sessionStorage.getItem(LAST_ACTIVITY_KEY);
-
-            if (sessionUid && sessionUsername) {
-                return isExpired(sessionLastActivity);
-            }
-
-            const dashboardAuth = readDashboardAuth();
-            if (dashboardAuth.uid && dashboardAuth.username) {
-                return isExpired(dashboardAuth.timestamp);
-            }
-
-            return true;
-        },
-
         touch(uid, username, role) {
             touchSession(uid, username, role);
             startInactivityTimer();
@@ -120,7 +167,7 @@
 
         clearSession() {
             clearTimeout(inactivityTimer);
-            removeAuthStorage();
+            clearAuthStorage();
         },
 
         async forceLogout(message = '一定時間操作がなかったため、自動的にログアウトしました。再度ログインしてください。') {
@@ -152,37 +199,29 @@
                     location.pathname.endsWith(path) || location.pathname.includes(path)
                 );
 
-                if (this.isSessionExpired()) {
-                    this.clearSession();
-                    if (requireAuth || isAnalyticsPage) {
+                const candidate = getSessionCandidate();
+
+                // 期限切れ判定は「セッションがある場合だけ」行う
+                if (candidate.hasSession) {
+                    // sessionStorage由来でtimestampが切れていたら、明示的に期限切れ
+                    if (candidate.source === 'session' && isExpired(candidate.timestamp)) {
+                        this.clearSession();
                         alert('セッションの有効期限が切れました。再度ログインしてください。');
                         location.href = '../index.html';
                         return false;
                     }
-                }
 
-                const params = new URLSearchParams(location.search);
-                const dashboardAuth = readDashboardAuth();
-                const canUseDashboardAuth =
-                    dashboardAuth.uid &&
-                    dashboardAuth.username &&
-                    !isExpired(dashboardAuth.timestamp);
-
-                const uid = params.get('uid') ||
-                    sessionStorage.getItem('targetUID') ||
-                    (canUseDashboardAuth ? dashboardAuth.uid : '');
-
-                const username = params.get('username') ||
-                    sessionStorage.getItem('currentUsername') ||
-                    (canUseDashboardAuth ? dashboardAuth.username : '');
-
-                const role = params.get('role') ||
-                    sessionStorage.getItem('userRole') ||
-                    (canUseDashboardAuth ? dashboardAuth.role : 'viewer');
-
-                if (uid && username) {
-                    this.touch(uid, username, role);
-                    console.log('✅ 認証情報復元完了:', { uid: uid.substring(0, 8) + '...', username, role });
+                    // localStorage由来の古い復元情報なら、警告なしで破棄
+                    if (candidate.source === 'dashboard' && isExpired(candidate.timestamp)) {
+                        this.clearSession();
+                    } else {
+                        this.touch(candidate.uid, candidate.username, candidate.role);
+                        console.log('✅ 認証情報復元完了:', {
+                            uid: candidate.uid.substring(0, 8) + '...',
+                            username: candidate.username,
+                            role: candidate.role
+                        });
+                    }
                 }
 
                 if (isAnalyticsPage) {
