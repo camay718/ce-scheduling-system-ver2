@@ -300,33 +300,23 @@
 
         // 認証確認と初期化
         async function initHome() {
-            try {
-                await window.waitForFirebase();
-                
-                // セッション情報の確認
-                const uid = sessionStorage.getItem('targetUID');
-                const username = sessionStorage.getItem('currentUsername');
-                let role = sessionStorage.getItem('userRole') || 'viewer';
+    try {
+        const authSuccess = await window.AuthGuard.init();
+        if (!authSuccess) return;
 
-                if (!uid || !username) {
-                    showMessage('認証が必要です。ログインに戻ります。', 'warning');
-                    return location.href = '../index.html';
-                }
+        const session = window.AuthGuard.getSession();
+        const uid = session.uid;
+        const username = session.username;
+        let role = session.role || 'viewer';
 
-                // 匿名認証の確保
-                if (!window.auth.currentUser) {
-                    await window.auth.signInAnonymously();
-                }
+        const userData = await window.AuthGuard.getUserData();
+        if (!userData) {
+            showMessage('ユーザーデータが見つかりません', 'error');
+            return location.href = '../index.html';
+        }
 
-                // ユーザーデータの再取得
-                const userSnapshot = await window.database.ref(`${window.DATA_ROOT}/users/${uid}`).once('value');
-                if (!userSnapshot.exists()) {
-                    showMessage('ユーザーデータが見つかりません', 'error');
-                    return location.href = '../index.html';
-                }
-                
-                const userData = userSnapshot.val();
-                role = userData.role || role;
+        role = userData.role || role;
+
 
                 // Dashboard用のlocalStorage保存（セッション復元用）
                 try {
