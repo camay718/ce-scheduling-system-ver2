@@ -1413,10 +1413,13 @@ async saveMonthlyTask() {
             if (!btn) return;
 
             const allowed = await this.checkPersonalCardPermission();
+
             if (allowed) {
-                btn.style.display = '';
+                btn.classList.remove('is-force-hidden');
+                btn.style.removeProperty('display');
             } else {
-                btn.style.display = 'none';
+                btn.classList.add('is-force-hidden');
+                btn.style.setProperty('display', 'none', 'important');
             }
         }
     }
