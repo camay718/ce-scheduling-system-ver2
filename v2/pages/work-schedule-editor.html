@@ -1980,41 +1980,48 @@ renderTableHeader(dates) {
     headerRow.appendChild(nameHeader);
     
     // 日付列
-    dates.forEach(date => {
-        const dayOfWeek = ['日', '月', '火', '水', '木', '金', '土'][date.getDay()];
-        const dateKey = this.formatDateKey(date);
-        const isWeekendOrHoliday = this.isWeekendOrHoliday(date);
-        const isHoliday = this.isHoliday(date);
-        
-        let headerClass = 'date-col';
-        let dayClass = '';
-        
-        if (date.getDay() === 0 || isHoliday) {
-            dayClass = 'text-red-600';
-        } else if (date.getDay() === 6) {
-            dayClass = 'text-blue-600';
-        }
-        
-        // 🆕 日付オーバーライドの反映
-        if (this.dateOverrides[dateKey] === 'holiday') {
-            dayClass = 'text-red-600';
-        } else if (this.dateOverrides[dateKey] === 'workday') {
-            dayClass = 'text-gray-700';
-        }
-        
-        const th = document.createElement('th');
-        th.className = headerClass;
-        th.innerHTML = `
-            <div>${date.getDate()}</div>
-            <div class="text-xs ${dayClass}">${dayOfWeek}</div>
-        `;
-        // 🆕 ダブルクリックで日付設定メニューを開く
-        th.ondblclick = (e) => this.openDateSettingMenu(e, date);
-        th.title = '日付設定（ダブルクリック）';
-        th.style.cursor = 'pointer';
-        
-        headerRow.appendChild(th);
-    });
+dates.forEach((date, index) => {
+    const dayOfWeek = ['日', '月', '火', '水', '木', '金', '土'][date.getDay()];
+    const dateKey = this.formatDateKey(date);
+    const isHoliday = this.isHoliday(date);
+
+    let headerClass = 'date-col';
+    let dayClass = '';
+
+    if (date.getDay() === 0 || isHoliday) {
+        dayClass = 'text-red-600';
+    } else if (date.getDay() === 6) {
+        dayClass = 'text-blue-600';
+    }
+
+    // 日付オーバーライドの反映
+    if (this.dateOverrides[dateKey] === 'holiday') {
+        dayClass = 'text-red-600';
+    } else if (this.dateOverrides[dateKey] === 'workday') {
+        dayClass = 'text-gray-700';
+    }
+
+    // 月表示: 先頭列または前日と月が変わる列だけ表示
+    const prevDate = index > 0 ? dates[index - 1] : null;
+    const showMonth = index === 0 || !prevDate || prevDate.getMonth() !== date.getMonth();
+    const monthLabel = showMonth ? `${date.getMonth() + 1}月` : '&nbsp;';
+
+    const th = document.createElement('th');
+    th.className = headerClass;
+    th.innerHTML = `
+        <div class="text-[10px] leading-tight font-semibold text-gray-500">${monthLabel}</div>
+        <div class="leading-tight">${date.getDate()}</div>
+        <div class="text-xs leading-tight ${dayClass}">${dayOfWeek}</div>
+    `;
+
+    // ダブルクリックで日付設定メニューを開く
+    th.ondblclick = (e) => this.openDateSettingMenu(e, date);
+    th.title = '日付設定（ダブルクリック）';
+    th.style.cursor = 'pointer';
+
+    headerRow.appendChild(th);
+});
+
     
     // サマリー列を要素として追加
     const summaryHeaders = ['A', 'A1', 'B', '非', '×', '休日数', '実勤務', '当直回数'];
