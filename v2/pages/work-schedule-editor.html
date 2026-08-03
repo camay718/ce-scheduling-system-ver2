@@ -1303,6 +1303,15 @@ async addCE() {
         if (nameInput) nameInput.value = '';
         if (workTypeSelect) workTypeSelect.value = 'ME';
 
+        // 監査ログ
+        if (window.auditLogger) {
+            await window.auditLogger.logAction('schedule-ce-add', {
+                ceName: name,
+                ceId: newCE.id,
+                workType: workType
+            });
+        }
+
         window.showMessage(`CE「${name}」を追加しました`, 'success');
     } catch (error) {
         console.error('❌ CE追加エラー:', error);
@@ -1338,11 +1347,18 @@ async removeCE() {
     await this.saveWorkTypeOverrides();
     this.renderScheduleTable();
     this.updateRemoveCESelect();
+
+    // 監査ログ
+    if (window.auditLogger) {
+        await window.auditLogger.logAction('schedule-ce-remove', {
+            ceName: ceToRemove.fullName || ceToRemove.displayName || ceToRemove.name || 'unknown',
+            ceId: ceToRemove.id || selectedId
+        });
+    }
     
     window.showMessage(`CE「${ceToRemove.fullName}」を削除しました`, 'success');
 }
-
-
+    
         initialize27CE() {
             if (!confirm('CEリストを指定の27名で初期化しますか？\n\n※現在のCEリストと勤務データは全て削除されます。')) {
                 return;
@@ -1542,6 +1558,10 @@ async removeCE() {
 
                 console.log('✅ 勤務表エディタ認証成功:', userData.displayName, `(${userData.role})`);
                 return true;
+                
+                if (window.auditLogger) {
+                    await window.auditLogger.logPageAccess('work-schedule-editor');
+                }
 
             } catch (error) {
                 console.error('❌ 認証チェックエラー:', error);
@@ -2635,11 +2655,24 @@ const saveData = {
     dateOverrides: this.dateOverrides,  // 追加
     savedAt: firebase.database.ServerValue.TIMESTAMP
 };
-
-                
+ 
                 await window.database.ref(`${window.DATA_ROOT}/savedSchedules/${saveId}`).set(saveData);
                 this.savedSchedules[saveId] = saveData;
-                
+
+                if (window.auditLogger) {
+                    await window.auditLogger.logScheduleAction('create', {
+                        targetMonth: saveData.startDate?.slice(0, 7) || '',
+                        type: 'snapshot-save',
+                        changes: {
+                            saveId: saveId,
+                            title: title,
+                            startDate: saveData.startDate,
+                            endDate: saveData.endDate,
+                            affectedCEs: (this.ceList || []).length
+                        }
+                    });
+                }
+
                 titleInput.value = '';
                 this.updateSnapshotSelect();
                 window.showMessage('勤務表を保存しました', 'success');
@@ -2735,6 +2768,20 @@ try {
                 
                 await window.database.ref(`${window.DATA_ROOT}/savedSchedules/${scheduleId}`).set(saveData);
                 this.savedSchedules[scheduleId] = saveData;
+
+                if (window.auditLogger) {
+                    await window.auditLogger.logScheduleAction('edit', {
+                        targetMonth: saveData.startDate?.slice(0, 7) || '',
+                        type: 'snapshot-overwrite',
+                        changes: {
+                            saveId: scheduleId,
+                            title: saveData.title,
+                            startDate: saveData.startDate,
+                            endDate: saveData.endDate,
+                            affectedCEs: (this.ceList || []).length
+                        }
+                    });
+                }
                 
                 this.updateSnapshotSelect();
                 window.showMessage(`勤務表「${existingSchedule.title}」を上書き保存しました`, 'success');
@@ -2766,7 +2813,20 @@ try {
             try {
                 await window.database.ref(`${window.DATA_ROOT}/savedSchedules/${scheduleId}`).remove();
                 delete this.savedSchedules[scheduleId];
-                
+
+                if (window.auditLogger) {
+                    await window.auditLogger.logScheduleAction('delete', {
+                        targetMonth: (schedule.startDate || '').slice(0, 7),
+                        type: 'snapshot-delete',
+                        changes: {
+                            saveId: scheduleId,
+                            title: schedule.title,
+                            startDate: schedule.startDate,
+                            endDate: schedule.endDate
+                        }
+                    });
+                }
+
                 this.updateSnapshotSelect();
                 window.showMessage('勤務表を削除しました', 'success');
                 
@@ -2826,7 +2886,20 @@ try {
         await window.database.ref(`${window.DATA_ROOT}/workSchedule`).set(this.scheduleData);
         await window.database.ref(`${window.DATA_ROOT}/workTypeOverrides`).set(this.workTypeOverrides);
         await this.saveCEList();
-        
+
+        if (window.auditLogger) {
+            await window.auditLogger.logScheduleAction('publish', {
+                targetMonth: startKey.slice(0, 7),
+                type: 'work-schedule',
+                affectedCEs: (this.ceList || []).length,
+                changes: {
+                    periodKey: periodKey,
+                    startDate: startKey,
+                    endDate: endKey
+                }
+            });
+        }
+
         console.log('✅ 勤務表公開完了:', periodKey);
         window.showMessage('勤務表を公開しました', 'success');
         
