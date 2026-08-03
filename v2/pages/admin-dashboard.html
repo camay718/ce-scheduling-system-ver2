@@ -343,6 +343,11 @@ class AdminUserManagement {
             
             this.initializeAdminFunctions();
             
+            // ページアクセスログ
+            if (window.auditLogger) {
+                await window.auditLogger.logPageAccess('admin-dashboard');
+            }
+
         } catch (error) {
             console.error('❌ 初期化エラー:', error);
             window.showMessage('管理者ダッシュボードの初期化に失敗しました', 'error');
@@ -567,6 +572,16 @@ class AdminUserManagement {
             };
 
             await this.database.ref(`${window.DATA_ROOT}/pendingUsers/${username}`).set(pendingUserData);
+            
+            // 監査ログ
+            if (window.auditLogger) {
+                await window.auditLogger.logAction('user-create', {
+                    targetUsername: username,
+                    targetRole: role,
+                    method: 'admin-created',
+                    status: 'pending-initial-login'
+                });
+            }
 
             window.showMessage(`✅ ユーザー「${username}」を作成しました\n\n初回パスワード: ${this.currentPassword}\n\n※この情報を本人に伝達してください`, 'success');
             
@@ -665,7 +680,15 @@ class AdminUserManagement {
 
         try {
             await this.database.ref(`${window.DATA_ROOT}/pendingUsers/${username}`).remove();
+            
+            if (window.auditLogger) {
+                await window.auditLogger.logAction('user-pending-delete', {
+                    targetUsername: username
+                });
+            }
+            
             window.showMessage(`待機中ユーザー「${username}」を削除しました`, 'success');
+
         } catch (error) {
             console.error('❌ 待機ユーザー削除エラー:', error);
             window.showMessage('待機ユーザーの削除に失敗しました', 'error');
@@ -684,8 +707,16 @@ class AdminUserManagement {
                     role: newRole,
                     updatedAt: firebase.database.ServerValue.TIMESTAMP
                 });
-
+                if (window.auditLogger) {
+                    await window.auditLogger.logAction('user-role-change', {
+                        targetUid: uid,
+                        targetUsername: user.username,
+                        fromRole: user.role,
+                        toRole: newRole
+                    });
+                }
                 window.showMessage(`${user.username}の権限を${newRole}に変更しました`, 'success');
+
             } catch (error) {
                 console.error('❌ 権限変更エラー:', error);
                 window.showMessage('権限の変更に失敗しました', 'error');
@@ -734,6 +765,14 @@ class AdminUserManagement {
 
             await this.database.ref().update(updates);
 
+            if (window.auditLogger) {
+                await window.auditLogger.logAction('user-password-reset', {
+                    targetUid: uid,
+                    targetUsername: username,
+                    targetRole: userData.role
+                });
+            }
+
             alert(`✅ パスワードリセット完了！\n\nユーザー名: ${username}\n新しい初回パスワード: ${newPassword}\n\n※この情報を本人に伝達してください`);
             window.showMessage('パスワードリセットが完了しました', 'success');
 
@@ -755,10 +794,22 @@ class AdminUserManagement {
         if (!confirm(`ユーザー「${username}」を削除しますか？\n\nこの操作は元に戻せません。`)) return;
 
         try {
+            const targetUserSnap = await this.database.ref(`${window.DATA_ROOT}/users/${uid}`).once('value');
+            const targetUserRole = targetUserSnap.val()?.role || 'unknown';
+
             await this.database.ref(`${window.DATA_ROOT}/users/${uid}`).remove();
             await this.database.ref(`${window.DATA_ROOT}/usernames/${username}`).remove();
 
+            if (window.auditLogger) {
+                await window.auditLogger.logAction('user-delete', {
+                    targetUid: uid,
+                    targetUsername: username,
+                    targetRole: targetUserRole
+                });
+            }
+
             window.showMessage(`ユーザー「${username}」を削除しました`, 'success');
+
         } catch (error) {
             console.error('❌ ユーザー削除エラー:', error);
             window.showMessage('ユーザーの削除に失敗しました', 'error');
@@ -774,9 +825,20 @@ class AdminUserManagement {
                 updatedBy: window.currentUserData?.displayName || 'admin'
             };
             
+            const previousPermissions = { ...this.permissions };
+
             await this.database.ref(`${window.DATA_ROOT}/permissions`).set(newPermissions);
             this.permissions = newPermissions;
-            
+
+            if (window.auditLogger) {
+                await window.auditLogger.logAction('user-permissions-update', {
+                    viewerCanEdit: newPermissions.viewerCanEdit,
+                    viewerCanAssign: newPermissions.viewerCanAssign,
+                    previousViewerCanEdit: previousPermissions.viewerCanEdit ?? false,
+                    previousViewerCanAssign: previousPermissions.viewerCanAssign ?? false
+                });
+            }
+
             window.showMessage('権限設定を保存しました', 'success');
             
         } catch (error) {
