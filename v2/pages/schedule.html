@@ -570,13 +570,38 @@
             .taskbar-center {
                 order: 2;
                 justify-content: center;
+                flex-wrap: wrap;
+                gap: 6px;
+                width: 100%;
+            }
+
+            .taskbar-center input[type="date"],
+            .taskbar-center .btn-unified {
+                font-size: 13px;
+                padding: 6px 8px;
             }
 
             .taskbar-right {
                 order: 3;
-                display: grid;
-                grid-template-columns: repeat(2, 1fr);
-                gap: 4px;
+                display: flex;
+                flex-wrap: wrap;
+                gap: 6px;
+                width: 100%;
+                justify-content: flex-start;
+            }
+
+            .taskbar-right .btn-unified,
+            .taskbar-right button {
+                flex: 1 1 calc(50% - 6px);
+                min-width: 0;
+                white-space: nowrap;
+                font-size: 12px;
+                padding: 6px 8px;
+            }
+
+            .taskbar-right .btn-unified i,
+            .taskbar-right button i {
+                margin-right: 4px !important;
             }
 
             .schedule-sidebar {
@@ -673,25 +698,7 @@
     opacity: 0.3;
     cursor: not-allowed;
 }
-     /* スマホ対応: タスクバーボタン折り返し */
-@media (max-width: 768px) {
-    .taskbar-right {
-        display: flex !important;
-        flex-wrap: wrap !important;
-        gap: 6px !important;
-        justify-content: flex-start !important;
-        width: 100% !important;
-        margin-top: 8px !important;
-    }
-    .taskbar-right .btn-unified,
-    .taskbar-right button {
-        flex: 1 1 auto !important;
-        min-width: 0 !important;
-        white-space: nowrap !important;
-        font-size: 12px !important;
-        padding: 6px 8px !important;
-    }
-}
+        
 /* 個人カードモーダル: PC・スマホ共通の安定表示 */
 .personal-card-modal-content {
     padding: 24px;
