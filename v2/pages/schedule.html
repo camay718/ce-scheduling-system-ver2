@@ -275,6 +275,18 @@
             transform: scale(1.02);
         }
 
+        /* 個人カードスタイル */
+        .personal-card {
+            border: 2px solid #6366f1 !important;
+            background: #eef2ff !important;
+        }
+        .personal-card:hover {
+            box-shadow: 0 2px 8px rgba(99, 102, 241, 0.2);
+        }
+        .personal-card .ce-chip[data-ce-id] {
+            cursor: default;
+        }
+
         .event-count-display {
             font-size: 11px;
             color: #6b7280;
@@ -719,15 +731,20 @@
                 </button>
             </div>
 
-            <!-- 右側：業務追加ボタン -->
-<div class="taskbar-right">
-    <button id="addBulkEventBtn" class="btn-unified btn-primary-unified btn-small">
-        <i class="fas fa-calendar-plus mr-1"></i>期間一括追加
-    </button>
-    <button id="templateManagerBtn" class="btn-unified btn-outline-unified btn-small">
-        <i class="fas fa-bookmark mr-1"></i>テンプレート編集
-    </button>
-</div>
+                        <!-- 右側：業務追加ボタン -->
+            <div class="taskbar-right">
+                <button id="addBulkEventBtn" class="btn-unified btn-primary-unified btn-small">
+                    <i class="fas fa-calendar-plus mr-1"></i>期間一括追加
+                </button>
+                <button id="addPersonalCardBtn" class="btn-unified btn-small"
+                    style="border-color: #6366f1; color: #6366f1; display: none;">
+                    <i class="fas fa-user-tag mr-1"></i>個人業務入力
+                </button>
+                <button id="templateManagerBtn" class="btn-unified btn-outline-unified btn-small">
+                    <i class="fas fa-bookmark mr-1"></i>テンプレート編集
+                </button>
+            </div>
+
         </div>
     </div>
 
@@ -954,8 +971,12 @@ constructor() {
                         role: userData.role || __session_ug.role || sessionStorage.getItem('userRole') || 'viewer'
                     };
 
-
 await this.initializeScheduleSystem();
+
+// 個人カードボタンの表示制御
+if (window.eventManager && typeof window.eventManager.updatePersonalCardButtonVisibility === 'function') {
+    window.eventManager.updatePersonalCardButtonVisibility().catch(console.error);
+}
 
 // ページアクセスログ記録
 if (window.auditLogger) {
@@ -2248,6 +2269,9 @@ async loadAndRenderEventsForSelectedDate() {
         // 月次業務の表示
         await this.renderMonthlyTasks();
 
+        // 個人カードの表示
+        await this.renderPersonalCards(dateKey);
+
         // 集計の更新
         this.updateDailySummary().catch(console.error);
 
@@ -2258,9 +2282,41 @@ async loadAndRenderEventsForSelectedDate() {
             await this.syncWorkTypeColorsForDate(dateKey);
         }
 
-    } catch (error) {
+        } catch (error) {
         console.error('❌ 日別イベント読み込みエラー:', error);
         window.showMessage('イベントの読み込みに失敗しました', 'error');
+    }
+}
+
+// 個人カード表示メソッド
+async renderPersonalCards(dateKey) {
+    const grid = document.getElementById('departmentGrid');
+    if (!grid) return;
+
+    // EventManagerが未初期化ならスキップ
+    if (!window.eventManager || typeof window.eventManager.loadPersonalCardsForDate !== 'function') {
+        return;
+    }
+
+    try {
+        const personalCards = await window.eventManager.loadPersonalCardsForDate(dateKey);
+
+        if (personalCards.length === 0) {
+            console.log('📋 個人カードなし:', dateKey);
+            return;
+        }
+
+        console.log(`📋 個人カード表示: ${personalCards.length}件 (${dateKey})`);
+
+        for (const card of personalCards) {
+            const section = grid.querySelector(`.task-list[data-department="${card.department}"]`);
+            if (!section) continue;
+
+            const cardElement = window.eventManager.createPersonalCardElement(card, dateKey);
+            section.appendChild(cardElement);
+        }
+    } catch (error) {
+        console.error('❌ 個人カード表示エラー:', error);
     }
 }
 
