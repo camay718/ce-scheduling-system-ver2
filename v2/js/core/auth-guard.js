@@ -5,7 +5,7 @@
 (function(){
     if (window.AuthGuard) return;
 
-    const TIMEOUT_MINUTES = 30; // ← 必要ならここだけ変更
+    const TIMEOUT_MINUTES = 3; // ← 必要ならここだけ変更
     const TIMEOUT_MS = TIMEOUT_MINUTES * 60 * 1000;
     const DASHBOARD_AUTH_KEY = 'dashboardAuth';
     const LAST_ACTIVITY_KEY = 'lastActivityAt';
@@ -26,13 +26,14 @@
         sessionStorage.removeItem('targetUID');
         sessionStorage.removeItem('currentUsername');
         sessionStorage.removeItem('userRole');
+        sessionStorage.removeItem('needsSetup');
         sessionStorage.removeItem(LAST_ACTIVITY_KEY);
         localStorage.removeItem(DASHBOARD_AUTH_KEY);
     }
 
     function isExpired(timestamp) {
         const ts = Number(timestamp || 0);
-        if (!ts) return false; // timestampが無ければ期限切れ扱いしない
+        if (!ts) return false;
         return (Date.now() - ts) > TIMEOUT_MS;
     }
 
@@ -73,7 +74,11 @@
 
         const sessionTimestamp = sessionStorage.getItem(LAST_ACTIVITY_KEY);
         const dashboardTimestamp = dashboardAuth.timestamp;
-        const timestamp = Number(sessionTimestamp || dashboardTimestamp || 0);
+
+        const timestamp =
+            source === 'session' ? Number(sessionTimestamp || 0) :
+            source === 'dashboard' ? Number(dashboardTimestamp || 0) :
+            0;
 
         return {
             uid,
@@ -201,9 +206,8 @@
 
                 const candidate = getSessionCandidate();
 
-                // 期限切れ判定は「セッションがある場合だけ」行う
+                // 期限切れ判定は「セッションがある場合だけ」
                 if (candidate.hasSession) {
-                    // sessionStorage由来でtimestampが切れていたら、明示的に期限切れ
                     if (candidate.source === 'session' && isExpired(candidate.timestamp)) {
                         this.clearSession();
                         alert('セッションの有効期限が切れました。再度ログインしてください。');
@@ -211,7 +215,6 @@
                         return false;
                     }
 
-                    // localStorage由来の古い復元情報なら、警告なしで破棄
                     if (candidate.source === 'dashboard' && isExpired(candidate.timestamp)) {
                         this.clearSession();
                     } else {
