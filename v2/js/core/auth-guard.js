@@ -5,7 +5,7 @@
 (function(){
     if (window.AuthGuard) return;
 
-    const TIMEOUT_MINUTES = 3; // ← 必要ならここだけ変更
+    const TIMEOUT_MINUTES = 30; // ← 必要ならここだけ変更
     const TIMEOUT_MS = TIMEOUT_MINUTES * 60 * 1000;
     const DASHBOARD_AUTH_KEY = 'dashboardAuth';
     const LAST_ACTIVITY_KEY = 'lastActivityAt';
