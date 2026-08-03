@@ -673,7 +673,80 @@
     opacity: 0.3;
     cursor: not-allowed;
 }
-        
+     /* スマホ対応: タスクバーボタン折り返し */
+@media (max-width: 768px) {
+    .taskbar-right {
+        display: flex !important;
+        flex-wrap: wrap !important;
+        gap: 6px !important;
+        justify-content: flex-start !important;
+        width: 100% !important;
+        margin-top: 8px !important;
+    }
+    .taskbar-right .btn-unified,
+    .taskbar-right button {
+        flex: 1 1 auto !important;
+        min-width: 0 !important;
+        white-space: nowrap !important;
+        font-size: 12px !important;
+        padding: 6px 8px !important;
+    }
+}
+/* 個人カードモーダル: PC・スマホ共通の安定表示 */
+.personal-card-modal-content {
+    padding: 24px;
+    width: calc(100vw - 32px);
+    max-width: 512px;
+    max-height: calc(100dvh - 32px);
+    max-height: calc(100vh - 32px); /* dvh未対応ブラウザのフォールバック */
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    margin: 16px auto;
+    box-sizing: border-box;
+}
+
+/* スマホ用調整 */
+@media (max-width: 768px) {
+    #personalCardModal,
+    #personalCardEditModal {
+        align-items: flex-start !important;
+        padding-top: 8px !important;
+        padding-bottom: 8px !important;
+    }
+    .personal-card-modal-content {
+        padding: 16px;
+        margin: 8px auto;
+        max-height: calc(100dvh - 16px);
+        max-height: calc(100vh - 16px);
+    }
+    .personal-card-modal-content .grid-cols-2 {
+        grid-template-columns: 1fr 1fr;
+        gap: 8px;
+    }
+    .personal-card-modal-content label {
+        font-size: 13px;
+    }
+    .personal-card-modal-content .input-unified {
+        font-size: 14px;
+        padding: 8px;
+    }
+    /* 追加CEリストのスマホ高さ調整 */
+    #pcAdditionalCEList,
+    #pceAdditionalCEList {
+        max-height: 120px !important;
+    }
+    /* ボタンエリアを固定表示 */
+    .personal-card-modal-content form > .flex.space-x-3 {
+        position: sticky;
+        bottom: 0;
+        background: white;
+        padding-top: 8px;
+        margin-top: 8px;
+        border-top: 1px solid #e5e7eb;
+        z-index: 10;
+    }
+}
+   
     </style>
     
     <!-- PWA・アプリアイコン設定 -->
