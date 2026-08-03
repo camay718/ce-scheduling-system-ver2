@@ -548,13 +548,15 @@
         /* スマートフォン対応 */
         @media (max-width: 768px) {
             .fixed-taskbar {
-                height: 120px;
-                padding: 6px 8px;
+                height: auto !important;
+                min-height: 96px !important;
+                padding: 6px 8px !important;
                 left: 0 !important;
+                overflow: visible !important;
             }
 
             .schedule-layout {
-                padding-top: 120px;
+                padding-top: 100px;
             }
 
             /* タスクバー全体を2段レイアウトに */
@@ -564,8 +566,15 @@
                 justify-content: center !important;
                 gap: 4px !important;
                 align-items: stretch !important;
-                height: 100% !important;
-                padding: 0 !important;
+                height: auto !important;
+                min-height: 100% !important;
+                padding: 4px 0 !important;
+            }
+
+            /* ヘッダーの左側タイトル・集計はスマホでは非表示 */
+            .taskbar-left h2#scheduleTitle,
+            .taskbar-left #dailySummaryStats {
+                display: none !important;
             }
 
             /* 1段目: 日付ナビ + 今日 */
@@ -594,9 +603,9 @@
             .taskbar-left .btn-unified,
             .taskbar-center .btn-unified {
                 font-size: 12px !important;
-                padding: 4px 8px !important;
+                padding: 3px 6px !important;
                 white-space: nowrap !important;
-                height: 30px !important;
+                height: 26px !important;
                 line-height: 1 !important;
             }
             /* 前日・翌日ボタンをコンパクト化 */
@@ -622,13 +631,17 @@
             .taskbar-right button {
                 flex: 1 1 0 !important;
                 min-width: 0 !important;
+                width: 0 !important;
                 white-space: nowrap !important;
                 font-size: 11px !important;
-                padding: 4px 4px !important;
-                height: 30px !important;
+                padding: 3px 4px !important;
+                height: 26px !important;
                 line-height: 1 !important;
                 overflow: hidden !important;
                 text-overflow: ellipsis !important;
+                display: inline-flex !important;
+                align-items: center !important;
+                justify-content: center !important;
             }
             .taskbar-right .btn-unified i,
             .taskbar-right button i {
@@ -700,7 +713,7 @@
             .schedule-main {
                 margin-left: 0;
                 padding: 12px;
-                padding-bottom: 80px;
+                padding-bottom: 100px;
             }
             
             .daily-summary-stats {
@@ -798,15 +811,25 @@
     #pceAdditionalCEList {
         max-height: 120px !important;
     }
-    /* ボタンエリアを固定表示 */
+    /* ボタンエリアを白背景フッターとして固定表示 */
     .personal-card-modal-content form > .flex.space-x-3 {
         position: sticky;
         bottom: 0;
         background: white;
-        padding-top: 8px;
-        margin-top: 8px;
+        padding: 12px 16px calc(12px + env(safe-area-inset-bottom, 20px)) 16px;
+        margin: 8px -16px 0 -16px;
         border-top: 1px solid #e5e7eb;
         z-index: 10;
+        box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.05);
+    }
+    /* モーダル本体の下部余白を safe-area 対応 */
+    .personal-card-modal-content {
+        padding-bottom: calc(16px + env(safe-area-inset-bottom, 20px)) !important;
+    }
+    /* モーダル背景も safe-area を考慮 */
+    #personalCardModal,
+    #personalCardEditModal {
+        padding-bottom: calc(8px + env(safe-area-inset-bottom, 0px)) !important;
     }
 }
    
