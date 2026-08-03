@@ -225,24 +225,14 @@
                         </h3>
                         
                         <div class="space-y-3">
+                            <!-- 個人業務入力の許可 -->
                             <div class="flex items-center justify-between p-3 bg-white rounded border">
                                 <div>
-                                    <div class="font-medium text-gray-800">業務の編集を許可</div>
-                                    <div class="text-sm text-gray-600">日別スケジュールでの業務追加・編集・削除を許可します</div>
+                                    <div class="font-medium text-gray-800">個人業務入力の許可</div>
+                                    <div class="text-sm text-gray-600">Viewerが個人業務カードを作成・編集・削除できるようにします。自身のアイコンが自動配置され、追加CEも選択できます。</div>
                                 </div>
                                 <label class="relative inline-flex items-center cursor-pointer">
-                                    <input type="checkbox" id="viewerCanEdit" class="sr-only peer">
-                                    <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
-                                </label>
-                            </div>
-                            
-                            <div class="flex items-center justify-between p-3 bg-white rounded border">
-                                <div>
-                                    <div class="font-medium text-gray-800">CE配置の変更を許可</div>
-                                    <div class="text-sm text-gray-600">業務への担当CE配置の変更を許可します</div>
-                                </div>
-                                <label class="relative inline-flex items-center cursor-pointer">
-                                    <input type="checkbox" id="viewerCanAssign" class="sr-only peer">
+                                    <input type="checkbox" id="viewerCanCreatePersonalCard" class="sr-only peer">
                                     <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
                                 </label>
                             </div>
@@ -497,7 +487,7 @@ class AdminUserManagement {
             const snapshot = await this.database.ref(`${window.DATA_ROOT}/permissions`).once('value');
             this.permissions = snapshot.val() || {};
             
-            const defaults = { viewerCanEdit: false, viewerCanAssign: false };
+            const defaults = { viewerCanCreatePersonalCard: false };
             
             Object.keys(defaults).forEach(key => {
                 const checkbox = document.getElementById(key);
@@ -505,6 +495,15 @@ class AdminUserManagement {
                     checkbox.checked = this.permissions[key] !== undefined ? this.permissions[key] : defaults[key];
                 }
             });
+            
+            // ステータス表示
+            const statusEl = document.getElementById('permissionsStatus');
+            if (statusEl) {
+                const enabled = this.permissions.viewerCanCreatePersonalCard !== undefined ? this.permissions.viewerCanCreatePersonalCard : false;
+                statusEl.innerHTML = enabled
+                    ? '<span class="text-green-600"><i class="fas fa-check-circle mr-1"></i>個人業務入力: 許可中</span>'
+                    : '<span class="text-gray-500"><i class="fas fa-times-circle mr-1"></i>個人業務入力: 無効</span>';
+            }
             
             console.log('✅ 権限設定読み込み完了:', this.permissions);
         } catch (error) {
@@ -819,8 +818,7 @@ class AdminUserManagement {
     async savePermissions() {
         try {
             const newPermissions = {
-                viewerCanEdit: document.getElementById('viewerCanEdit')?.checked || false,
-                viewerCanAssign: document.getElementById('viewerCanAssign')?.checked || false,
+                viewerCanCreatePersonalCard: document.getElementById('viewerCanCreatePersonalCard')?.checked || false,
                 updatedAt: firebase.database.ServerValue.TIMESTAMP,
                 updatedBy: window.currentUserData?.displayName || 'admin'
             };
@@ -830,12 +828,18 @@ class AdminUserManagement {
             await this.database.ref(`${window.DATA_ROOT}/permissions`).set(newPermissions);
             this.permissions = newPermissions;
 
+            // ステータス表示更新
+            const statusEl = document.getElementById('permissionsStatus');
+            if (statusEl) {
+                statusEl.innerHTML = newPermissions.viewerCanCreatePersonalCard
+                    ? '<span class="text-green-600"><i class="fas fa-check-circle mr-1"></i>個人業務入力: 許可中</span>'
+                    : '<span class="text-gray-500"><i class="fas fa-times-circle mr-1"></i>個人業務入力: 無効</span>';
+            }
+
             if (window.auditLogger) {
                 await window.auditLogger.logAction('user-permissions-update', {
-                    viewerCanEdit: newPermissions.viewerCanEdit,
-                    viewerCanAssign: newPermissions.viewerCanAssign,
-                    previousViewerCanEdit: previousPermissions.viewerCanEdit ?? false,
-                    previousViewerCanAssign: previousPermissions.viewerCanAssign ?? false
+                    viewerCanCreatePersonalCard: newPermissions.viewerCanCreatePersonalCard,
+                    previousViewerCanCreatePersonalCard: previousPermissions.viewerCanCreatePersonalCard ?? false
                 });
             }
 
