@@ -4,313 +4,210 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>設定 - CEスケジュール管理システム V2</title>
-    
-    <!-- 外部ライブラリ -->
+
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css">
     <link rel="stylesheet" href="../css/theme-unified.css">
-    
-    <!-- Firebase SDK -->
+
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
     <script src="../js/config/firebase-config.js"></script>
 
-    <!-- 監査ログシステム -->
-<script src="../js/utils/audit-logger.js"></script>
-
-
-    <!-- 共通モジュール -->
+    <script src="../js/utils/audit-logger.js"></script>
     <script src="../js/utils/ui-utils.js"></script>
     <script src="../js/core/auth-guard.js"></script>
 
     <style>
-        /* 設定ページ専用レスポンシブレイアウト */
-        .settings-layout {
-            display: flex;
-            height: 100vh;
-            overflow: hidden;
-        }
-
+        .settings-layout { display: flex; height: 100vh; overflow: hidden; }
         .settings-sidebar {
-            width: 280px;
-            background: var(--glass-bg);
+            width: 300px; background: var(--glass-bg);
             backdrop-filter: blur(10px);
             border-right: 1px solid var(--glass-border);
-            display: flex;
-            flex-direction: column;
+            display: flex; flex-direction: column;
             transition: width 0.3s ease;
-            position: relative;
-            flex-shrink: 0;
+            position: relative; flex-shrink: 0;
         }
-
-        .settings-sidebar.collapsed {
-            width: 60px;
-        }
-
+        .settings-sidebar.collapsed { width: 60px; }
         .sidebar-content {
-            padding: 20px;
-            width: 280px;
+            padding: 20px; width: 300px;
             transition: opacity 0.3s ease;
-            flex: 1;
-            overflow-y: auto;
-            display: flex;
-            flex-direction: column;
+            flex: 1; overflow-y: auto;
+            display: flex; flex-direction: column;
         }
-
         .settings-sidebar.collapsed .sidebar-content {
-            opacity: 0;
-            pointer-events: none;
+            opacity: 0; pointer-events: none;
         }
-
         .sidebar-toggle {
-            position: absolute;
-            top: 15px;
-            right: -15px;
-            background: var(--brand-primary);
-            color: white;
-            border: none;
-            border-radius: 50%;
-            width: 30px;
-            height: 30px;
-            cursor: pointer;
-            z-index: 101;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+            position: absolute; top: 15px; right: -15px;
+            background: var(--brand-primary); color: white;
+            border: none; border-radius: 50%;
+            width: 30px; height: 30px; cursor: pointer;
+            z-index: 101; display: flex; align-items: center; justify-content: center;
         }
-
-        .settings-main {
-            flex-grow: 1;
-            padding: 20px;
-            overflow-y: auto;
-            display: flex;
-            flex-direction: column;
-        }
-
-        /* 統計情報グリッド */
-        .stats-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 16px;
-            margin-bottom: 20px;
-        }
+        .main-content { flex: 1; padding: 24px; overflow-y: auto; }
 
         .stat-card {
             background: var(--glass-bg);
-            backdrop-filter: blur(10px);
             border: 1px solid var(--glass-border);
             border-radius: 12px;
-            padding: 16px;
+            padding: 16px 20px;
             text-align: center;
         }
-
         .stat-value {
-            font-size: 24px;
-            font-weight: bold;
+            font-size: 1.75rem; font-weight: 700;
             color: var(--brand-primary);
-            margin-bottom: 4px;
         }
-
         .stat-label {
-            font-size: 12px;
-            color: #6c757d;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
+            font-size: 0.75rem; color: var(--text-color-light);
+            margin-top: 4px;
         }
 
-        /* 変更履歴専用スタイル */
-        .activity-log-container {
-            background: var(--glass-bg);
-            backdrop-filter: blur(10px);
-            border: 1px solid var(--glass-border);
-            border-radius: 16px;
-            padding: 20px;
-            flex: 1;
-            overflow: hidden;
-            display: flex;
-            flex-direction: column;
+        .tab-bar {
+            display: flex; gap: 4px;
+            border-bottom: 2px solid rgba(0,0,0,0.06);
+            margin-bottom: 12px; flex-wrap: wrap;
         }
-
-        .activity-log {
-            flex: 1;
-            overflow-y: auto;
-            padding: 10px 0;
-            font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
-        }
-
-        .activity-item {
-            padding: 12px 16px;
-            margin-bottom: 8px;
-            background: rgba(255, 255, 255, 0.9);
-            border-radius: 12px;
-            border-left: 4px solid #007bff;
+        .tab-btn {
+            padding: 8px 14px;
             font-size: 13px;
-            line-height: 1.4;
-            transition: all 0.2s ease;
-            display: grid;
-            grid-template-columns: 1fr auto;
-            gap: 8px;
-        }
-
-        .activity-item:hover {
-            background: rgba(255, 255, 255, 1);
-            transform: translateX(4px);
-            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-        }
-
-        /* アクション別色分け */
-        .activity-item.login { border-left-color: #28a745; }
-        .activity-item.logout { border-left-color: #6c757d; }
-        .activity-item.event-add { border-left-color: #17a2b8; }
-        .activity-item.event-edit { border-left-color: #ffc107; }
-        .activity-item.event-delete { border-left-color: #dc3545; }
-        .activity-item.ce-assign { border-left-color: #6f42c1; }
-        .activity-item.ce-unassign { border-left-color: #fd7e14; }
-        .activity-item.schedule-create { border-left-color: #20c997; }
-        .activity-item.schedule-edit { border-left-color: #e83e8c; }
-        .activity-item.schedule-publish { border-left-color: #007bff; }
-
-        .activity-main {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-
-        .activity-actor {
-            font-weight: 700;
-            color: #1f2937;
-        }
-
-        .activity-action {
+            border-radius: 8px 8px 0 0;
+            background: transparent;
+            color: var(--text-color-light);
+            cursor: pointer;
+            border: none;
+            border-bottom: 3px solid transparent;
             font-weight: 600;
+        }
+        .tab-btn.active {
+            color: var(--brand-primary);
+            background: rgba(76,175,80,0.06);
+            border-bottom-color: var(--brand-primary);
+        }
+        .tab-btn .tab-badge {
+            display: inline-block;
+            margin-left: 6px;
+            padding: 1px 6px;
+            font-size: 11px;
+            border-radius: 999px;
+            background: #e5e7eb;
             color: #374151;
         }
 
-        .activity-details {
-            color: #4b5563;
-            font-size: 12px;
+        .activity-item {
+            display: grid;
+            grid-template-columns: 28px 1fr auto;
+            gap: 10px;
+            align-items: start;
+            padding: 10px 12px;
+            border-left: 4px solid #d1d5db;
+            background: #ffffff;
+            border-radius: 8px;
+            margin-bottom: 6px;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.04);
         }
+        .activity-item:hover { background: #f9fafb; }
+        .activity-icon {
+            width: 28px; height: 28px;
+            border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            background: #f3f4f6;
+            color: #4b5563;
+            font-size: 13px;
+        }
+        .activity-body { min-width: 0; }
+        .activity-headline {
+            font-size: 13px; line-height: 1.5;
+        }
+        .activity-actor {
+            font-weight: 700; color: #111827;
+        }
+        .activity-role-badge {
+            display: inline-block;
+            font-size: 10px;
+            padding: 1px 6px;
+            border-radius: 4px;
+            margin-left: 6px;
+            background: #e5e7eb;
+            color: #374151;
+            vertical-align: middle;
+        }
+        .activity-role-badge.admin  { background: #fee2e2; color: #b91c1c; }
+        .activity-role-badge.editor { background: #dbeafe; color: #1d4ed8; }
+        .activity-role-badge.viewer { background: #e5e7eb; color: #374151; }
+
+        .activity-action {
+            font-weight: 600; color: #374151;
+            margin-left: 4px;
+        }
+        .activity-target {
+            color: #4b5563;
+            margin-left: 4px;
+        }
+        .activity-meta {
+            font-size: 11px;
+            color: #6b7280;
+            margin-top: 3px;
+            display: flex; flex-wrap: wrap; gap: 8px;
+        }
+        .activity-meta .chip {
+            padding: 1px 6px;
+            border-radius: 4px;
+            background: #f3f4f6;
+        }
+        .activity-meta .chip.dept { background: #ecfdf5; color: #065f46; }
+        .activity-meta .chip.page { background: #eef2ff; color: #3730a3; }
+        .activity-meta .chip.date { background: #fef3c7; color: #92400e; }
 
         .activity-time {
+            font-size: 11px;
             color: #6b7280;
-            font-size: 12px;
-            text-align: right;
             white-space: nowrap;
         }
 
-        /* フィルター設定 */
-        .filter-section {
-            background: rgba(255, 255, 255, 0.8);
-            border-radius: 12px;
-            padding: 16px;
-            margin-bottom: 16px;
-        }
+        /* 種別ごとの左バー色 */
+        .activity-item.type-login    { border-left-color: #16a34a; }
+        .activity-item.type-logout   { border-left-color: #6b7280; }
+        .activity-item.type-add      { border-left-color: #0ea5e9; }
+        .activity-item.type-edit     { border-left-color: #f59e0b; }
+        .activity-item.type-delete   { border-left-color: #dc2626; }
+        .activity-item.type-assign   { border-left-color: #7c3aed; }
+        .activity-item.type-unassign { border-left-color: #f97316; }
+        .activity-item.type-publish  { border-left-color: #0d9488; }
+        .activity-item.type-template { border-left-color: #14b8a6; }
+        .activity-item.type-monthly  { border-left-color: #4f46e5; }
+        .activity-item.type-page     { border-left-color: #cbd5e1; }
+        .activity-item.type-system   { border-left-color: #94a3b8; }
+        .activity-item.type-user     { border-left-color: #db2777; }
+        .activity-item.type-other    { border-left-color: #9ca3af; }
 
-        .filter-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 12px;
-            align-items: end;
-        }
-
-        /* 接続状態インジケーター */
         .connection-status {
-            display: flex;
-            align-items: center;
-            gap: 8px;
+            display: flex; align-items: center; gap: 8px;
             font-size: 12px;
-            margin-bottom: 16px;
+            padding: 8px 10px;
+            background: #f0fdf4; border-radius: 6px;
+            margin-bottom: 12px;
         }
-
         .status-dot {
-            width: 8px;
-            height: 8px;
-            border-radius: 50%;
-            background: #10b981;
-            animation: pulse 2s infinite;
+            width: 8px; height: 8px; border-radius: 50%;
+            background: #16a34a;
         }
+        .status-dot.offline { background: #dc2626; }
 
-        .status-dot.offline {
-            background: #ef4444;
-        }
-
-        @keyframes pulse {
-            0%, 100% { opacity: 0.8; }
-            50% { opacity: 1; }
-        }
-
-        /* スマートフォン対応 */
         @media (max-width: 768px) {
             .settings-sidebar {
-                position: fixed;
-                top: 0;
-                bottom: 0;
-                left: -280px;
-                width: 280px;
-                height: 100vh;
-                transform: translateX(0);
-                transition: left 0.3s ease;
-                z-index: 1000;
-                background: rgba(255, 255, 255, 0.98);
-                backdrop-filter: blur(10px);
-                border-radius: 0 8px 8px 0;
-                border-right: 2px solid #e5e7eb;
-                overflow-y: auto;
-                box-shadow: 2px 0 20px rgba(0, 0, 0, 0.15);
+                position: fixed; top: 0; left: 0; height: 100vh;
+                transform: translateX(-100%); z-index: 100;
             }
-            
-            .settings-sidebar.expanded {
-                left: 0;
-            }
-            
-            .sidebar-toggle {
-                position: fixed;
-                bottom: 20px;
-                right: 20px;
-                background: var(--brand-primary);
-                color: white;
-                border-radius: 50%;
-                width: 56px;
-                height: 56px;
-                border: none;
-                box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-                z-index: 1001;
-                font-size: 18px;
-            }
-            
-            .settings-main {
-                margin-left: 0;
-                padding: 12px;
-                padding-bottom: 80px;
-                width: 100%;
-            }
-
-            .stats-grid {
-                grid-template-columns: repeat(2, 1fr);
-            }
-
-            .filter-grid {
-                grid-template-columns: 1fr;
-            }
-
-            .activity-item {
-                font-size: 12px;
-                padding: 10px 12px;
-                grid-template-columns: 1fr;
-                gap: 4px;
-            }
-
-            .activity-time {
-                text-align: left;
-            }
+            .settings-sidebar.expanded { transform: translateX(0); }
+            .main-content { padding: 16px; }
+            .activity-item { grid-template-columns: 24px 1fr; }
+            .activity-time { grid-column: 2 / 3; text-align: left; }
         }
     </style>
 </head>
 <body class="theme-unified">
-    <!-- ローディング -->
     <div id="loading" class="center-layout">
         <div class="glass-card center-card text-center">
             <div class="spinner mb-4"></div>
@@ -318,39 +215,34 @@
         </div>
     </div>
 
-    <!-- メインインターフェース -->
     <div id="mainInterface" class="settings-layout" style="display:none;">
         <!-- サイドバー -->
         <div id="sidebar" class="settings-sidebar">
             <button id="toggleSidebar" class="sidebar-toggle" title="サイドバー表示/非表示">
                 <i class="fas fa-bars"></i>
             </button>
-            
+
             <div class="sidebar-content">
-                <!-- ヘッダー -->
-                <div class="mb-6 text-center">
-                    <h1 class="text-lg font-bold text-gray-800 mb-2">
-                        <i class="fas fa-cog mr-2 text-green-600"></i>
-                        設定管理
+                <div class="mb-4 text-center">
+                    <h1 class="text-lg font-bold text-gray-800 mb-1">
+                        <i class="fas fa-cog mr-2 text-green-600"></i>設定管理
                     </h1>
                     <p class="text-xs text-gray-600">CEスケジュール管理システム V2</p>
-                    <div class="mt-3 text-xs text-gray-600">
+                    <div class="mt-2 text-xs text-gray-600">
                         <span id="currentUserDisplay">ユーザー</span>
                     </div>
                 </div>
 
-                <!-- 接続状態 -->
                 <div class="connection-status">
                     <div id="connectionDot" class="status-dot"></div>
                     <span id="connectionText">リアルタイム同期中</span>
                 </div>
 
-                <!-- フィルター設定 -->
-                <div class="mb-6">
-                    <h3 class="text-sm font-semibold mb-3">
-                        <i class="fas fa-filter mr-2"></i>フィルター設定
+                <div class="mb-4">
+                    <h3 class="text-sm font-semibold mb-2">
+                        <i class="fas fa-filter mr-2"></i>フィルター
                     </h3>
-                    <div class="space-y-3">
+                    <div class="space-y-2">
                         <div>
                             <label class="block text-xs font-medium mb-1">期間</label>
                             <select id="timeFilter" class="input-unified text-xs">
@@ -361,108 +253,135 @@
                             </select>
                         </div>
                         <div>
-                            <label class="block text-xs font-medium mb-1">アクション</label>
-<select id="actionFilter" class="input-unified text-xs">
-    <option value="">全て</option>
-    <option value="login">ログイン/ログアウト</option>
-    <option value="event">業務操作</option>
-    <option value="ce">CE配置</option>
-    <option value="schedule">勤務表操作</option>
-    <option value="monthly">月次業務</option>
-    <option value="user">ユーザー管理</option>
-    <option value="navigation">ページ遷移</option>
-    <option value="system">システム操作</option>
-</select>
-                        </div>
-                        <div>
                             <label class="block text-xs font-medium mb-1">ユーザー</label>
                             <select id="userFilter" class="input-unified text-xs">
                                 <option value="">全ユーザー</option>
                             </select>
                         </div>
-                        <div class="flex items-center gap-2">
-                            <input type="checkbox" id="myActionsOnly" class="rounded">
-                            <label for="myActionsOnly" class="text-xs">自分の操作のみ</label>
+                        <div>
+                            <label class="block text-xs font-medium mb-1">キーワード</label>
+                            <input id="keywordFilter" type="text" class="input-unified text-xs" placeholder="業務名/CE名/ページ名など">
                         </div>
-                        <button id="applyFiltersBtn" class="btn-unified btn-primary-unified btn-small w-full">
-                            <i class="fas fa-search mr-1"></i>フィルター適用
+                        <label class="flex items-center gap-2 text-xs">
+                            <input type="checkbox" id="myActionsOnly">
+                            自分の操作のみ
+                        </label>
+                        <label class="flex items-center gap-2 text-xs">
+                            <input type="checkbox" id="hidePageAccess" checked>
+                            ページアクセスを隠す
+                        </label>
+                    </div>
+                    <div class="mt-2 grid grid-cols-2 gap-2">
+                        <button id="applyFiltersBtn" class="btn-unified btn-primary-unified btn-small">
+                            <i class="fas fa-search mr-1"></i>適用
                         </button>
-                        <button id="clearFiltersBtn" class="btn-unified btn-outline-unified btn-small w-full">
+                        <button id="clearFiltersBtn" class="btn-unified btn-outline-unified btn-small">
                             <i class="fas fa-eraser mr-1"></i>クリア
                         </button>
                     </div>
                 </div>
 
-                <!-- 管理者機能（管理者のみ表示） -->
-                <div id="adminSection" class="mb-6" style="display: none;">
-                    <h3 class="text-sm font-semibold mb-3 text-red-600">
+                <div id="adminSection" style="display:none;">
+                    <h3 class="text-sm font-semibold mb-2 text-red-600">
                         <i class="fas fa-shield-alt mr-2"></i>管理者機能
                     </h3>
                     <div class="space-y-2">
                         <button id="exportLogsBtn" class="btn-unified btn-outline-unified btn-small w-full">
-                            <i class="fas fa-download mr-1"></i>ログエクスポート
+                            <i class="fas fa-file-export mr-1"></i>ログエクスポート
                         </button>
                         <button id="clearOldLogsBtn" class="btn-unified btn-outline-unified btn-small w-full text-red-600 border-red-600">
                             <i class="fas fa-trash mr-1"></i>古いログ削除
                         </button>
-                        <a href="admin-dashboard.html" class="btn-unified btn-primary-unified btn-small w-full">
+                        <a href="./admin-dashboard.html" class="btn-unified btn-primary-unified btn-small w-full text-center block">
                             <i class="fas fa-users-cog mr-1"></i>ユーザー管理
                         </a>
                     </div>
                 </div>
 
-                <!-- ナビゲーション -->
-                <div class="mt-auto pt-4 border-t border-gray-200">
-                    <div class="space-y-2">
-                        <a href="./home.html" class="btn-unified btn-outline-unified btn-small w-full">
-                            <i class="fas fa-home mr-1"></i>HOME
-                        </a>
-                        <button onclick="window.handleLogout()" 
-                                class="btn-unified btn-outline-unified btn-small w-full text-red-600 border-red-600">
-                            <i class="fas fa-sign-out-alt mr-1"></i>ログアウト
-                        </button>
-                    </div>
+                <div class="mt-auto text-center pt-4">
+                    <a href="./home.html" class="btn-unified btn-outline-unified btn-small w-full">
+                        <i class="fas fa-home mr-1"></i>HOME
+                    </a>
+                    <button onclick="window.handleLogout()" class="btn-unified btn-outline-unified btn-small w-full mt-2 text-red-600 border-red-600">
+                        <i class="fas fa-sign-out-alt mr-1"></i>ログアウト
+                    </button>
                 </div>
             </div>
         </div>
 
-        <!-- メインコンテンツ -->
-        <div class="settings-main">
-            <!-- ヘッダー -->
-            <div class="mb-6">
-                <h2 class="text-2xl font-bold text-gray-800 mb-2">設定・変更履歴</h2>
-                <p class="text-gray-600">システムの利用状況と変更履歴をリアルタイムで確認できます</p>
+        <!-- メイン -->
+        <div class="main-content">
+            <div class="flex items-center mb-4">
+                <i class="fas fa-history text-green-600 text-2xl mr-3"></i>
+                <div>
+                    <h2 class="text-xl font-bold text-gray-800">設定・変更履歴</h2>
+                    <p class="text-xs text-gray-500">
+                        システム利用状況と変更履歴をリアルタイムで確認できます
+                    </p>
+                </div>
             </div>
 
-            <!-- 統計情報 -->
-            <div class="stats-grid">
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-5">
                 <div class="stat-card">
-                    <div id="totalLogsCount" class="stat-value">0</div>
+                    <div id="statTotalLogs" class="stat-value">0</div>
                     <div class="stat-label">総ログ数</div>
                 </div>
                 <div class="stat-card">
-                    <div id="todayLogsCount" class="stat-value">0</div>
+                    <div id="statTodayActivity" class="stat-value">0</div>
                     <div class="stat-label">今日のアクティビティ</div>
                 </div>
                 <div class="stat-card">
-                    <div id="activeUsersCount" class="stat-value">0</div>
-                    <div class="stat-label">アクティブユーザー（24h）</div>
+                    <div id="statActiveUsers" class="stat-value">0</div>
+                    <div class="stat-label">アクティブユーザー(24H)</div>
                 </div>
                 <div class="stat-card">
-                    <div id="lastActivityTime" class="stat-value text-sm">--:--</div>
-                    <div class="stat-label">最終更新</div>
+                    <div id="statImportantToday" class="stat-value">0</div>
+                    <div class="stat-label">今日の重要操作</div>
                 </div>
             </div>
 
-            <!-- 変更履歴 -->
-            <div class="activity-log-container">
-                <div class="flex items-center justify-between mb-4">
-                    <h3 class="text-lg font-semibold">
-                        <i class="fas fa-history mr-2 text-blue-600"></i>
-                        変更履歴（リアルタイム）
-                    </h3>
+            <div class="glass-card p-4">
+                <div class="tab-bar">
+                    <button class="tab-btn active" data-tab="important">
+                        <i class="fas fa-star mr-1"></i>重要操作
+                        <span class="tab-badge" id="tabCountImportant">0</span>
+                    </button>
+                    <button class="tab-btn" data-tab="all">
+                        <i class="fas fa-list mr-1"></i>すべて
+                        <span class="tab-badge" id="tabCountAll">0</span>
+                    </button>
+                    <button class="tab-btn" data-tab="event">
+                        <i class="fas fa-briefcase mr-1"></i>業務変更
+                        <span class="tab-badge" id="tabCountEvent">0</span>
+                    </button>
+                    <button class="tab-btn" data-tab="ce">
+                        <i class="fas fa-user-nurse mr-1"></i>CE配置
+                        <span class="tab-badge" id="tabCountCE">0</span>
+                    </button>
+                    <button class="tab-btn" data-tab="schedule">
+                        <i class="fas fa-calendar-check mr-1"></i>勤務表
+                        <span class="tab-badge" id="tabCountSchedule">0</span>
+                    </button>
+                    <button class="tab-btn" data-tab="user">
+                        <i class="fas fa-users mr-1"></i>ユーザー
+                        <span class="tab-badge" id="tabCountUser">0</span>
+                    </button>
+                    <button class="tab-btn" data-tab="login">
+                        <i class="fas fa-sign-in-alt mr-1"></i>ログイン
+                        <span class="tab-badge" id="tabCountLogin">0</span>
+                    </button>
+                    <button class="tab-btn" data-tab="page">
+                        <i class="fas fa-eye mr-1"></i>アクセス
+                        <span class="tab-badge" id="tabCountPage">0</span>
+                    </button>
+                </div>
+
+                <div class="flex items-center justify-between mb-3 text-xs text-gray-600">
+                    <div>
+                        表示中: <span id="visibleCount">0</span>件 /
+                        取得済: <span id="totalCount">0</span>件
+                    </div>
                     <div class="flex items-center gap-2">
-                        <span class="text-sm text-gray-500">表示: <span id="visibleCount">0</span>件</span>
                         <button id="pauseUpdatesBtn" class="btn-unified btn-outline-unified btn-small">
                             <i class="fas fa-pause mr-1"></i>停止
                         </button>
@@ -471,749 +390,724 @@
                         </button>
                     </div>
                 </div>
-                
-                <div class="activity-log" id="activityLogContainer">
+
+                <div id="activityLogContainer">
                     <div class="text-center py-8 text-gray-500">
-                        <i class="fas fa-spinner fa-spin text-2xl mb-3"></i>
-                        <p>変更履歴を読み込み中...</p>
+                        <i class="fas fa-spinner fa-spin text-2xl mb-2"></i>
+                        <p>ログを読み込んでいます...</p>
                     </div>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- 設定管理システム -->
-    <script>
-        class SettingsManager {
-            constructor() {
-                this.isInitialized = false;
-                this.activityLogs = [];
-                this.filteredLogs = [];
-                this.users = new Map();
-                this.realtimeRef = null;
-                this.isPaused = false;
-                this.maxLogs = 200;
-                this.batchSize = 50;
-                this.oldestTimestamp = null;
-                this.currentFilters = {
-                    timeRange: 'week',
-                    action: '',
-                    user: '',
-                    myOnly: false
-                };
+<script>
+class SettingsManager {
+    constructor() {
+        this.activityLogs = [];
+        this.filteredLogs = [];
+        this.users = new Map();
+        this.isPaused = false;
+        this.realtimeRef = null;
+        this.maxLogs = 300;
+        this.oldestTimestamp = null;
+        this.currentTab = 'important';
+        this.init();
+    }
+
+    async init() {
+        try {
+            const authSuccess = await AuthGuard.init();
+            if (!authSuccess) return;
+
+            const userData = await AuthGuard.getUserData();
+            if (!userData || !userData.setupCompleted) {
+                console.error('ユーザーデータ不正');
+                location.href = '../index.html';
+                return;
             }
 
-            async init() {
-                if (this.isInitialized) return;
-                this.isInitialized = true;
-
-                try {
-                    // 認証ガード実行
-                    const authSuccess = await AuthGuard.init();
-                    if (!authSuccess) return;
-
-                    // ユーザーデータ取得
-                    const userData = await AuthGuard.getUserData();
-                    if (!userData || !userData.setupCompleted) {
-                        console.error('ユーザーデータ不正:', userData);
-                        location.href = '../index.html';
-                        return;
-                    }
-
-                    window.userRole = userData.role || 'viewer';
-                    const __session_ug = (window.AuthGuard && window.AuthGuard.getSession) ?
-                        window.AuthGuard.getSession() : {};
-                    window.currentUserData = {
-                        ...userData,
-                        uid: userData.uid || __session_ug.uid || sessionStorage.getItem('targetUID') || '',
-                        username: userData.username || __session_ug.username || sessionStorage.getItem('currentUsername') || '',
-                        displayName: userData.displayName || userData.username || __session_ug.username || 'ユーザー',
-                        role: userData.role || __session_ug.role || sessionStorage.getItem('userRole') || 'viewer'
-                    };
-
-                    await this.initializeSettingsSystem();
-                    console.log('✅ 設定管理初期化完了');
-                } catch (error) {
-                    console.error('設定管理初期化エラー:', error);
-                    location.href = '../index.html';
-                }
-            }
-
-            async initializeSettingsSystem() {
-                try {
-                    this.showSettings();
-                    this.setupEventListeners();
-                    this.setupConnectionMonitor();
-                    await this.loadUsers();
-                    await this.setupRealtimeActivityLog();
-                    this.updateStats();
-                    
-// ページアクセスログ記録
-if (window.auditLogger) {
-    await window.auditLogger.logPageAccess('settings');
-}
-
-                    console.log('✅ 設定システム初期化完了');
-                } catch (error) {
-                    console.error('❌ 設定システム初期化エラー:', error);
-                    throw error;
-                }
-            }
-
-            showSettings() {
-                const loadingEl = document.getElementById('loading');
-                const mainEl = document.getElementById('mainInterface');
-                if (loadingEl) loadingEl.style.display = 'none';
-                if (mainEl) mainEl.style.display = 'flex';
-
-                this.updateUserDisplay();
-                this.setupAdminControls();
-            }
-
-            updateUserDisplay() {
-                const userData = window.currentUserData;
-                if (!userData) return;
-                
-                const displayName = userData.displayName || userData.username || 'ユーザー';
-                document.querySelectorAll('#currentUserDisplay').forEach(el => {
-                    el.textContent = `${displayName} (${userData.role})`;
-                });
-            }
-
-            setupAdminControls() {
-                const adminSection = document.getElementById('adminSection');
-                if (adminSection && window.userRole === 'admin') {
-                    adminSection.style.display = 'block';
-                }
-            }
-
-            setupConnectionMonitor() {
-                try {
-                    window.database.ref('.info/connected').on('value', (snapshot) => {
-                        const connected = snapshot.val();
-                        const dot = document.getElementById('connectionDot');
-                        const text = document.getElementById('connectionText');
-                        
-                        if (connected) {
-                            dot.className = 'status-dot';
-                            text.textContent = 'リアルタイム同期中';
-                        } else {
-                            dot.className = 'status-dot offline';
-                            text.textContent = 'オフライン（再接続待機）';
-                        }
-                    });
-                } catch (error) {
-                    console.warn('接続監視設定エラー:', error);
-                }
-            }
-
-            setupEventListeners() {
-                // サイドバートグル
-                const toggle = document.getElementById('toggleSidebar');
-                const sidebar = document.getElementById('sidebar');
-                if (toggle && sidebar) {
-                    toggle.onclick = () => sidebar.classList.toggle('expanded');
-                }
-
-                // フィルターボタン
-                document.getElementById('applyFiltersBtn')?.addEventListener('click', () => this.applyFilters());
-                document.getElementById('clearFiltersBtn')?.addEventListener('click', () => this.clearFilters());
-
-                // 更新制御ボタン
-                document.getElementById('pauseUpdatesBtn')?.addEventListener('click', () => this.toggleUpdates());
-                document.getElementById('loadMoreBtn')?.addEventListener('click', () => this.loadMoreLogs());
-
-                // 管理者機能ボタン
-                document.getElementById('exportLogsBtn')?.addEventListener('click', () => this.exportLogs());
-                document.getElementById('clearOldLogsBtn')?.addEventListener('click', () => this.clearOldLogs());
-            }
-
-            async loadUsers() {
-                try {
-                    const snapshot = await window.database.ref(`${window.DATA_ROOT}/users`).once('value');
-                    const usersData = snapshot.val() || {};
-                    
-                    this.users.clear();
-                    Object.entries(usersData).forEach(([uid, user]) => {
-                        if (user.setupCompleted) {
-                            this.users.set(uid, {
-                                uid: uid,
-                                username: user.username,
-                                displayName: user.displayName || user.username,
-                                role: user.role
-                            });
-                        }
-                    });
-
-                    this.updateUserFilter();
-                    console.log('✅ ユーザーリスト読み込み完了:', this.users.size);
-                } catch (error) {
-                    console.error('❌ ユーザーリスト読み込みエラー:', error);
-                }
-            }
-
-            updateUserFilter() {
-                const userFilter = document.getElementById('userFilter');
-                if (!userFilter) return;
-
-                // 既存オプションをクリア（最初のオプションは保持）
-                while (userFilter.children.length > 1) {
-                    userFilter.removeChild(userFilter.lastChild);
-                }
-
-                // ユーザーオプションを追加
-                Array.from(this.users.values())
-                    .sort((a, b) => a.displayName.localeCompare(b.displayName, 'ja'))
-                    .forEach(user => {
-                        const option = document.createElement('option');
-                        option.value = user.uid;
-                        option.textContent = `${user.displayName} (${user.role})`;
-                        userFilter.appendChild(option);
-                    });
-            }
-
-            async setupRealtimeActivityLog() {
-                try {
-                    // 初期データ読み込み
-                    const initialSnapshot = await window.database.ref(`${window.DATA_ROOT}/auditLogs`)
-                        .orderByChild('timestamp')
-                        .limitToLast(this.maxLogs)
-                        .once('value');
-
-                    this.activityLogs = [];
-                    
-                    if (initialSnapshot.exists()) {
-                        const logsData = initialSnapshot.val();
-                        Object.entries(logsData).forEach(([key, log]) => {
-                            if (log.timestamp) {
-                                this.activityLogs.push({
-                                    id: key,
-                                    ...log
-                                });
-                            }
-                        });
-                        
-                        // タイムスタンプでソート（新しい順）
-                        this.activityLogs.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
-                        this.oldestTimestamp = this.activityLogs.length > 0 ? 
-                            this.activityLogs[this.activityLogs.length - 1].timestamp : null;
-                    }
-
-                    // リアルタイムリスナー設定
-                    this.setupRealtimeListener();
-                    this.applyFilters();
-                    this.updateStats();
-                    
-                    console.log('✅ リアルタイム変更履歴システム初期化完了');
-                } catch (error) {
-                    console.error('❌ リアルタイム変更履歴初期化エラー:', error);
-                    this.displayError('変更履歴の読み込みに失敗しました');
-                }
-            }
-
-            setupRealtimeListener() {
-                if (this.realtimeRef) {
-                    this.realtimeRef.off();
-                }
-
-                // 最新のログをリアルタイムで監視
-                const latestTimestamp = this.activityLogs.length > 0 ? this.activityLogs[0].timestamp : 0;
-this.realtimeRef = window.database.ref(`${window.DATA_ROOT}/auditLogs`)
-    .orderByChild('timestamp')
-    .startAt(latestTimestamp ? latestTimestamp + 1 : 0);
-
-                this.realtimeRef.on('child_added', (snapshot) => {
-                    if (!this.isPaused) {
-                        const logEntry = snapshot.val();
-                        if (logEntry && logEntry.timestamp) {
-                            this.addLogEntry({
-                                id: snapshot.key,
-                                ...logEntry
-                            });
-                        }
-                    }
-                });
-            }
-
-            addLogEntry(logEntry) {
-                // 重複チェック
-                const exists = this.activityLogs.some(log => log.id === logEntry.id);
-                if (exists) return;
-
-                // 新しいエントリを先頭に追加
-                this.activityLogs.unshift(logEntry);
-
-                // 最大件数を超えた場合は古いものを削除
-                if (this.activityLogs.length > this.maxLogs * 2) {
-                    this.activityLogs = this.activityLogs.slice(0, this.maxLogs);
-                }
-
-                this.applyFilters();
-                this.updateStats();
-            }
-
-            async loadMoreLogs() {
-                if (!this.oldestTimestamp) {
-                    window.showMessage('これ以上の履歴はありません', 'info');
-                    return;
-                }
-
-                try {
-                    const snapshot = await window.database.ref(`${window.DATA_ROOT}/auditLogs`)
-                        .orderByChild('timestamp')
-                        .endBefore(this.oldestTimestamp)
-                        .limitToLast(this.batchSize)
-                        .once('value');
-
-                    if (!snapshot.exists()) {
-                        window.showMessage('これ以上の履歴はありません', 'info');
-                        return;
-                    }
-
-                    const logsData = snapshot.val();
-                    const newLogs = [];
-                    
-                    Object.entries(logsData).forEach(([key, log]) => {
-                        if (log.timestamp && !this.activityLogs.some(existing => existing.id === key)) {
-                            newLogs.push({
-                                id: key,
-                                ...log
-                            });
-                        }
-                    });
-
-                    if (newLogs.length > 0) {
-                        newLogs.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
-                        this.activityLogs = this.activityLogs.concat(newLogs);
-                        this.oldestTimestamp = newLogs[newLogs.length - 1].timestamp;
-                        
-                        this.applyFilters();
-                        window.showMessage(`${newLogs.length}件の履歴を追加読み込みしました`, 'success');
-                    } else {
-                        window.showMessage('これ以上の履歴はありません', 'info');
-                    }
-                } catch (error) {
-                    console.error('追加読み込みエラー:', error);
-                    window.showMessage('履歴の追加読み込みに失敗しました', 'error');
-                }
-            }
-
-            applyFilters() {
-                const timeFilter = document.getElementById('timeFilter')?.value || 'week';
-                const actionFilter = document.getElementById('actionFilter')?.value || '';
-                const userFilter = document.getElementById('userFilter')?.value || '';
-                const myActionsOnly = document.getElementById('myActionsOnly')?.checked || false;
-
-                this.currentFilters = {
-                    timeRange: timeFilter,
-                    action: actionFilter,
-                    user: userFilter,
-                    myOnly: myActionsOnly
-                };
-
-                this.filteredLogs = this.activityLogs.filter(log => {
-                    // 時間フィルター
-                    if (timeFilter !== 'all') {
-                        const logTime = new Date(log.timestamp);
-                        const now = new Date();
-                        const diffHours = (now - logTime) / (1000 * 60 * 60);
-                        
-                        switch (timeFilter) {
-                            case 'today':
-                                if (diffHours > 24) return false;
-                                break;
-                            case 'week':
-                                if (diffHours > 168) return false; // 7 * 24
-                                break;
-                            case 'month':
-                                if (diffHours > 720) return false; // 30 * 24
-                                break;
-                        }
-                    }
-
-                    // アクションフィルター
-                    if (actionFilter) {
-                        const actionCategory = this.getActionCategory(log.action);
-                        if (actionCategory !== actionFilter) return false;
-                    }
-
-                    // ユーザーフィルター
-                    if (userFilter && log.uid !== userFilter) return false;
-
-                    // 自分の操作のみフィルター
-                    if (myActionsOnly && log.uid !== window.currentUserData?.uid) return false;
-
-                    return true;
-                });
-
-                this.renderActivityLog();
-            }
-
- getActionCategory(action) {
-    if (['login', 'logout'].includes(action)) return 'login';
-    if (['event-add', 'event-edit', 'event-delete', 'event-bulk-add'].includes(action)) return 'event';
-    if (['ce-assign', 'ce-unassign'].includes(action)) return 'ce';
-    if (['schedule-create', 'schedule-edit', 'schedule-publish'].includes(action)) return 'schedule';
-    if (action.startsWith('monthly-')) return 'monthly';
-    if (['user-create', 'user-delete', 'user-role-change'].includes(action)) return 'user';
-    if (['page-access'].includes(action)) return 'navigation';
-    if (['system-log-export', 'system-log-cleanup'].includes(action)) return 'system';
-    return 'other';
-}
-
-            clearFilters() {
-                document.getElementById('timeFilter').value = 'week';
-                document.getElementById('actionFilter').value = '';
-                document.getElementById('userFilter').value = '';
-                document.getElementById('myActionsOnly').checked = false;
-                this.applyFilters();
-                window.showMessage('フィルターをクリアしました', 'info');
-            }
-
-            renderActivityLog() {
-                const container = document.getElementById('activityLogContainer');
-                const visibleCountEl = document.getElementById('visibleCount');
-                
-                if (!container) return;
-
-                // 表示件数を更新
-                if (visibleCountEl) {
-                    visibleCountEl.textContent = this.filteredLogs.length;
-                }
-
-                if (this.filteredLogs.length === 0) {
-                    container.innerHTML = `
-                        <div class="text-center py-8 text-gray-500">
-                            <i class="fas fa-search text-2xl mb-3"></i>
-                            <p>条件に一致する履歴がありません</p>
-                        </div>
-                    `;
-                    return;
-                }
-
-                container.innerHTML = '';
-                
-                this.filteredLogs.forEach(log => {
-                    const logElement = this.createLogElement(log);
-                    container.appendChild(logElement);
-                });
-            }
-
-            createLogElement(log) {
-                const div = document.createElement('div');
-                div.className = `activity-item ${this.getActionClass(log.action)}`;
-
-                const user = this.users.get(log.uid);
-                const userName = user?.displayName || log.displayName || log.username || '不明なユーザー';
-                
-                const timestamp = log.timestamp ? 
-                    new Date(log.timestamp).toLocaleString('ja-JP', {
-                        month: 'short', day: 'numeric', 
-                        hour: '2-digit', minute: '2-digit'
-                    }) : '不明な時刻';
-
-                const actionText = this.getActionText(log);
-                const actionIcon = this.getActionIcon(log.action);
-                const details = this.formatDetails(log.details);
-
-                div.innerHTML = `
-                    <div class="activity-main">
-                        <i class="${actionIcon}"></i>
-                        <span class="activity-actor">${userName}</span>
-                        <span class="activity-action">${actionText}</span>
-                        ${details ? `<span class="activity-details">- ${details}</span>` : ''}
-                    </div>
-                    <div class="activity-time">${timestamp}</div>
-                `;
-
-                return div;
-            }
-
-            getActionClass(action) {
-                const classMap = {
-                    'login': 'login',
-                    'logout': 'logout',
-                    'event-add': 'event-add',
-                    'event-edit': 'event-edit',
-                    'event-delete': 'event-delete',
-                    'ce-assign': 'ce-assign',
-                    'ce-unassign': 'ce-unassign',
-                    'schedule-create': 'schedule-create',
-                    'schedule-edit': 'schedule-edit',
-                    'schedule-publish': 'schedule-publish'
-                };
-                
-                return classMap[action] || 'login';
-            }
-
-            getActionText(log) {
-const actionMap = {
-    'login': 'ログイン',
-    'logout': 'ログアウト',
-    'event-add': '業務追加',
-    'event-edit': '業務編集',
-    'event-delete': '業務削除',
-    'ce-assign': 'CE配置',
-    'ce-unassign': 'CE配置解除',
-    'schedule-create': '勤務表作成',
-    'schedule-edit': '勤務表編集',
-    'schedule-publish': '勤務表公開',
-    'page-access': 'ページアクセス',
-    'event-bulk-add': '業務一括追加',
-    'monthly-create': '月次業務作成',
-    'monthly-edit': '月次業務編集',
-    'monthly-delete': '月次業務削除',
-    'monthly-daily-record': '月次実績記録',
-    'user-create': 'ユーザー作成',
-    'user-delete': 'ユーザー削除',
-    'user-role-change': '権限変更',
-    'system-log-export': 'ログエクスポート',
-    'system-log-cleanup': 'ログクリーンアップ'
-};
-
-                return actionMap[log.action] || log.action || '不明な操作';
-            }
-
-            getActionIcon(action) {
-                const iconMap = {
-                    'login': 'fas fa-sign-in-alt',
-                    'logout': 'fas fa-sign-out-alt',
-                    'event-add': 'fas fa-plus-circle',
-                    'event-edit': 'fas fa-edit',
-                    'event-delete': 'fas fa-trash',
-                    'ce-assign': 'fas fa-user-plus',
-                    'ce-unassign': 'fas fa-user-minus',
-                    'schedule-create': 'fas fa-calendar-plus',
-                    'schedule-edit': 'fas fa-calendar-edit',
-                    'schedule-publish': 'fas fa-bullhorn'
-                };
-
-                return iconMap[action] || 'fas fa-info-circle';
-            }
-
-            formatDetails(details) {
-                if (!details) return '';
-                
-                const parts = [];
-                if (details.eventName) parts.push(`業務: ${details.eventName}`);
-                if (details.ceName) parts.push(`CE: ${details.ceName}`);
-                if (details.description) parts.push(details.description);
-                
-                return parts.join(' | ') || '';
-            }
-
-            updateStats() {
-                // 総ログ数
-                const totalEl = document.getElementById('totalLogsCount');
-                if (totalEl) totalEl.textContent = this.activityLogs.length;
-
-                // 今日のアクティビティ
-                const today = new Date();
-                today.setHours(0, 0, 0, 0);
-                const todayLogs = this.activityLogs.filter(log => {
-                    const logDate = new Date(log.timestamp);
-                    return logDate >= today;
-                });
-                const todayEl = document.getElementById('todayLogsCount');
-                if (todayEl) todayEl.textContent = todayLogs.length;
-
-                // アクティブユーザー（過去24時間）
-                const past24h = new Date(Date.now() - 24 * 60 * 60 * 1000);
-                const activeUsers = new Set();
-                this.activityLogs.forEach(log => {
-                    if (new Date(log.timestamp) >= past24h && log.uid) {
-                        activeUsers.add(log.uid);
-                    }
-                });
-                const activeEl = document.getElementById('activeUsersCount');
-                if (activeEl) activeEl.textContent = activeUsers.size;
-
-                // 最終更新時刻
-                if (this.activityLogs.length > 0) {
-                    const lastLog = this.activityLogs[0];
-                    const lastTime = new Date(lastLog.timestamp).toLocaleTimeString('ja-JP', {
-                        hour: '2-digit', minute: '2-digit'
-                    });
-                    const lastEl = document.getElementById('lastActivityTime');
-                    if (lastEl) lastEl.textContent = lastTime;
-                }
-            }
-
-            toggleUpdates() {
-                const pauseBtn = document.getElementById('pauseUpdatesBtn');
-                if (!pauseBtn) return;
-
-                this.isPaused = !this.isPaused;
-                
-                if (this.isPaused) {
-                    pauseBtn.innerHTML = '<i class="fas fa-play mr-1"></i>再開';
-                    pauseBtn.className = 'btn-unified btn-primary-unified btn-small';
-                    window.showMessage('リアルタイム更新を停止しました', 'info');
-                } else {
-                    pauseBtn.innerHTML = '<i class="fas fa-pause mr-1"></i>停止';
-                    pauseBtn.className = 'btn-unified btn-outline-unified btn-small';
-                    window.showMessage('リアルタイム更新を再開しました', 'success');
-                }
-            }
-
-            exportLogs() {
-                if (window.userRole !== 'admin') {
-                    window.showMessage('管理者権限が必要です', 'warning');
-                    return;
-                }
-
-                try {
-                    const exportData = this.filteredLogs.map(log => ({
-                        日時: new Date(log.timestamp).toLocaleString('ja-JP'),
-                        ユーザー: this.users.get(log.uid)?.displayName || log.displayName || '不明',
-                        アクション: this.getActionText(log),
-                        詳細: this.formatDetails(log.details),
-                        UserAgent: log.userAgent || ''
-                    }));
-
-                    const csvContent = this.convertToCSV(exportData);
-                    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-                    const link = document.createElement('a');
-                    
-                    const fileName = `activity_logs_${new Date().toISOString().slice(0, 10)}.csv`;
-                    link.href = URL.createObjectURL(blob);
-                    link.download = fileName;
-                    document.body.appendChild(link);
-                    link.click();
-                    document.body.removeChild(link);
-                    
-                    window.showMessage(`ログをエクスポートしました（${exportData.length}件）`, 'success');
-                } catch (error) {
-                    console.error('❌ ログエクスポートエラー:', error);
-                    window.showMessage('ログのエクスポートに失敗しました', 'error');
-                }
-            }
-
-            convertToCSV(data) {
-                if (data.length === 0) return '';
-
-                const headers = Object.keys(data[0]);
-                const csvRows = [];
-
-                // ヘッダー行
-                csvRows.push(headers.join(','));
-
-                // データ行
-                data.forEach(row => {
-                    const values = headers.map(header => {
-                        const value = row[header] || '';
-                        return `"${value.toString().replace(/"/g, '""')}"`;
-                    });
-                    csvRows.push(values.join(','));
-                });
-
-                return csvRows.join('\n');
-            }
-
-            async clearOldLogs() {
-                if (window.userRole !== 'admin') {
-                    window.showMessage('管理者権限が必要です', 'warning');
-                    return;
-                }
-
-                const days = prompt('何日前より古いログを削除しますか？（数値のみ入力）', '30');
-                if (!days || isNaN(days) || days <= 0) {
-                    window.showMessage('有効な日数を入力してください', 'warning');
-                    return;
-                }
-
-                if (!confirm(`${days}日前より古いログを削除しますか？\nこの操作は元に戻せません。`)) {
-                    return;
-                }
-
-                try {
-                    const cutoffTime = Date.now() - (parseInt(days) * 24 * 60 * 60 * 1000);
-                    const logsRef = window.database.ref(`${window.DATA_ROOT}/auditLogs`);
-                    
-                    const snapshot = await logsRef.orderByChild('timestamp').endBefore(cutoffTime).once('value');
-                    const oldLogs = snapshot.val();
-                    
-                    if (!oldLogs) {
-                        window.showMessage('削除対象のログがありません', 'info');
-                        return;
-                    }
-
-                    const deleteCount = Object.keys(oldLogs).length;
-                    
-                    // 古いログを削除
-                    const updates = {};
-                    Object.keys(oldLogs).forEach(key => {
-                        updates[key] = null;
-                    });
-                    
-                    await logsRef.update(updates);
-                    
-                    window.showMessage(`${deleteCount}件の古いログを削除しました`, 'success');
-                    
-                    // ローカルデータも更新
-                    this.activityLogs = this.activityLogs.filter(log => log.timestamp >= cutoffTime);
-                    this.applyFilters();
-                    this.updateStats();
-                    
-                } catch (error) {
-                    console.error('❌ 古いログ削除エラー:', error);
-                    window.showMessage('古いログの削除に失敗しました', 'error');
-                }
-            }
-
-            displayError(message) {
-                const container = document.getElementById('activityLogContainer');
-                if (container) {
-                    container.innerHTML = `
-                        <div class="text-center py-8 text-red-500">
-                            <i class="fas fa-exclamation-triangle text-2xl mb-3"></i>
-                            <p>${message}</p>
-                            <button onclick="window.settingsManager.setupRealtimeActivityLog()" 
-                                    class="btn-unified btn-primary-unified btn-small mt-3">
-                                <i class="fas fa-redo mr-1"></i>再試行
-                            </button>
-                        </div>
-                    `;
-                }
-            }
+            const session = AuthGuard.getSession();
+            window.userRole = userData.role || session.role || 'viewer';
+            window.currentUserData = {
+                ...userData,
+                uid: userData.uid || session.uid || sessionStorage.getItem('targetUID') || '',
+                username: userData.username || session.username || sessionStorage.getItem('currentUsername') || '',
+                displayName: userData.displayName || userData.username || session.username || 'ユーザー',
+                role: window.userRole
+            };
+
+            await this.initializeSettingsSystem();
+        } catch (error) {
+            console.error('設定管理初期化エラー:', error);
+            location.href = '../index.html';
         }
+    }
 
-        // ログアウト処理
-        window.handleLogout = async () => {
-    try {
-        // 監査ログ記録（共通ロガー使用）
+    async initializeSettingsSystem() {
+        this.showSettings();
+        this.setupEventListeners();
+        this.setupConnectionMonitor();
+        await this.loadUsers();
+        await this.setupRealtimeActivityLog();
+        this.updateStats();
+
         if (window.auditLogger) {
-            await window.auditLogger.logAction('logout');
+            await window.auditLogger.logPageAccess('settings');
+        }
+    }
+
+    showSettings() {
+        document.getElementById('loading').style.display = 'none';
+        document.getElementById('mainInterface').style.display = 'flex';
+        this.updateUserDisplay();
+        this.setupAdminControls();
+    }
+
+    updateUserDisplay() {
+        const u = window.currentUserData;
+        const displayName = u.displayName || u.username || 'ユーザー';
+        document.querySelectorAll('#currentUserDisplay').forEach(el => {
+            el.textContent = `${displayName} (${u.role})`;
+        });
+    }
+
+    setupAdminControls() {
+        const adminSection = document.getElementById('adminSection');
+        if (adminSection && window.userRole === 'admin') {
+            adminSection.style.display = 'block';
+        }
+    }
+
+    setupConnectionMonitor() {
+        try {
+            window.database.ref('.info/connected').on('value', (snapshot) => {
+                const connected = snapshot.val();
+                const dot = document.getElementById('connectionDot');
+                const text = document.getElementById('connectionText');
+                if (connected) {
+                    dot.className = 'status-dot';
+                    text.textContent = 'リアルタイム同期中';
+                } else {
+                    dot.className = 'status-dot offline';
+                    text.textContent = 'オフライン(再接続待機)';
+                }
+            });
+        } catch (e) {
+            console.warn('接続監視設定エラー:', e);
+        }
+    }
+
+    setupEventListeners() {
+        const toggle = document.getElementById('toggleSidebar');
+        const sidebar = document.getElementById('sidebar');
+        if (toggle && sidebar) {
+            toggle.onclick = () => sidebar.classList.toggle('expanded');
         }
 
-        if (window.auth && window.auth.currentUser) {
-            await window.auth.signOut();
+        document.getElementById('applyFiltersBtn')?.addEventListener('click', () => this.applyFilters());
+        document.getElementById('clearFiltersBtn')?.addEventListener('click', () => this.clearFilters());
+        document.getElementById('pauseUpdatesBtn')?.addEventListener('click', () => this.toggleUpdates());
+        document.getElementById('loadMoreBtn')?.addEventListener('click', () => this.loadMoreLogs());
+        document.getElementById('exportLogsBtn')?.addEventListener('click', () => this.exportLogs());
+        document.getElementById('clearOldLogsBtn')?.addEventListener('click', () => this.clearOldLogs());
+        document.getElementById('keywordFilter')?.addEventListener('input', () => this.applyFilters());
+        document.getElementById('hidePageAccess')?.addEventListener('change', () => this.applyFilters());
+
+        document.querySelectorAll('.tab-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                this.currentTab = btn.dataset.tab;
+                this.applyFilters();
+            });
+        });
+    }
+
+    async loadUsers() {
+        try {
+            const snap = await window.database.ref(`${window.DATA_ROOT}/users`).once('value');
+            const usersData = snap.val() || {};
+            this.users.clear();
+            Object.entries(usersData).forEach(([uid, user]) => {
+                if (user.setupCompleted) {
+                    this.users.set(uid, {
+                        uid,
+                        username: user.username,
+                        displayName: user.displayName || user.username,
+                        role: user.role || 'viewer'
+                    });
+                }
+            });
+            this.updateUserFilter();
+        } catch (e) {
+            console.error('❌ ユーザーリスト読み込みエラー:', e);
         }
-    } catch (error) {
-        console.error('ログアウトエラー:', error);
+    }
+
+    updateUserFilter() {
+        const uf = document.getElementById('userFilter');
+        if (!uf) return;
+        while (uf.children.length > 1) uf.removeChild(uf.lastChild);
+        Array.from(this.users.values())
+            .sort((a, b) => a.displayName.localeCompare(b.displayName, 'ja'))
+            .forEach(user => {
+                const opt = document.createElement('option');
+                opt.value = user.uid;
+                opt.textContent = `${user.displayName} (${user.role})`;
+                uf.appendChild(opt);
+            });
+    }
+
+    async setupRealtimeActivityLog() {
+        try {
+            const initSnap = await window.database.ref(`${window.DATA_ROOT}/auditLogs`)
+                .orderByChild('timestamp')
+                .limitToLast(this.maxLogs)
+                .once('value');
+
+            this.activityLogs = [];
+            if (initSnap.exists()) {
+                const logsData = initSnap.val();
+                Object.entries(logsData).forEach(([key, log]) => {
+                    if (log.timestamp) this.activityLogs.push({ id: key, ...log });
+                });
+                this.activityLogs.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
+                this.oldestTimestamp = this.activityLogs.length > 0
+                    ? this.activityLogs[this.activityLogs.length - 1].timestamp
+                    : null;
+            }
+
+            this.setupRealtimeListener();
+            this.applyFilters();
+            this.updateStats();
+        } catch (e) {
+            console.error('❌ リアルタイム変更履歴初期化エラー:', e);
+            this.displayError('変更履歴の読み込みに失敗しました');
+        }
+    }
+
+    setupRealtimeListener() {
+        if (this.realtimeRef) this.realtimeRef.off();
+        const latest = this.activityLogs.length > 0 ? this.activityLogs[0].timestamp : 0;
+        this.realtimeRef = window.database.ref(`${window.DATA_ROOT}/auditLogs`)
+            .orderByChild('timestamp')
+            .startAt(latest ? latest + 1 : 0);
+
+        this.realtimeRef.on('child_added', (snap) => {
+            if (this.isPaused) return;
+            const log = snap.val();
+            if (log && log.timestamp) {
+                this.addLogEntry({ id: snap.key, ...log });
+            }
+        });
+    }
+
+    addLogEntry(logEntry) {
+        if (this.activityLogs.some(l => l.id === logEntry.id)) return;
+        this.activityLogs.unshift(logEntry);
+        if (this.activityLogs.length > this.maxLogs * 2) {
+            this.activityLogs = this.activityLogs.slice(0, this.maxLogs);
+        }
+        this.applyFilters();
+        this.updateStats();
+    }
+
+    // ==== フィルタ・分類 ====
+    classify(action) {
+        if (!action) return 'other';
+        if (action === 'login') return 'login';
+        if (action === 'logout') return 'login';
+        if (action === 'page-access' || action === 'analytics-page-access') return 'page';
+        if (action.startsWith('event-')) return 'event';
+        if (action.startsWith('ce-')) return 'ce';
+        if (action.startsWith('schedule-')) return 'schedule';
+        if (action.startsWith('monthly-')) return 'event';
+        if (action.startsWith('template-')) return 'event';
+        if (action.startsWith('user-')) return 'user';
+        if (action.startsWith('system-')) return 'other';
+        return 'other';
+    }
+
+    isImportant(action) {
+        if (!action) return false;
+        if (action === 'page-access' || action === 'analytics-page-access') return false;
+        // login/logoutも重要とみなす
+        return true;
+    }
+
+    matchesTab(log) {
+        const cat = this.classify(log.action);
+        switch (this.currentTab) {
+            case 'important': return this.isImportant(log.action);
+            case 'all':       return true;
+            case 'event':     return cat === 'event';
+            case 'ce':        return cat === 'ce';
+            case 'schedule':  return cat === 'schedule';
+            case 'user':      return cat === 'user';
+            case 'login':     return cat === 'login';
+            case 'page':      return cat === 'page';
+            default:          return true;
+        }
+    }
+
+    applyFilters() {
+        const timeFilter = document.getElementById('timeFilter')?.value || 'week';
+        const userFilter = document.getElementById('userFilter')?.value || '';
+        const keyword = (document.getElementById('keywordFilter')?.value || '').trim().toLowerCase();
+        const myOnly = document.getElementById('myActionsOnly')?.checked || false;
+        const hidePage = document.getElementById('hidePageAccess')?.checked || false;
+
+        const now = Date.now();
+        const timeThreshold = {
+            today: now - 24 * 3600 * 1000,
+            week:  now - 7 * 24 * 3600 * 1000,
+            month: now - 30 * 24 * 3600 * 1000,
+            all:   0
+        }[timeFilter] ?? 0;
+
+        const myUid = window.currentUserData?.uid;
+
+        this.filteredLogs = this.activityLogs.filter(log => {
+            if (!log.timestamp || log.timestamp < timeThreshold) return false;
+            if (userFilter && log.uid !== userFilter) return false;
+            if (myOnly && log.uid !== myUid) return false;
+            if (hidePage && this.classify(log.action) === 'page' && this.currentTab !== 'page') return false;
+
+            if (!this.matchesTab(log)) return false;
+
+            if (keyword) {
+                const hay = [
+                    log.username, log.displayName, log.action,
+                    log.details?.pageName,
+                    log.details?.eventName,
+                    log.details?.ceName,
+                    log.details?.taskName,
+                    log.details?.department,
+                    log.details?.dateKey,
+                    log.details?.name
+                ].filter(Boolean).join(' ').toLowerCase();
+                if (!hay.includes(keyword)) return false;
+            }
+            return true;
+        });
+
+        this.renderActivityLog();
+        this.updateTabBadges();
+    }
+
+    updateTabBadges() {
+        const now = Date.now();
+        const timeFilter = document.getElementById('timeFilter')?.value || 'week';
+        const timeThreshold = {
+            today: now - 24 * 3600 * 1000,
+            week:  now - 7 * 24 * 3600 * 1000,
+            month: now - 30 * 24 * 3600 * 1000,
+            all:   0
+        }[timeFilter] ?? 0;
+
+        const inRange = this.activityLogs.filter(l => l.timestamp && l.timestamp >= timeThreshold);
+
+        const count = (fn) => inRange.filter(fn).length;
+
+        const setBadge = (id, n) => {
+            const el = document.getElementById(id);
+            if (el) el.textContent = n;
+        };
+        setBadge('tabCountImportant', count(l => this.isImportant(l.action)));
+        setBadge('tabCountAll',       inRange.length);
+        setBadge('tabCountEvent',     count(l => this.classify(l.action) === 'event'));
+        setBadge('tabCountCE',        count(l => this.classify(l.action) === 'ce'));
+        setBadge('tabCountSchedule',  count(l => this.classify(l.action) === 'schedule'));
+        setBadge('tabCountUser',      count(l => this.classify(l.action) === 'user'));
+        setBadge('tabCountLogin',     count(l => this.classify(l.action) === 'login'));
+        setBadge('tabCountPage',      count(l => this.classify(l.action) === 'page'));
+    }
+
+    clearFilters() {
+        document.getElementById('timeFilter').value = 'week';
+        document.getElementById('userFilter').value = '';
+        document.getElementById('keywordFilter').value = '';
+        document.getElementById('myActionsOnly').checked = false;
+        document.getElementById('hidePageAccess').checked = true;
+        this.currentTab = 'important';
+        document.querySelectorAll('.tab-btn').forEach(b => {
+            b.classList.toggle('active', b.dataset.tab === 'important');
+        });
+        this.applyFilters();
+    }
+
+    // ==== 表示 ====
+    renderActivityLog() {
+        const container = document.getElementById('activityLogContainer');
+        const visibleEl = document.getElementById('visibleCount');
+        const totalEl = document.getElementById('totalCount');
+
+        if (visibleEl) visibleEl.textContent = this.filteredLogs.length;
+        if (totalEl) totalEl.textContent = this.activityLogs.length;
+
+        if (!container) return;
+
+        if (this.filteredLogs.length === 0) {
+            container.innerHTML = `
+                <div class="text-center py-8 text-gray-500">
+                    <i class="fas fa-search text-2xl mb-3"></i>
+                    <p>条件に一致する履歴がありません</p>
+                </div>`;
+            return;
+        }
+
+        container.innerHTML = '';
+        this.filteredLogs.forEach(log => {
+            container.appendChild(this.createLogElement(log));
+        });
+    }
+
+    createLogElement(log) {
+        const div = document.createElement('div');
+        const typeClass = this.getTypeClass(log.action);
+        div.className = `activity-item type-${typeClass}`;
+
+        const user = this.users.get(log.uid);
+        const displayName =
+            user?.displayName || log.displayName || log.username || '不明なユーザー';
+        const role = (user?.role || log.role || 'viewer').toLowerCase();
+
+        const time = log.timestamp
+            ? new Date(log.timestamp).toLocaleString('ja-JP', {
+                month: 'numeric', day: 'numeric',
+                hour: '2-digit', minute: '2-digit'
+              })
+            : '不明な時刻';
+
+        const actionLabel = this.getActionLabel(log);
+        const target = this.getTargetLabel(log);
+        const iconClass = this.getActionIcon(log.action);
+
+        const meta = this.buildMeta(log);
+
+        div.innerHTML = `
+            <div class="activity-icon"><i class="${iconClass}"></i></div>
+            <div class="activity-body">
+                <div class="activity-headline">
+                    <span class="activity-actor">${this.escape(displayName)}</span>
+                    <span class="activity-role-badge ${role}">${this.roleLabel(role)}</span>
+                    <span class="activity-action">${this.escape(actionLabel)}</span>
+                    ${target ? `<span class="activity-target">${this.escape(target)}</span>` : ''}
+                </div>
+                ${meta ? `<div class="activity-meta">${meta}</div>` : ''}
+            </div>
+            <div class="activity-time">${time}</div>
+        `;
+        return div;
+    }
+
+    escape(s) {
+        return String(s ?? '')
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;');
+    }
+
+    roleLabel(role) {
+        return ({ admin: '管理者', editor: '編集者', viewer: '閲覧者' })[role] || '不明';
+    }
+
+    getTypeClass(action) {
+        if (!action) return 'other';
+        if (action === 'login') return 'login';
+        if (action === 'logout') return 'logout';
+        if (action === 'page-access' || action === 'analytics-page-access') return 'page';
+        if (action.endsWith('-add') || action === 'event-bulk-add' || action.startsWith('monthly-')) return 'add';
+        if (action.endsWith('-edit') || action.endsWith('-update') || action.endsWith('-rename')) return 'edit';
+        if (action.endsWith('-delete') || action.endsWith('-remove')) return 'delete';
+        if (action === 'ce-assign') return 'assign';
+        if (action === 'ce-unassign') return 'unassign';
+        if (action === 'schedule-publish') return 'publish';
+        if (action.startsWith('template-')) return 'template';
+        if (action.startsWith('monthly-')) return 'monthly';
+        if (action.startsWith('user-')) return 'user';
+        return 'other';
+    }
+
+    getActionIcon(action) {
+        const map = {
+            'login': 'fas fa-sign-in-alt',
+            'logout': 'fas fa-sign-out-alt',
+            'page-access': 'fas fa-eye',
+            'analytics-page-access': 'fas fa-chart-line',
+            'event-add': 'fas fa-plus',
+            'event-edit': 'fas fa-pen',
+            'event-delete': 'fas fa-trash',
+            'event-bulk-add': 'fas fa-layer-group',
+            'event-copy': 'fas fa-copy',
+            'ce-assign': 'fas fa-user-plus',
+            'ce-unassign': 'fas fa-user-minus',
+            'schedule-create': 'fas fa-calendar-plus',
+            'schedule-edit': 'fas fa-calendar-day',
+            'schedule-publish': 'fas fa-bullhorn',
+            'template-create': 'fas fa-bookmark',
+            'template-apply': 'fas fa-magic',
+            'template-delete': 'fas fa-eraser',
+            'template-rename': 'fas fa-i-cursor',
+            'template-reorder': 'fas fa-sort',
+            'monthly-create': 'fas fa-calendar-alt',
+            'monthly-update': 'fas fa-calendar-check',
+            'monthly-delete': 'fas fa-calendar-minus',
+            'monthly-task-copy': 'fas fa-copy',
+            'user-create': 'fas fa-user-plus',
+            'user-delete': 'fas fa-user-times'
+        };
+        return map[action] || 'fas fa-circle-info';
+    }
+
+    getActionLabel(log) {
+        const map = {
+            'login': 'ログイン',
+            'logout': 'ログアウト',
+            'page-access': 'ページ閲覧',
+            'analytics-page-access': '分析ページ閲覧',
+            'event-add': '業務を追加',
+            'event-edit': '業務を編集',
+            'event-delete': '業務を削除',
+            'event-bulk-add': '業務を一括追加',
+            'event-copy': '業務をコピー',
+            'ce-assign': 'CEを配置',
+            'ce-unassign': 'CE配置を解除',
+            'schedule-create': '勤務表を作成',
+            'schedule-edit': '勤務表を編集',
+            'schedule-publish': '勤務表を公開',
+            'template-create': 'テンプレを作成',
+            'template-apply': 'テンプレを適用',
+            'template-delete': 'テンプレを削除',
+            'template-rename': 'テンプレ名を変更',
+            'template-reorder': 'テンプレ順序変更',
+            'monthly-create': '月次業務を追加',
+            'monthly-update': '月次業務を更新',
+            'monthly-delete': '月次業務を削除',
+            'monthly-task-copy': '月次業務コピー',
+            'user-create': 'ユーザーを作成',
+            'user-delete': 'ユーザーを削除',
+            'weekly-view-print': '週間表を印刷'
+        };
+        return map[log.action] || (log.action || '操作');
+    }
+
+    getTargetLabel(log) {
+        const d = log.details || {};
+        if (d.eventName && d.eventName !== 'unknown') return `｢${d.eventName}｣`;
+        if (d.taskName && d.taskName !== 'unknown') return `｢${d.taskName}｣`;
+        if (d.ceName && d.ceName !== 'unknown') return `｢${d.ceName}｣`;
+        if (d.name) return `｢${d.name}｣`;
+        if (d.pageName) return `→ ${this.pageLabel(d.pageName)}`;
+        return '';
+    }
+
+    pageLabel(pageName) {
+        const map = {
+            'home': 'HOME',
+            'schedule': '日別スケジュール',
+            'weekly-view': '週間表示',
+            'ce-schedule': 'CE勤務表',
+            'settings': '設定',
+            'analytics': '集計・分析',
+            'admin-dashboard': '管理者ダッシュボード',
+            'work-schedule-editor': '勤務表エディタ',
+            'assignment-summary': '配置サマリ',
+            'department-timeline': '部門タイムライン',
+            'personal-timeline': '個人タイムライン',
+            'staffing-adjustment': '人員調整',
+            'user-setup': '個人設定'
+        };
+        return map[pageName] || pageName;
+    }
+
+    buildMeta(log) {
+        const d = log.details || {};
+        const chips = [];
+
+        if (d.department && d.department !== 'unknown') {
+            chips.push(`<span class="chip dept">${this.escape(d.department)}</span>`);
+        }
+        if (d.dateKey) {
+            chips.push(`<span class="chip date">${this.escape(d.dateKey)}</span>`);
+        } else if (d.yearMonth) {
+            chips.push(`<span class="chip date">${this.escape(d.yearMonth)}</span>`);
+        }
+        if (d.pageName && this.classify(log.action) !== 'page') {
+            chips.push(`<span class="chip page">${this.escape(this.pageLabel(d.pageName))}</span>`);
+        } else if (d.page && this.classify(log.action) !== 'page') {
+            chips.push(`<span class="chip page">${this.escape(this.pageLabel(d.page))}</span>`);
+        }
+        if (typeof d.addedCount === 'number') {
+            chips.push(`<span class="chip">${d.addedCount}件追加</span>`);
+        }
+        if (typeof d.totalAdded === 'number') {
+            chips.push(`<span class="chip">${d.totalAdded}件追加</span>`);
+        }
+        if (d.workType && d.workType !== 'unknown') {
+            chips.push(`<span class="chip">${this.escape(d.workType)}</span>`);
+        }
+        return chips.join('');
+    }
+
+    // ==== 統計 ====
+    updateStats() {
+        const now = Date.now();
+        const dayAgo = now - 24 * 3600 * 1000;
+
+        const totalEl = document.getElementById('statTotalLogs');
+        const todayEl = document.getElementById('statTodayActivity');
+        const usersEl = document.getElementById('statActiveUsers');
+        const impEl   = document.getElementById('statImportantToday');
+
+        const recent = this.activityLogs.filter(l => l.timestamp && l.timestamp >= dayAgo);
+        const activeUsers = new Set(recent.map(l => l.uid).filter(Boolean));
+
+        const todayImportant = recent.filter(l => this.isImportant(l.action));
+
+        if (totalEl) totalEl.textContent = this.activityLogs.length;
+        if (todayEl) todayEl.textContent = recent.length;
+        if (usersEl) usersEl.textContent = activeUsers.size;
+        if (impEl)   impEl.textContent   = todayImportant.length;
+    }
+
+    // ==== コントロール ====
+    toggleUpdates() {
+        this.isPaused = !this.isPaused;
+        const btn = document.getElementById('pauseUpdatesBtn');
+        if (!btn) return;
+        btn.innerHTML = this.isPaused
+            ? '<i class="fas fa-play mr-1"></i>再開'
+            : '<i class="fas fa-pause mr-1"></i>停止';
+    }
+
+    async loadMoreLogs() {
+        if (!this.oldestTimestamp) return;
+        try {
+            const snap = await window.database.ref(`${window.DATA_ROOT}/auditLogs`)
+                .orderByChild('timestamp')
+                .endAt(this.oldestTimestamp - 1)
+                .limitToLast(this.maxLogs)
+                .once('value');
+            const data = snap.val() || {};
+            Object.entries(data).forEach(([key, log]) => {
+                if (!this.activityLogs.some(l => l.id === key)) {
+                    this.activityLogs.push({ id: key, ...log });
+                }
+            });
+            this.activityLogs.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
+            this.oldestTimestamp = this.activityLogs.length > 0
+                ? this.activityLogs[this.activityLogs.length - 1].timestamp
+                : this.oldestTimestamp;
+            this.applyFilters();
+            this.updateStats();
+        } catch (e) {
+            console.error('追加ログ読み込み失敗:', e);
+            window.showMessage?.('追加ログ読み込みに失敗しました', 'error');
+        }
+    }
+
+    exportLogs() {
+        if (window.userRole !== 'admin') {
+            window.showMessage?.('管理者権限が必要です', 'warning');
+            return;
+        }
+        const rows = this.filteredLogs.map(log => ({
+            日時: log.timestamp ? new Date(log.timestamp).toLocaleString('ja-JP') : '',
+            ユーザー: this.users.get(log.uid)?.displayName || log.displayName || '不明',
+            権限: log.role || this.users.get(log.uid)?.role || '',
+            操作: this.getActionLabel(log),
+            対象: this.getTargetLabel(log).replace(/[｢｣]/g, ''),
+            部門: log.details?.department || '',
+            日付: log.details?.dateKey || log.details?.yearMonth || '',
+            ページ: log.details?.pageName || log.details?.page || ''
+        }));
+        if (rows.length === 0) {
+            window.showMessage?.('エクスポート対象がありません', 'info');
+            return;
+        }
+        const header = Object.keys(rows[0]);
+        const csv = [
+            header.join(','),
+            ...rows.map(r => header.map(h => `"${String(r[h] ?? '').replace(/"/g, '""')}"`).join(','))
+        ].join('\n');
+
+        const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `audit-logs-${new Date().toISOString().slice(0,10)}.csv`;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        URL.revokeObjectURL(url);
+    }
+
+    async clearOldLogs() {
+        if (window.userRole !== 'admin') {
+            window.showMessage?.('管理者権限が必要です', 'warning');
+            return;
+        }
+        const days = prompt('何日前より古いログを削除しますか？(数値のみ)', '30');
+        if (!days || isNaN(days) || Number(days) <= 0) {
+            window.showMessage?.('有効な日数を入力してください', 'warning');
+            return;
+        }
+        if (!confirm(`${days}日前より古いログを削除します。元に戻せません。`)) return;
+
+        try {
+            const cutoff = Date.now() - (parseInt(days) * 24 * 3600 * 1000);
+            const ref = window.database.ref(`${window.DATA_ROOT}/auditLogs`);
+            const snap = await ref.orderByChild('timestamp').endBefore(cutoff).once('value');
+            const old = snap.val();
+            if (!old) {
+                window.showMessage?.('削除対象のログがありません', 'info');
+                return;
+            }
+            const updates = {};
+            Object.keys(old).forEach(k => { updates[k] = null; });
+            await ref.update(updates);
+            window.showMessage?.(`${Object.keys(old).length}件の古いログを削除しました`, 'success');
+
+            this.activityLogs = this.activityLogs.filter(l => l.timestamp >= cutoff);
+            this.applyFilters();
+            this.updateStats();
+        } catch (e) {
+            console.error('古いログ削除失敗:', e);
+            window.showMessage?.('削除に失敗しました', 'error');
+        }
+    }
+
+    displayError(msg) {
+        const c = document.getElementById('activityLogContainer');
+        if (c) {
+            c.innerHTML = `
+                <div class="text-center py-8 text-red-600">
+                    <i class="fas fa-exclamation-triangle text-2xl mb-2"></i>
+                    <p>${this.escape(msg)}</p>
+                </div>`;
+        }
+    }
+}
+
+// 共通ログアウト
+window.handleLogout = async () => {
+    try {
+        if (window.auditLogger) await window.auditLogger.logAction('logout');
+        if (window.auth?.currentUser) await window.auth.signOut();
+    } catch (e) {
+        console.error('ログアウトエラー:', e);
     } finally {
         sessionStorage.clear();
-        localStorage.clear();
-        window.location.href = '../index.html';
+        localStorage.removeItem('dashboardAuth');
+        location.href = '../index.html';
     }
 };
 
-
-        // 初期化
-        window.settingsManager = null;
-        document.addEventListener('DOMContentLoaded', async () => {
-            try {
-                window.settingsManager = new SettingsManager();
-                await window.settingsManager.init();
-                if (window.auditLogger) {
-                    await window.auditLogger.logPageAccess('settings');
-                    }
-                console.log('✅ 設定管理初期化完了');
-            } catch (error) {
-                console.error('❌ 設定管理初期化エラー:', error);
-                window.showMessage('設定管理の初期化に失敗しました', 'error');
-            }
-        });
-    </script>
+document.addEventListener('DOMContentLoaded', () => {
+    new SettingsManager();
+});
+</script>
 </body>
 </html>
