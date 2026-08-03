@@ -1522,7 +1522,16 @@ async removeCE() {
                     return false;
                 }
 
-                window.currentUserData = userData;
+                const __session_ug = (window.AuthGuard && window.AuthGuard.getSession) ?
+                    window.AuthGuard.getSession() : {};
+                window.currentUserData = {
+                    ...userData,
+                    uid: userData.uid || __session_ug.uid || sessionStorage.getItem('targetUID') || '',
+                    username: userData.username || __session_ug.username || sessionStorage.getItem('currentUsername') || '',
+                    displayName: userData.displayName || userData.username || __session_ug.username || 'ユーザー',
+                    role: userData.role || __session_ug.role || sessionStorage.getItem('userRole') || 'viewer'
+};
+
                 window.userRole = userData.role;
 
                 if (!['admin', 'editor'].includes(window.userRole)) {
