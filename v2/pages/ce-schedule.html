@@ -1112,15 +1112,30 @@ fitTableToViewport() {
     // ヘッダー(No + 氏名)
     let html = '<thead><tr><th class="no-header">No</th><th class="name-header">氏名</th>';
     
-    dates.forEach(date => {
-        const dayOfWeek = ['日', '月', '火', '水', '木', '金', '土'][date.getDay()];
-        const isHoliday = this.isJapaneseHoliday(date);
-        let headerClass = '';
-        if (date.getDay() === 0 || isHoliday) headerClass = 'text-red-600';
-        else if (date.getDay() === 6) headerClass = 'text-blue-600';
-        
-        html += `<th class="date-col"><div>${date.getDate()}</div><div class="text-xs ${headerClass}">${dayOfWeek}</div></th>`;
-    });
+    dates.forEach((date, index) => {
+    const dayOfWeek = ['日', '月', '火', '水', '木', '金', '土'][date.getDay()];
+    const isHoliday = this.isJapaneseHoliday(date);
+    let headerClass = '';
+
+    if (date.getDay() === 0 || isHoliday) {
+        headerClass = 'text-red-600';
+    } else if (date.getDay() === 6) {
+        headerClass = 'text-blue-600';
+    }
+
+    // 月表示: 先頭列または前日と月が変わる列だけ表示
+    const prevDate = index > 0 ? dates[index - 1] : null;
+    const showMonth = index === 0 || !prevDate || prevDate.getMonth() !== date.getMonth();
+    const monthLabel = showMonth ? `${date.getMonth() + 1}月` : '&nbsp;';
+
+    html += `
+        <th class="date-col">
+            <div class="text-[10px] leading-tight font-semibold text-gray-500">${monthLabel}</div>
+            <div class="leading-tight">${date.getDate()}</div>
+            <div class="text-xs leading-tight ${headerClass}">${dayOfWeek}</div>
+        </th>
+    `;
+});
     
     const summaryHeaders = ['A', 'A1', 'B', '非', '×', '休日数', '実勤務', '当直回数'];
     summaryHeaders.forEach(h => html += `<th class="summary-cell">${h}</th>`);
