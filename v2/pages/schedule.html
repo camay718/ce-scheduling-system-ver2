@@ -648,6 +648,10 @@
                 margin-right: 2px !important;
                 font-size: 12px !important;
                 }
+            /* 権限OFF時はスマホでも個人業務入力ボタンを強制非表示 */
+            #addPersonalCardBtn.is-force-hidden {
+                display: none !important;
+            }
             /* スマホ用ラベル短縮（元テキストを隠して短いラベルに差し替え） */
             #addBulkEventBtn { font-size: 0 !important; }
             #addBulkEventBtn i { font-size: 12px !important; }
