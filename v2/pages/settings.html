@@ -620,6 +620,7 @@ class SettingsManager {
         if (action === 'logout') return 'login';
         if (action === 'page-access' || action === 'analytics-page-access') return 'page';
         if (action.startsWith('event-')) return 'event';
+        if (action.startsWith('personal-card-')) return 'event';
         if (action.startsWith('ce-')) return 'ce';
         if (action.startsWith('schedule-')) return 'schedule';
         if (action.startsWith('monthly-')) return 'event';
@@ -830,7 +831,7 @@ class SettingsManager {
         return 'other';
     }
 
-getActionIcon(action) {
+    getActionIcon(action) {
     const map = {
         'login': 'fas fa-sign-in-alt',
         'logout': 'fas fa-sign-out-alt',
@@ -863,7 +864,10 @@ getActionIcon(action) {
         'user-role-change': 'fas fa-user-shield',
         'user-password-reset': 'fas fa-key',
         'user-delete': 'fas fa-user-times',
-        'user-permissions-update': 'fas fa-lock'
+        'user-permissions-update': 'fas fa-lock',
+        'personal-card-create': 'fas fa-user-plus',
+        'personal-card-edit': 'fas fa-user-edit',
+        'personal-card-delete': 'fas fa-user-times'
     };
     return map[action] || 'fas fa-circle-info';
 }
@@ -902,6 +906,9 @@ getActionIcon(action) {
         'user-password-reset': 'パスワードをリセット',
         'user-delete': 'ユーザーを削除',
         'user-permissions-update': 'viewer権限設定を更新',
+        'personal-card-create': '個人業務カードを作成',
+        'personal-card-edit': '個人業務カードを編集',
+        'personal-card-delete': '個人業務カードを削除',
         'weekly-view-print': '週間表を印刷'
     };
     return map[log.action] || (log.action || '操作');
@@ -910,6 +917,7 @@ getActionIcon(action) {
     getTargetLabel(log) {
         const d = log.details || {};
         if (d.eventName && d.eventName !== 'unknown') return `｢${d.eventName}｣`;
+        if (d.cardName && d.cardName !== 'unknown') return `｢${d.cardName}｣`;
         if (d.taskName && d.taskName !== 'unknown') return `｢${d.taskName}｣`;
         if (d.ceName && d.ceName !== 'unknown') return `｢${d.ceName}｣`;
         if (d.name) return `｢${d.name}｣`;
