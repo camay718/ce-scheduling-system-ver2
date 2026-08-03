@@ -707,7 +707,7 @@ async saveMonthlyTask() {
             modal.id = 'personalCardModal';
             modal.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50';
             modal.innerHTML = `
-                <div class="glass-card p-6 max-w-lg w-full mx-4 max-h-[90vh] overflow-y-auto" style="border: 2px solid #6366f1;">
+                <div class="glass-card personal-card-modal-content" style="border: 2px solid #6366f1;">
                     <div class="flex justify-between items-center mb-4">
                         <h3 class="text-lg font-bold" style="color: #4f46e5;">
                             <i class="fas fa-user-tag mr-2"></i>個人業務入力
@@ -988,7 +988,7 @@ async saveMonthlyTask() {
             modal.id = 'personalCardEditModal';
             modal.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50';
             modal.innerHTML = `
-                <div class="glass-card p-6 max-w-lg w-full mx-4 max-h-[90vh] overflow-y-auto" style="border: 2px solid #6366f1;">
+                <div class="glass-card personal-card-modal-content" style="border: 2px solid #6366f1;">
                     <div class="flex justify-between items-center mb-4">
                         <h3 class="text-lg font-bold" style="color: #4f46e5;">
                             <i class="fas fa-user-edit mr-2"></i>個人業務編集
