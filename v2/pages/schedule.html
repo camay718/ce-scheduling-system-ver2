@@ -752,6 +752,32 @@
             
         }
 
+/* 一括削除モーダル: スマホ対応 */
+@media (max-width: 768px) {
+    #batchDeleteModal .glass-card {
+        margin: 8px !important;
+        padding: 16px !important;
+        max-height: calc(100dvh - 16px) !important;
+        max-height: calc(100vh - 16px) !important;
+    }
+    #batchDeleteList {
+        max-height: 35vh !important;
+    }
+    #batchDeleteModal .flex.items-center.gap-2.flex-wrap {
+        gap: 4px !important;
+    }
+    #batchDeleteSelectAll,
+    #batchDeleteDeselectAll {
+        font-size: 11px !important;
+        padding: 4px 8px !important;
+    }
+    #batchDeleteExecuteBtn,
+    #batchDeleteCancelBtn {
+        font-size: 13px !important;
+        padding: 8px !important;
+    }
+}
+        
         /* モーダル表示の改善 */
 @media (max-width: 768px) {
     #templateManagerModal .glass-card {
@@ -1552,7 +1578,7 @@ renderDailySchedule() {
                             <i class="fas fa-${window.DEPARTMENT_ICONS?.[dept] || 'cog'}" style="color: ${deptColor}"></i>
                             <h3 class="font-bold text-sm">${dept}</h3>
                         </div>
-                ${window.userRole !== 'viewer' ? `
+                                ${window.userRole !== 'viewer' ? `
                         <div class="flex items-center gap-1">
                             <button class="btn-unified btn-primary-unified btn-small" onclick="window.scheduleManager.openQuickAddEvent('${dept}')">
                                 <i class="fas fa-plus mr-1"></i>業務追加
@@ -1565,7 +1591,15 @@ renderDailySchedule() {
                                     title="この部門の業務をテンプレート保存">
                                 <i class="fas fa-bookmark mr-1"></i>テンプレ保存
                             </button>
-                        </div>` : ''}
+                            <button class="btn-unified btn-small" style="border-color:#ef4444;color:#ef4444;" onclick="window.scheduleManager.openBatchDeleteModal('${dept}')" title="この部門の業務を一括削除">
+                                <i class="fas fa-trash-alt mr-1"></i>一括削除
+                            </button>
+                        </div>` : `
+                        <div class="flex items-center gap-1">
+                            <button class="btn-unified btn-small" style="border-color:#ef4444;color:#ef4444;" onclick="window.scheduleManager.openBatchDeleteModal('${dept}')" title="自分の個人業務を削除">
+                                <i class="fas fa-trash-alt mr-1"></i>削除
+                            </button>
+                        </div>`}
                     </div>
 
                     <!-- 部門別集計バー -->
@@ -3948,6 +3982,505 @@ async deleteMonthlyTaskConfirm(yearMonth, taskId, taskName) {
         window.showMessage('月次業務の削除に失敗しました', 'error');
     }
 }
+
+    // 部門別一括削除モーダル
+async openBatchDeleteModal(dept) {
+    const dateKey = this.formatDate(this.selectedDate);
+    const yearMonth = dateKey.substring(0, 7);
+
+    // 既存モーダルがあれば削除
+    document.getElementById('batchDeleteModal')?.remove();
+
+    // 簡易HTMLエスケープ
+    const esc = s => {
+        if (typeof s !== 'string') return s;
+        return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+    };
+
+    // データ取得
+    const items = [];
+
+    try {
+        // 共有業務を取得
+        const eventSnap = await window.database.ref(`${window.DATA_ROOT}/events/byDate/${dateKey}`).once('value');
+        const eventsById = eventSnap.val() || {};
+        for (const [id, ev] of Object.entries(eventsById)) {
+            if (ev.department === dept) {
+                const assignedList = Array.isArray(ev.assignedCEs) ? ev.assignedCEs : [];
+                items.push({
+                    type: 'event',
+                    id, dateKey,
+                    name: ev.name || '(無名)',
+                    timeText: (ev.startTime && ev.endTime) ? `${ev.startTime}〜${ev.endTime}` : '',
+                    assignedCount: assignedList.length,
+                    requiredPeople: ev.requiredPeople || 0,
+                    typeLabel: '共有', typeColor: '#3b82f6'
+                });
+            }
+        }
+
+        // 個人カードを取得（権限チェックあり）
+        const pcSnap = await window.database.ref(`${window.DATA_ROOT}/personalCards/byDate/${dateKey}`).once('value');
+        const pcsById = pcSnap.val() || {};
+        for (const [id, card] of Object.entries(pcsById)) {
+            if (card.department === dept) {
+                const canDelete = window.eventManager?.canEditPersonalCard(card) ?? false;
+                if (!canDelete) continue;
+                items.push({
+                    type: 'personal',
+                    id, dateKey,
+                    name: card.name || '(無名)',
+                    timeText: (card.startTime && card.endTime) ? `${card.startTime}〜${card.endTime}` : '',
+                    assignedCount: (card.additionalCEs || []).length,
+                    requiredPeople: card.requiredPeople || 0,
+                    typeLabel: '個人', typeColor: '#6366f1',
+                    creator: card.displayName || card.username || ''
+                });
+            }
+        }
+
+        // 月次業務を取得（viewer以外のみ）
+        if (window.userRole !== 'viewer') {
+            const mtSnap = await window.database.ref(`${window.DATA_ROOT}/monthlyTasks/${yearMonth}`).once('value');
+            const mtsById = mtSnap.val() || {};
+            for (const [id, task] of Object.entries(mtsById)) {
+                if (task.department === dept) {
+                    items.push({
+                        type: 'monthly',
+                        id, dateKey, yearMonth,
+                        name: task.name || '(無名)',
+                        timeText: '',
+                        assignedCount: 0,
+                        requiredPeople: task.requiredPeople || 0,
+                        typeLabel: '月次', typeColor: '#f59e0b'
+                    });
+                }
+            }
+        }
+
+    } catch (error) {
+        console.error('❌ 一括削除データ取得エラー:', error);
+        window.showMessage('データの取得に失敗しました', 'error');
+        return;
+    }
+
+    if (items.length === 0) {
+        window.showMessage(`${dept}に削除可能な業務カードがありません`, 'info');
+        return;
+    }
+
+    // モーダル生成
+    const modal = document.createElement('div');
+    modal.id = 'batchDeleteModal';
+    modal.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50';
+
+    const itemsHtml = items.map(item => {
+        const typeBadge = `<span class="inline-block text-[10px] px-1.5 py-0.5 rounded font-semibold" style="background:${item.typeColor}20;color:${item.typeColor};">${item.typeLabel}</span>`;
+        const creatorText = item.creator ? ` <span class="text-xs text-gray-400">(${esc(item.creator)})</span>` : '';
+        const countText = (item.assignedCount > 0 || item.requiredPeople > 0) ? ` <span class="text-xs text-gray-500">${item.assignedCount}/${item.requiredPeople}名</span>` : '';
+        const timeText = item.timeText ? `<span class="ml-1 text-xs text-gray-500">${esc(item.timeText)}</span>` : '';
+        return `
+            <label class="flex items-center p-2.5 rounded-lg border border-gray-200 hover:bg-red-50 cursor-pointer transition-colors">
+                <input type="checkbox" class="batch-delete-checkbox mr-3" data-type="${item.type}" data-id="${item.id}" data-date-key="${item.dateKey}" data-year-month="${item.yearMonth || ''}" data-name="${esc(item.name)}">
+                <div class="flex-1 min-w-0">
+                    <div class="text-sm font-medium truncate">${esc(item.name)}${creatorText}</div>
+                    <div class="text-xs text-gray-500 mt-0.5">${typeBadge}${timeText}${countText}</div>
+                </div>
+            </label>
+        `;
+    }).join('');
+
+    modal.innerHTML = `
+        <div class="glass-card p-6 max-w-lg w-full mx-4 max-h-[90vh] overflow-y-auto" style="border-top:4px solid #ef4444;">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-lg font-bold text-red-600">
+                    <i class="fas fa-trash-alt mr-2"></i>${esc(dept)} - 一括削除
+                </h3>
+                <button onclick="this.closest('.fixed').remove()" class="text-gray-500 hover:text-gray-700">
+                    <i class="fas fa-times text-xl"></i>
+                </button>
+            </div>
+
+            <div class="mb-3 p-3 rounded-lg bg-red-50 border border-red-200">
+                <div class="text-sm text-red-800">
+                    <i class="fas fa-exclamation-triangle mr-1"></i>
+                    <strong>${dateKey}</strong> の${esc(dept)}に所属する業務カード<br>
+                    削除する項目にチェックを入れて「削除実行」を押してください
+                </div>
+                <div class="text-xs text-red-600 mt-1">※この操作は取り消せません</div>
+            </div>
+
+            <div class="mb-3 flex items-center gap-2 flex-wrap">
+                <button id="batchDeleteSelectAll" class="btn-unified btn-outline-unified btn-small">
+                    <i class="fas fa-check-square mr-1"></i>全選択
+                </button>
+                <button id="batchDeleteDeselectAll" class="btn-unified btn-outline-unified btn-small">
+                    <i class="fas fa-square mr-1"></i>全解除
+                </button>
+                <span class="ml-auto text-sm text-gray-500">
+                    <span id="batchDeleteSelectedCount">0</span>/${items.length}件選択
+                </span>
+            </div>
+
+            <div id="batchDeleteList" class="space-y-2 mb-4 max-h-[45vh] overflow-y-auto">
+                ${itemsHtml}
+            </div>
+
+            <div class="flex space-x-3">
+                <button type="button" id="batchDeleteCancelBtn" class="btn-unified btn-outline-unified flex-1">
+                    キャンセル
+                </button>
+                <button id="batchDeleteExecuteBtn" class="btn-unified flex-1" style="background:#ef4444;color:white;" disabled>
+                    <i class="fas fa-trash mr-1"></i>削除実行
+                </button>
+            </div>
+        </div>
+    `;
+
+    document.body.appendChild(modal);
+
+    // イベントリスナー設定
+    const checkboxes = modal.querySelectorAll('.batch-delete-checkbox');
+    const selectAllBtn = modal.querySelector('#batchDeleteSelectAll');
+    const deselectAllBtn = modal.querySelector('#batchDeleteDeselectAll');
+    const executeBtn = modal.querySelector('#batchDeleteExecuteBtn');
+    const cancelBtn = modal.querySelector('#batchDeleteCancelBtn');
+    const countSpan = modal.querySelector('#batchDeleteSelectedCount');
+
+    const updateCount = () => {
+        const checked = modal.querySelectorAll('.batch-delete-checkbox:checked').length;
+        countSpan.textContent = checked;
+        executeBtn.disabled = checked === 0;
+        executeBtn.style.opacity = checked === 0 ? '0.5' : '1';
+    };
+
+    checkboxes.forEach(cb => cb.addEventListener('change', updateCount));
+
+    selectAllBtn.addEventListener('click', () => {
+        checkboxes.forEach(cb => cb.checked = true);
+        updateCount();
+    });
+
+    deselectAllBtn.addEventListener('click', () => {
+        checkboxes.forEach(cb => cb.checked = false);
+        updateCount();
+    });
+
+    cancelBtn.addEventListener('click', () => modal.remove());
+
+    executeBtn.addEventListener('click', async () => {
+        const checked = Array.from(modal.querySelectorAll('.batch-delete-checkbox:checked'));
+        if (checked.length === 0) return;
+
+        if (!confirm(`選択した${checked.length}件の業務カードを削除しますか？\n\nこの操作は取り消せません。`)) return;
+
+        executeBtn.disabled = true;
+        executeBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-1"></i>削除中...';
+
+        let successCount = 0;
+        let failCount = 0;
+        const auditPromises = [];
+
+        const deletePromises = checked.map(cb => {
+            const type = cb.dataset.type;
+            const id = cb.dataset.id;
+            const dk = cb.dataset.dateKey;
+            const ym = cb.dataset.yearMonth;
+            const name = cb.dataset.name;
+
+            let refPath;
+            if (type === 'event') {
+                refPath = `${window.DATA_ROOT}/events/byDate/${dk}/${id}`;
+            } else if (type === 'personal') {
+                refPath = `${window.DATA_ROOT}/personalCards/byDate/${dk}/${id}`;
+            } else if (type === 'monthly') {
+                refPath = `${window.DATA_ROOT}/monthlyTasks/${ym}/${id}`;
+            }
+
+            return window.database.ref(refPath).remove()
+                .then(() => {
+                    successCount++;
+                    // 個人カードの監査ログ
+                    if (type === 'personal' && window.auditLogger) {
+                        return window.auditLogger.logAction('personal-card-delete', {
+                            cardId: id, cardName: name, department: dept,
+                            date: dk, createdBy: 'batch-delete'
+                        }).catch(() => {});
+                    }
+                })
+                .catch(e => {
+                    failCount++;
+                    console.error('❌ 削除失敗:', id, e);
+                });
+        });
+
+        await Promise.all(deletePromises);
+
+        modal.remove();
+
+        if (failCount === 0) {
+            window.showMessage(`${successCount}件の業務カードを削除しました`, 'success');
+        } else {
+            window.showMessage(`${successCount}件削除成功、${failCount}件失敗しました`, 'warning');
+        }
+
+        // 再描画
+        setTimeout(() => {
+            this.loadAndRenderEventsForSelectedDate();
+            this.renderMonthlyTasks();
+        }, 300);
+    });
+}
+            
+            // 部門別一括削除モーダル
+async openBatchDeleteModal(dept) {
+    const dateKey = this.formatDate(this.selectedDate);
+    const yearMonth = dateKey.substring(0, 7);
+
+    // 既存モーダルがあれば削除
+    document.getElementById('batchDeleteModal')?.remove();
+
+    // 簡易HTMLエスケープ
+    const esc = s => {
+        if (typeof s !== 'string') return s;
+        return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+    };
+
+    // データ取得
+    const items = [];
+
+    try {
+        // 共有業務を取得
+        const eventSnap = await window.database.ref(`${window.DATA_ROOT}/events/byDate/${dateKey}`).once('value');
+        const eventsById = eventSnap.val() || {};
+        for (const [id, ev] of Object.entries(eventsById)) {
+            if (ev.department === dept) {
+                const assignedList = Array.isArray(ev.assignedCEs) ? ev.assignedCEs : [];
+                items.push({
+                    type: 'event',
+                    id, dateKey,
+                    name: ev.name || '(無名)',
+                    timeText: (ev.startTime && ev.endTime) ? `${ev.startTime}〜${ev.endTime}` : '',
+                    assignedCount: assignedList.length,
+                    requiredPeople: ev.requiredPeople || 0,
+                    typeLabel: '共有', typeColor: '#3b82f6'
+                });
+            }
+        }
+
+        // 個人カードを取得（権限チェックあり）
+        const pcSnap = await window.database.ref(`${window.DATA_ROOT}/personalCards/byDate/${dateKey}`).once('value');
+        const pcsById = pcSnap.val() || {};
+        for (const [id, card] of Object.entries(pcsById)) {
+            if (card.department === dept) {
+                const canDelete = window.eventManager?.canEditPersonalCard(card) ?? false;
+                if (!canDelete) continue;
+                items.push({
+                    type: 'personal',
+                    id, dateKey,
+                    name: card.name || '(無名)',
+                    timeText: (card.startTime && card.endTime) ? `${card.startTime}〜${card.endTime}` : '',
+                    assignedCount: (card.additionalCEs || []).length,
+                    requiredPeople: card.requiredPeople || 0,
+                    typeLabel: '個人', typeColor: '#6366f1',
+                    creator: card.displayName || card.username || ''
+                });
+            }
+        }
+
+        // 月次業務を取得（viewer以外のみ）
+        if (window.userRole !== 'viewer') {
+            const mtSnap = await window.database.ref(`${window.DATA_ROOT}/monthlyTasks/${yearMonth}`).once('value');
+            const mtsById = mtSnap.val() || {};
+            for (const [id, task] of Object.entries(mtsById)) {
+                if (task.department === dept) {
+                    items.push({
+                        type: 'monthly',
+                        id, dateKey, yearMonth,
+                        name: task.name || '(無名)',
+                        timeText: '',
+                        assignedCount: 0,
+                        requiredPeople: task.requiredPeople || 0,
+                        typeLabel: '月次', typeColor: '#f59e0b'
+                    });
+                }
+            }
+        }
+
+    } catch (error) {
+        console.error('❌ 一括削除データ取得エラー:', error);
+        window.showMessage('データの取得に失敗しました', 'error');
+        return;
+    }
+
+    if (items.length === 0) {
+        window.showMessage(`${dept}に削除可能な業務カードがありません`, 'info');
+        return;
+    }
+
+    // モーダル生成
+    const modal = document.createElement('div');
+    modal.id = 'batchDeleteModal';
+    modal.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50';
+
+    const itemsHtml = items.map(item => {
+        const typeBadge = `<span class="inline-block text-[10px] px-1.5 py-0.5 rounded font-semibold" style="background:${item.typeColor}20;color:${item.typeColor};">${item.typeLabel}</span>`;
+        const creatorText = item.creator ? ` <span class="text-xs text-gray-400">(${esc(item.creator)})</span>` : '';
+        const countText = (item.assignedCount > 0 || item.requiredPeople > 0) ? ` <span class="text-xs text-gray-500">${item.assignedCount}/${item.requiredPeople}名</span>` : '';
+        const timeText = item.timeText ? `<span class="ml-1 text-xs text-gray-500">${esc(item.timeText)}</span>` : '';
+        return `
+            <label class="flex items-center p-2.5 rounded-lg border border-gray-200 hover:bg-red-50 cursor-pointer transition-colors">
+                <input type="checkbox" class="batch-delete-checkbox mr-3" data-type="${item.type}" data-id="${item.id}" data-date-key="${item.dateKey}" data-year-month="${item.yearMonth || ''}" data-name="${esc(item.name)}">
+                <div class="flex-1 min-w-0">
+                    <div class="text-sm font-medium truncate">${esc(item.name)}${creatorText}</div>
+                    <div class="text-xs text-gray-500 mt-0.5">${typeBadge}${timeText}${countText}</div>
+                </div>
+            </label>
+        `;
+    }).join('');
+
+    modal.innerHTML = `
+        <div class="glass-card p-6 max-w-lg w-full mx-4 max-h-[90vh] overflow-y-auto" style="border-top:4px solid #ef4444;">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-lg font-bold text-red-600">
+                    <i class="fas fa-trash-alt mr-2"></i>${esc(dept)} - 一括削除
+                </h3>
+                <button onclick="this.closest('.fixed').remove()" class="text-gray-500 hover:text-gray-700">
+                    <i class="fas fa-times text-xl"></i>
+                </button>
+            </div>
+
+            <div class="mb-3 p-3 rounded-lg bg-red-50 border border-red-200">
+                <div class="text-sm text-red-800">
+                    <i class="fas fa-exclamation-triangle mr-1"></i>
+                    <strong>${dateKey}</strong> の${esc(dept)}に所属する業務カード<br>
+                    削除する項目にチェックを入れて「削除実行」を押してください
+                </div>
+                <div class="text-xs text-red-600 mt-1">※この操作は取り消せません</div>
+            </div>
+
+            <div class="mb-3 flex items-center gap-2 flex-wrap">
+                <button id="batchDeleteSelectAll" class="btn-unified btn-outline-unified btn-small">
+                    <i class="fas fa-check-square mr-1"></i>全選択
+                </button>
+                <button id="batchDeleteDeselectAll" class="btn-unified btn-outline-unified btn-small">
+                    <i class="fas fa-square mr-1"></i>全解除
+                </button>
+                <span class="ml-auto text-sm text-gray-500">
+                    <span id="batchDeleteSelectedCount">0</span>/${items.length}件選択
+                </span>
+            </div>
+
+            <div id="batchDeleteList" class="space-y-2 mb-4 max-h-[45vh] overflow-y-auto">
+                ${itemsHtml}
+            </div>
+
+            <div class="flex space-x-3">
+                <button type="button" id="batchDeleteCancelBtn" class="btn-unified btn-outline-unified flex-1">
+                    キャンセル
+                </button>
+                <button id="batchDeleteExecuteBtn" class="btn-unified flex-1" style="background:#ef4444;color:white;" disabled>
+                    <i class="fas fa-trash mr-1"></i>削除実行
+                </button>
+            </div>
+        </div>
+    `;
+
+    document.body.appendChild(modal);
+
+    // イベントリスナー設定
+    const checkboxes = modal.querySelectorAll('.batch-delete-checkbox');
+    const selectAllBtn = modal.querySelector('#batchDeleteSelectAll');
+    const deselectAllBtn = modal.querySelector('#batchDeleteDeselectAll');
+    const executeBtn = modal.querySelector('#batchDeleteExecuteBtn');
+    const cancelBtn = modal.querySelector('#batchDeleteCancelBtn');
+    const countSpan = modal.querySelector('#batchDeleteSelectedCount');
+
+    const updateCount = () => {
+        const checked = modal.querySelectorAll('.batch-delete-checkbox:checked').length;
+        countSpan.textContent = checked;
+        executeBtn.disabled = checked === 0;
+        executeBtn.style.opacity = checked === 0 ? '0.5' : '1';
+    };
+
+    checkboxes.forEach(cb => cb.addEventListener('change', updateCount));
+
+    selectAllBtn.addEventListener('click', () => {
+        checkboxes.forEach(cb => cb.checked = true);
+        updateCount();
+    });
+
+    deselectAllBtn.addEventListener('click', () => {
+        checkboxes.forEach(cb => cb.checked = false);
+        updateCount();
+    });
+
+    cancelBtn.addEventListener('click', () => modal.remove());
+
+    executeBtn.addEventListener('click', async () => {
+        const checked = Array.from(modal.querySelectorAll('.batch-delete-checkbox:checked'));
+        if (checked.length === 0) return;
+
+        if (!confirm(`選択した${checked.length}件の業務カードを削除しますか？\n\nこの操作は取り消せません。`)) return;
+
+        executeBtn.disabled = true;
+        executeBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-1"></i>削除中...';
+
+        let successCount = 0;
+        let failCount = 0;
+        const auditPromises = [];
+
+        const deletePromises = checked.map(cb => {
+            const type = cb.dataset.type;
+            const id = cb.dataset.id;
+            const dk = cb.dataset.dateKey;
+            const ym = cb.dataset.yearMonth;
+            const name = cb.dataset.name;
+
+            let refPath;
+            if (type === 'event') {
+                refPath = `${window.DATA_ROOT}/events/byDate/${dk}/${id}`;
+            } else if (type === 'personal') {
+                refPath = `${window.DATA_ROOT}/personalCards/byDate/${dk}/${id}`;
+            } else if (type === 'monthly') {
+                refPath = `${window.DATA_ROOT}/monthlyTasks/${ym}/${id}`;
+            }
+
+            return window.database.ref(refPath).remove()
+                .then(() => {
+                    successCount++;
+                    // 個人カードの監査ログ
+                    if (type === 'personal' && window.auditLogger) {
+                        return window.auditLogger.logAction('personal-card-delete', {
+                            cardId: id, cardName: name, department: dept,
+                            date: dk, createdBy: 'batch-delete'
+                        }).catch(() => {});
+                    }
+                })
+                .catch(e => {
+                    failCount++;
+                    console.error('❌ 削除失敗:', id, e);
+                });
+        });
+
+        await Promise.all(deletePromises);
+
+        modal.remove();
+
+        if (failCount === 0) {
+            window.showMessage(`${successCount}件の業務カードを削除しました`, 'success');
+        } else {
+            window.showMessage(`${successCount}件削除成功、${failCount}件失敗しました`, 'warning');
+        }
+
+        // 再描画
+        setTimeout(() => {
+            this.loadAndRenderEventsForSelectedDate();
+            this.renderMonthlyTasks();
+        }, 300);
+    });
+}
+
 
 // テンプレート一覧をセレクトに反映
 populateTemplateSelect(selectEl, department) {
