@@ -938,9 +938,31 @@
                 let departmentSections = '';
 
                 for (const dept of departments) {
-                    const deptEvents = this.cardTypeFilter.shared ? dayInfo.events.filter(e => e.department === dept) : [];
-                    const deptMonthlyTasks = this.cardTypeFilter.shared ? dayInfo.monthlyTasks.filter(t => t.department === dept) : [];
-                    const deptPersonalCards = this.cardTypeFilter.personal ? (dayInfo.personalCards || []).filter(c => c.department === dept) : [];
+                    // 共有業務: sortOrder順（未設定はcreatedAtフォールバック）
+                    const deptEvents = this.cardTypeFilter.shared
+                        ? dayInfo.events
+                            .filter(e => e.department === dept)
+                            .sort((a, b) => {
+                                const ao = this.getEventSortOrder(a);
+                                const bo = this.getEventSortOrder(b);
+                                if (ao !== bo) return ao - bo;
+                                return Number(a.createdAt || 0) - Number(b.createdAt || 0);
+                            })
+                        : [];
+
+                    // 個人業務: 作成順
+                    const deptPersonalCards = this.cardTypeFilter.personal
+                        ? (dayInfo.personalCards || [])
+                            .filter(c => c.department === dept)
+                            .sort((a, b) => Number(a.createdAt || 0) - Number(b.createdAt || 0))
+                        : [];
+
+                    // 月次業務: 作成順（最下部固定）
+                    const deptMonthlyTasks = this.cardTypeFilter.shared
+                        ? dayInfo.monthlyTasks
+                            .filter(t => t.department === dept)
+                            .sort((a, b) => Number(a.createdAt || 0) - Number(b.createdAt || 0))
+                        : [];
 
                     if (deptEvents.length === 0 && deptMonthlyTasks.length === 0 && deptPersonalCards.length === 0) continue;
 
@@ -971,39 +993,6 @@
                                 </div>
                                 <div class="task-info">
                                     ${event.count > 0 ? `${event.count}件 | ` : ''}必要: ${need}名 / 配置: ${assignedCount}名
-                                </div>
-                                ${memoHtml}
-                                <div class="ce-chips">${ceChipsHtml}</div>
-                            </div>
-                        `;
-                    }
-
-                    for (const task of deptMonthlyTasks) {
-                        const normalizedAssigned = await this.normalizeAssignedCEs(task.assignedCEs || []);
-                        const assignedCount = normalizedAssigned.length;
-                        const need = Number.isFinite(task.requiredPeople) ? task.requiredPeople : 0;
-
-                        deptAssigned += assignedCount;
-                        deptRequired += need;
-                        totalDayAssigned += assignedCount;
-                        totalDayRequired += need;
-
-                        const ceChipsHtml = await this.generateCEChipsWithStatus(normalizedAssigned, dayInfo.dateKey);
-                        const actualCount = task.dailyActuals?.count || 0;
-                        const memoHtml = task.description ? 
-                            `<div class="task-memo"><i class="fas fa-sticky-note mr-1"></i>${this.escapeHtml(task.description)}</div>` : '';
-
-                        tasksHtml += `
-                            <div class="task-item" style="--dept-color: ${deptColor}">
-                                <div class="task-title">
-                                    <span>
-                                        <i class="fas fa-calendar-alt mr-1 text-orange-600"></i>${this.escapeHtml(task.name)}
-                                        <span class="monthly-badge">月次</span>
-                                    </span>
-                                    <span class="text-xs text-gray-500">実績: ${actualCount}件</span>
-                                </div>
-                                <div class="task-info">
-                                    必要: ${need}名 / 配置: ${assignedCount}名
                                 </div>
                                 ${memoHtml}
                                 <div class="ce-chips">${ceChipsHtml}</div>
@@ -1042,6 +1031,39 @@
                                 </div>
                                 ${memoHtml}
                                 <div class="text-[10px] text-gray-500 mt-1">作成者: ${this.escapeHtml(card.displayName || card.username || '不明')}</div>
+                                <div class="ce-chips">${ceChipsHtml}</div>
+                            </div>
+                        `;
+                    }
+
+                    for (const task of deptMonthlyTasks) {
+                        const normalizedAssigned = await this.normalizeAssignedCEs(task.assignedCEs || []);
+                        const assignedCount = normalizedAssigned.length;
+                        const need = Number.isFinite(task.requiredPeople) ? task.requiredPeople : 0;
+
+                        deptAssigned += assignedCount;
+                        deptRequired += need;
+                        totalDayAssigned += assignedCount;
+                        totalDayRequired += need;
+
+                        const ceChipsHtml = await this.generateCEChipsWithStatus(normalizedAssigned, dayInfo.dateKey);
+                        const actualCount = task.dailyActuals?.count || 0;
+                        const memoHtml = task.description ? 
+                            `<div class="task-memo"><i class="fas fa-sticky-note mr-1"></i>${this.escapeHtml(task.description)}</div>` : '';
+
+                        tasksHtml += `
+                            <div class="task-item" style="--dept-color: ${deptColor}">
+                                <div class="task-title">
+                                    <span>
+                                        <i class="fas fa-calendar-alt mr-1 text-orange-600"></i>${this.escapeHtml(task.name)}
+                                        <span class="monthly-badge">月次</span>
+                                    </span>
+                                    <span class="text-xs text-gray-500">実績: ${actualCount}件</span>
+                                </div>
+                                <div class="task-info">
+                                    必要: ${need}名 / 配置: ${assignedCount}名
+                                </div>
+                                ${memoHtml}
                                 <div class="ce-chips">${ceChipsHtml}</div>
                             </div>
                         `;
@@ -1086,6 +1108,15 @@
 
                 return dayCard;
             }
+
+            // 共有業務のsortOrder取得（未設定はcreatedAtフォールバック）
+        getEventSortOrder(ev) {
+            const sortOrder = Number(ev?.sortOrder);
+            if (Number.isFinite(sortOrder) && sortOrder > 0) return sortOrder;
+            const createdAt = Number(ev?.createdAt);
+            if (Number.isFinite(createdAt) && createdAt > 0) return createdAt;
+            return 0;
+        }
 
             escapeHtml(text) {
                 if (!text) return '';
