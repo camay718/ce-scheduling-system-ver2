@@ -287,6 +287,55 @@
             cursor: default;
         }
 
+        /* 並び替えボタン（部門ヘッダー） */
+.department-sort-btn.active {
+    background: #dbeafe !important;
+    border-color: #3b82f6 !important;
+    color: #1d4ed8 !important;
+}
+
+/* カード内の↑↓ボタン */
+.card-reorder-controls {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    margin-left: 8px;
+    flex-shrink: 0;
+}
+
+.reorder-btn {
+    width: 22px;
+    height: 22px;
+    border: 1px solid #d1d5db;
+    border-radius: 6px;
+    background: #fff;
+    color: #6b7280;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    font-size: 11px;
+    transition: all 0.15s ease;
+}
+
+.reorder-btn:hover {
+    background: #f3f4f6;
+    color: #111827;
+    border-color: #9ca3af;
+}
+
+.reorder-btn:disabled {
+    opacity: 0.35;
+    cursor: not-allowed;
+}
+
+@media (max-width: 768px) {
+    .reorder-btn {
+        width: 24px;
+        height: 24px;
+    }
+}
+
         /* フィルターチェックボックス */
         #filterSharedEvents, #filterPersonalCards {
             cursor: pointer;
@@ -1090,9 +1139,11 @@ constructor() {
     this.templates = {};
     this.templatesRef = null;
     this.templatesCallback = null;
+    // 並び替えモード（部門ごとにON/OFF）
+    this.departmentSortMode = {};
 }
-
-                /**
+            
+            /**
      * 公開勤務表（publishedScheduleResolver）から、指定日の「実効workType」を解決する
      * - workTypeOverrides を含んだ workType が返る
      * - 取得できなければ fallbackWorkType
@@ -1170,6 +1221,7 @@ constructor() {
                 // フィルター状態・リスナー管理
                 this.cardFilters = { shared: true, personal: true, department: 'all' };
                 this.personalCardListener = null;
+                this.departmentSortMode = {};
 
                 try {
                     // 依存関係の待機
@@ -1578,8 +1630,8 @@ renderDailySchedule() {
                             <i class="fas fa-${window.DEPARTMENT_ICONS?.[dept] || 'cog'}" style="color: ${deptColor}"></i>
                             <h3 class="font-bold text-sm">${dept}</h3>
                         </div>
-                                ${window.userRole !== 'viewer' ? `
-                        <div class="flex items-center gap-1">
+                        ${(window.userRole === 'admin' || window.userRole === 'editor') ? `
+                        <div class="flex items-center gap-1 flex-wrap justify-end">
                             <button class="btn-unified btn-primary-unified btn-small" onclick="window.scheduleManager.openQuickAddEvent('${dept}')">
                                 <i class="fas fa-plus mr-1"></i>業務追加
                             </button>
@@ -1594,12 +1646,17 @@ renderDailySchedule() {
                             <button class="btn-unified btn-small" style="border-color:#ef4444;color:#ef4444;" onclick="window.scheduleManager.openBatchDeleteModal('${dept}')" title="この部門の業務を一括削除">
                                 <i class="fas fa-trash-alt mr-1"></i>一括削除
                             </button>
-                        </div>` : `
+                            <button class="btn-unified btn-outline-unified btn-small department-sort-btn ${this.departmentSortMode?.[dept] ? 'active' : ''}"
+                                    onclick="window.scheduleManager.toggleDepartmentSortMode('${dept}')"
+                                    title="共有業務カードを並び替え">
+                                <i class="fas fa-sort mr-1"></i>${this.departmentSortMode?.[dept] ? '並替中' : '並替'}
+                            </button>
+                        </div>` : (window.userRole === 'viewer' ? `
                         <div class="flex items-center gap-1">
                             <button class="btn-unified btn-small" style="border-color:#ef4444;color:#ef4444;" onclick="window.scheduleManager.openBatchDeleteModal('${dept}')" title="自分の個人業務を削除">
                                 <i class="fas fa-trash-alt mr-1"></i>削除
                             </button>
-                        </div>`}
+                        </div>` : '')}
                     </div>
 
                     <!-- 部門別集計バー -->
@@ -1862,7 +1919,7 @@ try {
     
     const eventRef = window.database.ref(`${window.DATA_ROOT}/events/byDate/${dateKey}`).push();
 
-                    const eventData = {
+    const eventData = {
                         id: eventRef.key,
                         name: name,
                         department: department,
@@ -1872,6 +1929,7 @@ try {
                         requiredPeople: requiredPeople,
                         description: description || null,
                         assignedCEs: [],
+                        sortOrder: Date.now(),
                         createdAt: firebase.database.ServerValue.TIMESTAMP,
                         createdBy: window.currentUserData?.displayName || 'user'
                     };
@@ -2374,7 +2432,13 @@ async loadAndRenderEventsForSelectedDate() {
     try {
         const snap = await window.database.ref(`${window.DATA_ROOT}/events/byDate/${dateKey}`).once('value');
         const eventsById = snap.val() || {};
-        const events = Object.values(eventsById);
+        const events = Object.values(eventsById).sort((a, b) => {
+            // 共有業務は sortOrder → createdAt の順で並べる（部門を跨いだ全体並び）
+            const ao = Number(a.sortOrder ?? a.createdAt ?? 0);
+            const bo = Number(b.sortOrder ?? b.createdAt ?? 0);
+            if (ao !== bo) return ao - bo;
+            return Number(a.createdAt || 0) - Number(b.createdAt || 0);
+        });
 
         // 既存のイベントカードをクリア
         grid.querySelectorAll('.task-list').forEach(el => {
@@ -2394,6 +2458,8 @@ async loadAndRenderEventsForSelectedDate() {
             item.dataset.eventId = ev.id;
             item.dataset.dateKey = dateKey;
             item.dataset.department = ev.department;
+            item.dataset.sortOrder = String(Number(ev.sortOrder ?? ev.createdAt ?? 0));
+            item.dataset.createdAt = String(Number(ev.createdAt ?? 0));
 
             // ドロップイベントリスナー
             item.addEventListener('dragover', (e) => this.handleEventDragOver(e));
@@ -2458,11 +2524,14 @@ async loadAndRenderEventsForSelectedDate() {
                 : '';
 
             item.innerHTML = `
-                <div class="flex justify-between items-center mb-2">
+                <div class="flex justify-between items-start mb-2">
                     <div class="font-semibold text-sm">
                         <i class="fas fa-briefcase mr-1"></i>${ev.name}${timeText}
                     </div>
-                    <div class="text-xs text-gray-500">${assignedCount}/${need}名</div>
+                    <div class="flex items-center">
+                        <div class="text-xs text-gray-500">${assignedCount}/${need}名</div>
+                        ${this.buildReorderButtonsForEvent(ev.id, ev.department)}
+                    </div>
                 </div>
                 ${countDisplay}
                 ${ev.description ? `<div class="text-xs text-gray-600 mb-2">${ev.description}</div>` : ''}
@@ -2499,6 +2568,9 @@ async loadAndRenderEventsForSelectedDate() {
 
             section.appendChild(item);
         }
+
+        // 部門ごとに、共有業務→個人業務の順にDOMを整列
+        this.reorderDailyCardsWithinDepartments();
 
         // CEアイテムにドラッグ機能を有効化
         setTimeout(() => {
@@ -2605,6 +2677,8 @@ refreshPersonalCards() {
                 const cardElement = window.eventManager.createPersonalCardElement(card, dateKey);
                 section.appendChild(cardElement);
             }
+            // ★追加: 個人カード追加後にDOMを再整列（共有業務→個人業務の順を維持）
+            this.reorderDailyCardsWithinDepartments();
         }).catch(console.error);
     }
 }
@@ -2664,6 +2738,135 @@ applyDepartmentFilter() {
         } else {
             section.style.display = section.dataset.department === selectedDept ? '' : 'none';
         }
+    });
+}
+       
+// ============================================================
+// 部門内の業務カード並び替え（共有業務のみ）
+// ============================================================
+
+// 並び替え権限チェック（admin / editor のみ）
+canReorderCards() {
+    return window.userRole === 'admin' || window.userRole === 'editor';
+}
+
+// 並び替えモードON/OFF切り替え
+toggleDepartmentSortMode(dept) {
+    if (!this.canReorderCards()) {
+        window.showMessage('並び替え権限がありません（管理者・編集者のみ）', 'warning');
+        return;
+    }
+    this.departmentSortMode[dept] = !this.departmentSortMode[dept];
+    this.renderDailySchedule();
+}
+
+// 共有業務カード用の↑↓ボタン生成
+buildReorderButtonsForEvent(eventId, dept) {
+    if (!this.canReorderCards()) return '';
+    if (!this.departmentSortMode?.[dept]) return '';
+    return `
+        <div class="card-reorder-controls">
+            <button type="button" class="reorder-btn"
+                    onclick="event.stopPropagation(); window.scheduleManager.moveEventCard('${dept}', '${eventId}', -1)"
+                    title="上へ">
+                <i class="fas fa-arrow-up"></i>
+            </button>
+            <button type="button" class="reorder-btn"
+                    onclick="event.stopPropagation(); window.scheduleManager.moveEventCard('${dept}', '${eventId}', 1)"
+                    title="下へ">
+                <i class="fas fa-arrow-down"></i>
+            </button>
+        </div>
+    `;
+}
+
+// 部門内の共有業務カードだけを並び替える
+async moveEventCard(dept, eventId, direction) {
+    if (!this.canReorderCards()) {
+        window.showMessage('並び替え権限がありません', 'warning');
+        return;
+    }
+
+    const dateKey = this.formatDate(this.selectedDate);
+
+    try {
+        // Firebase から当該日の全共有業務を取得し、同部門だけを対象にする
+        const snap = await window.database.ref(`${window.DATA_ROOT}/events/byDate/${dateKey}`).once('value');
+        const eventsById = snap.val() || {};
+        const deptEvents = Object.values(eventsById)
+            .filter(ev => ev.department === dept)
+            .sort((a, b) => {
+                const ao = Number(a.sortOrder ?? a.createdAt ?? 0);
+                const bo = Number(b.sortOrder ?? b.createdAt ?? 0);
+                if (ao !== bo) return ao - bo;
+                return Number(a.createdAt || 0) - Number(b.createdAt || 0);
+            });
+
+        const currentIndex = deptEvents.findIndex(ev => ev.id === eventId);
+        if (currentIndex < 0) return;
+
+        const targetIndex = currentIndex + direction;
+        if (targetIndex < 0 || targetIndex >= deptEvents.length) return;
+
+        // 入れ替え
+        const reordered = [...deptEvents];
+        [reordered[currentIndex], reordered[targetIndex]] = [reordered[targetIndex], reordered[currentIndex]];
+
+        // sortOrder を一括更新
+        const updates = {};
+        reordered.forEach((ev, index) => {
+            updates[`${window.DATA_ROOT}/events/byDate/${dateKey}/${ev.id}/sortOrder`] = (index + 1) * 1000;
+        });
+
+        await window.database.ref().update(updates);
+
+        if (window.auditLogger) {
+            await window.auditLogger.logAction('event-sort-update', {
+                department: dept,
+                date: dateKey,
+                eventId: eventId,
+                direction: direction
+            });
+        }
+
+        window.showMessage('並び順を更新しました', 'success');
+
+        setTimeout(() => {
+            this.loadAndRenderEventsForSelectedDate();
+        }, 150);
+
+    } catch (error) {
+        console.error('❌ 並び替え保存エラー:', error);
+        window.showMessage('並び替えの保存に失敗しました', 'error');
+    }
+}
+            
+// 部門内DOMを「共有業務→個人業務」の順に整列
+// (月次業務は .monthly-plans に別配置なので影響なし)
+reorderDailyCardsWithinDepartments() {
+    const grid = document.getElementById('departmentGrid');
+    if (!grid) return;
+
+    grid.querySelectorAll('.task-list').forEach(section => {
+        const shared = Array.from(section.querySelectorAll('.event-card:not(.personal-card)'));
+        const personal = Array.from(section.querySelectorAll('.event-card.personal-card'));
+
+        // 共有業務：sortOrder → createdAt
+        shared.sort((a, b) => {
+            const ao = Number(a.dataset.sortOrder || 0);
+            const bo = Number(b.dataset.sortOrder || 0);
+            if (ao !== bo) return ao - bo;
+            return Number(a.dataset.createdAt || 0) - Number(b.dataset.createdAt || 0);
+        });
+
+        // 個人業務：createdAt 昇順（作成順）
+        personal.sort((a, b) => {
+            return Number(a.dataset.createdAt || 0) - Number(b.dataset.createdAt || 0);
+        });
+
+        // 順番に appendChild で並べ直す
+        shared.forEach(el => section.appendChild(el));
+        personal.forEach(el => section.appendChild(el));
     });
 }
 
