@@ -1335,6 +1335,8 @@ async saveMonthlyTask() {
             item.dataset.dateKey = dateKey;
             item.dataset.department = card.department || '';
             item.dataset.isPersonalCard = 'true';
+            item.dataset.createdAt = String(Number(card.createdAt ?? 0));
+            item.dataset.sortOrder = String(Number(card.createdAt ?? 0));
 
             const timeText = (card.startTime && card.endTime) ? ` ${card.startTime}-${card.endTime}` : '';
             const additionalCEs = card.additionalCEs || [];
