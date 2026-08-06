@@ -341,7 +341,7 @@
                     <p class="text-sm text-gray-600 mt-1">業務種別×部門の延べ時間、需給ギャップ、掛け持ち指標を分析</p>
                 </div>
                 <div class="flex gap-2 no-print">
-                    <button class="btn btn-outline" onclick="location.href='analytics.html'">
+                    <button class="btn btn-outline" onclick="location.href='../pages/analytics.html'">
                         <i class="fas fa-arrow-left mr-1"></i>戻る
                     </button>
                     <button class="btn btn-secondary" onclick="window.print()">
@@ -524,7 +524,8 @@
                     ・赤が同じ時間帯に集中 → シフト調整・要員追加の根拠<br>
                     ・青と赤が同時間帯に並ぶ → <span class="highlight">部門間の応援ルート整備</span>の議論材料<br>
                     ・セルにマウスを重ねると、需要・供給・出勤可能人数の詳細が表示されます</p>
-                    <p class="mt-2 text-gray-600">※ 平日別セクションでは祝日を除外して集計しています。</p>
+                    <p class="mt-2 text-gray-600">※ 平日別セクションでは、業務が発生していない祝日のみ除外して集計しています。血液浄化など祝日も稼働する部門は含まれます。
+</p>
                 </div>
             </details>
         </div>
@@ -563,7 +564,8 @@
                     <p class="mt-2"><b>判断材料の例</b>：<br>
                     ・火曜午前が常に濃い → 火曜午前の要員は削減不可<br>
                     ・金曜午後が薄い → 月次業務や研修を配置しやすい時間帯</p>
-                    <p class="mt-2 text-gray-600">※ 土日・祝日は除外。※ 部門別は期間が短いとサンプル不足で判断材料になりにくい。月次以上の期間推奨。</p>
+                    <p class="mt-2 text-gray-600">※ 土日は除外。祝日は業務が発生している日のみ含めます（血液浄化など祝日稼働部門は反映）。※ 部門別は期間が短いとサンプル不足で判断材料になりにくい。月次以上の期間推奨。
+</p>
                 </div>
             </details>
         </div>
@@ -681,6 +683,18 @@ function weekdayLabel(k) { return ['日','月','火','水','木','金','土'][pa
 function isHoliday(dateKey) { return SUMMARY_APP.raw.holidays.has(dateKey); }
 function isWeekend(dateKey) { const d = parseDateKey(dateKey).getDay(); return d === 0 || d === 6; }
 function isWeekdayNonHoliday(dateKey) { return !isWeekend(dateKey) && !isHoliday(dateKey); }
+    /**
+ * 集計対象として使う日付を判定
+ * - 平日: 常に対象
+ * - 土日: 対象外
+ * - 祝日: その日に業務(assignedCEs>0の配置)が1件でもあれば対象
+ */
+function shouldIncludeDateForWeekdayAnalysis(dateKey, eventsInRange) {
+    if (isWeekend(dateKey)) return false;
+    if (!isHoliday(dateKey)) return true;
+    // 祝日でも業務があれば対象
+    return eventsInRange.some(e => e.date === dateKey && e.assignedCEs.length > 0);
+}
 
 function getWeekStartMonday(d) {
     const x = new Date(d); const day = x.getDay();
@@ -1216,7 +1230,7 @@ function analyzeCore(startDate, endDate, taskTypeFilter, selectedDepts) {
     const forHeatmap = filterByDepartments(byType.events, byType.monthlyTasks, selectedDepts, false);
 
     const dateKeysAll = enumerateDateKeys(startDate, endDate);
-    const dateKeysWeekday = dateKeysAll.filter(isWeekdayNonHoliday);
+    const dateKeysWeekday = dateKeysAll.filter(dk => shouldIncludeDateForWeekdayAnalysis(dk, byType.events));
     const availableByDate = getAvailableCECountByDate(dateKeysAll);
 
     return { forSummary, forHeatmap, dateKeysAll, dateKeysWeekday, availableByDate, selectedDepts: [...selectedDepts].filter(d => PRIMARY_DEPARTMENTS.includes(d)) };
