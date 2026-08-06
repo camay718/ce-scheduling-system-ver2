@@ -239,40 +239,37 @@
 
         <!-- 分析機能グリッド -->
         <div class="analytics-grid">
-            <!-- 業務別タイムライン -->
-            <div class="analytics-card" onclick="openAnalyticsPage('department-timeline')">
-                <div class="status-badge available">利用可能</div>
-                <i class="fas fa-chart-bar icon"></i>
-                <div class="title">業務別タイムライン</div>
-                <div class="description">部門・業務ごとの時系列分析と配置状況の可視化</div>
-            </div>
-
-            <!-- 個人別タイムライン -->
-            <div class="analytics-card" onclick="openAnalyticsPage('personal-timeline')">
-                <div class="status-badge available">利用可能</div>
-                <i class="fas fa-chart-line icon"></i>
-                <div class="title">個人別タイムライン</div>
-                <div class="description">CE個人の勤務パターンと業務配置履歴の分析</div>
-            </div>
-
-            <!-- 配置サマリー -->
-            <div class="analytics-card" onclick="openAnalyticsPage('assignment-summary')">
-                <div class="status-badge available">利用可能</div>
-                <i class="fas fa-clipboard-list icon"></i>
-                <div class="title">配置サマリ</div>
-                <div class="description">業務配置状況の要約表示と効率性分析</div>
-            </div>
-
-                        <!-- 人員配置調整 -->
-            <div class="analytics-card" onclick="openAnalyticsPage('staffing-adjustment')">
-                <div class="status-badge available">利用可能</div>
-                <i class="fas fa-users-cog icon"></i>
-                <div class="title">人員配置調整</div>
-                <div class="description">日別・時間別の人員配置最適化と不足人員の可視化</div>
-            </div>
+    <!-- カード1: 業務別タイムライン -->
+    <a href="department-timeline.html" class="analytics-card" onclick="openAnalyticsPage(event, 'department-timeline.html')">
+        <div class="icon"><i class="fas fa-stream"></i></div>
+        <div class="title">業務別タイムライン</div>
+        <div class="description">
+            部門ごとの業務を時間軸で可視化し、<br>
+            配置状況と充足率を確認できます
         </div>
-    </div>
+    </a>
 
+    <!-- カード2: 個人別タイムライン -->
+    <a href="personal-timeline.html" class="analytics-card" onclick="openAnalyticsPage(event, 'personal-timeline.html')">
+        <div class="icon"><i class="fas fa-user-clock"></i></div>
+        <div class="title">個人別タイムライン</div>
+        <div class="description">
+            CE個人の実労働時間・勤務状態を<br>
+            重複除外で正確に集計します
+        </div>
+    </a>
+
+    <!-- カード3: 実績サマリ（旧・配置サマリ） -->
+    <a href="assignment-summary.html" class="analytics-card" onclick="openAnalyticsPage(event, 'assignment-summary.html')">
+        <div class="icon"><i class="fas fa-chart-column"></i></div>
+        <div class="title">実績サマリ</div>
+        <div class="description">
+            業務種別×部門の延べ時間と<br>
+            需給ギャップ・掛け持ち指標を分析
+        </div>
+    </a>
+</div>
+        
     <script>
         // 軽量メッセージ機能
         window.showMessage = window.showMessage || function(msg, type='info') {
