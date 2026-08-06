@@ -444,7 +444,1096 @@
     </div>
 </div>
 
-<!-- スクリプトは次の c-2 / c-3 で追加 -->
+    <script>
+/* =========================
+ * 実績サマリ - 集計/描画ロジック
+ * c-2 + c-3 統合版
+ * ========================= */
+
+const SUMMARY_APP = {
+    currentUserData: null,
+    raw: {
+        events: [],
+        monthlyTasks: [],
+        workSchedules: [],
+        ceList: []
+    },
+    ceMapById: new Map(),
+    ceMapByName: new Map(),
+    lastAnalysis: null
+};
+
+const SPECIAL_DEPARTMENTS = new Set([
+    '会議・ミーティング・勉強会・打ち合わせ',
+    '出張・研修内容',
+    'その他・連絡'
+]);
+
+const DEFAULT_DEPARTMENTS = [
+    '機器管理・人工呼吸',
+    '血液浄化',
+    '不整脈',
+    '心・カテーテル',
+    '人工心肺・補助循環',
+    '手術・麻酔',
+    '会議・ミーティング・勉強会・打ち合わせ',
+    '出張・研修内容',
+    'その他・連絡'
+];
+
+const PRIMARY_DEPARTMENTS = (window.DEPARTMENTS || DEFAULT_DEPARTMENTS).filter(d => !SPECIAL_DEPARTMENTS.has(d));
+const AVAILABLE_STATUSES = new Set(['A', 'A1', 'B']);
+
+function showLoading(show, message = '実績データを集計中...') {
+    const loading = document.getElementById('loading');
+    if (!loading) return;
+    const p = loading.querySelector('p');
+    if (p) p.textContent = message;
+    loading.style.display = show ? 'flex' : 'none';
+}
+
+function showMain() {
+    const main = document.getElementById('mainContent');
+    if (main) main.style.display = 'block';
+}
+
+function hideMain() {
+    const main = document.getElementById('mainContent');
+    if (main) main.style.display = 'none';
+}
+
+function safeNum(v, fallback = 0) {
+    const n = Number(v);
+    return Number.isFinite(n) ? n : fallback;
+}
+
+function formatHours(v) {
+    return (Math.round((safeNum(v) + Number.EPSILON) * 10) / 10).toFixed(1);
+}
+
+function escapeHtml(str) {
+    return String(str ?? '')
+        .replaceAll('&', '&amp;')
+        .replaceAll('<', '&lt;')
+        .replaceAll('>', '&gt;')
+        .replaceAll('"', '&quot;')
+        .replaceAll("'", '&#39;');
+}
+
+function pad2(n) {
+    return String(n).padStart(2, '0');
+}
+
+function toDateKey(dateObj) {
+    return `${dateObj.getFullYear()}-${pad2(dateObj.getMonth() + 1)}-${pad2(dateObj.getDate())}`;
+}
+
+function parseDateKey(dateKey) {
+    const [y, m, d] = String(dateKey).split('-').map(Number);
+    return new Date(y, (m || 1) - 1, d || 1);
+}
+
+function addDays(dateObj, days) {
+    const d = new Date(dateObj);
+    d.setDate(d.getDate() + days);
+    return d;
+}
+
+function enumerateDateKeys(startDateKey, endDateKey) {
+    const out = [];
+    let cur = parseDateKey(startDateKey);
+    const end = parseDateKey(endDateKey);
+    while (cur <= end) {
+        out.push(toDateKey(cur));
+        cur = addDays(cur, 1);
+    }
+    return out;
+}
+
+function weekdayLabel(dateKey) {
+    const labels = ['日', '月', '火', '水', '木', '金', '土'];
+    return labels[parseDateKey(dateKey).getDay()];
+}
+
+function getWeekStartMonday(dateObj) {
+    const d = new Date(dateObj);
+    const day = d.getDay(); // 0=日
+    const diff = day === 0 ? -6 : 1 - day;
+    d.setDate(d.getDate() + diff);
+    return d;
+}
+
+function setDateInput(id, dateObj) {
+    const el = document.getElementById(id);
+    if (el) el.value = toDateKey(dateObj);
+}
+
+function onPeriodPresetChange() {
+    const preset = document.getElementById('periodPreset')?.value || 'week';
+    const today = new Date();
+
+    if (preset === 'today') {
+        setDateInput('startDate', today);
+        setDateInput('endDate', today);
+        return;
+    }
+
+    if (preset === 'week') {
+        const start = getWeekStartMonday(today);
+        setDateInput('startDate', start);
+        setDateInput('endDate', addDays(start, 6));
+        return;
+    }
+
+    if (preset === 'month') {
+        const start = new Date(today.getFullYear(), today.getMonth(), 1);
+        const end = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+        setDateInput('startDate', start);
+        setDateInput('endDate', end);
+        return;
+    }
+
+    if (preset === 'prevMonth') {
+        const start = new Date(today.getFullYear(), today.getMonth() - 1, 1);
+        const end = new Date(today.getFullYear(), today.getMonth(), 0);
+        setDateInput('startDate', start);
+        setDateInput('endDate', end);
+        return;
+    }
+    // custom は何もしない
+}
+window.onPeriodPresetChange = onPeriodPresetChange;
+
+function getTimeSlots() {
+    // 7:00 ～ 19:00 を 30分刻み（終端19:00は非包含）
+    const slots = [];
+    for (let minutes = 7 * 60; minutes < 19 * 60; minutes += 30) {
+        const h = Math.floor(minutes / 60);
+        const m = minutes % 60;
+        slots.push({
+            key: `${pad2(h)}:${pad2(m)}`,
+            start: minutes,
+            end: minutes + 30
+        });
+    }
+    return slots;
+}
+
+function timeToMinutes(timeStr) {
+    if (!timeStr || typeof timeStr !== 'string' || !timeStr.includes(':')) return null;
+    const [h, m] = timeStr.split(':').map(Number);
+    if (!Number.isFinite(h) || !Number.isFinite(m)) return null;
+    return h * 60 + m;
+}
+
+function getDurationHours(startTime, endTime) {
+    const s = timeToMinutes(startTime);
+    const e = timeToMinutes(endTime);
+    if (s == null || e == null || e <= s) return 0;
+    return (e - s) / 60;
+}
+
+function overlapsSlot(task, slot) {
+    const s = timeToMinutes(task.startTime);
+    const e = timeToMinutes(task.endTime);
+    if (s == null || e == null || e <= s) return false;
+    return s < slot.end && e > slot.start;
+}
+
+function percentile(arr, p) {
+    if (!arr.length) return 0;
+    const sorted = [...arr].sort((a, b) => a - b);
+    const idx = (sorted.length - 1) * p;
+    const lower = Math.floor(idx);
+    const upper = Math.ceil(idx);
+    if (lower === upper) return sorted[lower];
+    return sorted[lower] + (sorted[upper] - sorted[lower]) * (idx - lower);
+}
+
+function average(arr) {
+    if (!arr.length) return 0;
+    return arr.reduce((s, v) => s + v, 0) / arr.length;
+}
+
+function stddev(arr) {
+    if (!arr.length) return 0;
+    const avg = average(arr);
+    const variance = average(arr.map(v => (v - avg) ** 2));
+    return Math.sqrt(variance);
+}
+
+function normalizeMonthKey(rawMonth, fallbackDateKey = null) {
+    if (rawMonth == null) {
+        return fallbackDateKey ? fallbackDateKey.slice(0, 7) : null;
+    }
+
+    const s = String(rawMonth).trim();
+
+    // YYYY-MM
+    if (/^\d{4}-\d{2}$/.test(s)) return s;
+
+    // YYYYMM
+    if (/^\d{6}$/.test(s)) return `${s.slice(0, 4)}-${s.slice(4, 6)}`;
+
+    // タイムスタンプ風の数値
+    if (/^\d{13}$/.test(s) || /^\d{10}$/.test(s)) {
+        const ts = s.length === 10 ? Number(s) * 1000 : Number(s);
+        const d = new Date(ts);
+        return toDateKey(new Date(d.getFullYear(), d.getMonth(), 1)).slice(0, 7);
+    }
+
+    // "2026-08-01" など
+    if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s.slice(0, 7);
+
+    // 既存実装の parseInt(month) バグ対策:
+    // "2026-08" が parseInt されると 2026 になる。これは月情報として壊れている。
+    // この場合は fallback に頼る。
+    if (/^\d{4}$/.test(s)) {
+        return fallbackDateKey ? fallbackDateKey.slice(0, 7) : null;
+    }
+
+    return fallbackDateKey ? fallbackDateKey.slice(0, 7) : null;
+}
+
+function parseCEList(rawCeList) {
+    const list = [];
+    if (rawCeList && Array.isArray(rawCeList.list)) {
+        rawCeList.list.forEach((ce, idx) => {
+            if (!ce) return;
+            const id = ce.id || `ce_${idx}`;
+            const name = ce.name || ce.fullName || ce.displayName || id;
+            list.push({ ...ce, id, name });
+        });
+        return list;
+    }
+
+    if (rawCeList && typeof rawCeList === 'object') {
+        const deny = new Set(['list', 'updatedAt', 'lastUpdated', 'timestamp', 'state', 'templates', 'metadata', 'default', 'scheduleData', 'workTypeOverrides']);
+        Object.entries(rawCeList).forEach(([key, value]) => {
+            if (deny.has(key)) return;
+            if (!value || typeof value !== 'object') return;
+            const id = value.id || key;
+            const name = value.name || value.fullName || value.displayName || key;
+            list.push({ ...value, id, name });
+        });
+    }
+    return list;
+}
+
+function buildCEMaps(ceList) {
+    SUMMARY_APP.ceMapById.clear();
+    SUMMARY_APP.ceMapByName.clear();
+
+    ceList.forEach(ce => {
+        SUMMARY_APP.ceMapById.set(String(ce.id), ce);
+        SUMMARY_APP.ceMapByName.set(String(ce.name), ce);
+        if (ce.fullName) SUMMARY_APP.ceMapByName.set(String(ce.fullName), ce);
+        if (ce.displayName) SUMMARY_APP.ceMapByName.set(String(ce.displayName), ce);
+    });
+}
+
+function resolveCERef(value) {
+    if (!value) return null;
+
+    if (typeof value === 'string') {
+        if (SUMMARY_APP.ceMapById.has(value)) {
+            const ce = SUMMARY_APP.ceMapById.get(value);
+            return { id: ce.id, name: ce.name };
+        }
+        if (SUMMARY_APP.ceMapByName.has(value)) {
+            const ce = SUMMARY_APP.ceMapByName.get(value);
+            return { id: ce.id, name: ce.name };
+        }
+        return { id: null, name: value };
+    }
+
+    if (typeof value === 'object') {
+        const rawId = value.id || value.ceId || null;
+        const rawName = value.name || value.ceName || value.fullName || value.displayName || null;
+
+        if (rawId && SUMMARY_APP.ceMapById.has(String(rawId))) {
+            const ce = SUMMARY_APP.ceMapById.get(String(rawId));
+            return { id: ce.id, name: ce.name };
+        }
+        if (rawName && SUMMARY_APP.ceMapByName.has(String(rawName))) {
+            const ce = SUMMARY_APP.ceMapByName.get(String(rawName));
+            return { id: ce.id, name: ce.name };
+        }
+        return { id: rawId, name: rawName || rawId || '不明CE' };
+    }
+
+    return null;
+}
+
+function normalizeAssignedCEs(value) {
+    if (!Array.isArray(value)) return [];
+    return value
+        .map(resolveCERef)
+        .filter(Boolean)
+        .filter((ce, idx, arr) => arr.findIndex(x => (x.id && ce.id ? x.id === ce.id : x.name === ce.name)) === idx);
+}
+
+function flattenEvents(rawEventsRoot) {
+    const events = [];
+    const byDate = rawEventsRoot?.byDate || {};
+    Object.entries(byDate).forEach(([dateKey, items]) => {
+        if (!items || typeof items !== 'object') return;
+        Object.entries(items).forEach(([id, raw]) => {
+            if (!raw || typeof raw !== 'object') return;
+            events.push({
+                id,
+                source: 'event',
+                date: raw.date || dateKey,
+                department: raw.department || '未分類',
+                name: raw.name || raw.title || '名称未設定',
+                startTime: raw.startTime || null,
+                endTime: raw.endTime || null,
+                durationHours: getDurationHours(raw.startTime, raw.endTime),
+                count: safeNum(raw.count, 0),
+                requiredPeople: safeNum(raw.requiredPeople ?? raw.requiredCount, 0),
+                taskType: raw.taskType || 'shared',
+                assignedCEs: normalizeAssignedCEs(raw.assignedCEs),
+                raw
+            });
+        });
+    });
+    return events;
+}
+
+function flattenMonthlyTasks(rawMonthlyRoot) {
+    const tasks = [];
+    if (!rawMonthlyRoot || typeof rawMonthlyRoot !== 'object') return tasks;
+
+    Object.entries(rawMonthlyRoot).forEach(([key, node]) => {
+        if (!node || typeof node !== 'object') return;
+
+        const looksFlatTask =
+            node.isMonthlyTask === true ||
+            'name' in node ||
+            'title' in node ||
+            'department' in node ||
+            'month' in node;
+
+        if (looksFlatTask) {
+            tasks.push({
+                id: node.id || key,
+                source: 'monthly',
+                department: node.department || '未分類',
+                name: node.name || node.title || '名称未設定',
+                monthKey: normalizeMonthKey(node.month, node.date || null),
+                count: safeNum(node.count, 0),
+                requiredPeople: safeNum(node.requiredPeople ?? node.requiredCount, 0),
+                taskType: node.taskType || 'monthly',
+                assignedCEs: normalizeAssignedCEs(node.assignedCEs),
+                raw: node
+            });
+        } else {
+            // ネスト構造にも一応対応
+            Object.entries(node).forEach(([childKey, child]) => {
+                if (!child || typeof child !== 'object') return;
+                tasks.push({
+                    id: child.id || childKey,
+                    source: 'monthly',
+                    department: child.department || '未分類',
+                    name: child.name || child.title || '名称未設定',
+                    monthKey: normalizeMonthKey(child.month ?? key, child.date || null),
+                    count: safeNum(child.count, 0),
+                    requiredPeople: safeNum(child.requiredPeople ?? child.requiredCount, 0),
+                    taskType: child.taskType || 'monthly',
+                    assignedCEs: normalizeAssignedCEs(child.assignedCEs),
+                    raw: child
+                });
+            });
+        }
+    });
+
+    return tasks;
+}
+
+function flattenWorkSchedules(rawWorkSchedules) {
+    if (!rawWorkSchedules || typeof rawWorkSchedules !== 'object') return [];
+    return Object.entries(rawWorkSchedules).map(([key, val]) => ({
+        key,
+        ...(val || {})
+    }));
+}
+
+async function loadAllData() {
+    const DATA_ROOT = window.DATA_ROOT || 'ceScheduleV2';
+
+    const [eventsSnap, monthlySnap, ceListSnap, workSchedulesSnap] = await Promise.all([
+        window.database.ref(`${DATA_ROOT}/events`).once('value'),
+        window.database.ref(`${DATA_ROOT}/monthlyTasks`).once('value'),
+        window.database.ref(`${DATA_ROOT}/ceList`).once('value'),
+        window.database.ref(`${DATA_ROOT}/workSchedules`).once('value')
+    ]);
+
+    const ceList = parseCEList(ceListSnap.val() || {});
+    buildCEMaps(ceList);
+
+    SUMMARY_APP.raw.ceList = ceList;
+    SUMMARY_APP.raw.events = flattenEvents(eventsSnap.val() || {});
+    SUMMARY_APP.raw.monthlyTasks = flattenMonthlyTasks(monthlySnap.val() || {});
+    SUMMARY_APP.raw.workSchedules = flattenWorkSchedules(workSchedulesSnap.val() || {});
+
+    console.log('✅ 実績サマリ データロード完了', {
+        ceList: SUMMARY_APP.raw.ceList.length,
+        events: SUMMARY_APP.raw.events.length,
+        monthlyTasks: SUMMARY_APP.raw.monthlyTasks.length,
+        workSchedules: SUMMARY_APP.raw.workSchedules.length
+    });
+}
+
+function selectScheduleForDate(dateKey) {
+    const matches = SUMMARY_APP.raw.workSchedules.filter(schedule => {
+        const md = schedule.metadata || {};
+        return md.startDate && md.endDate && md.startDate <= dateKey && md.endDate >= dateKey;
+    });
+
+    if (!matches.length) return null;
+
+    return matches.sort((a, b) => {
+        const pa = safeNum(a.metadata?.priority, 0);
+        const pb = safeNum(b.metadata?.priority, 0);
+        if (pa !== pb) return pb - pa;
+        const ta = safeNum(a.metadata?.publishedAt, 0);
+        const tb = safeNum(b.metadata?.publishedAt, 0);
+        return tb - ta;
+    })[0];
+}
+
+function defaultStatusForDate(dateKey) {
+    const day = parseDateKey(dateKey).getDay();
+    return (day === 0 || day === 6) ? '×' : 'A';
+}
+
+function getCEStatusForDate(schedule, ceId, dateKey) {
+    if (!schedule) return defaultStatusForDate(dateKey);
+
+    const workData = schedule.scheduleData?.[ceId]?.[dateKey];
+    if (workData) {
+        return (workData.customText?.trim() || workData.status || defaultStatusForDate(dateKey));
+    }
+
+    // PublishedScheduleResolver 準拠の簡易版
+    return defaultStatusForDate(dateKey);
+}
+
+function getAvailableCECountByDate(dateKeys) {
+    const out = {};
+    dateKeys.forEach(dateKey => {
+        const schedule = selectScheduleForDate(dateKey);
+        let count = 0;
+        SUMMARY_APP.raw.ceList.forEach(ce => {
+            const status = getCEStatusForDate(schedule, ce.id, dateKey);
+            if (AVAILABLE_STATUSES.has(status)) count++;
+        });
+        out[dateKey] = count;
+    });
+    return out;
+}
+
+function filterMonthlyTasksByRange(tasks, startDateKey, endDateKey) {
+    const startYm = startDateKey.slice(0, 7);
+    const endYm = endDateKey.slice(0, 7);
+    return tasks.filter(task => {
+        if (!task.monthKey) return false;
+        return task.monthKey >= startYm && task.monthKey <= endYm;
+    });
+}
+
+function filterByTaskType(events, monthlyTasks, taskTypeFilter) {
+    if (taskTypeFilter === 'all') {
+        return { events, monthlyTasks };
+    }
+    if (taskTypeFilter === 'monthly') {
+        return { events: [], monthlyTasks };
+    }
+    return {
+        events: events.filter(e => (e.taskType || 'shared') === taskTypeFilter),
+        monthlyTasks: []
+    };
+}
+
+function buildCrossSummary(events, monthlyTasks) {
+    const departments = [...new Set([
+        ...events.map(e => e.department || '未分類'),
+        ...monthlyTasks.map(t => t.department || '未分類')
+    ])];
+
+    const rows = departments.map(dept => ({
+        department: dept,
+        personalHours: 0,
+        personalCount: 0,
+        sharedHours: 0,
+        sharedCount: 0,
+        monthlyHours: 0,
+        monthlyCount: 0
+    }));
+
+    const rowMap = new Map(rows.map(r => [r.department, r]));
+
+    events.forEach(event => {
+        const row = rowMap.get(event.department || '未分類');
+        if (!row) return;
+        const type = event.taskType || 'shared';
+        const hours = event.durationHours * event.assignedCEs.length;
+        if (type === 'personal') {
+            row.personalHours += hours;
+            row.personalCount += 1;
+        } else {
+            row.sharedHours += hours;
+            row.sharedCount += 1;
+        }
+    });
+
+    monthlyTasks.forEach(task => {
+        const row = rowMap.get(task.department || '未分類');
+        if (!row) return;
+        row.monthlyCount += 1;
+    });
+
+    rows.sort((a, b) => {
+        const ah = a.personalHours + a.sharedHours + a.monthlyCount;
+        const bh = b.personalHours + b.sharedHours + b.monthlyCount;
+        return bh - ah;
+    });
+
+    const totals = rows.reduce((acc, r) => {
+        acc.personalHours += r.personalHours;
+        acc.personalCount += r.personalCount;
+        acc.sharedHours += r.sharedHours;
+        acc.sharedCount += r.sharedCount;
+        acc.monthlyHours += r.monthlyHours;
+        acc.monthlyCount += r.monthlyCount;
+        return acc;
+    }, {
+        personalHours: 0, personalCount: 0,
+        sharedHours: 0, sharedCount: 0,
+        monthlyHours: 0, monthlyCount: 0
+    });
+
+    return { rows, totals };
+}
+
+function buildCESummary(events, monthlyTasks) {
+    const map = new Map();
+
+    function ensure(name, id = null) {
+        const key = id || name;
+        if (!map.has(key)) {
+            map.set(key, {
+                id,
+                name,
+                personalHours: 0,
+                sharedHours: 0,
+                monthlyCount: 0,
+                totalHours: 0,
+                taskCount: 0
+            });
+        }
+        return map.get(key);
+    }
+
+    events.forEach(event => {
+        const type = event.taskType || 'shared';
+        const duration = event.durationHours;
+        event.assignedCEs.forEach(ce => {
+            const row = ensure(ce.name || ce.id || '不明CE', ce.id || null);
+            if (type === 'personal') {
+                row.personalHours += duration;
+            } else {
+                row.sharedHours += duration;
+            }
+            row.totalHours += duration;
+            row.taskCount += 1;
+        });
+    });
+
+    monthlyTasks.forEach(task => {
+        task.assignedCEs.forEach(ce => {
+            const row = ensure(ce.name || ce.id || '不明CE', ce.id || null);
+            row.monthlyCount += 1;
+            row.taskCount += 1;
+        });
+    });
+
+    return [...map.values()].sort((a, b) => {
+        if (b.totalHours !== a.totalHours) return b.totalHours - a.totalHours;
+        return b.monthlyCount - a.monthlyCount;
+    });
+}
+
+function buildDeptGapMatrix(events, dateKeys, availableByDate) {
+    const slots = getTimeSlots();
+    const departments = PRIMARY_DEPARTMENTS;
+
+    const matrix = departments.map(dept => {
+        return slots.map(slot => {
+            let required = 0;
+            let assigned = 0;
+            let activeDays = new Set();
+            let availableSamples = [];
+
+            events.forEach(event => {
+                if ((event.department || '未分類') !== dept) return;
+                if (!dateKeys.includes(event.date)) return;
+                if (!overlapsSlot(event, slot)) return;
+
+                required += safeNum(event.requiredPeople, 0);
+                assigned += event.assignedCEs.length;
+                activeDays.add(event.date);
+            });
+
+            activeDays.forEach(d => {
+                availableSamples.push(safeNum(availableByDate[d], 0));
+            });
+
+            const gap = assigned - required;
+            return {
+                required,
+                assigned,
+                gap,
+                activeDayCount: activeDays.size,
+                availableAvg: availableSamples.length ? average(availableSamples) : 0
+            };
+        });
+    });
+
+    return { departments, slots, matrix };
+}
+
+function buildWeekdayHeatmap(events, dateKeys, availableByDate) {
+    const slots = getTimeSlots();
+    const weekdayOrder = ['月', '火', '水', '木', '金', '土', '日'];
+
+    // dateごと×slotごとの配置数
+    const dailySlotAssigned = {};
+    dateKeys.forEach(dateKey => {
+        dailySlotAssigned[dateKey] = {};
+        slots.forEach(slot => {
+            let assigned = 0;
+            events.forEach(event => {
+                if (event.date !== dateKey) return;
+                if (!overlapsSlot(event, slot)) return;
+                assigned += event.assignedCEs.length;
+            });
+            dailySlotAssigned[dateKey][slot.key] = assigned;
+        });
+    });
+
+    const matrix = weekdayOrder.map(weekday => {
+        return slots.map(slot => {
+            const values = [];
+            const availableSamples = [];
+
+            dateKeys.forEach(dateKey => {
+                if (weekdayLabel(dateKey) !== weekday) return;
+                values.push(safeNum(dailySlotAssigned[dateKey][slot.key], 0));
+                availableSamples.push(safeNum(availableByDate[dateKey], 0));
+            });
+
+            const med = percentile(values, 0.5);
+            const p80 = percentile(values, 0.8);
+            const avg = average(values);
+            const sd = stddev(values);
+            const cv = avg > 0 ? sd / avg : 0;
+            const availAvg = average(availableSamples);
+
+            return {
+                median: med,
+                p80,
+                avg,
+                cv,
+                sampleCount: values.length,
+                availableAvg: availAvg
+            };
+        });
+    });
+
+    return { weekdays: weekdayOrder, slots, matrix };
+}
+
+function buildMultitaskSeries(events, dateKeys) {
+    const slots = getTimeSlots();
+
+    const series = slots.map(slot => {
+        const ratios = [];
+
+        dateKeys.forEach(dateKey => {
+            const overlapping = events.filter(e => e.date === dateKey && overlapsSlot(e, slot));
+            if (!overlapping.length) return;
+
+            let totalAssigned = 0;
+            const uniqueCEs = new Set();
+
+            overlapping.forEach(event => {
+                totalAssigned += event.assignedCEs.length;
+                event.assignedCEs.forEach(ce => uniqueCEs.add(ce.id || ce.name));
+            });
+
+            if (uniqueCEs.size > 0) {
+                ratios.push(totalAssigned / uniqueCEs.size);
+            }
+        });
+
+        return {
+            slot: slot.key,
+            avgRatio: average(ratios),
+            p80Ratio: percentile(ratios, 0.8),
+            sampleCount: ratios.length
+        };
+    });
+
+    return series;
+}
+
+function updateKpis(events, monthlyTasks) {
+    const totalTasks = events.length + monthlyTasks.length;
+    const totalHours = events.reduce((s, e) => s + (e.durationHours * e.assignedCEs.length), 0);
+
+    const uniqueCEs = new Set();
+    events.forEach(e => e.assignedCEs.forEach(ce => uniqueCEs.add(ce.id || ce.name)));
+    monthlyTasks.forEach(t => t.assignedCEs.forEach(ce => uniqueCEs.add(ce.id || ce.name)));
+
+    const avgPerCE = uniqueCEs.size > 0 ? totalHours / uniqueCEs.size : 0;
+
+    document.getElementById('kpiTotalTasks').textContent = totalTasks;
+    document.getElementById('kpiTotalHours').textContent = formatHours(totalHours);
+    document.getElementById('kpiUniqueCEs').textContent = uniqueCEs.size;
+    document.getElementById('kpiAvgPerCE').textContent = formatHours(avgPerCE);
+}
+
+function renderCrossTable(crossSummary) {
+    const tbody = document.getElementById('crossTableBody');
+    const tfoot = document.getElementById('crossTableFoot');
+    if (!tbody || !tfoot) return;
+
+    if (!crossSummary.rows.length) {
+        tbody.innerHTML = `<tr><td colspan="5" class="text-center text-gray-500">対象データがありません</td></tr>`;
+        tfoot.innerHTML = '';
+        return;
+    }
+
+    tbody.innerHTML = crossSummary.rows.map(row => {
+        const totalHours = row.personalHours + row.sharedHours;
+        const totalCount = row.personalCount + row.sharedCount + row.monthlyCount;
+        return `
+            <tr>
+                <td>${escapeHtml(row.department)}</td>
+                <td class="cell-personal">
+                    <div>${formatHours(row.personalHours)} h</div>
+                    <div class="text-xs text-gray-500">${row.personalCount} 件</div>
+                </td>
+                <td class="cell-shared">
+                    <div>${formatHours(row.sharedHours)} h</div>
+                    <div class="text-xs text-gray-500">${row.sharedCount} 件</div>
+                </td>
+                <td class="cell-monthly">
+                    <div>-</div>
+                    <div class="text-xs text-gray-500">${row.monthlyCount} 件</div>
+                </td>
+                <td>
+                    <div>${formatHours(totalHours)} h</div>
+                    <div class="text-xs text-gray-500">${totalCount} 件</div>
+                </td>
+            </tr>
+        `;
+    }).join('');
+
+    const t = crossSummary.totals;
+    tfoot.innerHTML = `
+        <tr>
+            <td>合計</td>
+            <td class="cell-personal">
+                <div>${formatHours(t.personalHours)} h</div>
+                <div class="text-xs text-gray-500">${t.personalCount} 件</div>
+            </td>
+            <td class="cell-shared">
+                <div>${formatHours(t.sharedHours)} h</div>
+                <div class="text-xs text-gray-500">${t.sharedCount} 件</div>
+            </td>
+            <td class="cell-monthly">
+                <div>-</div>
+                <div class="text-xs text-gray-500">${t.monthlyCount} 件</div>
+            </td>
+            <td>
+                <div>${formatHours(t.personalHours + t.sharedHours)} h</div>
+                <div class="text-xs text-gray-500">${t.personalCount + t.sharedCount + t.monthlyCount} 件</div>
+            </td>
+        </tr>
+    `;
+}
+
+function renderCESummary(rows) {
+    const tbody = document.getElementById('ceSummaryBody');
+    if (!tbody) return;
+
+    if (!rows.length) {
+        tbody.innerHTML = `<tr><td colspan="6" class="text-center text-gray-500">対象データがありません</td></tr>`;
+        return;
+    }
+
+    tbody.innerHTML = rows.map(row => `
+        <tr>
+            <td>${escapeHtml(row.name)}</td>
+            <td class="cell-personal">${formatHours(row.personalHours)}</td>
+            <td class="cell-shared">${formatHours(row.sharedHours)}</td>
+            <td class="cell-monthly">${row.monthlyCount}</td>
+            <td>${formatHours(row.totalHours)}</td>
+            <td>${row.taskCount}</td>
+        </tr>
+    `).join('');
+}
+
+function gapClass(cell) {
+    if ((cell.required === 0) && (cell.assigned === 0)) return 'gap-nodata';
+    if (cell.gap < 0) return 'gap-shortage';
+    if (Math.abs(cell.gap) <= 1) return 'gap-balanced';
+    return 'gap-surplus';
+}
+
+function renderDeptHeatmap(data) {
+    const container = document.getElementById('deptHeatmap');
+    if (!container) return;
+
+    const { departments, slots, matrix } = data;
+    const columns = slots.length + 1;
+    container.style.gridTemplateColumns = `180px repeat(${slots.length}, minmax(34px, 34px))`;
+
+    let html = `<div class="hm-corner">部門＼時刻</div>`;
+    html += slots.map(slot => `<div class="hm-colhead">${slot.key}</div>`).join('');
+
+    departments.forEach((dept, rowIdx) => {
+        html += `<div class="hm-rowhead">${escapeHtml(dept)}</div>`;
+        slots.forEach((slot, colIdx) => {
+            const cell = matrix[rowIdx][colIdx];
+            const cls = gapClass(cell);
+            const tooltip = [
+                `${dept} / ${slot.key}`,
+                `供給: ${cell.assigned} 名`,
+                `需要: ${cell.required} 名`,
+                `ギャップ: ${cell.gap >= 0 ? '+' : ''}${cell.gap}`,
+                `出勤可能人数(平均): ${formatHours(cell.availableAvg)} 名`,
+                `該当日数: ${cell.activeDayCount} 日`
+            ].join('\n');
+
+            html += `
+                <div class="hm-cell ${cls}" data-tooltip="${escapeHtml(tooltip)}">
+                    ${cell.assigned}
+                </div>
+            `;
+        });
+    });
+
+    container.innerHTML = html;
+}
+
+function heatCountClass(v) {
+    const n = Math.max(0, Math.min(8, Math.round(v)));
+    return `count-${n}`;
+}
+
+function renderWeekdayHeatmap(data) {
+    const container = document.getElementById('weekdayHeatmap');
+    if (!container) return;
+
+    const { weekdays, slots, matrix } = data;
+    container.style.gridTemplateColumns = `80px repeat(${slots.length}, minmax(34px, 34px))`;
+
+    let html = `<div class="hm-corner">曜日＼時刻</div>`;
+    html += slots.map(slot => `<div class="hm-colhead">${slot.key}</div>`).join('');
+
+    weekdays.forEach((wd, rowIdx) => {
+        html += `<div class="hm-rowhead">${wd}</div>`;
+        slots.forEach((slot, colIdx) => {
+            const cell = matrix[rowIdx][colIdx];
+            const tooltip = [
+                `${wd} / ${slot.key}`,
+                `中央値: ${formatHours(cell.median)} 名`,
+                `平均: ${formatHours(cell.avg)} 名`,
+                `80%タイル: ${formatHours(cell.p80)} 名`,
+                `CV: ${cell.cv.toFixed(2)}`,
+                `出勤可能人数(平均): ${formatHours(cell.availableAvg)} 名`,
+                `サンプル日数: ${cell.sampleCount} 日`
+            ].join('\n');
+
+            html += `
+                <div class="hm-cell ${heatCountClass(cell.median)}" data-tooltip="${escapeHtml(tooltip)}">
+                    ${Math.round(cell.median * 10) / 10}
+                </div>
+            `;
+        });
+    });
+
+    container.innerHTML = html;
+}
+
+function renderMultitask(series) {
+    const container = document.getElementById('multitaskChart');
+    if (!container) return;
+
+    if (!series.length) {
+        container.innerHTML = `<div class="text-center text-gray-500 p-4">対象データがありません</div>`;
+        return;
+    }
+
+    const maxValue = Math.max(2.5, ...series.map(x => x.avgRatio || 0));
+
+    container.innerHTML = series.map(row => {
+        const width = Math.max(0, Math.min(100, ((row.avgRatio || 0) / maxValue) * 100));
+        const tooltip = `平均 ${row.avgRatio.toFixed(2)} / 80%タイル ${row.p80Ratio.toFixed(2)} / サンプル ${row.sampleCount}日`;
+        return `
+            <div class="multitask-row" title="${escapeHtml(tooltip)}">
+                <div>${row.slot}</div>
+                <div class="multitask-bar">
+                    <div class="multitask-fill" style="width:${width}%"></div>
+                </div>
+                <div class="text-right font-semibold">${row.avgRatio.toFixed(2)}</div>
+            </div>
+        `;
+    }).join('');
+}
+
+function buildAnalysis(events, monthlyTasks, startDateKey, endDateKey) {
+    const dateKeys = enumerateDateKeys(startDateKey, endDateKey);
+    const availableByDate = getAvailableCECountByDate(dateKeys);
+
+    return {
+        crossSummary: buildCrossSummary(events, monthlyTasks),
+        ceSummary: buildCESummary(events, monthlyTasks),
+        deptHeatmap: buildDeptGapMatrix(
+            events.filter(e => !SPECIAL_DEPARTMENTS.has(e.department)),
+            dateKeys,
+            availableByDate
+        ),
+        weekdayHeatmap: buildWeekdayHeatmap(events, dateKeys, availableByDate),
+        multitaskSeries: buildMultitaskSeries(events, dateKeys),
+        availableByDate,
+        dateKeys
+    };
+}
+
+async function analyzeData() {
+    try {
+        showLoading(true, '実績データを集計中...');
+        hideMain();
+
+        const startDate = document.getElementById('startDate')?.value;
+        const endDate = document.getElementById('endDate')?.value;
+        const taskTypeFilter = document.getElementById('taskTypeFilter')?.value || 'all';
+
+        if (!startDate || !endDate) {
+            window.showMessage?.('期間を選択してください', 'warning');
+            showMain();
+            showLoading(false);
+            return;
+        }
+        if (startDate > endDate) {
+            window.showMessage?.('開始日が終了日より後になっています', 'warning');
+            showMain();
+            showLoading(false);
+            return;
+        }
+
+        const filteredEvents = SUMMARY_APP.raw.events.filter(event => event.date >= startDate && event.date <= endDate);
+        const filteredMonthlyTasks = filterMonthlyTasksByRange(SUMMARY_APP.raw.monthlyTasks, startDate, endDate);
+
+        const filtered = filterByTaskType(filteredEvents, filteredMonthlyTasks, taskTypeFilter);
+
+        updateKpis(filtered.events, filtered.monthlyTasks);
+
+        const analysis = buildAnalysis(filtered.events, filtered.monthlyTasks, startDate, endDate);
+        SUMMARY_APP.lastAnalysis = analysis;
+
+        renderCrossTable(analysis.crossSummary);
+        renderCESummary(analysis.ceSummary);
+        renderDeptHeatmap(analysis.deptHeatmap);
+        renderWeekdayHeatmap(analysis.weekdayHeatmap);
+        renderMultitask(analysis.multitaskSeries);
+
+        showMain();
+        showLoading(false);
+
+        console.log('✅ analyzeData 完了', {
+            events: filtered.events.length,
+            monthlyTasks: filtered.monthlyTasks.length,
+            taskTypeFilter
+        });
+    } catch (error) {
+        console.error('❌ analyzeData エラー:', error);
+        window.showMessage?.('集計中にエラーが発生しました', 'error');
+        showMain();
+        showLoading(false);
+    }
+}
+window.analyzeData = analyzeData;
+
+function printElement(elementId) {
+    const element = document.getElementById(elementId);
+    if (!element) return;
+
+    const printWindow = window.open('', 'printWindow');
+    if (!printWindow) return;
+
+    const styles = Array.from(document.querySelectorAll('style, link[rel="stylesheet"]'))
+        .map(el => el.outerHTML)
+        .join('\n');
+
+    printWindow.document.write(`
+        <html>
+            <head>
+                <title>印刷</title>
+                ${styles}
+                <style>
+                    body { margin: 20px; font-family: sans-serif; }
+                    .no-print { display:none !important; }
+                </style>
+            </head>
+            <body>${element.outerHTML}</body>
+        </html>
+    `);
+    printWindow.document.close();
+    printWindow.focus();
+    setTimeout(() => printWindow.print(), 300);
+}
+window.printElement = printElement;
+
+async function initPage() {
+    try {
+        showLoading(true, '認証と実績データを読み込んでいます...');
+        hideMain();
+
+        const authSuccess = await AuthGuard.init();
+        if (!authSuccess) return;
+
+        let userData = null;
+        try {
+            userData = await AuthGuard.getUserData();
+        } catch (e) {
+            console.warn('ユーザーデータ取得失敗:', e);
+        }
+        SUMMARY_APP.currentUserData = userData;
+
+        onPeriodPresetChange();
+        await loadAllData();
+        await analyzeData();
+
+        if (window.auditLogger) {
+            await window.auditLogger.logPageAccess('assignment-summary');
+        }
+    } catch (error) {
+        console.error('❌ 実績サマリ初期化エラー:', error);
+        window.showMessage?.('実績サマリの初期化に失敗しました', 'error');
+        showMain();
+        showLoading(false);
+    }
+}
+
+document.addEventListener('DOMContentLoaded', initPage);
+</script>
+
+    <!-- スクリプトは次の c-2 / c-3 で追加 -->
 
 </body>
 </html>
