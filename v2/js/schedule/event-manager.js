@@ -234,7 +234,9 @@ async saveMonthlyTask() {
             id: taskRef.key,
             department: department,
             name: name,
-            month: parseInt(month),
+            month: month,                    // ← YYYY-MM文字列のまま保存
+            monthYear: month.slice(0, 4),    // ← 参考: 年だけ数値で持ちたい場合
+            monthNumber: parseInt(month.slice(5, 7)),  // ← 参考: 月だけ数値で持ちたい場合
             count: count,
             requiredPeople: requiredPeople,
             description: description || null,
