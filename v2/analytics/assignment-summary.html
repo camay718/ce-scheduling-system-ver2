@@ -249,6 +249,60 @@
         body { background: white !important; }
         .glass-card { box-shadow: none !important; border: 1px solid #ccc; }
     }
+
+        /* ==================== フォントサイズ全体調整 ==================== */
+body { font-size: 15px; }
+
+.kpi-card .label { font-size: 15px; }
+.kpi-card .value { font-size: 32px; }
+.kpi-card .unit  { font-size: 16px; }
+
+.cross-table { font-size: 15px; }
+.cross-table th, .cross-table td { padding: 10px 14px; }
+.cross-table td .text-xs { font-size: 13px !important; }
+
+.heatmap .hm-corner,
+.heatmap .hm-colhead,
+.heatmap .hm-rowhead { font-size: 13px; }
+.heatmap .hm-cell   { font-size: 13px; min-width: 40px; min-height: 30px; }
+.heatmap .hm-colhead { font-size: 12px; }
+
+.multitask-row { font-size: 14px; }
+
+.glass-card h2 { font-size: 20px; }
+.glass-card p.text-xs { font-size: 13px !important; color: #555 !important; }
+
+.filter-bar { font-size: 15px; }
+.filter-bar input, .filter-bar select { font-size: 15px; padding: 8px 12px; }
+
+.legend { font-size: 13px; }
+
+/* ==================== 解説ボックス ==================== */
+.explain-box {
+    background: #F0F9FF;
+    border-left: 4px solid #3B82F6;
+    padding: 12px 16px;
+    border-radius: 8px;
+    margin-top: 12px;
+    font-size: 14px;
+    line-height: 1.7;
+    color: #1F2937;
+}
+.explain-box summary {
+    cursor: pointer;
+    font-weight: 700;
+    color: #1D4ED8;
+    padding: 4px 0;
+    outline: none;
+    user-select: none;
+}
+.explain-box summary:hover { color: #2563EB; }
+.explain-box .explain-body { margin-top: 8px; }
+.explain-box ul { list-style: disc; padding-left: 22px; margin-top: 6px; }
+.explain-box li { margin-bottom: 4px; }
+.explain-box .highlight { background: #FEF3C7; padding: 1px 4px; border-radius: 3px; }
+
+        
     </style>
 </head>
 
@@ -321,6 +375,18 @@
                 <div class="kpi-card"><div class="label">関与CE数</div><div class="value" id="kpiUniqueCEs">-</div><span class="unit">名</span></div>
                 <div class="kpi-card"><div class="label">1CEあたり平均時間</div><div class="value" id="kpiAvgPerCE">-</div><span class="unit">時間</span></div>
             </div>
+            <details class="explain-box">
+    <summary><i class="fas fa-info-circle mr-1"></i>この指標の見方</summary>
+    <div class="explain-body">
+        <ul>
+            <li><b>総業務数</b>：期間内の業務件数（個人＋共有＋月次の合計）。「どれだけ動いたか」の全体量。</li>
+            <li><b>延べ時間</b>：業務所要時間 × 配置CE数 の合計。同じ2時間の業務にCEが3人配置されれば6人時としてカウント。<span class="highlight">"人の時間の総消費量"</span>を意味します。</li>
+            <li><b>関与CE数</b>：期間中に1件以上の業務に配置されたCEの人数（重複除外）。「何人でこの期間を回したか」。</li>
+            <li><b>1CEあたり平均時間</b>：延べ時間 ÷ 関与CE数。<span class="highlight">1人あたりの負荷の目安</span>。数値が突出して高い期間は特定CEに偏っている可能性があります。</li>
+        </ul>
+        <p class="mt-2 text-gray-600">※ 月次業務は時間データを持たないため、延べ時間には含まれず件数のみ計上されます。</p>
+    </div>
+</details>
         </div>
 
         <!-- ==================== 3. 業務種別×部門クロス表 ==================== -->
@@ -349,6 +415,18 @@
                 </table>
                 <p class="text-xs text-gray-500 mt-2">※ 上段=延べ時間(h)、下段=件数。月次業務は時間データなしのため件数のみ表示</p>
             </div>
+            <details class="explain-box">
+    <summary><i class="fas fa-info-circle mr-1"></i>この表の見方と活用</summary>
+    <div class="explain-body">
+        <p>「どの部門で・どの種類の業務が・どれだけの時間を消費したか」を1枚で見る表です。</p>
+        <ul>
+            <li><b>個人業務列が突出</b>：材料部業務・書類・自己学習など、個人単位の作業に時間を取られている部門</li>
+            <li><b>共有業務列が突出</b>：手術・CHDF・心カテなど、複数CEで回す業務が中心の部門</li>
+            <li><b>月次業務件数が多い</b>：定期点検・棚卸が集中している部門。ただし件数のみなので時間感覚は別途要確認</li>
+        </ul>
+        <p class="mt-2"><b>判断材料の例</b>：ある部門で共有業務時間が急増していれば、その部門の要員配置強化 or 業務分担見直しの根拠になります。</p>
+    </div>
+</details>
         </div>
 
         <!-- ==================== 4. CE別実績サマリ表 ==================== -->
@@ -376,6 +454,18 @@
                     </tbody>
                 </table>
             </div>
+            <details class="explain-box">
+    <summary><i class="fas fa-info-circle mr-1"></i>この表の見方と活用</summary>
+    <div class="explain-body">
+        <p>CE1人ごとの実績を「個人業務／共有業務／月次業務」に分解した表です。</p>
+        <ul>
+            <li><b>合計時間の突出者</b>：期間内で最も稼働したCE。連続する期間で同じ人が上位に来続けている場合、負荷偏在のシグナル</li>
+            <li><b>関与業務数と合計時間のバランス</b>：件数は多いが時間が短い＝短時間業務の掛け持ち。件数少なく時間多い＝長時間業務の張り付き</li>
+            <li><b>個人業務ゼロのCE</b>：個人業務が taskType 未入力の可能性あり。データ整備の対象</li>
+        </ul>
+        <p class="mt-2"><b>判断材料の例</b>：業務評価や次月シフト調整の際、実績時間の偏りを可視化した資料として使えます。</p>
+    </div>
+</details>
         </div>
 
         <!-- ==================== 5. 需給ギャップヒートマップ（部門×時間帯） ==================== -->
@@ -400,6 +490,22 @@
                     <div class="legend-item text-xs text-gray-500">※ セル値=供給人数、ホバーで詳細</div>
                 </div>
             </div>
+            <details class="explain-box">
+    <summary><i class="fas fa-info-circle mr-1"></i>このヒートマップの見方と活用</summary>
+    <div class="explain-body">
+        <p>部門×時間帯（30分刻み）で、<b>実際に配置した人数 − 必要人数</b>のギャップを色で示します。</p>
+        <ul>
+            <li><b><span style="color:#EF4444">赤（不足）</span></b>：必要人数に届かなかった時間帯。当該時間の業務品質・安全性リスクの疑い</li>
+            <li><b><span style="color:#22C55E">緑（適正）</span></b>：需要と供給が±1名以内で釣り合っている時間帯</li>
+            <li><b><span style="color:#3B82F6">青（余剰）</span></b>：必要人数を上回って配置された時間帯。他部門への応援可能性あり</li>
+            <li><b>灰色</b>：業務が発生していない時間帯</li>
+        </ul>
+        <p class="mt-2"><b>判断材料の例</b>：<br>
+        ・赤が同じ時間帯に集中 → シフト調整・要員追加の根拠<br>
+        ・青と赤が同時間帯に並ぶ → <span class="highlight">部門間の応援ルート整備</span>の議論材料<br>
+        ・セルにマウスを重ねると、需要・供給・出勤可能人数の詳細が表示されます</p>
+    </div>
+</details>
         </div>
 
         <!-- ==================== 6. 曜日別ヒートマップ＋統計 ==================== -->
@@ -420,6 +526,20 @@
                     <div class="legend-item text-xs text-gray-500">セル値=中央値、ホバー時に平均・80%タイル・変動係数(CV)・出勤可能人数を表示</div>
                 </div>
             </div>
+            <details class="explain-box">
+    <summary><i class="fas fa-info-circle mr-1"></i>このヒートマップの見方と活用</summary>
+    <div class="explain-body">
+        <p>曜日×時間帯で、<b>配置人数の中央値</b>を色濃度で示します。色が濃いほど「その曜日・その時間帯に人を多く配置している常態」。</p>
+        <ul>
+            <li><b>中央値</b>：期間内の該当セルにおける配置人数の真ん中の値。平均より外れ値の影響を受けにくい</li>
+            <li>ホバー時に表示される<b>80%タイル</b>：忙しい日でも配置がここまで到達するライン</li>
+            <li>ホバー時に表示される<b>CV（変動係数）</b>：ばらつきの大きさ。<span class="highlight">CVが0.5以上の時間帯は読みにくい＝バッファ要員が必要</span></li>
+        </ul>
+        <p class="mt-2"><b>判断材料の例</b>：<br>
+        ・火曜午前が常に濃い → 火曜午前の要員は削減不可<br>
+        ・金曜午後が薄い → 月次業務や研修を配置しやすい時間帯</p>
+    </div>
+</details>
         </div>
 
         <!-- ==================== 7. 掛け持ち指標 ==================== -->
@@ -442,6 +562,23 @@
         </div>
 
     </div>
+    <details class="explain-box">
+    <summary><i class="fas fa-info-circle mr-1"></i>掛け持ち指標の見方と活用</summary>
+    <div class="explain-body">
+        <p>時間帯ごとに<b>「1人のCEが同時に何件の業務に関与しているか」</b>を示す指標です。</p>
+        <p><b>計算式</b>：配置延べ数 ÷ ユニークCE数</p>
+        <p class="mt-2"><b>ユニークCE数とは</b>：その時間帯に実際に業務に配置されていたCEの人数（同じ人が複数業務を掛け持ちしていても1名としてカウント）。<br>
+        例：3件の業務が同時進行し、Aさん・Bさん・Cさんの3人だけで回している場合、配置延べ数=各業務の配置人数の合計、ユニークCE数=3。</p>
+        <ul class="mt-2">
+            <li><b>1.0付近</b>：全員が単一業務に集中。業務ごとに専任がついている状態</li>
+            <li><b>1.5〜2.0</b>：半数程度が2件を掛け持ち。通常運転の目安</li>
+            <li><b>2.0超</b>：<span class="highlight">恒常的マルチタスク＝負荷高</span>。集中力低下・ミスリスクの検討対象</li>
+        </ul>
+        <p class="mt-2"><b>判断材料の例</b>：<br>
+        ・特定時間帯だけ2.5を超える → その時間帯の業務集中を分散する検討<br>
+        ・全時間帯で1.0前後 → 逆に余剰の可能性、業務再配分の余地</p>
+    </div>
+</details>
 </div>
 
     <script>
