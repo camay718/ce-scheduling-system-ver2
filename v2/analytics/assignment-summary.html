@@ -315,6 +315,15 @@
         .glass-card { box-shadow: none !important; border: 1px solid #ccc; }
         .sub-accordion:not([open]) .sub-body { display: block !important; }
     }
+        #mainContent {
+  padding-top: 24px;
+}
+
+@media (max-width: 768px) {
+  #mainContent {
+    padding-top: 36px;
+  }
+}
     </style>
 </head>
 
@@ -327,8 +336,9 @@
     </div>
 </div>
 
-<div id="mainContent" class="min-h-screen p-4" style="display:none;">
-    <div class="max-w-7xl mx-auto space-y-6">
+<div id="mainContent" class="min-h-screen p-4 pt-8 md:pt-10" style="display:none;">
+
+    <div class="max-w-7xl mx-auto space-y-6 pt-2 md:pt-4">
 
         <!-- ヘッダー & フィルタ -->
         <div class="glass-card p-4">
