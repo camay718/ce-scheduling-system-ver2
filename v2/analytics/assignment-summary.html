@@ -324,37 +324,33 @@
     padding-top: 36px;
   }
 }
-        /* ===== 実績サマリ用 固定アクションバー ===== */
-.summary-action-wrap {
-    position: sticky;
-    top: 8px;
-    z-index: 40;
+        
+/* ===== 実績サマリ：カード内アクションボタン ===== */
+.summary-header-row {
     display: flex;
-    justify-content: flex-end;
-    margin-bottom: 12px;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+    flex-wrap: wrap;
 }
 
-.summary-action-bar {
+.summary-header-actions {
     display: flex;
     gap: 10px;
-    align-items: center;
     flex-wrap: wrap;
-    padding: 8px 10px;
-    border-radius: 9999px;
-    background: rgba(255, 255, 255, 0.92);
-    backdrop-filter: blur(10px);
-    border: 1px solid rgba(255,255,255,0.6);
-    box-shadow: 0 8px 24px rgba(0,0,0,0.10);
+    justify-content: flex-end;
+    flex-shrink: 0;
 }
 
-.summary-action-btn {
+.summary-header-btn {
     display: inline-flex;
     align-items: center;
     justify-content: center;
     gap: 8px;
-    border: none;
-    border-radius: 9999px;
+    min-height: 42px;
     padding: 10px 16px;
+    border-radius: 12px;
+    border: 1px solid #d1d5db;
     font-size: 14px;
     font-weight: 700;
     cursor: pointer;
@@ -362,58 +358,51 @@
     white-space: nowrap;
 }
 
-.summary-action-btn:hover {
+.summary-header-btn:hover {
     transform: translateY(-1px);
     box-shadow: 0 4px 12px rgba(0,0,0,0.12);
 }
 
-.summary-action-btn.back-btn {
+.summary-header-btn.back-btn {
     background: #ffffff;
     color: #374151;
-    border: 1px solid #d1d5db;
 }
 
-.summary-action-btn.back-btn:hover {
+.summary-header-btn.back-btn:hover {
     background: #f3f4f6;
 }
 
-.summary-action-btn.print-btn {
+.summary-header-btn.print-btn {
     background: linear-gradient(135deg, #10b981 0%, #059669 100%);
-    color: white;
+    color: #ffffff;
+    border-color: #059669;
 }
 
-.summary-action-btn.print-btn:hover {
+.summary-header-btn.print-btn:hover {
     background: linear-gradient(135deg, #059669 0%, #047857 100%);
 }
 
-/* 上部の詰まりを少し緩和 */
-#mainContent {
-    padding-top: 12px;
-}
-
-/* スマホ対応 */
 @media (max-width: 768px) {
-    .summary-action-wrap {
-        top: 6px;
-        justify-content: stretch;
+    .summary-header-row {
+        flex-direction: column;
+        align-items: stretch;
     }
 
-    .summary-action-bar {
+    .summary-header-actions {
         width: 100%;
-        border-radius: 16px;
-        justify-content: space-between;
-        padding: 10px;
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 8px;
     }
 
-    .summary-action-btn {
-        flex: 1;
-        min-width: 0;
+    .summary-header-btn {
+        width: 100%;
         padding: 10px 12px;
         font-size: 13px;
     }
 }
-
     </style>
+    
 </head>
 
 <body class="theme-unified">
@@ -426,32 +415,31 @@
 </div>
 
 <div id="mainContent" class="min-h-screen p-4" style="display:none;">
-    <div class="summary-action-wrap no-print">
-        <div class="summary-action-bar">
-            <button onclick="window.location.href='../pages/analytics.html'" class="summary-action-btn back-btn">
+
+    <div class="max-w-7xl mx-auto space-y-6 pt-2 md:pt-4">
+
+        <!-- ヘッダー & フィルタ -->
+        <div class="glass-card p-4 mt-10 md:mt-12">
+    <div class="summary-header-row mb-4">
+        <div>
+            <h1 class="text-2xl font-bold flex items-center gap-2">
+                <i class="fas fa-chart-column text-green-600"></i>
+                実績サマリ
+            </h1>
+            <p class="text-sm text-gray-600 mt-1">業務種別×部門の延べ時間、需給ギャップ、掛け持ち指標を分析</p>
+        </div>
+
+        <div class="summary-header-actions no-print">
+            <button onclick="window.location.href='../pages/analytics.html'" class="summary-header-btn back-btn">
                 <i class="fas fa-arrow-left"></i>
-                <span>集計・分析へ戻る</span>
+                <span>戻る</span>
             </button>
-            <button onclick="window.print()" class="summary-action-btn print-btn">
+            <button onclick="window.print()" class="summary-header-btn print-btn">
                 <i class="fas fa-print"></i>
                 <span>印刷</span>
             </button>
         </div>
     </div>
-
-    <div class="max-w-7xl mx-auto space-y-6 pt-2 md:pt-4">
-
-        <!-- ヘッダー & フィルタ -->
-        <div class="glass-card p-4 mt-4 md:mt-6">
-            <div class="flex items-center justify-between mb-4">
-                <div>
-                    <h1 class="text-2xl font-bold flex items-center gap-2">
-                        <i class="fas fa-chart-column text-green-600"></i>
-                        実績サマリ
-                    </h1>
-                    <p class="text-sm text-gray-600 mt-1">業務種別×部門の延べ時間、需給ギャップ、掛け持ち指標を分析</p>
-                </div>
-            </div>
 
             <div class="filter-bar no-print">
                 <label class="font-semibold">期間:</label>
