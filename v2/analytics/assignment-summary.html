@@ -324,6 +324,95 @@
     padding-top: 36px;
   }
 }
+        /* ===== 実績サマリ用 固定アクションバー ===== */
+.summary-action-wrap {
+    position: sticky;
+    top: 8px;
+    z-index: 40;
+    display: flex;
+    justify-content: flex-end;
+    margin-bottom: 12px;
+}
+
+.summary-action-bar {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    flex-wrap: wrap;
+    padding: 8px 10px;
+    border-radius: 9999px;
+    background: rgba(255, 255, 255, 0.92);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255,255,255,0.6);
+    box-shadow: 0 8px 24px rgba(0,0,0,0.10);
+}
+
+.summary-action-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    border: none;
+    border-radius: 9999px;
+    padding: 10px 16px;
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    white-space: nowrap;
+}
+
+.summary-action-btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.12);
+}
+
+.summary-action-btn.back-btn {
+    background: #ffffff;
+    color: #374151;
+    border: 1px solid #d1d5db;
+}
+
+.summary-action-btn.back-btn:hover {
+    background: #f3f4f6;
+}
+
+.summary-action-btn.print-btn {
+    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+    color: white;
+}
+
+.summary-action-btn.print-btn:hover {
+    background: linear-gradient(135deg, #059669 0%, #047857 100%);
+}
+
+/* 上部の詰まりを少し緩和 */
+#mainContent {
+    padding-top: 12px;
+}
+
+/* スマホ対応 */
+@media (max-width: 768px) {
+    .summary-action-wrap {
+        top: 6px;
+        justify-content: stretch;
+    }
+
+    .summary-action-bar {
+        width: 100%;
+        border-radius: 16px;
+        justify-content: space-between;
+        padding: 10px;
+    }
+
+    .summary-action-btn {
+        flex: 1;
+        min-width: 0;
+        padding: 10px 12px;
+        font-size: 13px;
+    }
+}
+
     </style>
 </head>
 
@@ -336,7 +425,19 @@
     </div>
 </div>
 
-<div id="mainContent" class="min-h-screen p-4 pt-8 md:pt-10" style="display:none;">
+<div id="mainContent" class="min-h-screen p-4" style="display:none;">
+    <div class="summary-action-wrap no-print">
+        <div class="summary-action-bar">
+            <button onclick="window.location.href='../pages/analytics.html'" class="summary-action-btn back-btn">
+                <i class="fas fa-arrow-left"></i>
+                <span>集計・分析へ戻る</span>
+            </button>
+            <button onclick="window.print()" class="summary-action-btn print-btn">
+                <i class="fas fa-print"></i>
+                <span>印刷</span>
+            </button>
+        </div>
+    </div>
 
     <div class="max-w-7xl mx-auto space-y-6 pt-2 md:pt-4">
 
@@ -349,14 +450,6 @@
                         実績サマリ
                     </h1>
                     <p class="text-sm text-gray-600 mt-1">業務種別×部門の延べ時間、需給ギャップ、掛け持ち指標を分析</p>
-                </div>
-                <div class="flex gap-2 no-print">
-                    <button class="btn btn-outline" onclick="location.href='../pages/analytics.html'">
-                        <i class="fas fa-arrow-left mr-1"></i>戻る
-                    </button>
-                    <button class="btn btn-secondary" onclick="window.print()">
-                        <i class="fas fa-print mr-1"></i>印刷
-                    </button>
                 </div>
             </div>
 
