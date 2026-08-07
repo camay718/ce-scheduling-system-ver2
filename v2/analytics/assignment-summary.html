@@ -828,43 +828,164 @@ function flattenEvents(root) {
     });
     return events;
 }
-function flattenMonthlyTasks(root) {
+    
+    function flattenMonthlyTasks(root) {
     const tasks = [];
     if (!root || typeof root !== 'object') return tasks;
-    Object.entries(root).forEach(([key, node]) => {
-        if (!node || typeof node !== 'object') return;
-        const looksFlat = node.isMonthlyTask === true || 'name' in node || 'title' in node || 'department' in node || 'month' in node;
-        if (looksFlat) {
-            tasks.push({
-                id: node.id || key, source: 'monthly',
-                department: node.department || '未分類',
-                name: node.name || node.title || '名称未設定',
-                monthKey: normalizeMonthKey(node.month, node.date || null),
-                count: safeNum(node.count, 0),
-                requiredPeople: safeNum(node.requiredPeople ?? node.requiredCount, 0),
-                taskType: node.taskType || 'monthly',
-                assignedCEs: normalizeAssignedCEs(node.assignedCEs),
-                raw: node
-            });
+
+    /**
+     * 月次業務パーサ（新仕様対応版・フェーズ1）
+     * 
+     * 対応するデータ構造:
+     *   [新仕様] monthlyTasks/{yearMonth}/{taskId}/... （ネスト構造）
+     *   [旧仕様] monthlyTasks/{taskId}/... （フラット構造）
+     * 
+     * 抽出する情報:
+     *   - yearMonth: 年月キー（優先。無ければ month や createdAt から推測）
+     *   - assignedCEs: 日別オブジェクト構造 {日付: [CE配列]} に対応
+     *   - dailyActuals: 日別実績データ（時間・件数）を活用
+     *   - activityRecords: 活動履歴（時間・件数）を活用
+     */
+
+    // タスクレコードかどうかを判定
+    // 判定基準: name か department か yearMonth か month のいずれかを持つ
+    function isTaskRecord(node) {
+        if (!node || typeof node !== 'object') return false;
+        return ('name' in node) || ('title' in node) || ('department' in node)
+            || ('yearMonth' in node) || ('month' in node) || ('isMonthlyTask' in node);
+    }
+
+    // 1つのタスクレコードを正規化
+    function normalizeTask(id, raw, parentKey = null) {
+        // 年月キーを決定（優先順位: yearMonth > parentKey > month > createdAt）
+        let monthKey = null;
+        if (typeof raw.yearMonth === 'string' && /^\d{4}-\d{2}$/.test(raw.yearMonth)) {
+            monthKey = raw.yearMonth;
+        } else if (parentKey && /^\d{4}-\d{2}$/.test(parentKey)) {
+            monthKey = parentKey;
         } else {
-            Object.entries(node).forEach(([childKey, child]) => {
-                if (!child || typeof child !== 'object') return;
-                tasks.push({
-                    id: child.id || childKey, source: 'monthly',
-                    department: child.department || '未分類',
-                    name: child.name || child.title || '名称未設定',
-                    monthKey: normalizeMonthKey(child.month ?? key, child.date || null),
-                    count: safeNum(child.count, 0),
-                    requiredPeople: safeNum(child.requiredPeople ?? child.requiredCount, 0),
-                    taskType: child.taskType || 'monthly',
-                    assignedCEs: normalizeAssignedCEs(child.assignedCEs),
-                    raw: child
+            monthKey = normalizeMonthKey(raw.month, raw.date || null);
+        }
+        // createdAt から最終フォールバック
+        if (!monthKey && raw.createdAt) {
+            const d = new Date(raw.createdAt);
+            if (!isNaN(d)) {
+                monthKey = `${d.getFullYear()}-${pad2(d.getMonth() + 1)}`;
+            }
+        }
+
+        // 日別実績を集計
+        // dailyActuals: {日付: {count, startTime, endTime, ...}}
+        // activityRecords: [{date, count, startTime, endTime, ...}, ...]
+        const dailyEntries = [];
+
+        if (raw.dailyActuals && typeof raw.dailyActuals === 'object') {
+            Object.entries(raw.dailyActuals).forEach(([date, actual]) => {
+                if (!actual || typeof actual !== 'object') return;
+                if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return;
+                dailyEntries.push({
+                    date,
+                    count: safeNum(actual.count, 0),
+                    startTime: actual.startTime || null,
+                    endTime: actual.endTime || null,
+                    durationHours: getDurationHours(actual.startTime, actual.endTime),
+                    source: 'dailyActuals'
                 });
             });
         }
+
+        if (Array.isArray(raw.activityRecords)) {
+            raw.activityRecords.forEach(rec => {
+                if (!rec || typeof rec !== 'object') return;
+                if (!/^\d{4}-\d{2}-\d{2}$/.test(rec.date || '')) return;
+                // dailyActuals と同じ日付は重複扱いしない（dailyActuals優先）
+                if (dailyEntries.some(e => e.date === rec.date && e.source === 'dailyActuals')) return;
+                dailyEntries.push({
+                    date: rec.date,
+                    count: safeNum(rec.count, 0),
+                    startTime: rec.startTime || null,
+                    endTime: rec.endTime || null,
+                    durationHours: getDurationHours(rec.startTime, rec.endTime),
+                    source: 'activityRecords'
+                });
+            });
+        }
+
+        // assignedCEs は日別オブジェクト形式 {日付: [CE配列]} または旧仕様の配列
+        // 集計用には「全日を通じて関与したCEの集合」に平坦化
+        const assignedCEs = [];
+        if (raw.assignedCEs) {
+            if (Array.isArray(raw.assignedCEs)) {
+                // 旧仕様: 単純な配列
+                normalizeAssignedCEs(raw.assignedCEs).forEach(ce => assignedCEs.push(ce));
+            } else if (typeof raw.assignedCEs === 'object') {
+                // 新仕様: {日付: [CE配列]}
+                Object.values(raw.assignedCEs).forEach(dayCEs => {
+                    if (Array.isArray(dayCEs)) {
+                        normalizeAssignedCEs(dayCEs).forEach(ce => {
+                            // 重複除外
+                            if (!assignedCEs.some(x => (x.id && ce.id ? x.id === ce.id : x.name === ce.name))) {
+                                assignedCEs.push(ce);
+                            }
+                        });
+                    }
+                });
+            }
+        }
+
+        // 延べ時間 = 各日別実績の実施時間の合計
+        const totalHours = dailyEntries.reduce((s, e) => s + e.durationHours, 0);
+
+        return {
+            id: raw.id || id,
+            source: 'monthly',
+            department: raw.department || '未分類',
+            name: raw.name || raw.title || '名称未設定',
+            monthKey,
+            goalCount: safeNum(raw.goalCount, 0),
+            actualCount: safeNum(raw.actualCount, 0),
+            count: safeNum(raw.count, 0),
+            requiredPeople: safeNum(raw.requiredPeople ?? raw.requiredCount, 0),
+            taskType: raw.taskType || 'monthly',
+            assignedCEs,
+            dailyEntries,       // 日別実績（フェーズ2以降で活用）
+            totalHours,         // 延べ時間（月次業務でも時間集計可能に）
+            raw
+        };
+    }
+
+    // 実際のスキャン
+    Object.entries(root).forEach(([topKey, topNode]) => {
+        if (!topNode || typeof topNode !== 'object') return;
+
+        // ケース1: topKey が "YYYY-MM" 形式 → ネスト構造
+        if (/^\d{4}-\d{2}$/.test(topKey)) {
+            Object.entries(topNode).forEach(([taskId, taskNode]) => {
+                if (isTaskRecord(taskNode)) {
+                    tasks.push(normalizeTask(taskId, taskNode, topKey));
+                }
+            });
+            return;
+        }
+
+        // ケース2: topKey がタスクIDで、直下にタスクフィールド → フラット構造(旧仕様)
+        if (isTaskRecord(topNode)) {
+            tasks.push(normalizeTask(topKey, topNode, null));
+            return;
+        }
+
+        // ケース3: それ以外（想定外の中間ノード）→ 中を1段だけ探索
+        Object.entries(topNode).forEach(([childKey, childNode]) => {
+            if (isTaskRecord(childNode)) {
+                tasks.push(normalizeTask(childKey, childNode, topKey));
+            }
+        });
     });
+
+    console.log(`✅ 月次業務パーサ: ${tasks.length}件 抽出`);
     return tasks;
 }
+    
 function flattenWorkSchedules(raw) {
     if (!raw || typeof raw !== 'object') return [];
     return Object.entries(raw).map(([key, val]) => ({ key, ...(val || {}) }));
@@ -998,7 +1119,14 @@ function buildCrossSummary(events, monthlyTasks) {
         if (type === 'personal') { r.personalHours += h; r.personalCount += 1; }
         else { r.sharedHours += h; r.sharedCount += 1; }
     });
-    monthlyTasks.forEach(t => { const r = map.get(t.department || '未分類'); if (r) r.monthlyCount += 1; });
+    monthlyTasks.forEach(task => {
+    const r = map.get(task.department || '未分類');
+    if (!r) return;
+    r.monthlyCount += 1;
+    // 月次業務の延べ時間も加算（dailyActualsから算出）
+    const monthlyHours = safeNum(task.totalHours, 0) * (task.assignedCEs.length || 1);
+    r.monthlyHours += monthlyHours;
+});
     rows.sort((a,b) => (b.personalHours+b.sharedHours+b.monthlyCount) - (a.personalHours+a.sharedHours+a.monthlyCount));
     const totals = rows.reduce((acc,r) => {
         acc.personalHours += r.personalHours; acc.personalCount += r.personalCount;
@@ -1025,8 +1153,19 @@ function buildCESummary(events, monthlyTasks) {
         });
     });
     monthlyTasks.forEach(t => {
-        t.assignedCEs.forEach(ce => { const r = ensure(ce.name || ce.id || '不明CE', ce.id || null); r.monthlyCount += 1; r.taskCount += 1; });
+    // 月次業務でも dailyEntries があれば時間集計に加算
+    const monthlyHoursTotal = safeNum(t.totalHours, 0);
+    const ceCount = t.assignedCEs.length || 1;
+    const perCEHours = monthlyHoursTotal / ceCount;
+
+    t.assignedCEs.forEach(ce => {
+        const r = ensure(ce.name || ce.id || '不明CE', ce.id || null);
+        r.monthlyCount += 1;
+        r.taskCount += 1;
+        // 月次業務の時間も合計時間に加算
+        r.totalHours += perCEHours;
     });
+});
     return [...map.values()].sort((a,b) => b.totalHours - a.totalHours || b.monthlyCount - a.monthlyCount);
 }
 
