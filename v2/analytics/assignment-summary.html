@@ -458,7 +458,91 @@ body.theme-unified.assignment-summary-page .glass-card:first-child {
         }
     }
 }
+/* =========================================
+   Safariでも確実に見える位置の操作カード
+   ========================================= */
+.summary-floating-toolbar-card {
+    margin-top: 14px;
+}
 
+.summary-floating-toolbar {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+    flex-wrap: wrap;
+}
+
+.summary-floating-title {
+    flex: 1 1 320px;
+}
+
+.summary-floating-actions {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+}
+
+.summary-floating-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    min-height: 42px;
+    padding: 10px 16px;
+    border-radius: 12px;
+    border: 1px solid #d1d5db;
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    white-space: nowrap;
+}
+
+.summary-floating-btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.12);
+}
+
+.summary-floating-btn.back-btn {
+    background: #ffffff;
+    color: #374151;
+}
+
+.summary-floating-btn.back-btn:hover {
+    background: #f3f4f6;
+}
+
+.summary-floating-btn.print-btn {
+    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+    color: #ffffff;
+    border-color: #059669;
+}
+
+.summary-floating-btn.print-btn:hover {
+    background: linear-gradient(135deg, #059669 0%, #047857 100%);
+}
+
+@media (max-width: 768px) {
+    .summary-floating-toolbar {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .summary-floating-actions {
+        width: 100%;
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 8px;
+    }
+
+    .summary-floating-btn {
+        width: 100%;
+        padding: 10px 12px;
+        font-size: 13px;
+    }
+}
 
     </style>
     
@@ -479,26 +563,40 @@ body.theme-unified.assignment-summary-page .glass-card:first-child {
 
         <!-- ヘッダー & フィルタ -->
         <div class="glass-card p-4 summary-hero-card">
-        <div class="summary-header-row summary-hero-header mb-4">
-        <div>
+        <div class="summary-header-row summary-hero-header mb-4" style="display:none;">
+            
+        </div>
+
+            <div class="mt-3 no-print">
+    <label class="font-semibold block mb-2">対象部門（複数選択可）:</label>
+    <div class="dept-checkbox-group" id="deptCheckboxGroup"></div>
+</div>
+</div>
+<!-- Safariでも見える位置に固定したタイトル＋操作カード -->
+<div class="glass-card p-4 summary-floating-toolbar-card">
+    <div class="summary-floating-toolbar">
+        <div class="summary-floating-title">
             <h1 class="text-2xl font-bold flex items-center gap-2">
                 <i class="fas fa-chart-column text-green-600"></i>
                 実績サマリ
             </h1>
-            <p class="text-sm text-gray-600 mt-1">業務種別×部門の延べ時間、需給ギャップ、掛け持ち指標を分析</p>
+            <p class="text-sm text-gray-600 mt-1">
+                業務種別×部門の延べ時間、需給ギャップ、掛け持ち指標を分析
+            </p>
         </div>
 
-        <div class="summary-header-actions no-print">
-            <button onclick="window.location.href='../pages/analytics.html'" class="summary-header-btn back-btn">
+        <div class="summary-floating-actions no-print">
+            <button onclick="window.location.href='../pages/analytics.html'" class="summary-floating-btn back-btn">
                 <i class="fas fa-arrow-left"></i>
                 <span>戻る</span>
             </button>
-            <button onclick="window.print()" class="summary-header-btn print-btn">
+            <button onclick="window.print()" class="summary-floating-btn print-btn">
                 <i class="fas fa-print"></i>
                 <span>印刷</span>
             </button>
         </div>
     </div>
+</div>
 
             <div class="filter-bar no-print">
                 <label class="font-semibold">期間:</label>
