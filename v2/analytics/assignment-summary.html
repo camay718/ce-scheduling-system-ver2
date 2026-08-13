@@ -430,34 +430,6 @@ body.theme-unified.assignment-summary-page .glass-card:first-child {
     top: auto !important;
 }
 
-        /* =========================================
-        Safari専用：先頭カード上部を下げる
-        実測: titleTop=49, filterBarTop=121
-        → 約96px下げれば隠れ帯の外に出る
-        ========================================= */
-.summary-hero-card {
-    padding-top: 16px;
-}
-
-@supports (-webkit-touch-callout: none) {
-    body.theme-unified.assignment-summary-page .summary-hero-card {
-        padding-top: 150px !important;
-    }
-
-    body.theme-unified.assignment-summary-page .summary-hero-header {
-        margin-top: 0 !important;
-        margin-bottom: 20px !important;
-    }
-}
-
-/* Safariかつ幅が狭い場合は少し強めに */
-@media (max-width: 768px) {
-    @supports (-webkit-touch-callout: none) {
-        body.theme-unified.assignment-summary-page .summary-hero-card {
-            padding-top: 124px !important;
-        }
-    }
-}
 /* =========================================
    Safariでも確実に見える位置の操作カード
    ========================================= */
@@ -576,9 +548,6 @@ body.theme-unified.assignment-summary-page .glass-card:first-child {
 
         <!-- ヘッダー & フィルタ -->
         <div class="glass-card p-4 summary-hero-card">
-        <div class="summary-header-row summary-hero-header mb-4" style="display:none;">
-            
-        </div>
 </div>
 <!-- Safariでも見える位置に固定したタイトル＋操作カード -->
 <div class="glass-card p-4 summary-floating-toolbar-card">
