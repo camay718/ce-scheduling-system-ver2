@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="ja">
+<html lang="ja" class="assignment-html">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
@@ -53,51 +53,57 @@
         font-size: 15px;
     }
 
-        /* ===== Safari / iPhone 上端見切れ対策（強制版） ===== */
-html {
+        /* ================================================
+   Safari 上部見切れ 強制対策（実績サマリ専用）
+   ページ全体を物理的に下げる
+   ================================================ */
+
+html,
+html.assignment-html {
     height: 100%;
     height: -webkit-fill-available;
+    margin: 0;
+    padding: 0;
 }
 
+/* body を強制的に下げる */
 body.theme-unified.assignment-summary-page {
+    margin: 0 !important;
+    padding-top: 80px !important;   /* ← 全ブラウザ共通で80px下げる */
+    box-sizing: border-box;
     min-height: 100vh;
     min-height: -webkit-fill-available;
-    margin: 0;
-    padding-top: constant(safe-area-inset-top);
-    padding-top: env(safe-area-inset-top, 0px);
 }
 
-/* ページ全体を下げる。カード単位ではなく本体ごと下げる */
+/* Safari (WebKit) 判定：さらに下げる */
+@supports (-webkit-touch-callout: none),
+          (-webkit-backdrop-filter: blur(1px)) {
+    body.theme-unified.assignment-summary-page {
+        padding-top: calc(110px + env(safe-area-inset-top, 0px)) !important;
+    }
+}
+
+/* iPhone サイズ：もっと下げる */
+@media (max-width: 768px) {
+    body.theme-unified.assignment-summary-page {
+        padding-top: calc(120px + env(safe-area-inset-top, 0px)) !important;
+    }
+}
+
+/* #mainContent 側の上余白は 0 に戻す（二重に下がるのを防ぐ） */
 body.theme-unified.assignment-summary-page #mainContent {
-    padding-top: 72px !important;
+    padding-top: 0 !important;
 }
 
-/* 先頭カードの余計な個別marginは使わない */
+/* 先頭カードの余分な mt-* を打ち消す */
+body.theme-unified.assignment-summary-page #mainContent .glass-card:first-child,
 body.theme-unified.assignment-summary-page #mainContent > .max-w-7xl > .glass-card:first-child {
     margin-top: 0 !important;
 }
 
-/* Safari系はさらに強めに逃がす */
-@supports (-webkit-touch-callout: none) {
-    body.theme-unified.assignment-summary-page {
-        padding-top: calc(12px + env(safe-area-inset-top, 0px)) !important;
-    }
-
-    body.theme-unified.assignment-summary-page #mainContent {
-        padding-top: calc(88px + env(safe-area-inset-top, 0px)) !important;
-    }
-}
-
-/* iPhone幅ではもっと余裕を持たせる */
-@media (max-width: 768px) {
-    body.theme-unified.assignment-summary-page #mainContent {
-        padding-top: calc(96px + env(safe-area-inset-top, 0px)) !important;
-    }
-}
-
-/* フィルタカードの最上段は sticky/fixed にしない */
-.summary-header-row,
-.filter-bar {
+/* フィルタ・アクションバーが sticky/fixed で被らないよう明示 */
+body.theme-unified.assignment-summary-page .summary-header-row,
+body.theme-unified.assignment-summary-page .filter-bar {
     position: static !important;
     top: auto !important;
 }
