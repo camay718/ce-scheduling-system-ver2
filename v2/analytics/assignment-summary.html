@@ -430,6 +430,36 @@ body.theme-unified.assignment-summary-page .glass-card:first-child {
     top: auto !important;
 }
 
+        /* =========================================
+        Safari専用：先頭カード上部を下げる
+        実測: titleTop=49, filterBarTop=121
+        → 約96px下げれば隠れ帯の外に出る
+        ========================================= */
+.summary-hero-card {
+    padding-top: 16px;
+}
+
+@supports (-webkit-touch-callout: none) {
+    body.theme-unified.assignment-summary-page .summary-hero-card {
+        padding-top: 112px !important;
+    }
+
+    body.theme-unified.assignment-summary-page .summary-hero-header {
+        margin-top: 0 !important;
+        margin-bottom: 20px !important;
+    }
+}
+
+/* Safariかつ幅が狭い場合は少し強めに */
+@media (max-width: 768px) {
+    @supports (-webkit-touch-callout: none) {
+        body.theme-unified.assignment-summary-page .summary-hero-card {
+            padding-top: 124px !important;
+        }
+    }
+}
+
+
     </style>
     
 </head>
@@ -448,8 +478,8 @@ body.theme-unified.assignment-summary-page .glass-card:first-child {
     <div class="max-w-7xl mx-auto space-y-6 pt-2 md:pt-4">
 
         <!-- ヘッダー & フィルタ -->
-        <div class="glass-card p-4">
-    <div class="summary-header-row mb-4">
+        <div class="glass-card p-4 summary-hero-card">
+        <div class="summary-header-row summary-hero-header mb-4">
         <div>
             <h1 class="text-2xl font-bold flex items-center gap-2">
                 <i class="fas fa-chart-column text-green-600"></i>
