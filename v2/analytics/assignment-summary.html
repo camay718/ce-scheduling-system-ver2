@@ -53,19 +53,22 @@
         font-size: 15px;
     }
 
-        /* Safari対策：レイアウトを単純化 */
-body.theme-unified.assignment-summary-page {
-    margin: 0 !important;
-    padding-top: 16px !important;
-}
-
-body.theme-unified.assignment-summary-page #mainContent {
-    padding-top: 0 !important;
-}
-
-body.theme-unified.assignment-summary-page #mainContent > .max-w-7xl > .glass-card:first-child {
-    margin-top: 0 !important;
-}
+    /* Safariでも先頭が隠れないよう、body自体に上余白を確保 */
+    body.theme-unified.assignment-summary-page {
+        margin: 0 !important;
+        padding-top: 16px !important;
+    }
+    body.theme-unified.assignment-summary-page #mainContent {
+        padding-top: 0 !important;
+    }
+    body.theme-unified.assignment-summary-page #mainContent > .max-w-7xl > .glass-card:first-child {
+        margin-top: 0 !important;
+    }
+    /* Safariの overflow-anchor による自動スクロール調整を抑止 */
+    html.assignment-html,
+    body.theme-unified.assignment-summary-page {
+        overflow-anchor: none;
+    }
 
     .glass-card {
         background: rgba(255,255,255,0.9);
@@ -329,208 +332,99 @@ body.theme-unified.assignment-summary-page #mainContent > .max-w-7xl > .glass-ca
         .glass-card { box-shadow: none !important; border: 1px solid #ccc; }
         .sub-accordion:not([open]) .sub-body { display: block !important; }
     }
-        #mainContent {
-  padding-top: 24px;
-}
 
-@media (max-width: 768px) {
-  #mainContent {
-    padding-top: 36px;
-  }
-}
-        
-/* ===== 実績サマリ：カード内アクションボタン ===== */
-.summary-header-row {
-    display: flex;
-    align-items: flex-start;
-    justify-content: space-between;
-    gap: 16px;
-    flex-wrap: wrap;
-}
-
-.summary-header-actions {
-    display: flex;
-    gap: 10px;
-    flex-wrap: wrap;
-    justify-content: flex-end;
-    flex-shrink: 0;
-}
-
-.summary-header-btn {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    gap: 8px;
-    min-height: 42px;
-    padding: 10px 16px;
-    border-radius: 12px;
-    border: 1px solid #d1d5db;
-    font-size: 14px;
-    font-weight: 700;
-    cursor: pointer;
-    transition: all 0.2s ease;
-    white-space: nowrap;
-}
-
-.summary-header-btn:hover {
-    transform: translateY(-1px);
-    box-shadow: 0 4px 12px rgba(0,0,0,0.12);
-}
-
-.summary-header-btn.back-btn {
-    background: #ffffff;
-    color: #374151;
-}
-
-.summary-header-btn.back-btn:hover {
-    background: #f3f4f6;
-}
-
-.summary-header-btn.print-btn {
-    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
-    color: #ffffff;
-    border-color: #059669;
-}
-
-.summary-header-btn.print-btn:hover {
-    background: linear-gradient(135deg, #059669 0%, #047857 100%);
-}
-
-@media (max-width: 768px) {
-    .summary-header-row {
-        flex-direction: column;
-        align-items: stretch;
+    /* =========================================
+       Safariでも確実に見える位置のタイトル＋操作カード
+       ========================================= */
+    .summary-floating-toolbar-card {
+        margin-top: 0;
     }
 
-    .summary-header-actions {
-        width: 100%;
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: 8px;
-    }
-
-    .summary-header-btn {
-        width: 100%;
-        padding: 10px 12px;
-        font-size: 13px;
-    }
-}
-        
-/* Safari の自動スクロール復元を見た目でも抑える */
-html.assignment-html,
-body.theme-unified.assignment-summary-page {
-    overflow-anchor: none;
-}
-
-/* 先頭カードやフィルタが sticky 扱いにならないよう固定解除 */
-body.theme-unified.assignment-summary-page .summary-header-row,
-body.theme-unified.assignment-summary-page .filter-bar,
-body.theme-unified.assignment-summary-page .glass-card:first-child {
-    position: static !important;
-    top: auto !important;
-}
-
-/* =========================================
-   Safariでも確実に見える位置の操作カード
-   ========================================= */
-.summary-floating-toolbar-card {
-    margin-top: 14px;
-}
-
-.summary-floating-toolbar {
-    display: flex;
-    align-items: flex-start;
-    justify-content: space-between;
-    gap: 16px;
-    flex-wrap: wrap;
-}
-
-.summary-floating-title {
-    flex: 1 1 320px;
-}
-
-.summary-floating-actions {
-    display: flex;
-    gap: 10px;
-    flex-wrap: wrap;
-    justify-content: flex-end;
-}
-
-.summary-floating-btn {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    gap: 8px;
-    min-height: 42px;
-    padding: 10px 16px;
-    border-radius: 12px;
-    border: 1px solid #d1d5db;
-    font-size: 14px;
-    font-weight: 700;
-    cursor: pointer;
-    transition: all 0.2s ease;
-    white-space: nowrap;
-}
-
-.summary-floating-btn:hover {
-    transform: translateY(-1px);
-    box-shadow: 0 4px 12px rgba(0,0,0,0.12);
-}
-
-.summary-floating-btn.back-btn {
-    background: #ffffff;
-    color: #374151;
-}
-
-.summary-floating-btn.back-btn:hover {
-    background: #f3f4f6;
-}
-
-.summary-floating-btn.print-btn {
-    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
-    color: #ffffff;
-    border-color: #059669;
-}
-
-.summary-floating-btn.print-btn:hover {
-    background: linear-gradient(135deg, #059669 0%, #047857 100%);
-}
-
-@media (max-width: 768px) {
     .summary-floating-toolbar {
-        flex-direction: column;
-        align-items: stretch;
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 16px;
+        flex-wrap: wrap;
+    }
+
+    .summary-floating-title {
+        flex: 1 1 320px;
     }
 
     .summary-floating-actions {
-        width: 100%;
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: 8px;
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+        justify-content: flex-end;
     }
 
     .summary-floating-btn {
-        width: 100%;
-        padding: 10px 12px;
-        font-size: 13px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        min-height: 42px;
+        padding: 10px 16px;
+        border-radius: 12px;
+        border: 1px solid #d1d5db;
+        font-size: 14px;
+        font-weight: 700;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        white-space: nowrap;
     }
-}
 
-        .summary-floating-dept {
-    margin-top: 14px;
-    padding-top: 12px;
-    border-top: 1px solid rgba(0,0,0,0.06);
-}
+    .summary-floating-btn:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.12);
+    }
 
-@media (max-width: 768px) {
+    .summary-floating-btn.back-btn {
+        background: #ffffff;
+        color: #374151;
+    }
+    .summary-floating-btn.back-btn:hover {
+        background: #f3f4f6;
+    }
+
+    .summary-floating-btn.print-btn {
+        background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+        color: #ffffff;
+        border-color: #059669;
+    }
+    .summary-floating-btn.print-btn:hover {
+        background: linear-gradient(135deg, #059669 0%, #047857 100%);
+    }
+
     .summary-floating-dept {
-        margin-top: 12px;
-        padding-top: 10px;
+        margin-top: 14px;
+        padding-top: 12px;
+        border-top: 1px solid rgba(0,0,0,0.06);
     }
-}
 
+    @media (max-width: 768px) {
+        .summary-floating-toolbar {
+            flex-direction: column;
+            align-items: stretch;
+        }
+        .summary-floating-actions {
+            width: 100%;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+        }
+        .summary-floating-btn {
+            width: 100%;
+            padding: 10px 12px;
+            font-size: 13px;
+        }
+        .summary-floating-dept {
+            margin-top: 12px;
+            padding-top: 10px;
+        }
+    }
     </style>
-    
 </head>
 
 <body class="theme-unified assignment-summary-page">
@@ -546,40 +440,39 @@ body.theme-unified.assignment-summary-page .glass-card:first-child {
 
     <div class="max-w-7xl mx-auto space-y-6 pt-2 md:pt-4">
 
-        <!-- ヘッダー & フィルタ -->
-        <div class="glass-card p-4 summary-hero-card">
-</div>
-<!-- Safariでも見える位置に固定したタイトル＋操作カード -->
-<div class="glass-card p-4 summary-floating-toolbar-card">
-    <div class="summary-floating-toolbar">
-        <div class="summary-floating-title">
-            <h1 class="text-2xl font-bold flex items-center gap-2">
-                <i class="fas fa-chart-column text-green-600"></i>
-                実績サマリ
-            </h1>
-            <p class="text-sm text-gray-600 mt-1">
-                業務種別×部門の延べ時間、需給ギャップ、掛け持ち指標を分析
-            </p>
+        <!-- タイトル＋戻る/印刷＋対象部門（1枚のカードに統合） -->
+        <div class="glass-card p-4 summary-floating-toolbar-card">
+            <div class="summary-floating-toolbar">
+                <div class="summary-floating-title">
+                    <h1 class="text-2xl font-bold flex items-center gap-2">
+                        <i class="fas fa-chart-column text-green-600"></i>
+                        実績サマリ
+                    </h1>
+                    <p class="text-sm text-gray-600 mt-1">
+                        業務種別×部門の延べ時間、需給ギャップ、掛け持ち指標を分析
+                    </p>
+                </div>
+
+                <div class="summary-floating-actions no-print">
+                    <button onclick="window.location.href='../pages/analytics.html'" class="summary-floating-btn back-btn">
+                        <i class="fas fa-arrow-left"></i>
+                        <span>戻る</span>
+                    </button>
+                    <button onclick="window.print()" class="summary-floating-btn print-btn">
+                        <i class="fas fa-print"></i>
+                        <span>印刷</span>
+                    </button>
+                </div>
+            </div>
+
+            <div class="summary-floating-dept no-print">
+                <label class="font-semibold block mb-2">対象部門（複数選択可）:</label>
+                <div class="dept-checkbox-group" id="deptCheckboxGroup"></div>
+            </div>
         </div>
 
-        <div class="summary-floating-actions no-print">
-            <button onclick="window.location.href='../pages/analytics.html'" class="summary-floating-btn back-btn">
-                <i class="fas fa-arrow-left"></i>
-                <span>戻る</span>
-            </button>
-            <button onclick="window.print()" class="summary-floating-btn print-btn">
-                <i class="fas fa-print"></i>
-                <span>印刷</span>
-            </button>
-        </div>
-    </div>
-
-    <div class="summary-floating-dept no-print">
-        <label class="font-semibold block mb-2">対象部門（複数選択可）:</label>
-        <div class="dept-checkbox-group" id="deptCheckboxGroup"></div>
-    </div>
-</div>
-
+        <!-- 期間・業務種別・集計 -->
+        <div class="glass-card p-4">
             <div class="filter-bar no-print">
                 <label class="font-semibold">期間:</label>
                 <select id="periodPreset" onchange="onPeriodPresetChange()">
@@ -749,8 +642,7 @@ body.theme-unified.assignment-summary-page .glass-card:first-child {
                     ・赤が同じ時間帯に集中 → シフト調整・要員追加の根拠<br>
                     ・青と赤が同時間帯に並ぶ → <span class="highlight">部門間の応援ルート整備</span>の議論材料<br>
                     ・セルにマウスを重ねると、需要・供給・出勤可能人数の詳細が表示されます</p>
-                    <p class="mt-2 text-gray-600">※ 平日別セクションでは、業務が発生していない祝日のみ除外して集計しています。血液浄化など祝日も稼働する部門は含まれます。
-</p>
+                    <p class="mt-2 text-gray-600">※ 平日別セクションでは、業務が発生していない祝日のみ除外して集計しています。血液浄化など祝日も稼働する部門は含まれます。</p>
                 </div>
             </details>
         </div>
@@ -789,8 +681,7 @@ body.theme-unified.assignment-summary-page .glass-card:first-child {
                     <p class="mt-2"><b>判断材料の例</b>：<br>
                     ・火曜午前が常に濃い → 火曜午前の要員は削減不可<br>
                     ・金曜午後が薄い → 月次業務や研修を配置しやすい時間帯</p>
-                    <p class="mt-2 text-gray-600">※ 土日は除外。祝日は業務が発生している日のみ含めます（血液浄化など祝日稼働部門は反映）。※ 部門別は期間が短いとサンプル不足で判断材料になりにくい。月次以上の期間推奨。
-</p>
+                    <p class="mt-2 text-gray-600">※ 土日は除外。祝日は業務が発生している日のみ含めます（血液浄化など祝日稼働部門は反映）。※ 部門別は期間が短いとサンプル不足で判断材料になりにくい。月次以上の期間推奨。</p>
                 </div>
             </details>
         </div>
@@ -908,16 +799,10 @@ function weekdayLabel(k) { return ['日','月','火','水','木','金','土'][pa
 function isHoliday(dateKey) { return SUMMARY_APP.raw.holidays.has(dateKey); }
 function isWeekend(dateKey) { const d = parseDateKey(dateKey).getDay(); return d === 0 || d === 6; }
 function isWeekdayNonHoliday(dateKey) { return !isWeekend(dateKey) && !isHoliday(dateKey); }
-    /**
- * 集計対象として使う日付を判定
- * - 平日: 常に対象
- * - 土日: 対象外
- * - 祝日: その日に業務(assignedCEs>0の配置)が1件でもあれば対象
- */
+
 function shouldIncludeDateForWeekdayAnalysis(dateKey, eventsInRange) {
     if (isWeekend(dateKey)) return false;
     if (!isHoliday(dateKey)) return true;
-    // 祝日でも業務があれば対象
     return eventsInRange.some(e => e.date === dateKey && e.assignedCEs.length > 0);
 }
 
@@ -1053,36 +938,18 @@ function flattenEvents(root) {
     });
     return events;
 }
-    
-    function flattenMonthlyTasks(root) {
+
+function flattenMonthlyTasks(root) {
     const tasks = [];
     if (!root || typeof root !== 'object') return tasks;
 
-    /**
-     * 月次業務パーサ（新仕様対応版・フェーズ1）
-     * 
-     * 対応するデータ構造:
-     *   [新仕様] monthlyTasks/{yearMonth}/{taskId}/... （ネスト構造）
-     *   [旧仕様] monthlyTasks/{taskId}/... （フラット構造）
-     * 
-     * 抽出する情報:
-     *   - yearMonth: 年月キー（優先。無ければ month や createdAt から推測）
-     *   - assignedCEs: 日別オブジェクト構造 {日付: [CE配列]} に対応
-     *   - dailyActuals: 日別実績データ（時間・件数）を活用
-     *   - activityRecords: 活動履歴（時間・件数）を活用
-     */
-
-    // タスクレコードかどうかを判定
-    // 判定基準: name か department か yearMonth か month のいずれかを持つ
     function isTaskRecord(node) {
         if (!node || typeof node !== 'object') return false;
         return ('name' in node) || ('title' in node) || ('department' in node)
             || ('yearMonth' in node) || ('month' in node) || ('isMonthlyTask' in node);
     }
 
-    // 1つのタスクレコードを正規化
     function normalizeTask(id, raw, parentKey = null) {
-        // 年月キーを決定（優先順位: yearMonth > parentKey > month > createdAt）
         let monthKey = null;
         if (typeof raw.yearMonth === 'string' && /^\d{4}-\d{2}$/.test(raw.yearMonth)) {
             monthKey = raw.yearMonth;
@@ -1091,7 +958,6 @@ function flattenEvents(root) {
         } else {
             monthKey = normalizeMonthKey(raw.month, raw.date || null);
         }
-        // createdAt から最終フォールバック
         if (!monthKey && raw.createdAt) {
             const d = new Date(raw.createdAt);
             if (!isNaN(d)) {
@@ -1099,11 +965,7 @@ function flattenEvents(root) {
             }
         }
 
-        // 日別実績を集計
-        // dailyActuals: {日付: {count, startTime, endTime, ...}}
-        // activityRecords: [{date, count, startTime, endTime, ...}, ...]
         const dailyEntries = [];
-
         if (raw.dailyActuals && typeof raw.dailyActuals === 'object') {
             Object.entries(raw.dailyActuals).forEach(([date, actual]) => {
                 if (!actual || typeof actual !== 'object') return;
@@ -1118,12 +980,10 @@ function flattenEvents(root) {
                 });
             });
         }
-
         if (Array.isArray(raw.activityRecords)) {
             raw.activityRecords.forEach(rec => {
                 if (!rec || typeof rec !== 'object') return;
                 if (!/^\d{4}-\d{2}-\d{2}$/.test(rec.date || '')) return;
-                // dailyActuals と同じ日付は重複扱いしない（dailyActuals優先）
                 if (dailyEntries.some(e => e.date === rec.date && e.source === 'dailyActuals')) return;
                 dailyEntries.push({
                     date: rec.date,
@@ -1136,19 +996,14 @@ function flattenEvents(root) {
             });
         }
 
-        // assignedCEs は日別オブジェクト形式 {日付: [CE配列]} または旧仕様の配列
-        // 集計用には「全日を通じて関与したCEの集合」に平坦化
         const assignedCEs = [];
         if (raw.assignedCEs) {
             if (Array.isArray(raw.assignedCEs)) {
-                // 旧仕様: 単純な配列
                 normalizeAssignedCEs(raw.assignedCEs).forEach(ce => assignedCEs.push(ce));
             } else if (typeof raw.assignedCEs === 'object') {
-                // 新仕様: {日付: [CE配列]}
                 Object.values(raw.assignedCEs).forEach(dayCEs => {
                     if (Array.isArray(dayCEs)) {
                         normalizeAssignedCEs(dayCEs).forEach(ce => {
-                            // 重複除外
                             if (!assignedCEs.some(x => (x.id && ce.id ? x.id === ce.id : x.name === ce.name))) {
                                 assignedCEs.push(ce);
                             }
@@ -1158,7 +1013,6 @@ function flattenEvents(root) {
             }
         }
 
-        // 延べ時間 = 各日別実績の実施時間の合計
         const totalHours = dailyEntries.reduce((s, e) => s + e.durationHours, 0);
 
         return {
@@ -1173,17 +1027,14 @@ function flattenEvents(root) {
             requiredPeople: safeNum(raw.requiredPeople ?? raw.requiredCount, 0),
             taskType: raw.taskType || 'monthly',
             assignedCEs,
-            dailyEntries,       // 日別実績（フェーズ2以降で活用）
-            totalHours,         // 延べ時間（月次業務でも時間集計可能に）
+            dailyEntries,
+            totalHours,
             raw
         };
     }
 
-    // 実際のスキャン
     Object.entries(root).forEach(([topKey, topNode]) => {
         if (!topNode || typeof topNode !== 'object') return;
-
-        // ケース1: topKey が "YYYY-MM" 形式 → ネスト構造
         if (/^\d{4}-\d{2}$/.test(topKey)) {
             Object.entries(topNode).forEach(([taskId, taskNode]) => {
                 if (isTaskRecord(taskNode)) {
@@ -1192,14 +1043,10 @@ function flattenEvents(root) {
             });
             return;
         }
-
-        // ケース2: topKey がタスクIDで、直下にタスクフィールド → フラット構造(旧仕様)
         if (isTaskRecord(topNode)) {
             tasks.push(normalizeTask(topKey, topNode, null));
             return;
         }
-
-        // ケース3: それ以外（想定外の中間ノード）→ 中を1段だけ探索
         Object.entries(topNode).forEach(([childKey, childNode]) => {
             if (isTaskRecord(childNode)) {
                 tasks.push(normalizeTask(childKey, childNode, topKey));
@@ -1210,7 +1057,7 @@ function flattenEvents(root) {
     console.log(`✅ 月次業務パーサ: ${tasks.length}件 抽出`);
     return tasks;
 }
-    
+
 function flattenWorkSchedules(raw) {
     if (!raw || typeof raw !== 'object') return [];
     return Object.entries(raw).map(([key, val]) => ({ key, ...(val || {}) }));
@@ -1345,13 +1192,12 @@ function buildCrossSummary(events, monthlyTasks) {
         else { r.sharedHours += h; r.sharedCount += 1; }
     });
     monthlyTasks.forEach(task => {
-    const r = map.get(task.department || '未分類');
-    if (!r) return;
-    r.monthlyCount += 1;
-    // 月次業務の延べ時間も加算（dailyActualsから算出）
-    const monthlyHours = safeNum(task.totalHours, 0) * (task.assignedCEs.length || 1);
-    r.monthlyHours += monthlyHours;
-});
+        const r = map.get(task.department || '未分類');
+        if (!r) return;
+        r.monthlyCount += 1;
+        const monthlyHours = safeNum(task.totalHours, 0) * (task.assignedCEs.length || 1);
+        r.monthlyHours += monthlyHours;
+    });
     rows.sort((a,b) => (b.personalHours+b.sharedHours+b.monthlyCount) - (a.personalHours+a.sharedHours+a.monthlyCount));
     const totals = rows.reduce((acc,r) => {
         acc.personalHours += r.personalHours; acc.personalCount += r.personalCount;
@@ -1378,19 +1224,16 @@ function buildCESummary(events, monthlyTasks) {
         });
     });
     monthlyTasks.forEach(t => {
-    // 月次業務でも dailyEntries があれば時間集計に加算
-    const monthlyHoursTotal = safeNum(t.totalHours, 0);
-    const ceCount = t.assignedCEs.length || 1;
-    const perCEHours = monthlyHoursTotal / ceCount;
-
-    t.assignedCEs.forEach(ce => {
-        const r = ensure(ce.name || ce.id || '不明CE', ce.id || null);
-        r.monthlyCount += 1;
-        r.taskCount += 1;
-        // 月次業務の時間も合計時間に加算
-        r.totalHours += perCEHours;
+        const monthlyHoursTotal = safeNum(t.totalHours, 0);
+        const ceCount = t.assignedCEs.length || 1;
+        const perCEHours = monthlyHoursTotal / ceCount;
+        t.assignedCEs.forEach(ce => {
+            const r = ensure(ce.name || ce.id || '不明CE', ce.id || null);
+            r.monthlyCount += 1;
+            r.taskCount += 1;
+            r.totalHours += perCEHours;
+        });
     });
-});
     return [...map.values()].sort((a,b) => b.totalHours - a.totalHours || b.monthlyCount - a.monthlyCount);
 }
 
@@ -1588,9 +1431,7 @@ function analyzeCore(startDate, endDate, taskTypeFilter, selectedDepts) {
     const rangeMonthly = filterMonthlyTasksByRange(SUMMARY_APP.raw.monthlyTasks, startDate, endDate);
     const byType = filterByTaskType(rangeEvents, rangeMonthly, taskTypeFilter);
 
-    // クロス表/CE表: 特別カテゴリを含む
     const forSummary = filterByDepartments(byType.events, byType.monthlyTasks, selectedDepts, true);
-    // ヒートマップ系: 特別カテゴリを除外（時間データなしのため無意味）
     const forHeatmap = filterByDepartments(byType.events, byType.monthlyTasks, selectedDepts, false);
 
     const dateKeysAll = enumerateDateKeys(startDate, endDate);
@@ -1605,20 +1446,16 @@ function renderMainSections(analysis) {
     renderCrossTable(buildCrossSummary(analysis.forSummary.events, analysis.forSummary.monthlyTasks));
     renderCESummary(buildCESummary(analysis.forSummary.events, analysis.forSummary.monthlyTasks));
 
-    // 需給ギャップ 全体
     const deptData = buildDeptGapMatrix(analysis.forHeatmap.events, analysis.dateKeysAll, analysis.availableByDate, analysis.selectedDepts);
     renderDeptHeatmapInto('deptHeatmap', deptData);
 
-    // 曜日別 全体（月〜金のみ・祝日除外）
     const weekdaysNoWeekend = ['月','火','水','木','金'];
     const weekdayData = buildWeekdayHeatmap(analysis.forHeatmap.events, analysis.dateKeysWeekday, analysis.availableByDate, weekdaysNoWeekend);
     renderWeekdayHeatmapInto('weekdayHeatmap', weekdayData);
 
-    // 掛け持ち 全体
     const mtSeries = buildMultitaskSeries(analysis.forHeatmap.events, analysis.dateKeysAll);
     renderMultitaskInto('multitaskChart', mtSeries);
 
-    // アコーディオンを構築
     buildDeptHeatmapWeekdayAccordion(analysis);
     buildWeekdayHeatmapDeptAccordion(analysis);
     buildMultitaskDeptAccordion(analysis);
@@ -1725,9 +1562,6 @@ async function analyzeData() {
 
         showMain();
         showLoading(false);
-        forceTopForSafari();
-
-        resetInitialViewportForSafari();
         console.log('✅ analyzeData 完了');
 
     } catch (error) {
@@ -1747,40 +1581,8 @@ function printElement(elementId) {
 }
 window.printElement = printElement;
 
-function forceTopForSafari() {
-    try {
-        // ブラウザのスクロール復元を無効化
-        if ('scrollRestoration' in history) {
-            history.scrollRestoration = 'manual';
-        }
-
-        // いまフォーカスされている input/select があれば解除
-        const active = document.activeElement;
-        if (active && typeof active.blur === 'function') {
-            active.blur();
-        }
-
-        // 何度か繰り返して最上部に固定
-        const scrollTopNow = () => {
-            document.documentElement.scrollTop = 0;
-            document.body.scrollTop = 0;
-            window.scrollTo(0, 0);
-        };
-
-        scrollTopNow();
-        requestAnimationFrame(scrollTopNow);
-        requestAnimationFrame(() => requestAnimationFrame(scrollTopNow));
-        setTimeout(scrollTopNow, 80);
-        setTimeout(scrollTopNow, 250);
-        setTimeout(scrollTopNow, 500);
-    } catch (e) {
-        console.warn('forceTopForSafari failed:', e);
-    }
-}
-    
 async function initPage() {
     try {
-        forceTopForSafari();
         showLoading(true, '認証と実績データを読み込んでいます...');
         hideMain();
 
@@ -1790,7 +1592,6 @@ async function initPage() {
         onPeriodPresetChange();
         await loadAllData();
         await analyzeData();
-        forceTopForSafari();
         if (window.auditLogger) await window.auditLogger.logPageAccess('assignment-summary');
     } catch (error) {
         console.error('❌ 実績サマリ初期化エラー:', error);
@@ -1799,50 +1600,7 @@ async function initPage() {
     }
 }
 
-    function resetInitialViewportForSafari() {
-    try {
-        if ('scrollRestoration' in history) {
-            history.scrollRestoration = 'manual';
-        }
-
-        // いまフォーカスされている要素があれば外す
-        const active = document.activeElement;
-        if (active && typeof active.blur === 'function') {
-            active.blur();
-        }
-
-        // スクロール位置を最上部へ固定
-        document.documentElement.scrollTop = 0;
-        document.body.scrollTop = 0;
-        window.scrollTo(0, 0);
-
-        requestAnimationFrame(() => {
-            document.documentElement.scrollTop = 0;
-            document.body.scrollTop = 0;
-            window.scrollTo(0, 0);
-        });
-
-        setTimeout(() => {
-            document.documentElement.scrollTop = 0;
-            document.body.scrollTop = 0;
-            window.scrollTo(0, 0);
-        }, 50);
-
-        setTimeout(() => {
-            document.documentElement.scrollTop = 0;
-            document.body.scrollTop = 0;
-            window.scrollTo(0, 0);
-        }, 200);
-
-    } catch (e) {
-        console.warn('初期表示位置リセット失敗:', e);
-    }
-}
-
-    document.addEventListener('DOMContentLoaded', initPage);
-    window.addEventListener('load', forceTopForSafari);
-    window.addEventListener('pageshow', forceTopForSafari);
-    window.addEventListener('pageshow', resetInitialViewportForSafari);
+document.addEventListener('DOMContentLoaded', initPage);
 </script>
 
 </body>
