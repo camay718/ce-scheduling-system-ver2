@@ -2,7 +2,7 @@
 <html lang="ja" class="assignment-html">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>実績サマリ - CEスケジュール管理システムV2</title>
 
     <!-- 外部ライブラリ -->
@@ -53,59 +53,18 @@
         font-size: 15px;
     }
 
-        /* ================================================
-   Safari 上部見切れ 強制対策（実績サマリ専用）
-   ページ全体を物理的に下げる
-   ================================================ */
-
-html,
-html.assignment-html {
-    height: 100%;
-    height: -webkit-fill-available;
-    margin: 0;
-    padding: 0;
-}
-
-/* body を強制的に下げる */
+        /* Safari対策：レイアウトを単純化 */
 body.theme-unified.assignment-summary-page {
     margin: 0 !important;
-    padding-top: 80px !important;   /* ← 全ブラウザ共通で80px下げる */
-    box-sizing: border-box;
-    min-height: 100vh;
-    min-height: -webkit-fill-available;
+    padding-top: 16px !important;
 }
 
-/* Safari (WebKit) 判定：さらに下げる */
-@supports (-webkit-touch-callout: none),
-          (-webkit-backdrop-filter: blur(1px)) {
-    body.theme-unified.assignment-summary-page {
-        padding-top: calc(110px + env(safe-area-inset-top, 0px)) !important;
-    }
-}
-
-/* iPhone サイズ：もっと下げる */
-@media (max-width: 768px) {
-    body.theme-unified.assignment-summary-page {
-        padding-top: calc(120px + env(safe-area-inset-top, 0px)) !important;
-    }
-}
-
-/* #mainContent 側の上余白は 0 に戻す（二重に下がるのを防ぐ） */
 body.theme-unified.assignment-summary-page #mainContent {
     padding-top: 0 !important;
 }
 
-/* 先頭カードの余分な mt-* を打ち消す */
-body.theme-unified.assignment-summary-page #mainContent .glass-card:first-child,
 body.theme-unified.assignment-summary-page #mainContent > .max-w-7xl > .glass-card:first-child {
     margin-top: 0 !important;
-}
-
-/* フィルタ・アクションバーが sticky/fixed で被らないよう明示 */
-body.theme-unified.assignment-summary-page .summary-header-row,
-body.theme-unified.assignment-summary-page .filter-bar {
-    position: static !important;
-    top: auto !important;
 }
 
     .glass-card {
@@ -1644,8 +1603,11 @@ async function analyzeData() {
         SUMMARY_APP.lastAnalysis = analysis;
         renderMainSections(analysis);
 
-        showMain(); showLoading(false);
+        showMain(); 
+        showLoading(false);
+        resetInitialViewportForSafari();
         console.log('✅ analyzeData 完了');
+
     } catch (error) {
         console.error('❌ analyzeData エラー:', error);
         window.showMessage?.('集計中にエラーが発生しました', 'error');
@@ -1665,6 +1627,7 @@ window.printElement = printElement;
 
 async function initPage() {
     try {
+        resetInitialViewportForSafari();
         showLoading(true, '認証と実績データを読み込んでいます...');
         hideMain();
         const ok = await AuthGuard.init(); if (!ok) return;
@@ -1681,7 +1644,48 @@ async function initPage() {
     }
 }
 
-document.addEventListener('DOMContentLoaded', initPage);
+    function resetInitialViewportForSafari() {
+    try {
+        if ('scrollRestoration' in history) {
+            history.scrollRestoration = 'manual';
+        }
+
+        // いまフォーカスされている要素があれば外す
+        const active = document.activeElement;
+        if (active && typeof active.blur === 'function') {
+            active.blur();
+        }
+
+        // スクロール位置を最上部へ固定
+        document.documentElement.scrollTop = 0;
+        document.body.scrollTop = 0;
+        window.scrollTo(0, 0);
+
+        requestAnimationFrame(() => {
+            document.documentElement.scrollTop = 0;
+            document.body.scrollTop = 0;
+            window.scrollTo(0, 0);
+        });
+
+        setTimeout(() => {
+            document.documentElement.scrollTop = 0;
+            document.body.scrollTop = 0;
+            window.scrollTo(0, 0);
+        }, 50);
+
+        setTimeout(() => {
+            document.documentElement.scrollTop = 0;
+            document.body.scrollTop = 0;
+            window.scrollTo(0, 0);
+        }, 200);
+
+    } catch (e) {
+        console.warn('初期表示位置リセット失敗:', e);
+    }
+}
+
+    document.addEventListener('DOMContentLoaded', initPage);
+    window.addEventListener('pageshow', resetInitialViewportForSafari);
 </script>
 
 </body>
