@@ -473,32 +473,40 @@
 
         <!-- 期間・業務種別・集計 -->
         <div class="glass-card p-4">
-            <div class="filter-bar no-print">
-                <label class="font-semibold">期間:</label>
-                <select id="periodPreset" onchange="onPeriodPresetChange()">
-                    <option value="today">今日</option>
-                    <option value="week" selected>今週</option>
-                    <option value="month">今月</option>
-                    <option value="prevMonth">先月</option>
-                    <option value="custom">カスタム</option>
-                </select>
-                <input type="date" id="startDate">
-                <span>〜</span>
-                <input type="date" id="endDate">
+    <div class="filter-bar no-print">
+        <label class="font-semibold">期間:</label>
+        <select id="periodPreset" onchange="onPeriodPresetChange()">
+            <option value="today">今日</option>
+            <option value="week" selected>今週</option>
+            <option value="month">今月</option>
+            <option value="prevMonth">先月</option>
+            <option value="custom">カスタム</option>
+        </select>
+        <input type="date" id="startDate">
+        <span>〜</span>
+        <input type="date" id="endDate">
 
-                <label class="font-semibold ml-4">業務種別:</label>
-                <select id="taskTypeFilter">
-                    <option value="all" selected>すべて</option>
-                    <option value="personal">個人業務のみ</option>
-                    <option value="shared">共有業務のみ</option>
-                    <option value="monthly">月次業務のみ</option>
-                </select>
+        <label class="font-semibold ml-4">業務種別:</label>
+        <select id="taskTypeFilter">
+            <option value="all" selected>すべて</option>
+            <option value="personal">個人業務のみ</option>
+            <option value="shared">共有業務のみ</option>
+            <option value="monthly">月次業務のみ</option>
+        </select>
 
-                <button class="btn btn-primary" onclick="analyzeData()">
-                    <i class="fas fa-sync-alt mr-1"></i>集計
-                </button>
-            </div>
-        </div>
+        <button class="btn btn-primary" onclick="analyzeData()">
+            <i class="fas fa-sync-alt mr-1"></i>集計
+        </button>
+
+        <button class="btn btn-outline" onclick="window.location.href='../pages/analytics.html'">
+            <i class="fas fa-arrow-left mr-1"></i>戻る
+        </button>
+
+        <button class="btn btn-outline" onclick="window.print()">
+            <i class="fas fa-print mr-1"></i>印刷
+        </button>
+    </div>
+</div>
 
         <!-- KPI -->
         <div class="glass-card p-4">
