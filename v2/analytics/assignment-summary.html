@@ -53,47 +53,53 @@
         font-size: 15px;
     }
 
-    html {
+        /* ===== Safari / iPhone 上端見切れ対策（強制版） ===== */
+html {
     height: 100%;
     height: -webkit-fill-available;
 }
 
-body {
+body.theme-unified.assignment-summary-page {
     min-height: 100vh;
     min-height: -webkit-fill-available;
+    margin: 0;
+    padding-top: constant(safe-area-inset-top);
     padding-top: env(safe-area-inset-top, 0px);
 }
 
-/* Safari / iPhone 上端隠れ対策 */
-#mainContent {
-    padding-top: calc(20px + env(safe-area-inset-top, 0px)) !important;
+/* ページ全体を下げる。カード単位ではなく本体ごと下げる */
+body.theme-unified.assignment-summary-page #mainContent {
+    padding-top: 72px !important;
 }
 
-/* 最初のカードをさらに下げる */
-#mainContent > .max-w-7xl > .glass-card:first-child {
-    margin-top: calc(20px + env(safe-area-inset-top, 0px)) !important;
+/* 先頭カードの余計な個別marginは使わない */
+body.theme-unified.assignment-summary-page #mainContent > .max-w-7xl > .glass-card:first-child {
+    margin-top: 0 !important;
 }
 
-/* Safari 判定向けの追加逃がし */
+/* Safari系はさらに強めに逃がす */
 @supports (-webkit-touch-callout: none) {
-    #mainContent {
-        padding-top: calc(36px + env(safe-area-inset-top, 0px)) !important;
+    body.theme-unified.assignment-summary-page {
+        padding-top: calc(12px + env(safe-area-inset-top, 0px)) !important;
     }
 
-    #mainContent > .max-w-7xl > .glass-card:first-child {
-        margin-top: calc(28px + env(safe-area-inset-top, 0px)) !important;
+    body.theme-unified.assignment-summary-page #mainContent {
+        padding-top: calc(88px + env(safe-area-inset-top, 0px)) !important;
     }
 }
 
-/* モバイルではさらに余裕をとる */
+/* iPhone幅ではもっと余裕を持たせる */
 @media (max-width: 768px) {
-    #mainContent {
-        padding-top: calc(44px + env(safe-area-inset-top, 0px)) !important;
+    body.theme-unified.assignment-summary-page #mainContent {
+        padding-top: calc(96px + env(safe-area-inset-top, 0px)) !important;
     }
+}
 
-    #mainContent > .max-w-7xl > .glass-card:first-child {
-        margin-top: calc(32px + env(safe-area-inset-top, 0px)) !important;
-    }
+/* フィルタカードの最上段は sticky/fixed にしない */
+.summary-header-row,
+.filter-bar {
+    position: static !important;
+    top: auto !important;
 }
 
     .glass-card {
@@ -448,7 +454,7 @@ body {
     
 </head>
 
-<body class="theme-unified">
+<body class="theme-unified assignment-summary-page">
 
 <div id="loading" class="fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center z-50">
     <div class="glass-card p-6 text-center">
