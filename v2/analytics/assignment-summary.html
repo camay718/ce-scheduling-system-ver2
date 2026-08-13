@@ -544,6 +544,19 @@ body.theme-unified.assignment-summary-page .glass-card:first-child {
     }
 }
 
+        .summary-floating-dept {
+    margin-top: 14px;
+    padding-top: 12px;
+    border-top: 1px solid rgba(0,0,0,0.06);
+}
+
+@media (max-width: 768px) {
+    .summary-floating-dept {
+        margin-top: 12px;
+        padding-top: 10px;
+    }
+}
+
     </style>
     
 </head>
@@ -566,11 +579,6 @@ body.theme-unified.assignment-summary-page .glass-card:first-child {
         <div class="summary-header-row summary-hero-header mb-4" style="display:none;">
             
         </div>
-
-            <div class="mt-3 no-print">
-    <label class="font-semibold block mb-2">対象部門（複数選択可）:</label>
-    <div class="dept-checkbox-group" id="deptCheckboxGroup"></div>
-</div>
 </div>
 <!-- Safariでも見える位置に固定したタイトル＋操作カード -->
 <div class="glass-card p-4 summary-floating-toolbar-card">
@@ -595,6 +603,11 @@ body.theme-unified.assignment-summary-page .glass-card:first-child {
                 <span>印刷</span>
             </button>
         </div>
+    </div>
+
+    <div class="summary-floating-dept no-print">
+        <label class="font-semibold block mb-2">対象部門（複数選択可）:</label>
+        <div class="dept-checkbox-group" id="deptCheckboxGroup"></div>
     </div>
 </div>
 
@@ -622,11 +635,6 @@ body.theme-unified.assignment-summary-page .glass-card:first-child {
                 <button class="btn btn-primary" onclick="analyzeData()">
                     <i class="fas fa-sync-alt mr-1"></i>集計
                 </button>
-            </div>
-
-            <div class="mt-3 no-print">
-                <label class="font-semibold block mb-2">対象部門（複数選択可）:</label>
-                <div class="dept-checkbox-group" id="deptCheckboxGroup"></div>
             </div>
         </div>
 
