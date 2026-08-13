@@ -415,6 +415,21 @@ body.theme-unified.assignment-summary-page #mainContent > .max-w-7xl > .glass-ca
         font-size: 13px;
     }
 }
+        
+/* Safari の自動スクロール復元を見た目でも抑える */
+html.assignment-html,
+body.theme-unified.assignment-summary-page {
+    overflow-anchor: none;
+}
+
+/* 先頭カードやフィルタが sticky 扱いにならないよう固定解除 */
+body.theme-unified.assignment-summary-page .summary-header-row,
+body.theme-unified.assignment-summary-page .filter-bar,
+body.theme-unified.assignment-summary-page .glass-card:first-child {
+    position: static !important;
+    top: auto !important;
+}
+
     </style>
     
 </head>
@@ -1603,8 +1618,10 @@ async function analyzeData() {
         SUMMARY_APP.lastAnalysis = analysis;
         renderMainSections(analysis);
 
-        showMain(); 
+        showMain();
         showLoading(false);
+        forceTopForSafari();
+
         resetInitialViewportForSafari();
         console.log('✅ analyzeData 完了');
 
@@ -1625,17 +1642,50 @@ function printElement(elementId) {
 }
 window.printElement = printElement;
 
+function forceTopForSafari() {
+    try {
+        // ブラウザのスクロール復元を無効化
+        if ('scrollRestoration' in history) {
+            history.scrollRestoration = 'manual';
+        }
+
+        // いまフォーカスされている input/select があれば解除
+        const active = document.activeElement;
+        if (active && typeof active.blur === 'function') {
+            active.blur();
+        }
+
+        // 何度か繰り返して最上部に固定
+        const scrollTopNow = () => {
+            document.documentElement.scrollTop = 0;
+            document.body.scrollTop = 0;
+            window.scrollTo(0, 0);
+        };
+
+        scrollTopNow();
+        requestAnimationFrame(scrollTopNow);
+        requestAnimationFrame(() => requestAnimationFrame(scrollTopNow));
+        setTimeout(scrollTopNow, 80);
+        setTimeout(scrollTopNow, 250);
+        setTimeout(scrollTopNow, 500);
+    } catch (e) {
+        console.warn('forceTopForSafari failed:', e);
+    }
+}
+    
 async function initPage() {
     try {
-        resetInitialViewportForSafari();
+        forceTopForSafari();
         showLoading(true, '認証と実績データを読み込んでいます...');
         hideMain();
+
         const ok = await AuthGuard.init(); if (!ok) return;
         try { SUMMARY_APP.currentUserData = await AuthGuard.getUserData(); } catch (e) { console.warn('ユーザーデータ取得失敗:', e); }
         initDeptCheckboxes();
         onPeriodPresetChange();
         await loadAllData();
         await analyzeData();
+        forceTopForSafari();
         if (window.auditLogger) await window.auditLogger.logPageAccess('assignment-summary');
     } catch (error) {
         console.error('❌ 実績サマリ初期化エラー:', error);
@@ -1685,6 +1735,8 @@ async function initPage() {
 }
 
     document.addEventListener('DOMContentLoaded', initPage);
+    window.addEventListener('load', forceTopForSafari);
+    window.addEventListener('pageshow', forceTopForSafari);
     window.addEventListener('pageshow', resetInitialViewportForSafari);
 </script>
 
