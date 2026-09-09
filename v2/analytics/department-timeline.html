@@ -702,7 +702,7 @@ async function loadDataFromFirebase() {
                             if (typeof assignedCE === 'object' && assignedCE !== null) {
                                 return assignedCE.name || assignedCE.id || '不明CE';
                             } else if (typeof assignedCE === 'string') {
-                                cconst foundCE = ceListArray.find(ce => ce.id === assignedCE);
+                                const foundCE = ceListArray.find(ce => ce.id === assignedCE);
                                 return foundCE?.iconName || foundCE?.displayName || foundCE?.name || assignedCE;
                             }
                             return '不明CE';
