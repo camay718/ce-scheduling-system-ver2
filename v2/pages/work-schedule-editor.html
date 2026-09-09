@@ -480,6 +480,20 @@
     flex: 1;
 }
 
+/* 🆕 Undo/Redoボタングループ */
+.toolbar-undo-group {
+    display: flex;
+    gap: 8px;
+    flex-shrink: 0;
+}
+
+.toolbar-btn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+    background: rgba(255, 255, 255, 0.1);
+    border-color: rgba(255, 255, 255, 0.15);
+}
+
 .toolbar-btn {
     background: rgba(255, 255, 255, 0.2);
     color: white;
@@ -821,7 +835,19 @@
     <!-- 🆕 ツールバー（ここから追加） -->
     <div id="copyToolbar" class="copy-toolbar">
         <div class="toolbar-title">📋 勤務状態コピー</div>
+        <div class="toolbar-undo-group">
+            <button id="undoBtn" class="toolbar-btn" title="戻る（Ctrl+Z）" disabled>
+                <i class="fas fa-undo"></i> 戻る
+            </button>
+            <button id="redoBtn" class="toolbar-btn" title="進む（Ctrl+Shift+Z / Ctrl+Y）" disabled>
+                <i class="fas fa-redo"></i> 進む
+            </button>
+        </div>
         <div class="toolbar-buttons">
+            <label class="toolbar-checkbox">
+                <input type="checkbox" id="toolbarDesireCheck">
+                <span>希望勤務（下線）</span>
+            </label>
             <button class="toolbar-btn" data-status="A">A</button>
             <button class="toolbar-btn" data-status="A1">A1</button>
             <button class="toolbar-btn" data-status="B">B</button>
@@ -833,11 +859,10 @@
             <button class="toolbar-btn toolbar-btn-text" data-status="text">テキスト</button>
         </div>
         <div class="toolbar-options">
-            <label class="toolbar-checkbox">
-                <input type="checkbox" id="toolbarDesireCheck">
-                <span>希望勤務（下線）</span>
-            </label>
             <input type="text" id="toolbarTextInput" class="toolbar-text-input" placeholder="テキスト入力..." style="display: none;">
+            <button id="singleDayOverrideBtn" class="toolbar-btn" title="勤務区分を1日だけ設定（選択後、セルをクリック）">
+                <i class="fas fa-calendar-day"></i> 1日勤務区分
+            </button>
         </div>
     </div>
     <!-- 🆕 ツールバー（ここまで追加） -->
@@ -928,6 +953,43 @@
             </button>
         </div>
     </div>
+
+<!-- 🆕 1日だけ勤務区分オーバーライドメニュー -->
+<div id="singleDayOverrideMenu" class="work-type-override-menu" style="display: none;">
+    <div class="flex items-center justify-between mb-3">
+        <span class="text-sm font-semibold">1日勤務区分オーバーライド</span>
+        <button id="closeSingleDayOverrideMenu" class="text-gray-500 hover:text-gray-700">
+            <i class="fas fa-times"></i>
+        </button>
+    </div>
+
+    <div class="mb-3">
+        <div class="text-xs text-gray-600 mb-2">
+            設定する勤務区分を選択し、<br>勤務表のセルをクリックしてください。<br>（日付ごとに1日分を上書き設定）
+        </div>
+    </div>
+
+    <div class="work-type-buttons">
+        <button class="work-type-btn type-ope" data-type="OPE">
+            <i class="fas fa-user-md mr-1"></i>OPE
+        </button>
+        <button class="work-type-btn type-me" data-type="ME">
+            <i class="fas fa-stethoscope mr-1"></i>ME
+        </button>
+        <button class="work-type-btn type-hd" data-type="HD">
+            <i class="fas fa-heart mr-1"></i>HD
+        </button>
+        <button class="work-type-btn type-flex" data-type="FLEX">
+            <i class="fas fa-exchange-alt mr-1"></i>FLEX
+        </button>
+    </div>
+
+    <div class="mt-2">
+        <button id="clearSingleDayOverride" class="btn-unified btn-outline-unified btn-small w-full">
+            <i class="fas fa-stop-circle mr-1"></i>モード終了
+        </button>
+    </div>
+</div>
 
 <!-- CE編集メニュー -->
 <div id="ceEditMenu" class="ce-edit-menu" style="display: none;">
@@ -1033,6 +1095,17 @@ this.copyMode = {
     status: null,
     customText: '',
     desired: false
+};
+
+// 🆕 Undo/Redo 履歴管理
+this.undoStack = [];
+this.redoStack = [];
+this.historyLimit = 50;
+
+// 🆕 1日だけ勤務区分オーバーライドの状態管理
+this.singleDayOverrideMode = {
+    active: false,
+    workType: null
 };
 
             // 🆕 日付設定のオーバーライド（一時的な変更）
@@ -1295,6 +1368,7 @@ async addCE() {
     };
 
     try {
+        this.pushHistory();
         this.ceList.push(newCE);
         await this.saveCEList();
         this.renderScheduleTable();
@@ -1339,6 +1413,7 @@ async removeCE() {
         return;
     }
 
+    this.pushHistory();
     this.ceList = this.ceList.filter(ce => ce.id !== selectedId);
     delete this.scheduleData[selectedId];
     delete this.workTypeOverrides[selectedId];
@@ -1761,6 +1836,12 @@ if (publishBtn) publishBtn.onclick = () => this.publishSchedule();
 if (printBtn) printBtn.onclick = () => this.printSchedule();
 if (exportBtn) exportBtn.onclick = () => this.exportToExcel();
 
+// 🆕 Undo/Redoボタン
+const undoBtn = document.getElementById('undoBtn');
+const redoBtn = document.getElementById('redoBtn');
+if (undoBtn) undoBtn.onclick = () => this.undo();
+if (redoBtn) redoBtn.onclick = () => this.redo();
+
 
             const closeMenuBtn = document.getElementById('closeStatusMenu');
             if (closeMenuBtn) {
@@ -1807,6 +1888,25 @@ if (exportBtn) exportBtn.onclick = () => this.exportToExcel();
 
             // 🆕 日付設定メニューのイベントリスナー
             this.setupDateSettingMenu();
+
+            // 🆕 1日勤務区分オーバーライドメニューのイベントリスナー
+            this.setupSingleDayOverrideMenu();
+
+            // 🆕 Undo/Redo キーボードショートカット（Ctrl+Z / Ctrl+Shift+Z / Ctrl+Y）
+            document.addEventListener('keydown', (e) => {
+                const isCtrl = e.ctrlKey || e.metaKey;
+                if (isCtrl && e.key.toLowerCase() === 'z') {
+                    e.preventDefault();
+                    if (e.shiftKey) {
+                        this.redo();
+                    } else {
+                        this.undo();
+                    }
+                } else if (isCtrl && e.key.toLowerCase() === 'y') {
+                    e.preventDefault();
+                    this.redo();
+                }
+            });
             
             // リサイズ時のテーブルフィット
             let resizeTimer = null;
@@ -1837,6 +1937,12 @@ document.addEventListener('click', (e) => {
     if (!e.target.closest('#dateSettingMenu') && 
         !e.target.closest('.date-col')) {
         this.closeDateSettingMenu();
+    }
+
+    // 🆕 1日勤務区分メニューの外側クリックで閉じる
+    if (!e.target.closest('#singleDayOverrideMenu') && 
+        !e.target.closest('#singleDayOverrideBtn')) {
+        this.closeSingleDayOverrideMenu();
     }
 });
         }
@@ -1891,6 +1997,7 @@ document.addEventListener('click', (e) => {
         }
 
 async sortCEByName() {
+    this.pushHistory();
     this.ceList.sort((a, b) => (a.fullName || a.name).localeCompare(b.fullName || b.name, 'ja'));
     await this.saveCEList();
     this.renderScheduleTable();
@@ -1898,6 +2005,7 @@ async sortCEByName() {
 }
 
 async sortCEByWorkType() {
+    this.pushHistory();
     const workTypeOrder = { 'OPE': 1, 'ME': 2, 'HD': 3, 'FLEX': 4 };
     this.ceList.sort((a, b) => {
         const aOrder = workTypeOrder[a.workType] || 999;
@@ -1911,6 +2019,7 @@ async sortCEByWorkType() {
 }
 
 async sortCEByNormal() {
+    this.pushHistory();
     const normalOrderMap = new Map(this.normalOrder.map((name, index) => [name, index]));
     
     this.ceList.sort((a, b) => {
@@ -1980,48 +2089,41 @@ renderTableHeader(dates) {
     headerRow.appendChild(nameHeader);
     
     // 日付列
-dates.forEach((date, index) => {
-    const dayOfWeek = ['日', '月', '火', '水', '木', '金', '土'][date.getDay()];
-    const dateKey = this.formatDateKey(date);
-    const isHoliday = this.isHoliday(date);
-
-    let headerClass = 'date-col';
-    let dayClass = '';
-
-    if (date.getDay() === 0 || isHoliday) {
-        dayClass = 'text-red-600';
-    } else if (date.getDay() === 6) {
-        dayClass = 'text-blue-600';
-    }
-
-    // 日付オーバーライドの反映
-    if (this.dateOverrides[dateKey] === 'holiday') {
-        dayClass = 'text-red-600';
-    } else if (this.dateOverrides[dateKey] === 'workday') {
-        dayClass = 'text-gray-700';
-    }
-
-    // 月表示: 先頭列または前日と月が変わる列だけ表示
-    const prevDate = index > 0 ? dates[index - 1] : null;
-    const showMonth = index === 0 || !prevDate || prevDate.getMonth() !== date.getMonth();
-    const monthLabel = showMonth ? `${date.getMonth() + 1}月` : '&nbsp;';
-
-    const th = document.createElement('th');
-    th.className = headerClass;
-    th.innerHTML = `
-        <div class="text-[10px] leading-tight font-semibold text-gray-500">${monthLabel}</div>
-        <div class="leading-tight">${date.getDate()}</div>
-        <div class="text-xs leading-tight ${dayClass}">${dayOfWeek}</div>
-    `;
-
-    // ダブルクリックで日付設定メニューを開く
-    th.ondblclick = (e) => this.openDateSettingMenu(e, date);
-    th.title = '日付設定（ダブルクリック）';
-    th.style.cursor = 'pointer';
-
-    headerRow.appendChild(th);
-});
-
+    dates.forEach(date => {
+        const dayOfWeek = ['日', '月', '火', '水', '木', '金', '土'][date.getDay()];
+        const dateKey = this.formatDateKey(date);
+        const isWeekendOrHoliday = this.isWeekendOrHoliday(date);
+        const isHoliday = this.isHoliday(date);
+        
+        let headerClass = 'date-col';
+        let dayClass = '';
+        
+        if (date.getDay() === 0 || isHoliday) {
+            dayClass = 'text-red-600';
+        } else if (date.getDay() === 6) {
+            dayClass = 'text-blue-600';
+        }
+        
+        // 🆕 日付オーバーライドの反映
+        if (this.dateOverrides[dateKey] === 'holiday') {
+            dayClass = 'text-red-600';
+        } else if (this.dateOverrides[dateKey] === 'workday') {
+            dayClass = 'text-gray-700';
+        }
+        
+        const th = document.createElement('th');
+        th.className = headerClass;
+        th.innerHTML = `
+            <div>${date.getDate()}</div>
+            <div class="text-xs ${dayClass}">${dayOfWeek}</div>
+        `;
+        // 🆕 ダブルクリックで日付設定メニューを開く
+        th.ondblclick = (e) => this.openDateSettingMenu(e, date);
+        th.title = '日付設定（ダブルクリック）';
+        th.style.cursor = 'pointer';
+        
+        headerRow.appendChild(th);
+    });
     
     // サマリー列を要素として追加
     const summaryHeaders = ['A', 'A1', 'B', '非', '×', '休日数', '実勤務', '当直回数'];
@@ -2162,6 +2264,9 @@ createWorkCell(ce, date, dateKey, workData) {
     if (this.copyMode.active) {
         // 🆕 コピーモード中はペースト実行
         this.pasteCellData(ce.id, dateKey);
+    } else if (this.singleDayOverrideMode.active) {
+        // 🆕 1日勤務区分モード中は1日分のオーバーライドを設定
+        this.applySingleDayWorkTypeOverride(ce.id, dateKey);
     } else {
         // 通常モードはメニュー表示
         this.openStatusMenu(e, ce, dateKey);
@@ -2307,6 +2412,7 @@ createWorkCell(ce, date, dateKey, workData) {
 
         async selectWorkStatus(ceId, dateKey, status, customText = '') {
             try {
+                this.pushHistory();
                 const desireCheck = document.getElementById('desireWorkCheck');
                 const customTextInput = document.getElementById('customTextInput');
                 const desired = desireCheck ? desireCheck.checked : false;
@@ -2408,6 +2514,7 @@ createWorkCell(ce, date, dateKey, workData) {
             }
 
             try {
+                this.pushHistory();
                 const ceId = targetCE.id;
                 const newOverride = {
                     startDate: startDate,
@@ -2475,6 +2582,7 @@ createWorkCell(ce, date, dateKey, workData) {
             }
 
             try {
+                this.pushHistory();
                 let removedCount = 0;
                 if (startDate && endDate && Array.isArray(this.workTypeOverrides[targetCE.id])) {
                     const originalLength = this.workTypeOverrides[targetCE.id].length;
@@ -2561,6 +2669,7 @@ async saveCEEdit() {
     }
 
     try {
+        this.pushHistory();
         const ce = this.currentCEEditTarget;
         const ceIndex = this.ceList.findIndex(c => c.id === ce.id);
         
@@ -2593,6 +2702,7 @@ async saveCEEdit() {
             }
 
             try {
+                this.pushHistory();
                 const dates = this.generateDateRange(this.currentPeriod.startDate, this.currentPeriod.endDate);
                 
                 if (this.ceList.length === 0) {
@@ -2631,6 +2741,7 @@ async saveCEEdit() {
                 return;
             }
 
+            this.pushHistory();
             this.scheduleData = {};
             this.renderScheduleTable();
             window.showMessage('勤務表をクリアしました', 'info');
@@ -2710,6 +2821,7 @@ try {
     console.log('📂 勤務表読み込み開始:', schedule.title);
     console.log('📅 期間:', schedule.startDate, '～', schedule.endDate);
     
+    this.pushHistory();
     this.scheduleData = schedule.scheduleData || {};
     this.ceList = schedule.ceList || this.ceList;
     this.workTypeOverrides = schedule.workTypeOverrides || {};
@@ -2848,13 +2960,46 @@ try {
             if (!select) return;
 
             select.innerHTML = '<option value="">保存データを選択</option>';
-            
-            Object.entries(this.savedSchedules).forEach(([id, schedule]) => {
+
+            const todayKey = this.formatDateKey(new Date());
+            const entries = Object.entries(this.savedSchedules).map(([id, schedule]) => ({
+                id,
+                schedule,
+                startDate: schedule.startDate || '',
+                endDate: schedule.endDate || ''
+            }));
+
+            // 降順（新しい日付が先、古い日付が後）
+            const sortDesc = (a, b) => {
+                const aKey = a.startDate || a.endDate || '';
+                const bKey = b.startDate || b.endDate || '';
+                if (aKey !== bKey) return bKey.localeCompare(aKey);
+                return (b.endDate || '').localeCompare(a.endDate || '');
+            };
+
+            const current = entries.filter(e => !e.endDate || e.endDate >= todayKey).sort(sortDesc);
+            const past = entries.filter(e => e.endDate && e.endDate < todayKey).sort(sortDesc);
+
+            // 現在のデータ（新しい日付が先頭）
+            current.forEach(({ id, schedule }) => {
                 const option = document.createElement('option');
                 option.value = id;
                 option.textContent = `${schedule.title}（${schedule.period}）`;
                 select.appendChild(option);
             });
+
+            // 期間終了日が当日より古いデータは「以前のデータ」に階層分け
+            if (past.length > 0) {
+                const group = document.createElement('optgroup');
+                group.label = '以前のデータ';
+                past.forEach(({ id, schedule }) => {
+                    const option = document.createElement('option');
+                    option.value = id;
+                    option.textContent = `${schedule.title}（${schedule.period}）`;
+                    group.appendChild(option);
+                });
+                select.appendChild(group);
+            }
         }
 
  async publishSchedule() {
@@ -2947,6 +3092,7 @@ async pasteCellData(ceId, dateKey) {
     if (!this.copyMode.active) return;
 
     try {
+        this.pushHistory();
         const workData = {
             status: this.copyMode.status === 'text' ? null : this.copyMode.status,
             customText: this.copyMode.status === 'text' ? this.copyMode.customText : null,
@@ -3046,6 +3192,8 @@ setDateType(type) {
     const dateKey = this.formatDateKey(this.currentDateTarget);
     const dateStr = this.formatDateDisplay(this.currentDateTarget);
 
+    this.pushHistory();
+
     if (type === 'default') {
         // デフォルトに戻す
         delete this.dateOverrides[dateKey];
@@ -3067,6 +3215,191 @@ setDateType(type) {
 }
 
         
+        // 🆕 元に戻す・やり直し（Undo/Redo）
+        snapshotState() {
+            return {
+                scheduleData: JSON.parse(JSON.stringify(this.scheduleData)),
+                workTypeOverrides: JSON.parse(JSON.stringify(this.workTypeOverrides)),
+                dateOverrides: JSON.parse(JSON.stringify(this.dateOverrides)),
+                ceList: JSON.parse(JSON.stringify(this.ceList))
+            };
+        }
+
+        pushHistory() {
+            this.undoStack.push(this.snapshotState());
+            if (this.undoStack.length > this.historyLimit) {
+                this.undoStack.shift();
+            }
+            this.redoStack = [];
+            this.updateUndoRedoButtons();
+        }
+
+        async restoreState(state) {
+            this.scheduleData = state.scheduleData;
+            this.workTypeOverrides = state.workTypeOverrides;
+            this.dateOverrides = state.dateOverrides;
+            this.ceList = state.ceList;
+
+            await window.database.ref(`${window.DATA_ROOT}/workSchedule`).set(this.scheduleData);
+            await window.database.ref(`${window.DATA_ROOT}/workTypeOverrides`).set(this.workTypeOverrides);
+            await this.saveCEList();
+
+            this.renderScheduleTable();
+            this.updateRemoveCESelect();
+        }
+
+        async undo() {
+            if (this.undoStack.length === 0) {
+                window.showMessage('戻す操作がありません', 'info');
+                return;
+            }
+            const state = this.undoStack.pop();
+            this.redoStack.push(this.snapshotState());
+            await this.restoreState(state);
+            this.updateUndoRedoButtons();
+            window.showMessage('直前の操作を戻しました', 'success');
+        }
+
+        async redo() {
+            if (this.redoStack.length === 0) {
+                window.showMessage('進む操作がありません', 'info');
+                return;
+            }
+            const state = this.redoStack.pop();
+            this.undoStack.push(this.snapshotState());
+            await this.restoreState(state);
+            this.updateUndoRedoButtons();
+            window.showMessage('操作をやり直しました', 'success');
+        }
+
+        updateUndoRedoButtons() {
+            const undoBtn = document.getElementById('undoBtn');
+            const redoBtn = document.getElementById('redoBtn');
+            if (undoBtn) undoBtn.disabled = this.undoStack.length === 0;
+            if (redoBtn) redoBtn.disabled = this.redoStack.length === 0;
+        }
+
+        // 🆕 1日だけ勤務区分オーバーライド
+        setupSingleDayOverrideMenu() {
+            const openBtn = document.getElementById('singleDayOverrideBtn');
+            const closeBtn = document.getElementById('closeSingleDayOverrideMenu');
+            const endBtn = document.getElementById('clearSingleDayOverride');
+
+            if (openBtn) {
+                openBtn.onclick = (e) => this.openSingleDayOverrideMenu(e);
+            }
+            if (closeBtn) {
+                closeBtn.onclick = () => this.closeSingleDayOverrideMenu();
+            }
+            if (endBtn) {
+                endBtn.onclick = () => {
+                    this.deactivateSingleDayOverride();
+                    this.closeSingleDayOverrideMenu();
+                };
+            }
+
+            const menu = document.getElementById('singleDayOverrideMenu');
+            if (menu) {
+                menu.querySelectorAll('.work-type-btn').forEach(btn => {
+                    btn.onclick = () => {
+                        const workType = btn.dataset.type;
+                        this.selectSingleDayWorkType(workType);
+                        this.closeSingleDayOverrideMenu();
+                    };
+                });
+            }
+        }
+
+        openSingleDayOverrideMenu(event) {
+            const menu = document.getElementById('singleDayOverrideMenu');
+            if (!menu) return;
+
+            // 現在の選択状態を反映
+            menu.querySelectorAll('.work-type-btn').forEach(btn => {
+                btn.classList.toggle('active', this.singleDayOverrideMode.active && btn.dataset.type === this.singleDayOverrideMode.workType);
+            });
+
+            this.positionMenu(menu, event.target);
+        }
+
+        closeSingleDayOverrideMenu() {
+            const menu = document.getElementById('singleDayOverrideMenu');
+            if (menu) {
+                menu.style.display = 'none';
+            }
+        }
+
+        selectSingleDayWorkType(workType) {
+            this.singleDayOverrideMode = {
+                active: true,
+                workType: workType
+            };
+            this.updateSingleDayOverrideButton();
+            window.showMessage(`1日勤務区分モード: ${workType}（セルをクリックして設定）`, 'info');
+        }
+
+        deactivateSingleDayOverride() {
+            this.singleDayOverrideMode = { active: false, workType: null };
+            this.updateSingleDayOverrideButton();
+            window.showMessage('1日勤務区分モードを終了しました', 'info');
+        }
+
+        updateSingleDayOverrideButton() {
+            const btn = document.getElementById('singleDayOverrideBtn');
+            if (!btn) return;
+            if (this.singleDayOverrideMode.active) {
+                btn.classList.add('active');
+                btn.innerHTML = `<i class="fas fa-calendar-day"></i> ${this.singleDayOverrideMode.workType}設定中`;
+            } else {
+                btn.classList.remove('active');
+                btn.innerHTML = `<i class="fas fa-calendar-day"></i> 1日勤務区分`;
+            }
+        }
+
+        async applySingleDayWorkTypeOverride(ceId, dateKey) {
+            if (!this.singleDayOverrideMode.active) return;
+            const workType = this.singleDayOverrideMode.workType;
+            if (!workType) return;
+
+            this.pushHistory();
+
+            if (!this.workTypeOverrides[ceId]) {
+                this.workTypeOverrides[ceId] = [];
+            } else if (!Array.isArray(this.workTypeOverrides[ceId])) {
+                this.workTypeOverrides[ceId] = [this.workTypeOverrides[ceId]];
+            }
+
+            const newOverride = {
+                startDate: dateKey,
+                endDate: dateKey,
+                workType: workType,
+                createdAt: Date.now()
+            };
+
+            // 同じ1日（開始=終了=dateKey）の既存オーバーライドを上書き
+            let updated = false;
+            for (let i = 0; i < this.workTypeOverrides[ceId].length; i++) {
+                const existing = this.workTypeOverrides[ceId][i];
+                if (existing.startDate === dateKey && existing.endDate === dateKey) {
+                    this.workTypeOverrides[ceId][i] = newOverride;
+                    updated = true;
+                    break;
+                }
+            }
+            if (!updated) {
+                this.workTypeOverrides[ceId].push(newOverride);
+            }
+
+            try {
+                await this.saveWorkTypeOverrides();
+                this.renderScheduleTable();
+                window.showMessage(`${dateKey} の勤務区分を ${workType} に設定しました`, 'success');
+            } catch (error) {
+                console.error('❌ 1日勤務区分設定エラー:', error);
+                window.showMessage('勤務区分の設定に失敗しました', 'error');
+            }
+        }
+
         async saveCEList() {
             const ceListData = {
                 list: this.ceList,
@@ -3123,6 +3456,9 @@ setupCopyToolbar() {
     document.addEventListener('keydown', (e) => {
         if (e.key === 'Escape' && this.copyMode.active) {
             this.deactivateCopyMode();
+        }
+        if (e.key === 'Escape' && this.singleDayOverrideMode.active) {
+            this.deactivateSingleDayOverride();
         }
     });
 }
