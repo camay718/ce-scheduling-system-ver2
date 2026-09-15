@@ -125,6 +125,71 @@
             border: 2px dashed #ddd;
         }
 
+        /* 🆕 今日ハイライト */
+        .timeline-day-row.today-row {
+            border: 2px solid #4CAF50 !important;
+            background: rgba(76, 175, 80, 0.08) !important;
+        }
+
+        /* 🆕 現在時刻ライン */
+        .now-line {
+            position: absolute;
+            top: 0;
+            bottom: 0;
+            width: 2px;
+            background: #e53935;
+            z-index: 5;
+        }
+        .now-line::after {
+            content: '現在';
+            position: absolute;
+            top: -15px;
+            left: -9px;
+            font-size: 9px;
+            color: #e53935;
+            font-weight: bold;
+            background: white;
+            padding: 0 2px;
+            border-radius: 3px;
+        }
+
+        /* 🆕 配置不足アラート */
+        .task-bar-short {
+            border: 2px solid #dc3545 !important;
+            box-shadow: 0 0 6px rgba(220, 53, 69, 0.6);
+        }
+        .task-bar-short::after {
+            content: '⚠';
+            position: absolute;
+            top: -8px;
+            right: -6px;
+            font-size: 10px;
+            color: #dc3545;
+            background: white;
+            border-radius: 50%;
+            padding: 0 3px;
+        }
+
+        /* 🆕 勤務状態バッジ */
+        .status-badge {
+            display: inline-block;
+            padding: 1px 6px;
+            border-radius: 10px;
+            font-size: 9px;
+            font-weight: bold;
+            color: white;
+            margin: 1px 2px;
+        }
+
+        /* 🆕 出勤可能CE行 */
+        .duty-ce-line {
+            margin-top: 4px;
+            padding-top: 4px;
+            border-top: 1px dashed #e0e0e0;
+            font-size: 10px;
+            color: #555;
+        }
+
         .auth-error {
             background: #fee2e2;
             border: 1px solid #fecaca;
@@ -293,6 +358,14 @@
             </div>
         </div>
 
+        <!-- 🆕 配置不足アラート -->
+        <div id="shortageSection" class="glassmorphism rounded-2xl p-4 mb-6" style="display: none;">
+            <h3 class="text-lg font-bold mb-3">
+                <i class="fas fa-exclamation-triangle mr-2 text-red-500"></i>配置不足アラート
+            </h3>
+            <div id="shortageList" class="text-sm"></div>
+        </div>
+
         <!-- タイムライン表示エリア -->
         <div id="timelineContainer">
             <!-- JavaScriptで動的生成 -->
@@ -430,6 +503,25 @@
         let currentDateRange = [];
         let displayStartHour = 7;
         let displayEndHour = 19;
+
+        // 🆕 勤務表（workSchedules）統合用グローバル
+        let globalCEList = [];
+        let globalWorkStatusData = {};
+
+        // 無効データ除外リスト
+        const CE_DENY_NAMES = new Set(['list', 'updatedAt', 'lastUpdated', 'timestamp', 'ceList', 'state', 'templates', 'metadata', 'default', 'scheduleData', 'workTypeOverrides']);
+
+        // 勤務状態定義
+        const WORK_STATUS_DEFINITIONS = {
+            'A': { label: 'A', color: '#4CAF50' },
+            'A1': { label: 'A1', color: '#FF9800' },
+            'B': { label: 'B', color: '#9C27B0' },
+            '非': { label: '非番', color: '#607D8B' },
+            '×': { label: '休み', color: '#F44336' },
+            '年': { label: '年休', color: '#2196F3' },
+            '出': { label: '出張', color: '#2196F3' },
+            '研': { label: '研修', color: '#795548' }
+        };
 
         // 🔧 データキー形式の自動判定用変数
         const WEEKDAY_KEYS = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
@@ -626,6 +718,9 @@ function setCurrentWeekRange() {
                 // サマリー情報を更新
                 updateSummary();
                 
+                // 🆕 配置不足アラートを更新
+                updateShortageList();
+                
                 console.log('✅ タイムライン読み込み完了');
                 
             } catch (error) {
@@ -634,6 +729,57 @@ function setCurrentWeekRange() {
             } finally {
                 showLoading(false);
             }
+        }
+
+        // ========== 勤務表（公開済み）からの取得 ==========
+        async function loadLatestWorkSchedule() {
+            try {
+                const snapshot = await database.ref(`${DATA_ROOT}/workSchedules`).once('value');
+                const data = snapshot.val() || {};
+                const schedules = Object.keys(data)
+                    .map(key => ({ key, ...data[key] }))
+                    .filter(s => s.metadata && s.metadata.isVisible !== false);
+                if (schedules.length === 0) return null;
+                schedules.sort((a, b) => (b.metadata?.publishedAt || 0) - (a.metadata?.publishedAt || 0));
+                return schedules[0]; // 最新の公開勤務表
+            } catch (error) {
+                console.error('❌ 勤務表読み込みエラー:', error);
+                return null;
+            }
+        }
+
+        function buildCEListFromWorkSchedule(schedule) {
+            if (!schedule || !schedule.ceList || !Array.isArray(schedule.ceList)) return [];
+            return schedule.ceList
+                .filter(ce => ce && typeof ce === 'object')
+                .filter(ce => {
+                    const id = ce.id || '';
+                    const name = ce.fullName || ce.name || '';
+                    return !CE_DENY_NAMES.has(id) && !CE_DENY_NAMES.has(name) && name.trim() !== '';
+                })
+                .map(ce => ({
+                    id: ce.id,
+                    name: ce.fullName || ce.name,
+                    fullName: ce.fullName || ce.name,
+                    iconName: ce.iconName || ce.displayName,
+                    workType: ce.workType || 'ME'
+                }));
+        }
+
+        function buildWorkStatusMap(schedule, ceList, dateRange) {
+            const statusMap = {};
+            if (!schedule || !schedule.scheduleData) return statusMap;
+            const scheduleData = schedule.scheduleData;
+            dateRange.forEach(date => {
+                const dateKey = formatDateAsISO(date);
+                ceList.forEach(ce => {
+                    const workData = scheduleData[ce.id]?.[dateKey];
+                    const status = workData ? (workData.customText?.trim() || workData.status || '') : '';
+                    if (!statusMap[ce.id]) statusMap[ce.id] = {};
+                    statusMap[ce.id][dateKey] = status;
+                });
+            });
+            return statusMap;
         }
 
 async function loadDataFromFirebase() {
@@ -650,13 +796,32 @@ async function loadDataFromFirebase() {
         }
         console.log('🔐 認証確認完了:', currentUser.uid);
         
-        const [eventsByDateSnapshot, ceListSnapshot] = await Promise.all([
+        const [eventsByDateSnapshot, ceListSnapshot, latestSchedule] = await Promise.all([
             database.ref(`${DATA_ROOT}/events/byDate`).once('value'),
-            database.ref(`${DATA_ROOT}/ceList`).once('value')
+            database.ref(`${DATA_ROOT}/ceList`).once('value'),
+            loadLatestWorkSchedule()
         ]);
         
         const eventsByDate = eventsByDateSnapshot.val() || {};
         const ceListRaw = ceListSnapshot.val() || {};
+
+        // 🆕 勤務表からCEリストと勤務状態を構築（公開勤務表が無い場合はceListで補完）
+        globalCEList = buildCEListFromWorkSchedule(latestSchedule);
+        if (globalCEList.length === 0) {
+            let fallbackList = [];
+            if (ceListRaw && Array.isArray(ceListRaw.list)) fallbackList = ceListRaw.list;
+            else if (Array.isArray(ceListRaw)) fallbackList = ceListRaw;
+            globalCEList = fallbackList
+                .filter(ce => ce && ce.id && (ce.fullName || ce.iconName || ce.name))
+                .map(ce => ({
+                    id: ce.id,
+                    name: ce.fullName || ce.name,
+                    fullName: ce.fullName || ce.name,
+                    iconName: ce.iconName || ce.displayName || ce.name,
+                    workType: ce.workType || 'ME'
+                }));
+        }
+        globalWorkStatusData = buildWorkStatusMap(latestSchedule, globalCEList, currentDateRange);
 
         // ceListのデータ形式を統一 ({list:[...],updatedAt:...} または 配列 の両方に対応)
         let ceListArray = [];
@@ -930,18 +1095,45 @@ async function loadDataFromFirebase() {
             const dayRow = document.createElement('div');
             dayRow.className = 'timeline-day-row';
             
+            const dateKey = formatDateAsISO(dayData.date);
+            const isToday = dateKey === formatDateAsISO(new Date());
+            if (isToday) dayRow.classList.add('today-row');
+            
+            // 🆕 祝日・土日表示
+            const dow = dayData.date.getDay();
+            const isHol = isHolidayDate(dayData.date);
+            const dateColor = (dow === 0 || isHol) ? 'text-red-600' : (dow === 6) ? 'text-blue-600' : '';
+            const holMark = isHol ? '<span class="text-red-600 font-bold ml-1">祝</span>' : '';
+            
             // 日付ヘッダー
             const dayHeader = document.createElement('div');
             dayHeader.className = 'flex justify-between items-center mb-2';
             dayHeader.innerHTML = `
-                <div class="font-bold text-sm">
-                    ${formatDisplayDate(dayData.date)} (${getJapaneseDayName(dayData.date)})
+                <div class="font-bold text-sm ${dateColor}">
+                    ${formatDisplayDate(dayData.date)} (${getJapaneseDayName(dayData.date)})${holMark}
+                    ${isToday ? '<span class="ml-2 text-green-600 font-bold">今日</span>' : ''}
                 </div>
                 <div class="text-xs text-gray-600">
                     ${dayData.tasks.length}件の業務
                 </div>
             `;
             dayRow.appendChild(dayHeader);
+            
+            // 🆕 出勤可能CE表示（勤務状態: A/A1/B/非）
+            const onDutyCEs = globalCEList.filter(ce => {
+                const st = globalWorkStatusData[ce.id]?.[dateKey];
+                return ['A', 'A1', 'B', '非'].includes(st);
+            });
+            if (onDutyCEs.length > 0) {
+                const dutyDiv = document.createElement('div');
+                dutyDiv.className = 'duty-ce-line';
+                dutyDiv.innerHTML = '<span class="text-gray-500 mr-1">出勤:</span>' + onDutyCEs.map(ce => {
+                    const st = globalWorkStatusData[ce.id][dateKey];
+                    const def = WORK_STATUS_DEFINITIONS[st] || { label: st, color: '#B0BEC5' };
+                    return `<span class="status-badge" style="background:${def.color}">${ce.name} ${def.label}</span>`;
+                }).join('');
+                dayRow.appendChild(dutyDiv);
+            }
             
             // タイムライントラック
             const track = createTimelineTrack(dayData);
@@ -953,21 +1145,39 @@ async function loadDataFromFirebase() {
         function createTimelineTrack(dayData) {
             const track = document.createElement('div');
             track.className = 'timeline-track';
-            track.style.height = Math.max(30, dayData.tasks.length * 26 + 6) + 'px';
             
             const totalMinutes = (displayEndHour - displayStartHour) * 60;
             
+            // 🆕 同時刻の重なりを解消（レーン分割）
+            const laneOf = assignLanes(dayData.tasks);
+            const laneCount = Math.max(1, ...Object.values(laneOf).map(l => l + 1));
+            track.style.height = Math.max(30, laneCount * 26 + 6) + 'px';
+            
             dayData.tasks.forEach((task, taskIdx) => {
-                const taskBar = createTaskBar(task, dayData, taskIdx, totalMinutes);
+                const taskBar = createTaskBar(task, dayData, taskIdx, totalMinutes, laneOf[task] || 0);
                 if (taskBar) {
                     track.appendChild(taskBar);
                 }
             });
             
+            // 🆕 現在時刻ライン（今日のみ）
+            if (formatDateAsISO(dayData.date) === formatDateAsISO(new Date())) {
+                const now = new Date();
+                const nowMinutes = now.getHours() * 60 + now.getMinutes();
+                const displayStartMinutes = displayStartHour * 60;
+                const displayEndMinutes = displayEndHour * 60;
+                if (nowMinutes >= displayStartMinutes && nowMinutes <= displayEndMinutes) {
+                    const line = document.createElement('div');
+                    line.className = 'now-line';
+                    line.style.left = ((nowMinutes - displayStartMinutes) / totalMinutes * 100) + '%';
+                    track.appendChild(line);
+                }
+            }
+            
             return track;
         }
 
-function createTaskBar(task, dayData, taskIdx, totalMinutes) {
+function createTaskBar(task, dayData, taskIdx, totalMinutes, lane = 0) {
     const startMinutes = timeToMinutes(task.startTime);
     const endMinutes = timeToMinutes(task.endTime);
     const displayStartMinutes = displayStartHour * 60;
@@ -988,25 +1198,45 @@ function createTaskBar(task, dayData, taskIdx, totalMinutes) {
     const dateKey = formatDateAsISO(dayData.date);
     const assignedCEs = (globalAssignmentsData[dateKey] && globalAssignmentsData[dateKey][taskId]) || [];
     
+    // 🆕 配置CEの勤務状態を付加
+    const assignedWithStatus = assignedCEs.map(name => {
+        const ce = globalCEList.find(c => c.id === name || c.name === name || c.fullName === name || c.iconName === name);
+        if (ce && globalWorkStatusData[ce.id]?.[dateKey]) {
+            return `${name}(${globalWorkStatusData[ce.id][dateKey]})`;
+        }
+        return name;
+    });
+    
     console.log(`🔗 配置情報取得: ${task.name} (ID: ${taskId}) → ${assignedCEs.join(', ')}`);
     
     const taskBar = document.createElement('div');
     taskBar.className = 'task-bar';
     taskBar.style.left = left + '%';
     taskBar.style.width = width + '%';
-    taskBar.style.top = (taskIdx * 26 + 3) + 'px';
+    taskBar.style.top = (lane * 26 + 3) + 'px';
     taskBar.style.backgroundColor = DEPARTMENT_COLORS[task.department];
     taskBar.style.opacity = '0.9';
+    
+    // 🆕 配置不足の強調
+    const required = task.requiredPeople || 1;
+    if (assignedCEs.length < required) {
+        taskBar.classList.add('task-bar-short');
+    }
     
     taskBar.title = [
         `業務: ${task.name}`,
         `部門: ${task.department}`,
         `時間: ${task.startTime}-${task.endTime}`,
         `件数: ${task.count || 1}件`,
-        `必要人数: ${task.requiredPeople || 1}名`,
-        `配置CE: ${assignedCEs.join(', ') || '未配置'}`,
+        `必要人数: ${required}名`,
+        `配置CE: ${assignedWithStatus.join(', ') || '未配置'}`,
         `業務ID: ${taskId}`
     ].join('\n');
+    
+    // 🆕 クリックで日別スケジュール画面へ遷移
+    taskBar.onclick = () => {
+        window.location.href = `../schedule.html?date=${dateKey}`;
+    };
     
     let displayText = '';
     if (width > 25) {
@@ -1079,7 +1309,98 @@ function createTaskBar(task, dayData, taskIdx, totalMinutes) {
 
         function showMessage(message, type = 'info') {
             console.log(`${type.toUpperCase()}: ${message}`);
-            alert(message);
+            let cont = document.getElementById('messageContainer');
+            if (!cont) {
+                cont = document.createElement('div');
+                cont.id = 'messageContainer';
+                cont.style.cssText = 'position:fixed;top:16px;left:50%;transform:translateX(-50%);z-index:9999;width:min(92vw,480px);';
+                document.body.appendChild(cont);
+            }
+            const div = document.createElement('div');
+            div.textContent = message;
+            div.style.cssText = 'background:#333;color:#fff;padding:10px 16px;border-radius:8px;margin-bottom:8px;box-shadow:0 4px 12px rgba(0,0,0,0.3);font-size:13px;text-align:center;';
+            if (type === 'error') div.style.background = '#dc3545';
+            else if (type === 'success') div.style.background = '#28a745';
+            else if (type === 'warning') div.style.background = '#ff9800';
+            cont.appendChild(div);
+            setTimeout(() => div.remove(), 4000);
+        }
+
+        // 🆕 祝日データ（2024-2026年）
+        const HOLIDAYS = new Set([
+            '2024-01-01','2024-01-08','2024-02-11','2024-02-12','2024-02-23','2024-03-20','2024-04-29','2024-05-03','2024-05-04','2024-05-05','2024-05-06','2024-07-15','2024-08-11','2024-08-12','2024-09-16','2024-09-22','2024-09-23','2024-10-14','2024-11-03','2024-11-04','2024-11-23',
+            '2025-01-01','2025-01-13','2025-02-11','2025-02-23','2025-02-24','2025-03-20','2025-04-29','2025-05-03','2025-05-04','2025-05-05','2025-05-06','2025-07-21','2025-08-11','2025-09-15','2025-09-23','2025-10-13','2025-11-03','2025-11-23','2025-11-24',
+            '2026-01-01','2026-01-12','2026-02-11','2026-02-23','2026-03-20','2026-04-29','2026-05-03','2026-05-04','2026-05-05','2026-05-06','2026-07-20','2026-08-11','2026-09-21','2026-09-22','2026-09-23','2026-10-12','2026-11-03','2026-11-23'
+        ]);
+
+        function isHolidayDate(date) {
+            return HOLIDAYS.has(formatDateAsISO(date));
+        }
+
+        function parseDateKey(k) {
+            const [y, m, d] = String(k).split('-').map(Number);
+            return new Date(y, (m || 1) - 1, d || 1);
+        }
+
+        // 🆕 同時刻の業務バーをレーン分割（重なり解消）
+        function assignLanes(tasks) {
+            const laneOf = {};
+            const laneEnds = [];
+            const sorted = tasks.slice().sort((a, b) => {
+                const sa = timeToMinutes(a.startTime), sb = timeToMinutes(b.startTime);
+                if (sa !== sb) return sa - sb;
+                return timeToMinutes(a.endTime) - timeToMinutes(b.endTime);
+            });
+            sorted.forEach(task => {
+                const start = timeToMinutes(task.startTime);
+                let lane = laneEnds.findIndex(end => end <= start);
+                if (lane === -1) {
+                    lane = laneEnds.length;
+                    laneEnds.push(0);
+                }
+                laneEnds[lane] = Math.max(laneEnds[lane], timeToMinutes(task.endTime));
+                laneOf[task] = lane;
+            });
+            return laneOf;
+        }
+
+        // 🆕 配置不足アラート一覧
+        function updateShortageList() {
+            const section = document.getElementById('shortageSection');
+            const listEl = document.getElementById('shortageList');
+            if (!section || !listEl) return;
+
+            const shortages = [];
+            const selectedDepartments = getSelectedDepartments();
+
+            currentDateRange.forEach(date => {
+                const dateKey = formatDateAsISO(date);
+                const dayTasks = (globalTasksData[dateKey] || []).filter(task => selectedDepartments.includes(task.department));
+                dayTasks.forEach(task => {
+                    const assigned = (globalAssignmentsData[dateKey] && globalAssignmentsData[dateKey][task.id]) || [];
+                    const required = task.requiredPeople || 1;
+                    if (assigned.length < required) {
+                        shortages.push({ dateKey, task, assigned: assigned.length, required });
+                    }
+                });
+            });
+
+            if (shortages.length === 0) {
+                section.style.display = 'none';
+                return;
+            }
+
+            section.style.display = 'block';
+            listEl.innerHTML = shortages.map(s => `
+                <div class="flex items-center justify-between bg-red-50 border border-red-200 rounded-lg px-3 py-2 mb-2">
+                    <div>
+                        <span class="font-bold text-red-700">${formatDisplayDate(parseDateKey(s.dateKey))}</span>
+                        <span class="ml-2 text-gray-700">${s.task.department} / ${s.task.name}</span>
+                        <span class="ml-2 text-gray-500 text-xs">${s.task.startTime}-${s.task.endTime}</span>
+                    </div>
+                    <div class="text-red-600 font-bold text-sm">要${s.required}名 / 配置${s.assigned}名</div>
+                </div>
+            `).join('');
         }
 
         // ========== フィルター・操作関数 ==========
