@@ -188,6 +188,51 @@
             display: grid;
         }
 
+        /* 🆕 今日ハイライト */
+        .timeline-day-row.today-row {
+            border: 2px solid #4CAF50 !important;
+            background: rgba(76, 175, 80, 0.08) !important;
+        }
+
+        /* 🆕 現在時刻ライン */
+        .now-line {
+            position: absolute;
+            top: 0;
+            bottom: 0;
+            width: 2px;
+            background: #e53935;
+            z-index: 5;
+        }
+        .now-line::after {
+            content: '現在';
+            position: absolute;
+            top: -15px;
+            left: -9px;
+            font-size: 9px;
+            color: #e53935;
+            font-weight: bold;
+            background: white;
+            padding: 0 2px;
+            border-radius: 3px;
+        }
+
+        /* 🆕 配置不足アラート */
+        .task-bar-short {
+            border: 2px solid #dc3545 !important;
+            box-shadow: 0 0 6px rgba(220, 53, 69, 0.6);
+        }
+        .task-bar-short::after {
+            content: '⚠';
+            position: absolute;
+            top: -8px;
+            right: -6px;
+            font-size: 10px;
+            color: #dc3545;
+            background: white;
+            border-radius: 50%;
+            padding: 0 3px;
+        }
+
         /* 印刷用スタイル */
         @media print {
             body { 
@@ -428,6 +473,14 @@
             <div id="summaryContent" class="grid grid-cols-1 md:grid-cols-5 gap-4 text-sm">
                 <!-- JavaScriptで動的生成 -->
             </div>
+        </div>
+
+        <!-- 🆕 配置不足アラート -->
+        <div id="shortageSection" class="glassmorphism rounded-2xl p-4 mb-6" style="display: none;">
+            <h3 class="text-lg font-bold mb-3">
+                <i class="fas fa-exclamation-triangle mr-2 text-red-500"></i>配置不足アラート
+            </h3>
+            <div id="shortageList" class="text-sm"></div>
         </div>
 
         <!-- 個人別タイムライン表示エリア（3列グリッドレイアウト） -->
@@ -905,6 +958,9 @@
                 generateTimeline();
                 updateSummary();
                 
+                // 🆕 配置不足アラートを更新
+                updateShortageList();
+                
                 console.log('✅ 個人別タイムライン読み込み完了');
                 
             } catch (error) {
@@ -1374,13 +1430,25 @@ if (latestSchedule && latestSchedule.ceList) {
                 const statusColor = WORK_STATUS_DEFINITIONS[status].color;
                 dayRow.style.backgroundColor = hexToRgba(statusColor, 0.12); // 透明度0.12で薄く適用
             }
+            
+            // 🆕 今日ハイライト
+            if (dateKey === formatDateAsISO(new Date())) {
+                dayRow.classList.add('today-row');
+            }
+            
+            // 🆕 祝日・土日表示
+            const dow = dayData.date.getDay();
+            const isHol = isHolidayDate(dayData.date);
+            const dateColor = (dow === 0 || isHol) ? 'text-red-600' : (dow === 6) ? 'text-blue-600' : '';
+            const holMark = isHol ? '<span class="text-red-600 font-bold ml-1">祝</span>' : '';
 
             const dayHeader = document.createElement('div');
             dayHeader.className = 'flex justify-between items-center mb-2';
             dayHeader.innerHTML = `
-                <div class="font-bold text-sm">
-                    ${formatDisplayDate(dayData.date)} (${getJapaneseDayName(dayData.date)})
+                <div class="font-bold text-sm ${dateColor}">
+                    ${formatDisplayDate(dayData.date)} (${getJapaneseDayName(dayData.date)})${holMark}
                     ${status ? `<span class="ml-2 text-blue-700 font-medium">[${status}]</span>` : ''}
+                    ${dateKey === formatDateAsISO(new Date()) ? '<span class="ml-2 text-green-600 font-bold">今日</span>' : ''}
                 </div>
                 <div class="text-xs text-gray-600">
                     ${dayData.events.length}件の業務
@@ -1397,21 +1465,39 @@ if (latestSchedule && latestSchedule.ceList) {
         function createTimelineTrack(dayData) {
             const track = document.createElement('div');
             track.className = 'timeline-track';
-            track.style.height = Math.max(30, dayData.events.length * 26 + 6) + 'px';
             
             const totalMinutes = (displayEndHour - displayStartHour) * 60;
             
+            // 🆕 同時刻の重なりを解消（レーン分割）
+            const laneOf = assignLanes(dayData.events);
+            const laneCount = Math.max(1, ...Object.values(laneOf).map(l => l + 1));
+            track.style.height = Math.max(30, laneCount * 26 + 6) + 'px';
+            
             dayData.events.forEach((event, eventIdx) => {
-                const taskBar = createTaskBar(event, eventIdx, totalMinutes);
+                const taskBar = createTaskBar(event, eventIdx, totalMinutes, laneOf[event] || 0, formatDateAsISO(dayData.date));
                 if (taskBar) {
                     track.appendChild(taskBar);
                 }
             });
             
+            // 🆕 現在時刻ライン（今日のみ）
+            if (formatDateAsISO(dayData.date) === formatDateAsISO(new Date())) {
+                const now = new Date();
+                const nowMinutes = now.getHours() * 60 + now.getMinutes();
+                const displayStartMinutes = displayStartHour * 60;
+                const displayEndMinutes = displayEndHour * 60;
+                if (nowMinutes >= displayStartMinutes && nowMinutes <= displayEndMinutes) {
+                    const line = document.createElement('div');
+                    line.className = 'now-line';
+                    line.style.left = ((nowMinutes - displayStartMinutes) / totalMinutes * 100) + '%';
+                    track.appendChild(line);
+                }
+            }
+            
             return track;
         }
 
-        function createTaskBar(event, eventIdx, totalMinutes) {
+        function createTaskBar(event, eventIdx, totalMinutes, lane = 0, dateKey = '') {
             const startMinutes = timeToMinutes(event.startTime);
             const endMinutes = timeToMinutes(event.endTime);
             const displayStartMinutes = displayStartHour * 60;
@@ -1431,17 +1517,30 @@ if (latestSchedule && latestSchedule.ceList) {
             taskBar.className = 'task-bar';
             taskBar.style.left = left + '%';
             taskBar.style.width = width + '%';
-            taskBar.style.top = (eventIdx * 26 + 3) + 'px';
+            taskBar.style.top = (lane * 26 + 3) + 'px';
             taskBar.style.backgroundColor = DEPARTMENT_COLORS[event.department];
             taskBar.style.opacity = '0.9';
+            
+            // 🆕 配置不足の強調
+            const required = event.requiredPeople || 1;
+            const assignedCount = (event.assignedCEs && Array.isArray(event.assignedCEs)) ? event.assignedCEs.length : 0;
+            if (assignedCount < required) {
+                taskBar.classList.add('task-bar-short');
+            }
             
             taskBar.title = [
                 `業務: ${event.name}`,
                 `部門: ${event.department}`,
                 `時間: ${event.startTime}-${event.endTime}`,
                 `件数: ${event.count || 1}件`,
-                `必要人数: ${event.requiredPeople || 1}名`
+                `必要人数: ${required}名`,
+                `配置: ${assignedCount}名`
             ].join('\n');
+            
+            // 🆕 クリックで日別スケジュール画面へ遷移
+            taskBar.onclick = () => {
+                window.location.href = `../schedule.html?date=${dateKey}`;
+            };
             
             let displayText = '';
             if (width > 25) {
@@ -1517,6 +1616,84 @@ if (latestSchedule && latestSchedule.ceList) {
             }
         }
 
+        // 🆕 祝日データ（2024-2026年）
+        const HOLIDAYS = new Set([
+            '2024-01-01','2024-01-08','2024-02-11','2024-02-12','2024-02-23','2024-03-20','2024-04-29','2024-05-03','2024-05-04','2024-05-05','2024-05-06','2024-07-15','2024-08-11','2024-08-12','2024-09-16','2024-09-22','2024-09-23','2024-10-14','2024-11-03','2024-11-04','2024-11-23',
+            '2025-01-01','2025-01-13','2025-02-11','2025-02-23','2025-02-24','2025-03-20','2025-04-29','2025-05-03','2025-05-04','2025-05-05','2025-05-06','2025-07-21','2025-08-11','2025-09-15','2025-09-23','2025-10-13','2025-11-03','2025-11-23','2025-11-24',
+            '2026-01-01','2026-01-12','2026-02-11','2026-02-23','2026-03-20','2026-04-29','2026-05-03','2026-05-04','2026-05-05','2026-05-06','2026-07-20','2026-08-11','2026-09-21','2026-09-22','2026-09-23','2026-10-12','2026-11-03','2026-11-23'
+        ]);
+
+        function isHolidayDate(date) {
+            return HOLIDAYS.has(formatDateAsISO(date));
+        }
+
+        function parseDateKey(k) {
+            const [y, m, d] = String(k).split('-').map(Number);
+            return new Date(y, (m || 1) - 1, d || 1);
+        }
+
+        // 🆕 同時刻の業務バーをレーン分割（重なり解消）
+        function assignLanes(tasks) {
+            const laneOf = {};
+            const laneEnds = [];
+            const sorted = tasks.slice().sort((a, b) => {
+                const sa = timeToMinutes(a.startTime), sb = timeToMinutes(b.startTime);
+                if (sa !== sb) return sa - sb;
+                return timeToMinutes(a.endTime) - timeToMinutes(b.endTime);
+            });
+            sorted.forEach(task => {
+                const start = timeToMinutes(task.startTime);
+                let lane = laneEnds.findIndex(end => end <= start);
+                if (lane === -1) {
+                    lane = laneEnds.length;
+                    laneEnds.push(0);
+                }
+                laneEnds[lane] = Math.max(laneEnds[lane], timeToMinutes(task.endTime));
+                laneOf[task] = lane;
+            });
+            return laneOf;
+        }
+
+        // 🆕 配置不足アラート一覧
+        function updateShortageList() {
+            const section = document.getElementById('shortageSection');
+            const listEl = document.getElementById('shortageList');
+            if (!section || !listEl) return;
+
+            const shortages = [];
+            const selectedDepartments = getSelectedDepartments();
+
+            currentDateRange.forEach(date => {
+                const dateKey = formatDateAsISO(date);
+                const dayEvents = v2EventsByDate[dateKey] || {};
+                Object.values(dayEvents).forEach(event => {
+                    if (selectedDepartments.length && !selectedDepartments.includes(event.department)) return;
+                    const assigned = (event.assignedCEs && Array.isArray(event.assignedCEs)) ? event.assignedCEs.length : 0;
+                    const required = event.requiredPeople || 1;
+                    if (assigned < required) {
+                        shortages.push({ dateKey, event, assigned, required });
+                    }
+                });
+            });
+
+            if (shortages.length === 0) {
+                section.style.display = 'none';
+                return;
+            }
+
+            section.style.display = 'block';
+            listEl.innerHTML = shortages.map(s => `
+                <div class="flex items-center justify-between bg-red-50 border border-red-200 rounded-lg px-3 py-2 mb-2">
+                    <div>
+                        <span class="font-bold text-red-700">${formatDisplayDate(parseDateKey(s.dateKey))}</span>
+                        <span class="ml-2 text-gray-700">${s.event.department} / ${s.event.name}</span>
+                        <span class="ml-2 text-gray-500 text-xs">${s.event.startTime}-${s.event.endTime}</span>
+                    </div>
+                    <div class="text-red-600 font-bold text-sm">要${s.required}名 / 配置${s.assigned}名</div>
+                </div>
+            `).join('');
+        }
+
         // 即時更新ヘルパー関数
         function regenerateViews() {
             try {
@@ -1535,7 +1712,21 @@ if (latestSchedule && latestSchedule.ceList) {
 
         function showMessage(message, type = 'info') {
             console.log(`${type.toUpperCase()}: ${message}`);
-            alert(message);
+            let cont = document.getElementById('messageContainer');
+            if (!cont) {
+                cont = document.createElement('div');
+                cont.id = 'messageContainer';
+                cont.style.cssText = 'position:fixed;top:16px;left:50%;transform:translateX(-50%);z-index:9999;width:min(92vw,480px);';
+                document.body.appendChild(cont);
+            }
+            const div = document.createElement('div');
+            div.textContent = message;
+            div.style.cssText = 'background:#333;color:#fff;padding:10px 16px;border-radius:8px;margin-bottom:8px;box-shadow:0 4px 12px rgba(0,0,0,0.3);font-size:13px;text-align:center;';
+            if (type === 'error') div.style.background = '#dc3545';
+            else if (type === 'success') div.style.background = '#28a745';
+            else if (type === 'warning') div.style.background = '#ff9800';
+            cont.appendChild(div);
+            setTimeout(() => div.remove(), 4000);
         }
 
         function resetFilters() {
