@@ -233,6 +233,12 @@
             padding: 0 3px;
         }
 
+        /* 🆕 配置不足一覧はスクロール可能に */
+        #shortageList {
+            max-height: 320px;
+            overflow-y: auto;
+        }
+
         /* 印刷用スタイル */
         @media print {
             body { 
@@ -475,17 +481,17 @@
             </div>
         </div>
 
-        <!-- 🆕 配置不足アラート -->
+        <!-- 個人別タイムライン表示エリア（3列グリッドレイアウト） -->
+        <div id="timelineContainer" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+            <!-- JavaScriptで動的生成 -->
+        </div>
+
+        <!-- 🆕 配置不足アラート（タイムラインの下に表示） -->
         <div id="shortageSection" class="glassmorphism rounded-2xl p-4 mb-6" style="display: none;">
             <h3 class="text-lg font-bold mb-3">
                 <i class="fas fa-exclamation-triangle mr-2 text-red-500"></i>配置不足アラート
             </h3>
             <div id="shortageList" class="text-sm"></div>
-        </div>
-
-        <!-- 個人別タイムライン表示エリア（3列グリッドレイアウト） -->
-        <div id="timelineContainer" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-            <!-- JavaScriptで動的生成 -->
         </div>
 
         <!-- ローディング表示 -->
@@ -1468,13 +1474,11 @@ if (latestSchedule && latestSchedule.ceList) {
             
             const totalMinutes = (displayEndHour - displayStartHour) * 60;
             
-            // 🆕 同時刻の重なりを解消（レーン分割）
-            const laneOf = assignLanes(dayData.events);
-            const laneCount = Math.max(1, ...Object.values(laneOf).map(l => l + 1));
-            track.style.height = Math.max(30, laneCount * 26 + 6) + 'px';
+            // 業務ごとに行を割り当て（各行に1業務ずつ・重なりなし）
+            track.style.height = Math.max(30, dayData.events.length * 26 + 6) + 'px';
             
             dayData.events.forEach((event, eventIdx) => {
-                const taskBar = createTaskBar(event, eventIdx, totalMinutes, laneOf[event] || 0, formatDateAsISO(dayData.date));
+                const taskBar = createTaskBar(event, eventIdx, totalMinutes, formatDateAsISO(dayData.date));
                 if (taskBar) {
                     track.appendChild(taskBar);
                 }
@@ -1497,7 +1501,7 @@ if (latestSchedule && latestSchedule.ceList) {
             return track;
         }
 
-        function createTaskBar(event, eventIdx, totalMinutes, lane = 0, dateKey = '') {
+        function createTaskBar(event, eventIdx, totalMinutes, dateKey = '') {
             const startMinutes = timeToMinutes(event.startTime);
             const endMinutes = timeToMinutes(event.endTime);
             const displayStartMinutes = displayStartHour * 60;
@@ -1517,7 +1521,7 @@ if (latestSchedule && latestSchedule.ceList) {
             taskBar.className = 'task-bar';
             taskBar.style.left = left + '%';
             taskBar.style.width = width + '%';
-            taskBar.style.top = (lane * 26 + 3) + 'px';
+            taskBar.style.top = (eventIdx * 26 + 3) + 'px';
             taskBar.style.backgroundColor = DEPARTMENT_COLORS[event.department];
             taskBar.style.opacity = '0.9';
             
@@ -1539,7 +1543,7 @@ if (latestSchedule && latestSchedule.ceList) {
             
             // 🆕 クリックで日別スケジュール画面へ遷移
             taskBar.onclick = () => {
-                window.location.href = `../schedule.html?date=${dateKey}`;
+                window.location.href = `../pages/schedule.html?date=${dateKey}`;
             };
             
             let displayText = '';
