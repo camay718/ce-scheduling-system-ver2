@@ -196,6 +196,87 @@
             overflow-y: auto;
         }
 
+        /* 🆕 業務詳細ポップアップ */
+        .task-modal-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.45);
+            z-index: 10000;
+            align-items: center;
+            justify-content: center;
+            padding: 16px;
+        }
+        .task-modal {
+            background: #fff;
+            border-radius: 14px;
+            max-width: 520px;
+            width: 100%;
+            max-height: 85vh;
+            overflow-y: auto;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+        }
+        .task-modal-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 14px 18px;
+            border-bottom: 1px solid #eee;
+            font-weight: bold;
+            font-size: 16px;
+            position: sticky;
+            top: 0;
+            background: #fff;
+            border-radius: 14px 14px 0 0;
+            z-index: 1;
+        }
+        .task-modal-close {
+            background: none;
+            border: none;
+            font-size: 18px;
+            color: #888;
+            cursor: pointer;
+        }
+        .task-modal-close:hover { color: #333; }
+        .task-modal-body { padding: 14px 18px; font-size: 14px; }
+        .task-modal-footer {
+            padding: 12px 18px;
+            border-top: 1px solid #eee;
+            text-align: right;
+            position: sticky;
+            bottom: 0;
+            background: #fff;
+        }
+        .detail-row {
+            display: flex;
+            padding: 7px 0;
+            border-bottom: 1px dashed #f0f0f0;
+        }
+        .detail-label {
+            width: 100px;
+            color: #666;
+            flex-shrink: 0;
+            font-size: 13px;
+        }
+        .detail-value { flex: 1; color: #222; word-break: break-word; }
+        .detail-dept {
+            display: inline-block;
+            padding: 2px 10px;
+            border-radius: 10px;
+            color: #fff;
+            font-size: 12px;
+            font-weight: bold;
+        }
+        .detail-short { color: #dc3545; font-weight: bold; }
+        .detail-ok { color: #28a745; font-weight: bold; }
+        .detail-ce-badge {
+            display: inline-block;
+            padding: 1px 8px;
+            border-radius: 10px;
+            font-size: 11px;
+            color: #fff;
+            margin: 2px 3px 2px 0;
+        }
+
         .auth-error {
             background: #fee2e2;
             border: 1px solid #fecaca;
@@ -381,6 +462,20 @@
         <div id="loadingIndicator" class="text-center py-8" style="display: none;">
             <i class="fas fa-spinner fa-spin text-2xl text-green-600"></i>
             <p class="mt-2 text-gray-600">データを読み込み中...</p>
+        </div>
+    </div>
+
+    <!-- 🆕 業務詳細ポップアップ -->
+    <div id="taskDetailModal" class="task-modal-overlay" style="display: none;" onclick="if(event.target===this) closeTaskDetail();">
+        <div class="task-modal">
+            <div class="task-modal-header">
+                <span><i class="fas fa-info-circle mr-2"></i>業務詳細</span>
+                <button type="button" class="task-modal-close" onclick="closeTaskDetail()"><i class="fas fa-times"></i></button>
+            </div>
+            <div id="taskDetailBody" class="task-modal-body"></div>
+            <div class="task-modal-footer">
+                <button type="button" class="btn-primary" onclick="closeTaskDetail()">閉じる</button>
+            </div>
         </div>
     </div>
 
@@ -1237,9 +1332,9 @@ function createTaskBar(task, dayData, taskIdx, totalMinutes) {
         `業務ID: ${taskId}`
     ].join('\n');
     
-    // 🆕 クリックで日別スケジュール画面へ遷移
+    // 🆕 クリックで業務詳細ポップアップを表示
     taskBar.onclick = () => {
-        window.location.href = `../pages/schedule.html?date=${dateKey}`;
+        openTaskDetail(task, dateKey);
     };
     
     let displayText = '';
@@ -1406,6 +1501,50 @@ function createTaskBar(task, dayData, taskIdx, totalMinutes) {
                 </div>
             `).join('');
         }
+
+        // 🆕 業務詳細ポップアップを開く
+        function openTaskDetail(task, dateKey) {
+            const modal = document.getElementById('taskDetailModal');
+            const body = document.getElementById('taskDetailBody');
+            if (!modal || !body) return;
+
+            const assigned = (globalAssignmentsData[dateKey] && globalAssignmentsData[dateKey][task.id]) || [];
+            const required = task.requiredPeople || 1;
+            const deptColor = DEPARTMENT_COLORS[task.department] || '#888888';
+            const isShort = assigned.length < required;
+
+            const assignedHtml = assigned.length > 0 ? assigned.map(name => {
+                const ce = globalCEList.find(c => c.id === name || c.name === name || c.fullName === name || c.iconName === name);
+                const st = ce ? (globalWorkStatusData[ce.id]?.[dateKey] || '') : '';
+                const def = st ? WORK_STATUS_DEFINITIONS[st] : null;
+                const badgeColor = def ? def.color : '#90a4ae';
+                const label = def ? `${name}（${def.label}）` : name;
+                return `<span class="detail-ce-badge" style="background:${badgeColor}">${label}</span>`;
+            }).join('') : '<span class="text-gray-400">未配置</span>';
+
+            const d = parseDateKey(dateKey);
+            body.innerHTML = `
+                <div class="detail-row"><div class="detail-label">業務名</div><div class="detail-value font-bold">${task.name}</div></div>
+                <div class="detail-row"><div class="detail-label">部門</div><div class="detail-value"><span class="detail-dept" style="background:${deptColor}">${task.department}</span></div></div>
+                <div class="detail-row"><div class="detail-label">日付</div><div class="detail-value">${formatDisplayDate(d)}（${getJapaneseDayName(d)}）</div></div>
+                <div class="detail-row"><div class="detail-label">時間</div><div class="detail-value">${task.startTime} ～ ${task.endTime}</div></div>
+                <div class="detail-row"><div class="detail-label">件数</div><div class="detail-value">${task.count || 1}件</div></div>
+                <div class="detail-row"><div class="detail-label">必要人数</div><div class="detail-value">${required}名</div></div>
+                <div class="detail-row"><div class="detail-label">配置状況</div><div class="detail-value ${isShort ? 'detail-short' : 'detail-ok'}">配置${assigned.length}名 / 要${required}名 ${isShort ? '（不足）' : '（充足）'}</div></div>
+                <div class="detail-row"><div class="detail-label">配置CE</div><div class="detail-value">${assignedHtml}</div></div>
+                <div class="detail-row"><div class="detail-label">業務ID</div><div class="detail-value text-xs text-gray-500">${task.id || '-'}</div></div>
+            `;
+            modal.style.display = 'flex';
+        }
+
+        function closeTaskDetail() {
+            const modal = document.getElementById('taskDetailModal');
+            if (modal) modal.style.display = 'none';
+        }
+
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') closeTaskDetail();
+        });
 
         // ========== フィルター・操作関数 ==========
         function resetFilters() {
