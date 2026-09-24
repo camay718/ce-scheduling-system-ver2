@@ -269,6 +269,22 @@
             transition: all 0.2s ease;
         }
 
+        /* 🆕 部門内の業務カードを2列表示 */
+        .task-list {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 8px;
+            align-content: start;
+        }
+        .task-list .event-card {
+            margin-bottom: 0 !important;
+        }
+        @media (max-width: 600px) {
+            .task-list {
+                grid-template-columns: 1fr;
+            }
+        }
+
         .event-card.drag-over {
             background: #fff7ed !important;
             border: 2px dashed #f59e0b !important;
@@ -1679,7 +1695,7 @@ renderDailySchedule() {
                             <div class="dept-ratio-fill" style="background: ${deptColor}; width: 0%"></div>
                         </div>
                     </div>
-                    <div class="task-list min-h-[120px] space-y-2 mt-3" data-department="${dept}">
+                    <div class="task-list min-h-[120px] mt-3" data-department="${dept}">
                         <!-- 通常業務がここに表示されます -->
                     </div>
                     <div class="monthly-plans mt-2" data-department="${dept}">
@@ -5157,6 +5173,5 @@ window.handleLogout = async () => {
             }
         });
     </script>
-<script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/v31edd6df95cf4e85bb4c19e7a9bdbcba1788362987495" integrity="sha512-iIg7k2xntmwu6/uSb5tpc/hySgZc4eoL31yB29W6tJFo2akwjPWcEqnCEdJvGexCL0KEQwVYv5BlowfhVz26hg==" data-cf-beacon='{"version":"2024.11.0","token":"4edd5f8ec12a48cfa682ab8261b80a79","spa":2}' crossorigin="anonymous"></script>
 </body>
 </html>
